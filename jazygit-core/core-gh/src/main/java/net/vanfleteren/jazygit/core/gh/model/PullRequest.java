@@ -2,6 +2,9 @@ package net.vanfleteren.jazygit.core.gh.model;
 
 import io.vavr.collection.List;
 import io.vavr.control.Option;
+import net.vanfleteren.jazygit.core.repo.ForgeBranch;
+import net.vanfleteren.jazygit.core.repo.PrNumber;
+import net.vanfleteren.jazygit.core.repo.RepoSlug;
 import net.vanfleteren.jazygit.core.repo.Sha;
 
 /**
@@ -18,8 +21,8 @@ import net.vanfleteren.jazygit.core.repo.Sha;
  */
 public record PullRequest(
         PrNumber number,
-        GhBranch headBranch,
-        Option<GhBranch> baseBranch,
+        ForgeBranch headBranch,
+        Option<ForgeBranch> baseBranch,
         boolean draft,
         Checks checks,
         Review review,
@@ -31,7 +34,7 @@ public record PullRequest(
      */
     public PullRequest(
             PrNumber number,
-            GhBranch headBranch,
+            ForgeBranch headBranch,
             boolean draft,
             Checks checks,
             Review review,
@@ -45,7 +48,7 @@ public record PullRequest(
      */
     public PullRequest(
             PrNumber number,
-            GhBranch headBranch,
+            ForgeBranch headBranch,
             boolean draft,
             Checks checks,
             Review review,
@@ -56,7 +59,7 @@ public record PullRequest(
     /**
      * One that is not stacked.
      */
-    public PullRequest(PrNumber number, GhBranch headBranch, boolean draft, Checks checks, Review review) {
+    public PullRequest(PrNumber number, ForgeBranch headBranch, boolean draft, Checks checks, Review review) {
         this(number, headBranch, draft, checks, review, Option.none());
     }
 
@@ -68,12 +71,12 @@ public record PullRequest(
      * @param base       the commit its base branch is at
      * @param head       the commit its branch is at
      */
-    public record Commits(String repository, String url, Sha base, Sha head) {
+    public record Commits(RepoSlug repository, String url, Sha base, Sha head) {
 
         /**
          * Its commits, when GitHub said both.
          */
-        public static Option<Commits> of(String repository, String url, Option<Sha> base, Option<Sha> head) {
+        public static Option<Commits> of(RepoSlug repository, String url, Option<Sha> base, Option<Sha> head) {
             return base.flatMap(at -> head.map(tip -> new Commits(repository, url, at, tip)));
         }
 

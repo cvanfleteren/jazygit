@@ -10,6 +10,7 @@ import io.vavr.control.Option;
 import java.util.function.Supplier;
 import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.InProgress;
+import net.vanfleteren.jazygit.core.repo.RepoPath;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.TestModels;
@@ -50,8 +51,8 @@ class InProgressDialogsTest {
     @Test
     void continuingWithConflictMarkersLeftInAResolvedFileSaysItCommitsThem() throws Exception {
         InProgress rebasing = new InProgress.Rebasing(Option.of(new BranchName("feature")), new Sha("aaaa"), 1, 2);
-        Model open =
-                TestModels.loaded().openPopup(new InProgressPopup(rebasing, 0, io.vavr.collection.List.of("b.txt")));
+        Model open = TestModels.loaded()
+                .openPopup(new InProgressPopup(rebasing, 0, io.vavr.collection.List.of(new RepoPath("b.txt"))));
         Supplier<Element> view =
                 () -> stack(text("background"), dialog.render(open).get());
         try (ToolkitTestRunner runner = ToolkitTestRunner.runTest(view)) {

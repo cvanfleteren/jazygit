@@ -23,7 +23,6 @@ import io.vavr.collection.List;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.core.gh.graphql.ReviewingFragment;
 import net.vanfleteren.jazygit.core.gh.model.CommentRights;
-import net.vanfleteren.jazygit.core.gh.model.PrNumber;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestDetails;
 import net.vanfleteren.jazygit.core.gh.model.Reaction;
 import net.vanfleteren.jazygit.core.gh.model.Reactions;
@@ -33,6 +32,8 @@ import net.vanfleteren.jazygit.core.gh.model.ReviewThread.Comment;
 import net.vanfleteren.jazygit.core.gh.model.ReviewThread.Side;
 import net.vanfleteren.jazygit.core.gh.model.ReviewThread.Subject;
 import net.vanfleteren.jazygit.core.gh.process.GhCommand;
+import net.vanfleteren.jazygit.core.repo.PrNumber;
+import net.vanfleteren.jazygit.core.repo.RepoPath;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.lib.json.Decoder;
 
@@ -126,7 +127,7 @@ final class ReviewThreadsQuery {
     // A thread; none for one with only comments of a review that is not submitted yet.
     static final Decoder<Option<ReviewThread>> THREAD = map5(
             map8(
-                    field("path", string()),
+                    field("path", string().map(RepoPath::new)),
                     field("diffSide", enumOf(Side.class)),
                     field("line", nullable(integer())),
                     field("startLine", nullable(integer())),

@@ -14,6 +14,8 @@ import net.vanfleteren.jazygit.core.gh.process.GhError;
 import net.vanfleteren.jazygit.core.gh.process.GhFailure;
 import net.vanfleteren.jazygit.core.gh.process.GhProcess;
 import net.vanfleteren.jazygit.core.process.ExecutedCommand;
+import net.vanfleteren.jazygit.core.repo.ForgeBranch;
+import net.vanfleteren.jazygit.core.repo.RepoSlug;
 import net.vanfleteren.jazygit.core.repo.Sha;
 
 /**
@@ -69,7 +71,7 @@ public final class CliChecks implements Checks {
     }
 
     @Override
-    public Either<GhError, List<GhBranch>> protectedBranches() {
+    public Either<GhError, List<ForgeBranch>> protectedBranches() {
         return process.readJson(ProtectedBranchesQuery.COMMAND, ProtectedBranchesQuery.DECODER);
     }
 
@@ -79,7 +81,7 @@ public final class CliChecks implements Checks {
     }
 
     @Override
-    public Either<GhFailure, JobLog> jobLog(String repository, long runId, int attempt, long jobId) {
+    public Either<GhFailure, JobLog> jobLog(RepoSlug repository, long runId, int attempt, long jobId) {
         return JobLogQuery.file(cache, repository, runId, attempt, jobId)
                 .mapLeft(error -> new GhFailure(error, List.empty()))
                 .flatMap(file -> Files.isRegularFile(file) ? kept(file) : download(repository, jobId, file));
@@ -99,7 +101,7 @@ public final class CliChecks implements Checks {
      * The log read from GitHub, and kept in {@code file}: written next to it first, then moved there, so that a log
      * cut off halfway is never taken for one kept.
      */
-    private Either<GhFailure, JobLog> download(String repository, long jobId, Path file) {
+    private Either<GhFailure, JobLog> download(RepoSlug repository, long jobId, Path file) {
         return process.run(JobLogQuery.command(repository, jobId))
                 .fold(
                         failure -> JobLogQuery.tooOld(failure.error())

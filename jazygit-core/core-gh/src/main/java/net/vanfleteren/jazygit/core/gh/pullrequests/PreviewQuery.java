@@ -7,11 +7,11 @@ import static net.vanfleteren.jazygit.lib.json.Decoder.string;
 
 import io.vavr.Tuple;
 import io.vavr.Tuple2;
-import net.vanfleteren.jazygit.core.gh.model.GhBranch;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestPreview;
 import net.vanfleteren.jazygit.core.gh.process.GhCommand;
 import net.vanfleteren.jazygit.core.process.Limit;
 import net.vanfleteren.jazygit.core.process.Limited;
+import net.vanfleteren.jazygit.core.repo.ForgeBranch;
 import net.vanfleteren.jazygit.lib.json.Decoder;
 
 /**
@@ -24,8 +24,8 @@ final class PreviewQuery {
     static final Limit DIFF_LIMIT = new Limit(50_000, 4 * 1024 * 1024);
 
     // Its base branch and its body.
-    static final Decoder<Tuple2<GhBranch, String>> DECODER =
-            map2(field("baseRefName", string()).map(GhBranch::new), field("body", string()), Tuple::of);
+    static final Decoder<Tuple2<ForgeBranch, String>> DECODER =
+            map2(field("baseRefName", string()).map(ForgeBranch::new), field("body", string()), Tuple::of);
 
     private PreviewQuery() {}
 
@@ -40,7 +40,7 @@ final class PreviewQuery {
     /**
      * The preview of a pull request into {@code base}, with its body and the {@code diff} read of it.
      */
-    static PullRequestPreview preview(GhBranch base, String body, Limited diff) {
+    static PullRequestPreview preview(ForgeBranch base, String body, Limited diff) {
         return new PullRequestPreview(base, body.stripTrailing(), diff.text(), diff.cut());
     }
 }

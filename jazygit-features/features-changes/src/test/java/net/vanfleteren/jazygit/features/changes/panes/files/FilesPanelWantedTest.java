@@ -7,6 +7,7 @@ import io.vavr.collection.List;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.core.git.model.ChangeType;
 import net.vanfleteren.jazygit.core.git.model.CommitFile;
+import net.vanfleteren.jazygit.core.repo.RepoPath;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.kernel.state.Loadable;
 import net.vanfleteren.jazygit.kernel.state.Model;
@@ -26,12 +27,12 @@ import org.junit.jupiter.api.Test;
 class FilesPanelWantedTest {
 
     private static final Changes COMMIT = new Changes.OfCommit(new Sha("abcdef1234567"));
-    private static final CommitFile FIRST = new CommitFile("docs/a.md", ChangeType.MODIFIED);
-    private static final CommitFile WANTED = new CommitFile("src/main/B.java", ChangeType.MODIFIED);
+    private static final CommitFile FIRST = new CommitFile(new RepoPath("docs/a.md"), ChangeType.MODIFIED);
+    private static final CommitFile WANTED = new CommitFile(new RepoPath("src/main/B.java"), ChangeType.MODIFIED);
 
     private final FilesPanel panel = new FilesPanel(msg -> {}, () -> {});
 
-    private static Model opened(Option<String> wanted) {
+    private static Model opened(Option<RepoPath> wanted) {
         return TestModels.loaded()
                 .mapRepoView(view -> view.mapFiles(files -> files.withCommitFiles(
                         Option.of(CommitFilesView.of(COMMIT, Scopes.COMMITS.pane(), Scopes.FILES.pane())

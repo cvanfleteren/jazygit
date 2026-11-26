@@ -7,6 +7,8 @@ import io.vavr.collection.LinkedHashMap;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.core.repo.RemoteName;
+import net.vanfleteren.jazygit.core.repo.RemoteUrl;
+import net.vanfleteren.jazygit.kernel.state.FeatureId;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -17,7 +19,7 @@ class ForgeDecisionTest {
 
     static ForgeClaim claim(String feature, String... remotes) {
         return new ForgeClaim(
-                feature,
+                new FeatureId(feature),
                 feature,
                 LinkedHashMap.ofEntries(
                         List.of(remotes).map(remote -> io.vavr.Tuple.of(new RemoteName(remote), url(remote)))),
@@ -25,12 +27,12 @@ class ForgeDecisionTest {
                 Option.none());
     }
 
-    static String url(String remote) {
-        return "https://example.net/" + remote + ".git";
+    static RemoteUrl url(String remote) {
+        return new RemoteUrl("https://example.net/" + remote + ".git");
     }
 
     static ForgeCandidate candidate(String feature, String remote) {
-        return new ForgeCandidate(feature, feature, new RemoteName(remote), url(remote));
+        return new ForgeCandidate(new FeatureId(feature), feature, new RemoteName(remote), url(remote));
     }
 
     private static ForgeDecision decide(List<ForgeClaim> claims) {
@@ -63,7 +65,7 @@ class ForgeDecisionTest {
     @Test
     void theRemoteAForgePrefersComesFirst() {
         ForgeClaim preferring = new ForgeClaim(
-                "github",
+                new FeatureId("github"),
                 "github",
                 claim("github", "origin", "upstream").claimed(),
                 HashSet.empty(),
@@ -91,7 +93,11 @@ class ForgeDecisionTest {
     @Test
     void aRemoteAForgeCannotTellIsNoReasonToAskOrToPickAnother() {
         ForgeClaim down = new ForgeClaim(
-                "forgejo", "forgejo", LinkedHashMap.empty(), HashSet.of(new RemoteName("codeberg")), Option.none());
+                new FeatureId("forgejo"),
+                "forgejo",
+                LinkedHashMap.empty(),
+                HashSet.of(new RemoteName("codeberg")),
+                Option.none());
 
         // What is certain is decided.
         assertEquals(

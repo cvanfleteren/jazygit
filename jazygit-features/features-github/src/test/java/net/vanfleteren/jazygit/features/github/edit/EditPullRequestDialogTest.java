@@ -19,13 +19,13 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Optional;
 import net.vanfleteren.jazygit.core.gh.StubGitHub;
-import net.vanfleteren.jazygit.core.gh.model.GhBranch;
-import net.vanfleteren.jazygit.core.gh.model.PrNumber;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest.Review;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestDetails;
 import net.vanfleteren.jazygit.core.repo.BranchName;
+import net.vanfleteren.jazygit.core.repo.ForgeBranch;
+import net.vanfleteren.jazygit.core.repo.PrNumber;
 import net.vanfleteren.jazygit.core.repo.RemoteBranch;
 import net.vanfleteren.jazygit.features.github.show.PullRequestPopup;
 import net.vanfleteren.jazygit.kernel.state.Model;
@@ -52,7 +52,8 @@ class EditPullRequestDialogTest {
             StubGitHub.of().pullRequests().details(new PrNumber(42)).get().withBody("Why");
     private static final PullRequestPopup SHOWN = PullRequestPopup.loading(
                     new BranchName("feature"),
-                    new PullRequest(new PrNumber(42), new GhBranch("feature"), false, Checks.PASSING, Review.APPROVED),
+                    new PullRequest(
+                            new PrNumber(42), new ForgeBranch("feature"), false, Checks.PASSING, Review.APPROVED),
                     Instant.EPOCH,
                     0)
             .with(Either.right(DETAILS), 0);

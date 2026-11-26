@@ -8,6 +8,7 @@ import java.nio.file.Path;
 import java.util.regex.Pattern;
 import net.vanfleteren.jazygit.core.gh.process.GhCommand;
 import net.vanfleteren.jazygit.core.gh.process.GhError;
+import net.vanfleteren.jazygit.core.repo.RepoSlug;
 
 /**
  * The log of a job of GitHub Actions, over REST, as plain text, and where it is kept (ADR 160).
@@ -29,14 +30,14 @@ final class JobLogQuery {
      * The command that prints the log of the job {@code jobId} of {@code repository}, as {@code owner/name}, with its
      * escape sequences.
      */
-    static GhCommand command(String repository, long jobId) {
+    static GhCommand command(RepoSlug repository, long jobId) {
         return gh("api", ESCAPES, endpoint(repository, jobId));
     }
 
     /**
      * The command for a gh older than 2.104, which does not know {@link #ESCAPES}, and prints them anyway.
      */
-    static GhCommand older(String repository, long jobId) {
+    static GhCommand older(RepoSlug repository, long jobId) {
         return gh("api", endpoint(repository, jobId));
     }
 
@@ -48,8 +49,8 @@ final class JobLogQuery {
                 && explanation.exists(line -> line.contains("unknown flag: " + ESCAPES));
     }
 
-    private static String endpoint(String repository, long jobId) {
-        return "repos/" + repository + "/actions/jobs/" + jobId + "/logs";
+    private static String endpoint(RepoSlug repository, long jobId) {
+        return "repos/" + repository.value() + "/actions/jobs/" + jobId + "/logs";
     }
 
     /**
@@ -57,15 +58,15 @@ final class JobLogQuery {
      * {@code repository}, is kept in {@code cache}: {@code logs/<owner>/<name>/<run>-<attempt>-<job>.log}. Unexpected
      * output for what is no owner and name GitHub allows, so that no file is ever outside it.
      */
-    static Either<GhError, Path> file(Path cache, String repository, long runId, int attempt, long jobId) {
-        List<String> parts = List.of(repository.split("/", -1));
+    static Either<GhError, Path> file(Path cache, RepoSlug repository, long runId, int attempt, long jobId) {
+        List<String> parts = List.of(repository.value().split("/", -1));
         return parts.size() == 2
                         && parts.forAll(part -> NAME.matcher(part).matches() && !part.equals(".") && !part.equals(".."))
                 ? Either.right(cache.resolve("logs")
                         .resolve(parts.get(0))
                         .resolve(parts.get(1))
                         .resolve(runId + "-" + attempt + "-" + jobId + ".log"))
-                : Either.left(new GhError.UnexpectedOutput("No owner/name: " + repository));
+                : Either.left(new GhError.UnexpectedOutput("No owner/name: " + repository.value()));
     }
 
     /**

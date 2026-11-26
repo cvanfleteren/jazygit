@@ -3,12 +3,12 @@ package net.vanfleteren.jazygit.features.github.stack;
 import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.core.gh.model.PrNumber;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestStack;
 import net.vanfleteren.jazygit.core.git.Git;
 import net.vanfleteren.jazygit.core.git.process.GitFailure;
 import net.vanfleteren.jazygit.core.process.ExecutedCommand;
 import net.vanfleteren.jazygit.core.repo.BranchRef;
+import net.vanfleteren.jazygit.core.repo.PrNumber;
 import net.vanfleteren.jazygit.core.repo.RemoteName;
 import net.vanfleteren.jazygit.kernel.state.Env;
 import net.vanfleteren.jazygit.kernel.state.Failure;
@@ -43,7 +43,7 @@ public sealed interface StackCheckoutCmd extends OperationCmd {
 
         @Override
         public Option<String> subject() {
-            return Option.of("#" + stack.number());
+            return Option.of("#" + stack.number().value());
         }
 
         @Override
@@ -79,7 +79,7 @@ public sealed interface StackCheckoutCmd extends OperationCmd {
 
         @Override
         public Option<String> subject() {
-            return Option.of("#" + checkout.stack());
+            return Option.of("#" + checkout.stack().value());
         }
 
         // The branches that are there already, which move.

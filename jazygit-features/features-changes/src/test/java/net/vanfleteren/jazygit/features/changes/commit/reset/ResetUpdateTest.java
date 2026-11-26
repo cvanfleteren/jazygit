@@ -23,9 +23,9 @@ class ResetUpdateTest {
 
     private static final Commit ROOT = commit("c1", List.of());
     private static final Commit TIP = commit("c2", List.of("c1"));
-    private static final FileEntry MODIFIED = new FileEntry("a.txt", ChangeType.MODIFIED, false, true);
-    private static final FileEntry STAGED = new FileEntry("b.txt", ChangeType.ADDED, true, false);
-    private static final FileEntry UNTRACKED = new FileEntry("c.txt", ChangeType.UNTRACKED, false, true);
+    private static final FileEntry MODIFIED = new FileEntry(new RepoPath("a.txt"), ChangeType.MODIFIED, false, true);
+    private static final FileEntry STAGED = new FileEntry(new RepoPath("b.txt"), ChangeType.ADDED, true, false);
+    private static final FileEntry UNTRACKED = new FileEntry(new RepoPath("c.txt"), ChangeType.UNTRACKED, false, true);
 
     private static Commit commit(String sha, List<String> parents) {
         return Fixtures.commit(

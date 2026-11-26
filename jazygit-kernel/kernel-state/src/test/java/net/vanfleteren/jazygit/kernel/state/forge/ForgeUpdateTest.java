@@ -14,6 +14,7 @@ import net.vanfleteren.jazygit.kernel.state.Carried;
 import net.vanfleteren.jazygit.kernel.state.Cmd;
 import net.vanfleteren.jazygit.kernel.state.Env;
 import net.vanfleteren.jazygit.kernel.state.Failure;
+import net.vanfleteren.jazygit.kernel.state.FeatureId;
 import net.vanfleteren.jazygit.kernel.state.FeatureMsg;
 import net.vanfleteren.jazygit.kernel.state.FeatureUpdate;
 import net.vanfleteren.jazygit.kernel.state.KernelEvent;
@@ -35,8 +36,9 @@ class ForgeUpdateTest {
      * A repository opening with forges {@code github} and {@code forgejo}, both off until the kernel decides.
      */
     private static Model opened() {
-        Model off = FeatureUpdate.off(FeatureUpdate.off(loaded(), "github"), "forgejo");
-        return ForgeUpdate.opening(ForgeUpdate.opening(off, "github").model(), "forgejo")
+        Model off = FeatureUpdate.off(FeatureUpdate.off(loaded(), new FeatureId("github")), new FeatureId("forgejo"));
+        return ForgeUpdate.opening(
+                        ForgeUpdate.opening(off, new FeatureId("github")).model(), new FeatureId("forgejo"))
                 .model();
     }
 
@@ -57,17 +59,17 @@ class ForgeUpdateTest {
     void openingReadsWhatTheUserChoseBefore() {
         assertEquals(
                 List.of(new ReadForgeChoice()),
-                ForgeUpdate.opening(loaded(), "github").cmds());
+                ForgeUpdate.opening(loaded(), new FeatureId("github")).cmds());
     }
 
     @Test
     void theForgeOfTheHomeTurnsOnOnceEveryForgeToldAndTheChoiceWasRead() {
         Model githubTold = told(nothingRemembered(opened()), claim("github", "origin"));
-        assertFalse(githubTold.on("github"));
+        assertFalse(githubTold.on(new FeatureId("github")));
 
         Model decided = told(githubTold, claim("forgejo"));
-        assertTrue(decided.on("github"));
-        assertFalse(decided.on("forgejo"));
+        assertTrue(decided.on(new FeatureId("github")));
+        assertFalse(decided.on(new FeatureId("forgejo")));
         assertEquals(Option.of(new RemoteName("origin")), ForgeHome.of(decided));
     }
 
@@ -78,8 +80,8 @@ class ForgeUpdateTest {
         Model worktree = Carried.from(decided).into(Model.initial("repo"));
 
         assertTrue(ForgeUpdate.known(worktree));
-        assertTrue(worktree.on("github"));
-        assertFalse(worktree.on("forgejo"));
+        assertTrue(worktree.on(new FeatureId("github")));
+        assertFalse(worktree.on(new FeatureId("forgejo")));
         assertEquals(Option.of(new RemoteName("origin")), ForgeHome.of(worktree));
         // The settings panel can still ask which it is, from what the forges claimed.
         assertEquals(
@@ -94,8 +96,8 @@ class ForgeUpdateTest {
         Model worktree = Carried.from(decided).into(Model.initial("repo"));
 
         assertTrue(ForgeUpdate.known(worktree));
-        assertFalse(worktree.on("github"));
-        assertFalse(worktree.on("forgejo"));
+        assertFalse(worktree.on(new FeatureId("github")));
+        assertFalse(worktree.on(new FeatureId("forgejo")));
     }
 
     @Test
@@ -122,8 +124,8 @@ class ForgeUpdateTest {
                         List.of(candidate("github", "origin"), candidate("forgejo", "codeberg")),
                         Option.of(candidate("github", "origin")))),
                 asked.popup(ForgeChoicePopup.class));
-        assertFalse(asked.on("github"));
-        assertFalse(asked.on("forgejo"));
+        assertFalse(asked.on(new FeatureId("github")));
+        assertFalse(asked.on(new FeatureId("forgejo")));
     }
 
     @Test
@@ -132,8 +134,8 @@ class ForgeUpdateTest {
 
         Model told = told(typing, claim("github", "origin"), claim("forgejo", "codeberg"));
         assertEquals(Option.of(new Typing()), told.popup(Typing.class));
-        assertFalse(told.on("github"));
-        assertFalse(told.on("forgejo"));
+        assertFalse(told.on(new FeatureId("github")));
+        assertFalse(told.on(new FeatureId("forgejo")));
         // The settings can still ask.
         assertEquals(2, told.part(ForgeHome.PART).candidates().size());
     }
@@ -148,8 +150,8 @@ class ForgeUpdateTest {
         Model asked = told(nothingRemembered(opened()), claim("github", "origin"), claim("forgejo", "codeberg"));
 
         Next picked = Update.update(asked, new ForgeMsg.Picked(1));
-        assertTrue(picked.model().on("forgejo"));
-        assertFalse(picked.model().on("github"));
+        assertTrue(picked.model().on(new FeatureId("forgejo")));
+        assertFalse(picked.model().on(new FeatureId("github")));
         assertEquals(Option.none(), picked.model().popup(ForgeChoicePopup.class));
         assertEquals(Option.of(new RemoteName("codeberg")), ForgeHome.of(picked.model()));
         assertTrue(picked.cmds().contains(new SaveForgeChoice(Option.of(new RemoteName("codeberg")))));
@@ -160,13 +162,13 @@ class ForgeUpdateTest {
         Model asked = told(nothingRemembered(opened()), claim("github", "origin"), claim("forgejo", "codeberg"));
 
         Next none = Update.update(asked, new ForgeMsg.Chosen(Option.none()));
-        assertFalse(none.model().on("github"));
+        assertFalse(none.model().on(new FeatureId("github")));
         assertTrue(none.cmds().contains(new SaveForgeChoice(Option.none())));
 
         Next later = Update.update(asked, new ForgeMsg.Later());
         assertEquals(Option.none(), later.model().popup(ForgeChoicePopup.class));
         assertEquals(List.empty(), later.cmds());
-        assertFalse(later.model().on("github"));
+        assertFalse(later.model().on(new FeatureId("github")));
     }
 
     @Test
@@ -180,7 +182,7 @@ class ForgeUpdateTest {
                 asked.popup(ForgeChoicePopup.class));
 
         Model none = Update.update(asked, new ForgeMsg.Chosen(Option.none())).model();
-        assertFalse(none.on("github"));
+        assertFalse(none.on(new FeatureId("github")));
         assertEquals(Option.none(), ForgeHome.of(none));
     }
 
@@ -205,9 +207,9 @@ class ForgeUpdateTest {
         Next origin = Update.update(asked, new ForgeMsg.Picked(0));
 
         assertEquals(Option.of(new RemoteName("origin")), ForgeHome.of(origin.model()));
-        assertTrue(origin.model().on("forgejo"));
+        assertTrue(origin.model().on(new FeatureId("forgejo")));
         // Once, and only on, as it reads anew what it read of the home before (ADR 177).
-        assertEquals(List.of(new KernelEvent.Switched("forgejo", true)), seen(origin));
+        assertEquals(List.of(new KernelEvent.Switched(new FeatureId("forgejo"), true)), seen(origin));
     }
 
     @Test
@@ -218,7 +220,7 @@ class ForgeUpdateTest {
         Next upstream = Update.update(asked, new ForgeMsg.Picked(1));
 
         assertEquals(Option.of(new RemoteName("upstream")), ForgeHome.of(upstream.model()));
-        assertTrue(upstream.model().on("forgejo"));
+        assertTrue(upstream.model().on(new FeatureId("forgejo")));
         assertEquals(List.empty(), seen(upstream));
     }
 
@@ -245,7 +247,7 @@ class ForgeUpdateTest {
                 .model();
 
         Model decided = told(remembered, claim("github", "origin"), claim("forgejo", "codeberg"));
-        assertTrue(decided.on("forgejo"));
+        assertTrue(decided.on(new FeatureId("forgejo")));
         assertEquals(Option.none(), decided.popup(ForgeChoicePopup.class));
     }
 

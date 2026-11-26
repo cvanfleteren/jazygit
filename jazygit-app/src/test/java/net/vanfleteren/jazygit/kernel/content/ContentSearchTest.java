@@ -9,6 +9,7 @@ import io.vavr.control.Option;
 import java.util.ArrayList;
 import java.util.concurrent.atomic.AtomicReference;
 import net.vanfleteren.jazygit.core.git.model.DiffText;
+import net.vanfleteren.jazygit.core.repo.RepoPath;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.features.changes.panes.commits.CommitsPanel;
 import net.vanfleteren.jazygit.features.changes.panes.files.FilesPanel;
@@ -304,9 +305,15 @@ class ContentSearchTest {
                 net.vanfleteren.jazygit.core.git.model.SampleData.git(),
                 List.of(
                         new net.vanfleteren.jazygit.core.git.model.FileEntry(
-                                "a.txt", net.vanfleteren.jazygit.core.git.model.ChangeType.MODIFIED, true, false),
+                                new RepoPath("a.txt"),
+                                net.vanfleteren.jazygit.core.git.model.ChangeType.MODIFIED,
+                                true,
+                                false),
                         new net.vanfleteren.jazygit.core.git.model.FileEntry(
-                                "b.txt", net.vanfleteren.jazygit.core.git.model.ChangeType.MODIFIED, false, true)));
+                                new RepoPath("b.txt"),
+                                net.vanfleteren.jazygit.core.git.model.ChangeType.MODIFIED,
+                                false,
+                                true)));
         Driven driven = new Driven(selected, FilesPanel.PANE, FileDiffsSource.UNSTAGED.id());
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(driven::render)) {
             SettledPilot.focus(testRunner, driven.area().id());
@@ -322,10 +329,10 @@ class ContentSearchTest {
 
     private static final Anchor THREAD = new Anchor.Thread(
             new net.vanfleteren.jazygit.kernel.state.diff.RemarkThread.Id("T1"),
-            Option.of(new Anchor.OnLine("a.txt", DiffSide.NEW, 1)));
+            Option.of(new Anchor.OnLine(new RepoPath("a.txt"), DiffSide.NEW, 1)));
 
     private static Anchor onNew(int line) {
-        return new Anchor.OnLine("a.txt", DiffSide.NEW, line);
+        return new Anchor.OnLine(new RepoPath("a.txt"), DiffSide.NEW, line);
     }
 
     private static Model commit(DiffStyle style) {

@@ -10,8 +10,6 @@ import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.time.Instant;
 import java.util.stream.Collectors;
-import net.vanfleteren.jazygit.core.gh.model.GhBranch;
-import net.vanfleteren.jazygit.core.gh.model.PrNumber;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestPreview;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestSummary;
@@ -61,7 +59,7 @@ public class PullRequestContentTest {
             ViewMsg.ContentScrolled next = (ViewMsg.ContentScrolled) dispatched.getLast();
             Anchor onThread = new Anchor.Thread(
                     new net.vanfleteren.jazygit.kernel.state.diff.RemarkThread.Id("T1"),
-                    Option.of(new Anchor.OnLine("a.txt", DiffSide.NEW, 1)));
+                    Option.of(new Anchor.OnLine(new RepoPath("a.txt"), DiffSide.NEW, 1)));
             assertEquals(Option.of(onThread), next.to().cursor());
 
             drawn.set(Update.update(model, next).model());
@@ -81,7 +79,7 @@ public class PullRequestContentTest {
             SettledPilot.of(testRunner).press('c');
             SettledPilot.of(testRunner).pause();
             assertEquals(
-                    new Anchor.OnLine("a.txt", DiffSide.NEW, 1),
+                    new Anchor.OnLine(new RepoPath("a.txt"), DiffSide.NEW, 1),
                     ((net.vanfleteren.jazygit.features.github.review.ReviewMsg.StartAsked) dispatched.getLast())
                             .at()
                             .cursor());
@@ -98,7 +96,7 @@ public class PullRequestContentTest {
                 msg -> dispatched.add(net.vanfleteren.jazygit.app.GitHubKeys.unwrapped(msg)));
         Model model = pullRequestDiff();
         AreaId area = reviewing.areaOfPane(model, FilesPanel.PANE).get();
-        Anchor.OnLine line = new Anchor.OnLine("a.txt", DiffSide.NEW, 1);
+        Anchor.OnLine line = new Anchor.OnLine(new RepoPath("a.txt"), DiffSide.NEW, 1);
 
         java.util.concurrent.atomic.AtomicReference<Model> drawn =
                 new java.util.concurrent.atomic.AtomicReference<>(model);
@@ -311,7 +309,7 @@ public class PullRequestContentTest {
      */
     static Model pullRequestDiff(String body, String diff) {
         Changes of = pullRequestChanges();
-        CommitFile file = new CommitFile("a.txt", ChangeType.MODIFIED);
+        CommitFile file = new CommitFile(new RepoPath("a.txt"), ChangeType.MODIFIED);
         Model rich = PullRequestContentTest.withGitHub()
                 .mapPreferences(preferences ->
                         preferences.withSettings(preferences.settings().withDiffStyle(DiffStyle.RICH)));
@@ -345,8 +343,8 @@ public class PullRequestContentTest {
     }
 
     private static Changes pullRequestChanges() {
-        return new Changes.OfPullRequest(
-                new PullRequestCommits(7, "owner/repo", "", new Sha("b".repeat(40)), new Sha("a".repeat(40))));
+        return new Changes.OfPullRequest(new PullRequestCommits(
+                new PrNumber(7), new RepoSlug("owner/repo"), "", new Sha("b".repeat(40)), new Sha("a".repeat(40))));
     }
 
     /**
@@ -356,7 +354,7 @@ public class PullRequestContentTest {
     static Msg remarksLoaded(String body) {
         net.vanfleteren.jazygit.core.gh.model.ReviewThread thread =
                 new net.vanfleteren.jazygit.core.gh.model.ReviewThread(
-                        "a.txt",
+                        new RepoPath("a.txt"),
                         net.vanfleteren.jazygit.core.gh.model.ReviewThread.Side.RIGHT,
                         Option.of(1),
                         Option.none(),
@@ -390,11 +388,11 @@ public class PullRequestContentTest {
     @Test
     void aPullRequestShowsLikeACommitWithItsBranchesItsDescriptionAndItsDiff() {
         PullRequestSummary pr = new PullRequestSummary(
-                "owner/repo",
+                new RepoSlug("owner/repo"),
                 new PrNumber(12),
                 "Fix the login",
                 "alice",
-                new GhBranch("fix/login"),
+                new ForgeBranch("fix/login"),
                 false,
                 true,
                 PullRequest.Checks.NONE,
@@ -404,7 +402,7 @@ public class PullRequestContentTest {
 
         List<String> lines = PullRequestBody.text(
                         pr,
-                        new PullRequestPreview(new GhBranch("main"), "Why:\r\n\r\nit broke", "+fixed\n", false),
+                        new PullRequestPreview(new ForgeBranch("main"), "Why:\r\n\r\nit broke", "+fixed\n", false),
                         Theme.SpanStyles.NONE)
                 .lines()
                 .stream()

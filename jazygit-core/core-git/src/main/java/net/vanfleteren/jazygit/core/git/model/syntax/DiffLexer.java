@@ -23,8 +23,9 @@ public record DiffLexer() implements Highlighter {
 
     @Override
     public List<List<Option<List<Token>>>> tokens(FileDiff file) {
-        Option<Language> language =
-                file.type() == ChangeType.CONFLICTED ? Option.none() : Language.of(file.path(), firstLine(file));
+        Option<Language> language = file.type() == ChangeType.CONFLICTED
+                ? Option.none()
+                : Language.of(file.path().value(), firstLine(file));
         return file.hunks()
                 .map(hunk -> language.filter(ignored -> hunk.numbered())
                         .map(known -> hunk(known, hunk))

@@ -12,6 +12,7 @@ import io.vavr.control.Option;
 import java.util.stream.Collectors;
 import net.vanfleteren.jazygit.core.git.model.FileVersion;
 import net.vanfleteren.jazygit.core.git.model.ParsedDiff;
+import net.vanfleteren.jazygit.core.repo.RepoPath;
 import net.vanfleteren.jazygit.kernel.state.diff.Anchor;
 import net.vanfleteren.jazygit.kernel.state.diff.DiffSide;
 import net.vanfleteren.jazygit.kernel.state.diff.Expansion;
@@ -354,11 +355,23 @@ class RenderedJsonTest {
 
         assertEquals(
                 List.of(
-                        new Anchor.File("a.json"),
-                        new Anchor.Node("a.json", "/few", new Anchor.OnLine("a.json", DiffSide.NEW, 2)),
-                        new Anchor.Node("a.json", "/few/a", new Anchor.OnLine("a.json", DiffSide.NEW, 3)),
-                        new Anchor.Node("a.json", "/few/b", new Anchor.OnLine("a.json", DiffSide.NEW, 4)),
-                        new Anchor.Node("a.json", "/n", new Anchor.OnLine("a.json", DiffSide.NEW, 6))),
+                        new Anchor.File(new RepoPath("a.json")),
+                        new Anchor.Node(
+                                new RepoPath("a.json"),
+                                "/few",
+                                new Anchor.OnLine(new RepoPath("a.json"), DiffSide.NEW, 2)),
+                        new Anchor.Node(
+                                new RepoPath("a.json"),
+                                "/few/a",
+                                new Anchor.OnLine(new RepoPath("a.json"), DiffSide.NEW, 3)),
+                        new Anchor.Node(
+                                new RepoPath("a.json"),
+                                "/few/b",
+                                new Anchor.OnLine(new RepoPath("a.json"), DiffSide.NEW, 4)),
+                        new Anchor.Node(
+                                new RepoPath("a.json"),
+                                "/n",
+                                new Anchor.OnLine(new RepoPath("a.json"), DiffSide.NEW, 6))),
                 drawn.stops().map(stop -> stop.mark().anchor()));
     }
 
@@ -386,7 +399,7 @@ class RenderedJsonTest {
                 List.of("Not rendered: line 1, column 4, unexpected ','", "+ [1,,", "     ^", "   2]"),
                 drawnText(drawn).tail());
         assertEquals(
-                List.of(new Anchor.File("a.json")),
+                List.of(new Anchor.File(new RepoPath("a.json"))),
                 drawn.stops().map(stop -> stop.mark().anchor()));
     }
 
@@ -417,7 +430,7 @@ class RenderedJsonTest {
         return RichDiff.drawn(
                 new Expansion.Folded(
                         new ParsedDiff(List.empty(), List.of(version.of(whole))),
-                        HashMap.of("a.json", Expansion.Fold.of(version, cut, 1, true, nodes))),
+                        HashMap.of(new RepoPath("a.json"), Expansion.Fold.of(version, cut, 1, true, nodes))),
                 Option.none(),
                 Option.none(),
                 RichDiff.Drawing.of(Theme.SpanStyles.NONE).withWidth(40));

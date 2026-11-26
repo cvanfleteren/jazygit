@@ -5,6 +5,7 @@ import io.vavr.control.Option;
 import net.vanfleteren.jazygit.core.git.files.Index;
 import net.vanfleteren.jazygit.core.git.model.ConflictFile;
 import net.vanfleteren.jazygit.core.git.model.ConflictTools;
+import net.vanfleteren.jazygit.core.repo.RepoPath;
 import net.vanfleteren.jazygit.kernel.state.Cmd;
 import net.vanfleteren.jazygit.kernel.state.Env;
 import net.vanfleteren.jazygit.kernel.state.Failure;
@@ -14,7 +15,7 @@ import net.vanfleteren.jazygit.kernel.state.Msg;
  * Reads, for the resolve dialog of the file at {@code path}, what it can be handed to, where its first conflict
  * starts, and, when mergiraf runs, how it stands against the conflict git wrote of it (ADR 201).
  */
-public record ReadToolsCmd(String path) implements Cmd {
+public record ReadToolsCmd(RepoPath path) implements Cmd {
 
     @Override
     public Msg run(Env env) {

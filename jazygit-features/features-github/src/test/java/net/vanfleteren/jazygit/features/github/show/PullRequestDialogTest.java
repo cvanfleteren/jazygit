@@ -22,19 +22,21 @@ import java.util.ArrayList;
 import java.util.function.Supplier;
 import java.util.function.UnaryOperator;
 import net.vanfleteren.jazygit.core.gh.model.CheckRun;
-import net.vanfleteren.jazygit.core.gh.model.GhBranch;
 import net.vanfleteren.jazygit.core.gh.model.MergeMethod;
-import net.vanfleteren.jazygit.core.gh.model.PrNumber;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest.Review;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestDetails;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestDetails.*;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestStack;
+import net.vanfleteren.jazygit.core.gh.model.StackId;
 import net.vanfleteren.jazygit.core.gh.timing.CheckHistory;
 import net.vanfleteren.jazygit.core.gh.timing.CheckSample;
 import net.vanfleteren.jazygit.core.repo.BranchName;
+import net.vanfleteren.jazygit.core.repo.ForgeBranch;
+import net.vanfleteren.jazygit.core.repo.PrNumber;
 import net.vanfleteren.jazygit.core.repo.RemoteName;
+import net.vanfleteren.jazygit.core.repo.RepoSlug;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.features.github.checks.ChecksMsg;
 import net.vanfleteren.jazygit.features.github.checks.branches.BranchChecksMsg;
@@ -62,13 +64,13 @@ class PullRequestDialogTest {
 
     private static final Instant NOW = Instant.parse("2026-10-13T12:00:00Z");
     private static final PullRequest PR = new PullRequest(
-            new PrNumber(42), new GhBranch("support_rename"), true, Checks.FAILING, Review.CHANGES_REQUESTED);
+            new PrNumber(42), new ForgeBranch("support_rename"), true, Checks.FAILING, Review.CHANGES_REQUESTED);
     private static final PullRequestDetails DETAILS = new PullRequestDetails(
             new PrNumber(42),
             "Add rename support to the files panel",
             "cvf",
             new Status(State.OPEN, true, Mergeable.MERGEABLE),
-            new Branches(new GhBranch("support_rename"), new GhBranch("main")),
+            new Branches(new ForgeBranch("support_rename"), new ForgeBranch("main")),
             new Activity(Instant.parse("2026-10-10T08:00:00Z"), Instant.parse("2026-10-12T09:00:00Z")),
             new Size(120, 34, 7, 3),
             new Conversation(
@@ -91,7 +93,7 @@ class PullRequestDialogTest {
             "Ready",
             "cvf",
             new Status(State.OPEN, false, Mergeable.MERGEABLE),
-            new Branches(new GhBranch("support_rename"), new GhBranch("main")),
+            new Branches(new ForgeBranch("support_rename"), new ForgeBranch("main")),
             new Activity(NOW, NOW),
             new Size(1, 1, 1, 1),
             new Conversation(Review.APPROVED, List.empty(), 0, ReviewThreads.NONE, List.empty()),
@@ -102,8 +104,8 @@ class PullRequestDialogTest {
 
     // DETAILS at commit head, into base, not known to be behind it.
     private static PullRequestDetails at(String head, String base) {
-        return DETAILS.withBranches(
-                new Branches(DETAILS.branches().head(), new GhBranch(base), Option.of(new Sha(head)), Option.none()));
+        return DETAILS.withBranches(new Branches(
+                DETAILS.branches().head(), new ForgeBranch(base), Option.of(new Sha(head)), Option.none()));
     }
 
     /**
@@ -122,7 +124,7 @@ class PullRequestDialogTest {
                 READY.conversation(),
                 checks,
                 Option.none(),
-                "owner/repo");
+                new RepoSlug("owner/repo"));
     }
 
     /**
@@ -166,7 +168,7 @@ class PullRequestDialogTest {
                                 Duration.ofSeconds(254),
                                 "pull_request",
                                 NOW.minusSeconds(3600 + i))));
-        return CheckTimes.of("owner/repo", CheckHistory.EMPTY.with(samples, NOW), Option.none());
+        return CheckTimes.of(new RepoSlug("owner/repo"), CheckHistory.EMPTY.with(samples, NOW), Option.none());
     }
 
     private String timedScreen(List<Check> checks, CheckTimes times) throws Exception {
@@ -300,7 +302,7 @@ class PullRequestDialogTest {
     @Test
     void aStackedPullRequestSaysWhatMergingItMergesToo() throws Exception {
         PullRequestDetails stacked = stacked(new PullRequestStack(
-                96,
+                new StackId(96),
                 3,
                 3,
                 List.of(
@@ -320,7 +322,7 @@ class PullRequestDialogTest {
     @Test
     void theOnesBelowInAStackThatAreMergedAlreadyAreNotMergedAgain() throws Exception {
         PullRequestDetails stacked = stacked(new PullRequestStack(
-                96,
+                new StackId(96),
                 3,
                 3,
                 List.of(
@@ -338,7 +340,7 @@ class PullRequestDialogTest {
     @Test
     void aStackWhoseOnesBelowAreAllMergedMergesOnlyItself() throws Exception {
         PullRequestDetails stacked = stacked(new PullRequestStack(
-                9,
+                new StackId(9),
                 2,
                 2,
                 List.of(
@@ -370,19 +372,19 @@ class PullRequestDialogTest {
                 READY.conversation(),
                 READY.checks(),
                 Option.of(stack),
-                "");
+                new RepoSlug(""));
     }
 
     @Test
     void theBottomOfAStackMergesOnlyItself() throws Exception {
         PullRequest bottom = new PullRequest(
                 new PrNumber(42),
-                new GhBranch("support_rename"),
+                new ForgeBranch("support_rename"),
                 false,
                 Checks.PASSING,
                 Review.APPROVED,
                 Option.of(new PullRequestStack(
-                        96,
+                        new StackId(96),
                         1,
                         2,
                         List.of(
@@ -552,7 +554,7 @@ class PullRequestDialogTest {
                 "t",
                 "",
                 new Status(State.OPEN, false, Mergeable.UNKNOWN),
-                new Branches(new GhBranch("a"), new GhBranch("b")),
+                new Branches(new ForgeBranch("a"), new ForgeBranch("b")),
                 new Activity(NOW, NOW),
                 new Size(0, 0, 0, 1),
                 new Conversation(Review.NONE, List.empty(), 0, ReviewThreads.NONE, List.empty()),
@@ -678,7 +680,7 @@ class PullRequestDialogTest {
                         + "that it really does not fit",
                 "cvf",
                 new Status(State.OPEN, false, Mergeable.UNKNOWN),
-                new Branches(new GhBranch("a"), new GhBranch("b")),
+                new Branches(new ForgeBranch("a"), new ForgeBranch("b")),
                 new Activity(NOW, NOW),
                 new Size(0, 0, 0, 1),
                 new Conversation(
@@ -803,8 +805,8 @@ class PullRequestDialogTest {
     @Test
     void theFilesChangedAreListedForAnOpenPullRequestAtCommitsThatAreKnown() throws Exception {
         PullRequestDetails known = READY.withBranches(new Branches(
-                new GhBranch("support_rename"),
-                new GhBranch("main"),
+                new ForgeBranch("support_rename"),
+                new ForgeBranch("main"),
                 Sha.parse("a".repeat(40)),
                 Option.none(),
                 Sha.parse("b".repeat(40))));
@@ -949,7 +951,7 @@ class PullRequestDialogTest {
     @Test
     void aStackedPullRequestSaysGitHubHasNoAutoMergeForIt() throws Exception {
         PullRequestDetails blocked = stacked(new PullRequestStack(
-                        96, 1, 1, List.of(new PullRequestStack.Entry(1, new PrNumber(42), State.OPEN))))
+                        new StackId(96), 1, 1, List.of(new PullRequestStack.Entry(1, new PrNumber(42), State.OPEN))))
                 .withMerging(new PullRequestDetails.Merging(
                         PullRequestDetails.MergeState.BLOCKED, true, Option.none(), true, false));
 
@@ -986,7 +988,7 @@ class PullRequestDialogTest {
     @Test
     void mergingInAStackTellsTheOnesBelowAreMergedToo() throws Exception {
         PullRequestDetails stacked = stacked(new PullRequestStack(
-                96,
+                new StackId(96),
                 3,
                 3,
                 List.of(

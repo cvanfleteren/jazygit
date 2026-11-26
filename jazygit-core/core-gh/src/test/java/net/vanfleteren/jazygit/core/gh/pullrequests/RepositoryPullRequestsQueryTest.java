@@ -10,8 +10,6 @@ import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
 import java.time.Instant;
-import net.vanfleteren.jazygit.core.gh.model.GhBranch;
-import net.vanfleteren.jazygit.core.gh.model.PrNumber;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest.Review;
@@ -20,8 +18,12 @@ import net.vanfleteren.jazygit.core.gh.model.PullRequestList;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestStack;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestSummary;
 import net.vanfleteren.jazygit.core.gh.model.RepositoryPullRequests;
+import net.vanfleteren.jazygit.core.gh.model.StackId;
 import net.vanfleteren.jazygit.core.gh.process.GhError;
 import net.vanfleteren.jazygit.core.gh.process.GhProcess;
+import net.vanfleteren.jazygit.core.repo.ForgeBranch;
+import net.vanfleteren.jazygit.core.repo.PrNumber;
+import net.vanfleteren.jazygit.core.repo.RepoSlug;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import org.junit.jupiter.api.Test;
 
@@ -45,14 +47,14 @@ class RepositoryPullRequestsQueryTest {
     void theOpenPullRequestsOfTheRepositoryWithHowManyThereAre() {
         assertEquals(
                 Either.right(new RepositoryPullRequests(
-                        "owner/repo",
+                        new RepoSlug("owner/repo"),
                         new PullRequestList(
                                 List.of(new PullRequestSummary(
-                                        "owner/repo",
+                                        new RepoSlug("owner/repo"),
                                         new PrNumber(7),
                                         "WIP",
                                         "",
-                                        new GhBranch("patch-1"),
+                                        new ForgeBranch("patch-1"),
                                         true,
                                         true,
                                         Checks.NONE,
@@ -62,7 +64,7 @@ class RepositoryPullRequestsQueryTest {
                                         Option.none(),
                                         Option.none(),
                                         Option.none(),
-                                        Option.of(new GhBranch("main")))),
+                                        Option.of(new ForgeBranch("main")))),
                                 1),
                         Option.of("bob"),
                         Option.of(new PrNumber(7)))),
@@ -95,14 +97,22 @@ class RepositoryPullRequestsQueryTest {
     void aStackedPullRequestInTheListSaysWhereItSitsInItsStack() {
         assertEquals(
                 Option.of(new PullRequestStack(
-                        96,
+                        new StackId(96),
                         2,
                         2,
                         List.of(
                                 new PullRequestStack.Entry(
-                                        1, new PrNumber(94), State.MERGED, new GhBranch("b94"), new GhBranch("main")),
+                                        1,
+                                        new PrNumber(94),
+                                        State.MERGED,
+                                        new ForgeBranch("b94"),
+                                        new ForgeBranch("main")),
                                 new PullRequestStack.Entry(
-                                        2, new PrNumber(95), State.OPEN, new GhBranch("b95"), new GhBranch("b94"))))),
+                                        2,
+                                        new PrNumber(95),
+                                        State.OPEN,
+                                        new ForgeBranch("b95"),
+                                        new ForgeBranch("b94"))))),
                 read("{ \"login\": \"bob\" }", "", 1, summary(95, "null", NO_SUITES, STACKED))
                         .get()
                         .open()
@@ -152,7 +162,7 @@ class RepositoryPullRequestsQueryTest {
 
         assertEquals(
                 Option.of(new PullRequest.Commits(
-                        "owner/repo",
+                        new RepoSlug("owner/repo"),
                         "https://github.com/owner/repo/pull/95",
                         new Sha("b".repeat(40)),
                         new Sha("a".repeat(40)))),

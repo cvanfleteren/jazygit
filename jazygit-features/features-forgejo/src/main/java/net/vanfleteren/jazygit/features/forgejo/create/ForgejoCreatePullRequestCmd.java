@@ -7,6 +7,8 @@ import net.vanfleteren.jazygit.core.forgejo.ForgejoNewPullRequest;
 import net.vanfleteren.jazygit.core.forgejo.ForgejoRepository;
 import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.BranchRef;
+import net.vanfleteren.jazygit.core.repo.ForgeBranch;
+import net.vanfleteren.jazygit.core.repo.PrNumber;
 import net.vanfleteren.jazygit.core.repo.RemoteBranch;
 import net.vanfleteren.jazygit.core.repo.RemoteName;
 import net.vanfleteren.jazygit.features.forgejo.ForgejoFailure;
@@ -123,14 +125,16 @@ public sealed interface ForgejoCreatePullRequestCmd extends Cmd {
                     ForgejoNewPullRequest.head(home, repository, target.branch().value());
             // A head with the owner before it is in a fork, which a 404 then says must be one of the home's.
             Option<String> fork = Option.when(!head.equals(target.branch().value()), () -> named(repository));
-            return forgejo.createPullRequest(home, new ForgejoNewPullRequest(head, base.value(), title, body, draft))
+            return forgejo.createPullRequest(
+                            home, new ForgejoNewPullRequest(head, new ForgeBranch(base.value()), title, body, draft))
                     .fold(
                             error -> refused(error, home, fork),
                             created -> new ForgejoCreatePullRequestMsg.Created(this, created));
         }
 
         private Msg refused(ForgejoError error, ForgejoRepository home, Option<String> fork) {
-            Option<Long> existing = error instanceof ForgejoError.Refused refused ? refused.existing() : Option.none();
+            Option<PrNumber> existing =
+                    error instanceof ForgejoError.Refused refused ? refused.existing() : Option.none();
             return existing.<Msg>map(number -> new ForgejoCreatePullRequestMsg.AlreadyOpen(this, number))
                     .getOrElse(() -> failed(new CreateFailure.Refused(error, home.host(), named(home), fork)));
         }

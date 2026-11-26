@@ -8,6 +8,7 @@ import net.vanfleteren.jazygit.core.gh.model.PullRequestDetails.Check;
 import net.vanfleteren.jazygit.core.gh.timing.CheckTimings;
 import net.vanfleteren.jazygit.core.repo.BranchRef;
 import net.vanfleteren.jazygit.core.repo.RemoteBranch;
+import net.vanfleteren.jazygit.core.repo.RepoSlug;
 import net.vanfleteren.jazygit.features.github.checks.timings.CheckTimes;
 import net.vanfleteren.jazygit.features.github.checks.timings.ChecksReached;
 import net.vanfleteren.jazygit.features.github.checks.timings.PendingChecks;
@@ -187,7 +188,7 @@ public record ChecksPopup(
     /**
      * The repository the checks read are of, as {@code owner/name}; none while none are read.
      */
-    public Option<String> repository() {
+    public Option<RepoSlug> repository() {
         return checks.flatMap(Either::toOption).map(PendingChecks::repository);
     }
 

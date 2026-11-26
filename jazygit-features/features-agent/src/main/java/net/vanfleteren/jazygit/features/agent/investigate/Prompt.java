@@ -4,6 +4,7 @@ import io.vavr.collection.LinkedHashMap;
 import io.vavr.collection.List;
 import io.vavr.collection.Map;
 import io.vavr.control.Option;
+import net.vanfleteren.jazygit.core.repo.RepoSlug;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.kernel.settings.Programs;
 import net.vanfleteren.jazygit.kernel.state.build.FailedBuild;
@@ -45,14 +46,14 @@ public final class Prompt {
     static Map<String, String> values(FailedBuild build, Option<ForgeAccount> account) {
         return LinkedHashMap.of(
                 REPO,
-                build.repository().getOrElse(""),
+                build.repository().map(RepoSlug::value).getOrElse(""),
                 BRANCH,
                 build.branch().value(),
                 COMMIT,
                 build.commit().map(Sha::value).getOrElse(""),
                 PR,
                 build.changeRequest()
-                        .map(request -> String.valueOf(request.number()))
+                        .map(request -> String.valueOf(request.number().value()))
                         .getOrElse(""),
                 FAILURES,
                 failures(build),
@@ -85,7 +86,7 @@ public final class Prompt {
      * jazygit's own prompt.
      */
     private static String standard(FailedBuild build, Option<ForgeAccount> account) {
-        String where = build.repository().map(repo -> " of " + repo).getOrElse("");
+        String where = build.repository().map(repo -> " of " + repo.value()).getOrElse("");
         String commit = build.commit()
                 .map(sha -> " at commit " + sha.value())
                 .getOrElse(" at the tip of the branch on the remote");
@@ -93,7 +94,7 @@ public final class Prompt {
                 .map(sha -> "git log " + sha.value() + "..HEAD and git log HEAD.." + sha.value())
                 .getOrElse("git log @{upstream}..HEAD and git log HEAD..@{upstream}");
         String request = build.changeRequest()
-                .map(change -> " (" + change.noun() + " #" + change.number() + ")")
+                .map(change -> " (" + change.noun() + " #" + change.number().value() + ")")
                 .getOrElse("");
         return "The CI build of branch " + build.branch().value() + where + request + " failed," + commit + ".\n"
                 + "That build is of the branch on the forge, and may differ from what is checked out here: local"

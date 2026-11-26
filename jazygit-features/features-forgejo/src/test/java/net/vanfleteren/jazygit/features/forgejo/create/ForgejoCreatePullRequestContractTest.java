@@ -10,12 +10,14 @@ import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.BranchRef;
 import net.vanfleteren.jazygit.core.repo.RemoteBranch;
 import net.vanfleteren.jazygit.core.repo.RemoteRef;
+import net.vanfleteren.jazygit.core.repo.RemoteUrl;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.features.branches.branch.pullrequest.AfterPush;
 import net.vanfleteren.jazygit.features.branches.branch.pullrequest.CreatePullRequestCmd.ReadTitle;
 import net.vanfleteren.jazygit.features.branches.branch.pullrequest.CreatePullRequestContract;
 import net.vanfleteren.jazygit.features.branches.branch.pullrequest.FormOpening;
 import net.vanfleteren.jazygit.features.forgejo.pulls.PullRequestFixtures;
+import net.vanfleteren.jazygit.kernel.state.FeatureId;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.Msg;
 import net.vanfleteren.jazygit.kernel.state.TestModels;
@@ -43,8 +45,8 @@ class ForgejoCreatePullRequestContractTest extends CreatePullRequestContract {
                 .model()
                 .withPart(
                         ForgeHome.PART,
-                        ForgeHome.NONE.deciding(
-                                Option.of(new ForgeCandidate("forgejo", "Forgejo", ORIGIN, PullRequestFixtures.URL))));
+                        ForgeHome.NONE.deciding(Option.of(new ForgeCandidate(
+                                new FeatureId("forgejo"), "Forgejo", ORIGIN, new RemoteUrl(PullRequestFixtures.URL)))));
     }
 
     /**

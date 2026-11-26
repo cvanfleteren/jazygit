@@ -11,6 +11,7 @@ import java.util.ArrayList;
 import java.util.concurrent.atomic.AtomicReference;
 import net.vanfleteren.jazygit.core.git.model.DiffText;
 import net.vanfleteren.jazygit.core.git.model.FileContent;
+import net.vanfleteren.jazygit.core.repo.RepoPath;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.features.changes.diff.ExpandMsg;
 import net.vanfleteren.jazygit.features.changes.diff.VersionMsg;
@@ -151,7 +152,8 @@ class GoToLineTest {
                     .map(ExpandMsg.Asked.class::cast)
                     .single();
             assertEquals(
-                    new Anchor.Gap("a.txt", 94, Option.some(105)), asked.at().cursor());
+                    new Anchor.Gap(new RepoPath("a.txt"), 94, Option.some(105)),
+                    asked.at().cursor());
 
             ReadWholeFile read = driven.cmds.stream()
                     .filter(ReadWholeFile.class::isInstance)
@@ -239,7 +241,9 @@ class GoToLineTest {
                     .filter(ExpandMsg.Asked.class::isInstance)
                     .map(ExpandMsg.Asked.class::cast)
                     .single();
-            assertEquals(new Anchor.Gap("a.txt", 1, Option.some(11)), asked.at().cursor());
+            assertEquals(
+                    new Anchor.Gap(new RepoPath("a.txt"), 1, Option.some(11)),
+                    asked.at().cursor());
             assertEquals(ExpandMsg.Toward.ALL, asked.toward());
 
             ReadWholeFile read = driven.cmds.stream()
@@ -274,13 +278,13 @@ class GoToLineTest {
             driven.type(testRunner, "[:19");
             driven.press(testRunner, KeyCode.ENTER);
             assertEquals(
-                    Option.of(new Anchor.OnLine("a.txt", DiffSide.OLD, 19)),
+                    Option.of(new Anchor.OnLine(new RepoPath("a.txt"), DiffSide.OLD, 19)),
                     driven.lastScrolled().cursor());
 
             driven.type(testRunner, ":5");
             driven.press(testRunner, KeyCode.ENTER);
             assertEquals(
-                    Option.of(new Anchor.OnLine("a.txt", DiffSide.OLD, 17)),
+                    Option.of(new Anchor.OnLine(new RepoPath("a.txt"), DiffSide.OLD, 17)),
                     driven.lastScrolled().cursor());
             assertTrue(driven.screen(testRunner).contains("line 5 is not shown · at 17"), driven.screen(testRunner));
             assertTrue(List.ofAll(driven.dispatched)
@@ -328,7 +332,7 @@ class GoToLineTest {
             driven.type(testRunner, ":20");
             driven.press(testRunner, KeyCode.ENTER);
             assertEquals(
-                    Option.of(new Anchor.OnLine("a.txt", DiffSide.OLD, 20)),
+                    Option.of(new Anchor.OnLine(new RepoPath("a.txt"), DiffSide.OLD, 20)),
                     driven.lastScrolled().cursor());
         }
     }
@@ -359,7 +363,8 @@ class GoToLineTest {
         Model shown = TestModels.loaded()
                 .mapRepoView(view -> view.mapFiles(files -> files.withShown(FilesShown.ALL))
                         .mapFiles(files -> files.withUnchanged(Option.of(new UnchangedNode.File(new Preview<>(
-                                "README.md", new Loadable.Loaded<>(new FileContent.Text(DiffText.of(readme)))))))));
+                                new RepoPath("README.md"),
+                                new Loadable.Loaded<>(new FileContent.Text(DiffText.of(readme)))))))));
         Model rendered =
                 Update.update(shown, new VersionMsg.FilesRenderToggled()).model();
         Driven driven = new Driven(rendered, FilesPanel.PANE, Option.of(UnchangedSource.AREA.id()), 100);
@@ -383,7 +388,8 @@ class GoToLineTest {
         Model shown = TestModels.loaded()
                 .mapRepoView(view -> view.mapFiles(files -> files.withShown(FilesShown.ALL))
                         .mapFiles(files -> files.withUnchanged(Option.of(new UnchangedNode.File(new Preview<>(
-                                "data.json", new Loadable.Loaded<>(new FileContent.Text(DiffText.of(json)))))))));
+                                new RepoPath("data.json"),
+                                new Loadable.Loaded<>(new FileContent.Text(DiffText.of(json)))))))));
         Model rendered =
                 Update.update(shown, new VersionMsg.FilesRenderToggled()).model();
         Driven driven = new Driven(rendered, FilesPanel.PANE, Option.of(UnchangedSource.AREA.id()), 100);
@@ -395,13 +401,13 @@ class GoToLineTest {
             Option<Anchor> cursor = driven.lastScrolled().cursor();
             assertTrue(
                     cursor.exists(on -> on instanceof Anchor.Node node
-                            && node.line().equals(new Anchor.OnLine("data.json", DiffSide.NEW, 31))),
+                            && node.line().equals(new Anchor.OnLine(new RepoPath("data.json"), DiffSide.NEW, 31))),
                     cursor.toString());
         }
     }
 
     private static Anchor onNew(int line) {
-        return new Anchor.OnLine("a.txt", DiffSide.NEW, line);
+        return new Anchor.OnLine(new RepoPath("a.txt"), DiffSide.NEW, line);
     }
 
     /**

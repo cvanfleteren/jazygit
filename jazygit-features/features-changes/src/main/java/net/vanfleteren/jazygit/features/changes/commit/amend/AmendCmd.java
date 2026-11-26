@@ -5,6 +5,7 @@ import io.vavr.control.Either;
 import net.vanfleteren.jazygit.core.git.Git;
 import net.vanfleteren.jazygit.core.git.process.GitFailure;
 import net.vanfleteren.jazygit.core.process.ExecutedCommand;
+import net.vanfleteren.jazygit.core.repo.RepoPath;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.features.changes.commit.amend.AmendTarget.LastCommit;
 import net.vanfleteren.jazygit.features.changes.commit.amend.AmendTarget.Older;
@@ -15,7 +16,7 @@ import net.vanfleteren.jazygit.kernel.state.operation.Operation;
  * Stages the paths, if any, then amends {@code target} with the index, keeping its message. Only amending an
  * older commit waits until nothing is in progress, as it rebases the commits after it.
  */
-public record AmendCmd(AmendTarget target, List<String> stage) implements GitOperationCmd {
+public record AmendCmd(AmendTarget target, List<RepoPath> stage) implements GitOperationCmd {
 
     public static final Operation AMEND = Operation.of("changes.log.title.amend", "changes.error.amend.failed");
 

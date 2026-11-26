@@ -20,6 +20,7 @@ import net.vanfleteren.jazygit.core.process.SshAsking;
 import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.RemoteBranch;
 import net.vanfleteren.jazygit.core.repo.RemoteName;
+import net.vanfleteren.jazygit.core.repo.RemoteUrl;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.zeroturnaround.exec.ProcessExecutor;
@@ -41,7 +42,8 @@ class CliRemotesTest {
     void theUrlOfEachRemoteIsReadByItsName() {
         assertEquals(
                 HashMap.of("origin", "git@github.com:owner/repo.git", "work.mirror", "https://example.com/repo")
-                        .mapKeys(RemoteName::new),
+                        .mapKeys(RemoteName::new)
+                        .mapValues(RemoteUrl::new),
                 CliRemotes.parseUrls("remote.origin.url git@github.com:owner/repo.git\n"
                         + "remote.work.mirror.url https://example.com/repo\n"
                         + "remote.origin.url https://github.com/owner/other\n"));

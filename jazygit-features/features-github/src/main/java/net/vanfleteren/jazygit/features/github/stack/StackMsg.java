@@ -5,6 +5,7 @@ import io.vavr.collection.Map;
 import io.vavr.collection.Set;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestSummary;
+import net.vanfleteren.jazygit.core.gh.model.StackId;
 import net.vanfleteren.jazygit.core.process.ExecutedCommand;
 import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.RemoteBranch;
@@ -24,7 +25,7 @@ public sealed interface StackMsg extends Msg {
     /**
      * The user opened or closed the stack numbered {@code stack} in the branches pane (ADR 72).
      */
-    record Toggled(int stack) implements StackMsg {}
+    record Toggled(StackId stack) implements StackMsg {}
 
     /**
      * The user switched the branches pane between showing the stacks and listing their branches as any other (ADR 72).
@@ -35,7 +36,7 @@ public sealed interface StackMsg extends Msg {
      * The user asked what can be done with the stack of the highlighted branch, or of the highlighted stack
      * {@code stack} (ADR 73).
      */
-    record MenuRequested(Option<BranchName> branch, Option<Integer> stack) implements StackMsg {}
+    record MenuRequested(Option<BranchName> branch, Option<StackId> stack) implements StackMsg {}
 
     /**
      * The user asked what can be done with the stack of {@code pullRequest}, highlighted on the pull requests screen
@@ -97,7 +98,7 @@ public sealed interface StackMsg extends Msg {
      * not be read.
      */
     record BuiltOnRead(
-            int stack, BranchName top, Set<BranchName> eligible, Map<BranchName, List<BranchName>> containing)
+            StackId stack, BranchName top, Set<BranchName> eligible, Map<BranchName, List<BranchName>> containing)
             implements StackMsg {}
 
     /**
@@ -133,13 +134,13 @@ public sealed interface StackMsg extends Msg {
     /**
      * The own commits of the branches of stack {@code stack} could not be read.
      */
-    record StackReadFailed(int stack, Failure failure) implements StackMsg {}
+    record StackReadFailed(StackId stack, Failure failure) implements StackMsg {}
 
     /**
      * {@code branch} of stack {@code stack} lacks commits that {@code remote}, its branch on the remote, has: it is
      * not rebased, as it would be pushed over them (ADR 74).
      */
-    record StackBehindRemote(int stack, BranchName branch, RemoteBranch remote) implements StackMsg {}
+    record StackBehindRemote(StackId stack, BranchName branch, RemoteBranch remote) implements StackMsg {}
 
     /**
      * The user chose to rebase the stack asked about without pushing it (ADR 74).

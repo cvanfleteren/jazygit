@@ -2,6 +2,7 @@ package net.vanfleteren.jazygit.features.github.checks;
 
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.core.gh.model.CheckRun;
+import net.vanfleteren.jazygit.core.repo.RepoSlug;
 import net.vanfleteren.jazygit.features.github.GitHubFailure;
 import net.vanfleteren.jazygit.features.github.GitHubServices;
 import net.vanfleteren.jazygit.kernel.state.Env;
@@ -15,7 +16,7 @@ import net.vanfleteren.jazygit.kernel.state.operation.OperationCmd;
  *
  * @param repository the repository, as {@code owner/name}
  */
-public record CheckLogCmd(String repository, String name, CheckRun run) implements OperationCmd {
+public record CheckLogCmd(RepoSlug repository, String name, CheckRun run) implements OperationCmd {
 
     public static final Operation DOWNLOAD_LOG =
             Operation.of("github.log.title.downloadLog", "github.error.downloadLog.failed");

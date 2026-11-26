@@ -9,6 +9,8 @@ import net.vanfleteren.jazygit.core.git.StubGit;
 import net.vanfleteren.jazygit.core.git.branches.StubRemotes;
 import net.vanfleteren.jazygit.core.git.process.GitError;
 import net.vanfleteren.jazygit.core.repo.RemoteName;
+import net.vanfleteren.jazygit.core.repo.RemoteUrl;
+import net.vanfleteren.jazygit.core.repo.RepoSlug;
 import net.vanfleteren.jazygit.kernel.state.Env;
 import org.junit.jupiter.api.Test;
 
@@ -18,10 +20,10 @@ import org.junit.jupiter.api.Test;
  */
 class LoadRepositoryPullRequestsTest {
 
-    private static Env env(Either<GitError, Map<RemoteName, String>> urls) {
+    private static Env env(Either<GitError, Map<RemoteName, RemoteUrl>> urls) {
         return new Env(StubGit.of().withRemotes(new StubRemotes() {
             @Override
-            public Either<GitError, Map<RemoteName, String>> urls() {
+            public Either<GitError, Map<RemoteName, RemoteUrl>> urls() {
                 return urls;
             }
         }));
@@ -30,11 +32,15 @@ class LoadRepositoryPullRequestsTest {
     @Test
     void eachRemoteIsKnownByItsRepository() {
         assertEquals(
-                HashMap.of(new RemoteName("origin"), "me/repo", new RemoteName("upstream"), "project/repo"),
+                HashMap.of(
+                        new RemoteName("origin"),
+                        new RepoSlug("me/repo"),
+                        new RemoteName("upstream"),
+                        new RepoSlug("project/repo")),
                 LoadRepositoryPullRequests.remotes(env(Either.right(HashMap.of(
-                        new RemoteName("origin"), "git@github.com:me/repo.git",
-                        new RemoteName("upstream"), "https://github.com/project/repo",
-                        new RemoteName("local"), "/srv/git/repo.git")))));
+                        new RemoteName("origin"), new RemoteUrl("git@github.com:me/repo.git"),
+                        new RemoteName("upstream"), new RemoteUrl("https://github.com/project/repo"),
+                        new RemoteName("local"), new RemoteUrl("/srv/git/repo.git"))))));
     }
 
     @Test

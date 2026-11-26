@@ -6,6 +6,7 @@ import java.time.Instant;
 import net.vanfleteren.jazygit.core.gh.model.RecentChecks;
 import net.vanfleteren.jazygit.core.gh.timing.CheckHistory;
 import net.vanfleteren.jazygit.core.gh.timing.CheckSample;
+import net.vanfleteren.jazygit.core.repo.RepoSlug;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.Msg;
 import net.vanfleteren.jazygit.kernel.state.Update;
@@ -25,28 +26,28 @@ public sealed interface CheckTimesMsg extends Msg {
      * last topped up from GitHub at {@code toppedUp}. When {@code topUp}, the checks that ran lately are to be read
      * from GitHub, if they were not lately.
      */
-    record Recorded(String repository, CheckHistory history, Option<Instant> toppedUp, boolean topUp)
+    record Recorded(RepoSlug repository, CheckHistory history, Option<Instant> toppedUp, boolean topUp)
             implements CheckTimesMsg {}
 
     /**
      * {@code samples} of {@code repository} could not be kept; they are still learned, for this session.
      */
-    record NotRecorded(String repository, List<CheckSample> samples, boolean topUp) implements CheckTimesMsg {}
+    record NotRecorded(RepoSlug repository, List<CheckSample> samples, boolean topUp) implements CheckTimesMsg {}
 
     /**
      * The checks that ran lately on {@code repository} were read from GitHub.
      */
-    record ToppedUp(String repository, RecentChecks recent) implements CheckTimesMsg {}
+    record ToppedUp(RepoSlug repository, RecentChecks recent) implements CheckTimesMsg {}
 
     /**
      * The checks that ran lately on {@code repository} were not read from GitHub, as another jazygit did so, or
      * tried, at {@code toppedUp}, in the last day; the history kept of it is {@code history}, with what that
      * jazygit learned.
      */
-    record TopUpSkipped(String repository, CheckHistory history, Instant toppedUp) implements CheckTimesMsg {}
+    record TopUpSkipped(RepoSlug repository, CheckHistory history, Instant toppedUp) implements CheckTimesMsg {}
 
     /**
      * Reading the checks that ran lately on {@code repository} from GitHub failed.
      */
-    record TopUpFailed(String repository) implements CheckTimesMsg {}
+    record TopUpFailed(RepoSlug repository) implements CheckTimesMsg {}
 }

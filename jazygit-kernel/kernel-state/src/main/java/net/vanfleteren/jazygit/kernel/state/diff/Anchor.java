@@ -5,6 +5,7 @@ import io.vavr.control.Option;
 import net.vanfleteren.jazygit.core.git.model.DiffFiltering.HunkStart;
 import net.vanfleteren.jazygit.core.git.model.HiddenHunks.Ranges;
 import net.vanfleteren.jazygit.core.git.model.UnifiedDiff.DiffLine;
+import net.vanfleteren.jazygit.core.repo.RepoPath;
 
 /**
  * What a stop of the cursor in a rich diff is, by which it is found again in another drawing of the diff (ADR 60).
@@ -16,7 +17,7 @@ public sealed interface Anchor {
      * in the old file, an added or a context line by its number in the new one, as GitHub takes a context line; none
      * for a note, or a line without that number.
      */
-    static Option<OnLine> of(String path, DiffLine line) {
+    static Option<OnLine> of(RepoPath path, DiffLine line) {
         return switch (line.kind()) {
             case REMOVED -> line.oldNumber().map(number -> new OnLine(path, DiffSide.OLD, number));
             case ADDED, CONTEXT -> line.newNumber().map(number -> new OnLine(path, DiffSide.NEW, number));
@@ -32,12 +33,12 @@ public sealed interface Anchor {
     /**
      * The bar of the file with the path {@code path}.
      */
-    record File(String path) implements Anchor {}
+    record File(RepoPath path) implements Anchor {}
 
     /**
      * The line with the number {@code number} on {@code side} of the file with the path {@code path}.
      */
-    record OnLine(String path, DiffSide side, int number) implements Anchor {}
+    record OnLine(RepoPath path, DiffSide side, int number) implements Anchor {}
 
     /**
      * A marker of lines the file with the path {@code path} leaves out between its hunks, or around them: those of the
@@ -45,14 +46,14 @@ public sealed interface Anchor {
      * follow the last hunk (ADR 77). It is found again by its path and the closest {@code from}, as expanding it moves
      * where it starts or ends.
      */
-    record Gap(String path, int from, Option<Integer> until) implements Anchor {}
+    record Gap(RepoPath path, int from, Option<Integer> until) implements Anchor {}
 
     /**
      * A marker of hunks of the file with the path {@code path} that filters hide (ADR 144), each by the lines it has of
      * the old file and the new one, as git gave it; the first is where the marker is. One the user {@code opened} stays
      * above them, to hide them again. It is found again by its path and where its first hunk starts, opened or not.
      */
-    record Filtered(String path, List<Ranges> hunks, boolean opened) implements Anchor {
+    record Filtered(RepoPath path, List<Ranges> hunks, boolean opened) implements Anchor {
 
         /**
          * Where each of its hunks starts in the old file and the new one.
@@ -68,7 +69,7 @@ public sealed interface Anchor {
      * the original alike; when it is gone, as when a node closed over it, at the closest node it is in, and else as its
      * line.
      */
-    record Node(String path, String pointer, OnLine line) implements Anchor {}
+    record Node(RepoPath path, String pointer, OnLine line) implements Anchor {}
 
     /**
      * The remark thread with the id {@code id}, which was after {@code line} when the anchor was made, if after one:

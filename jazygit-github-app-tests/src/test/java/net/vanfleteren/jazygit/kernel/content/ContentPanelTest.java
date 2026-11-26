@@ -8,8 +8,6 @@ import dev.tamboui.tui.event.MouseButton;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.time.Instant;
-import net.vanfleteren.jazygit.core.gh.model.GhBranch;
-import net.vanfleteren.jazygit.core.gh.model.PrNumber;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestPreview;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestSummary;
@@ -100,8 +98,8 @@ class ContentPanelTest {
         Model selected = TestModels.withFilesSelected(
                 SampleData.git(),
                 List.of(
-                        new FileEntry("a.txt", ChangeType.MODIFIED, true, false),
-                        new FileEntry("b.txt", ChangeType.MODIFIED, false, true)));
+                        new FileEntry(new RepoPath("a.txt"), ChangeType.MODIFIED, true, false),
+                        new FileEntry(new RepoPath("b.txt"), ChangeType.MODIFIED, false, true)));
 
         try (ToolkitTestRunner testRunner =
                 ToolkitTestRunner.runTest(() -> content.render(selected, FilesPanel.PANE))) {
@@ -246,11 +244,11 @@ class ContentPanelTest {
     @Test
     void thePullRequestAreaIsFocusedFromTheListWhosePullRequestItShows() {
         PullRequestSummary pr = new PullRequestSummary(
-                "owner/repo",
+                new RepoSlug("owner/repo"),
                 new PrNumber(42),
                 "Fix the login",
                 "alice",
-                new GhBranch("fix/login"),
+                new ForgeBranch("fix/login"),
                 false,
                 false,
                 PullRequest.Checks.NONE,
@@ -266,7 +264,7 @@ class ContentPanelTest {
                                 .withPreview(Option.of(new Preview<>(
                                         pr,
                                         new Loadable.Loaded<>(new PullRequestPreview(
-                                                new GhBranch("main"), "Why", "+fixed\n", false))))));
+                                                new ForgeBranch("main"), "Why", "+fixed\n", false))))));
         PaneId first = PrOverview.SCREEN.first();
         PaneId second = PrScopes.REVIEW_REQUESTED.pane();
 
@@ -286,8 +284,8 @@ class ContentPanelTest {
         Model selected = TestModels.withFilesSelected(
                 data,
                 List.of(
-                        new FileEntry("a.txt", ChangeType.MODIFIED, true, false),
-                        new FileEntry("b.txt", ChangeType.MODIFIED, false, true)));
+                        new FileEntry(new RepoPath("a.txt"), ChangeType.MODIFIED, true, false),
+                        new FileEntry(new RepoPath("b.txt"), ChangeType.MODIFIED, false, true)));
 
         try (ToolkitTestRunner testRunner =
                 ToolkitTestRunner.runTest(() -> content.render(selected, FilesPanel.PANE))) {

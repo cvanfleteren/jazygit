@@ -17,6 +17,7 @@ import net.vanfleteren.jazygit.core.gh.model.PullRequestDetails;
 import net.vanfleteren.jazygit.core.gh.model.ReviewThread;
 import net.vanfleteren.jazygit.core.git.model.UnifiedDiff.DiffLine;
 import net.vanfleteren.jazygit.core.process.ExecutedCommand;
+import net.vanfleteren.jazygit.core.repo.RepoPath;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.features.github.GitHubError.CannotReview.Why;
 import net.vanfleteren.jazygit.features.github.compose.ComposeUpdate;
@@ -163,7 +164,7 @@ public final class ReviewUpdate {
                 .isDefined()) {
             return Either.left(Why.IN_VERSION);
         }
-        if (at.mark().isEmpty() && at.cursor() instanceof Anchor.File(String path)) {
+        if (at.mark().isEmpty() && at.cursor() instanceof Anchor.File(RepoPath path)) {
             return Either.right(popup(
                     view,
                     at,
@@ -351,7 +352,7 @@ public final class ReviewUpdate {
      * The last line a thread to start is on.
      */
     private static Option<Anchor.OnLine> lastLine(Target target) {
-        return target instanceof Target.Start(var ignored, String path, Option<NewReviewThread.Lines> lines)
+        return target instanceof Target.Start(var ignored, RepoPath path, Option<NewReviewThread.Lines> lines)
                 ? lines.map(on -> new Anchor.OnLine(path, FromGitHub.side(on.side()), on.line()))
                 : Option.none();
     }

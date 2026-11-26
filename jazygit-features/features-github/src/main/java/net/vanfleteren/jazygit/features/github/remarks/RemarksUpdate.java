@@ -4,10 +4,10 @@ import io.vavr.collection.HashSet;
 import io.vavr.collection.List;
 import io.vavr.collection.Set;
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.core.gh.model.PrNumber;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestDetails;
 import net.vanfleteren.jazygit.core.gh.model.ReviewRemarks;
 import net.vanfleteren.jazygit.core.gh.model.ReviewThread;
+import net.vanfleteren.jazygit.core.repo.PrNumber;
 import net.vanfleteren.jazygit.core.repo.PullRequestCommits;
 import net.vanfleteren.jazygit.features.changes.diff.CommitFilesMsg;
 import net.vanfleteren.jazygit.features.changes.diff.CommitFilesUpdate;
@@ -70,11 +70,10 @@ public final class RemarksUpdate {
     public static Next opened(Model model, Changes changes) {
         return changes instanceof Changes.OfPullRequest(PullRequestCommits commits, var _)
                 ? Next.of(model.withPart(
-                                RemarksState.PART,
-                                new RemarksState(Option.of(PrRemarks.reading(new PrNumber(commits.number()))))))
+                                RemarksState.PART, new RemarksState(Option.of(PrRemarks.reading(commits.number())))))
                         .and(List.of(
-                                new RemarksCmd.LoadReviewRemarks(new PrNumber(commits.number()), HashSet.empty(), 0),
-                                new RemarksCmd.LoadCollapsed(commits.repository(), new PrNumber(commits.number()))))
+                                new RemarksCmd.LoadReviewRemarks(commits.number(), HashSet.empty(), 0),
+                                new RemarksCmd.LoadCollapsed(commits.repository(), commits.number())))
                 : Next.of(model.withPart(RemarksState.PART, RemarksState.NONE));
     }
 

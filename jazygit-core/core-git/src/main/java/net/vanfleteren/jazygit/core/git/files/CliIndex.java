@@ -25,6 +25,7 @@ import net.vanfleteren.jazygit.core.process.CommandLine;
 import net.vanfleteren.jazygit.core.process.Exec;
 import net.vanfleteren.jazygit.core.process.ExecFailure;
 import net.vanfleteren.jazygit.core.process.ExecutedCommand;
+import net.vanfleteren.jazygit.core.repo.RepoPath;
 
 /**
  * The {@link Index} of a repository, the staging area, changed through the git command line tool.
@@ -49,7 +50,7 @@ public final class CliIndex implements Index {
      * {@code git add -- <paths>}: stages the changes of the paths.
      */
     @Override
-    public Either<GitFailure, List<ExecutedCommand>> stage(List<String> paths) {
+    public Either<GitFailure, List<ExecutedCommand>> stage(List<RepoPath> paths) {
         return onPaths(worktree, List.of("add"), paths);
     }
 
@@ -58,7 +59,7 @@ public final class CliIndex implements Index {
      * them untracked in the working tree.
      */
     @Override
-    public Either<GitFailure, List<ExecutedCommand>> unstageNew(List<String> paths) {
+    public Either<GitFailure, List<ExecutedCommand>> unstageNew(List<RepoPath> paths) {
         return onPaths(worktree, List.of("rm", "--cached", "--force", "--quiet"), paths);
     }
 
@@ -66,28 +67,28 @@ public final class CliIndex implements Index {
      * {@code git reset HEAD -- <paths>}: resets the index entries of the paths to HEAD.
      */
     @Override
-    public Either<GitFailure, List<ExecutedCommand>> unstage(List<String> paths) {
+    public Either<GitFailure, List<ExecutedCommand>> unstage(List<RepoPath> paths) {
         return onPaths(worktree, List.of("reset", "--quiet", "HEAD"), paths);
     }
 
     /**
      * {@code git checkout -- <paths>}: resets the working tree of the paths to the index.
      */
-    static Either<GitFailure, List<ExecutedCommand>> checkoutFromIndex(Path worktree, List<String> paths) {
+    static Either<GitFailure, List<ExecutedCommand>> checkoutFromIndex(Path worktree, List<RepoPath> paths) {
         return onPaths(worktree, List.of("checkout", "--quiet"), paths);
     }
 
     /**
      * {@code git checkout HEAD -- <paths>}: resets the index and the working tree of the paths to HEAD.
      */
-    static Either<GitFailure, List<ExecutedCommand>> checkoutFromHead(Path worktree, List<String> paths) {
+    static Either<GitFailure, List<ExecutedCommand>> checkoutFromHead(Path worktree, List<RepoPath> paths) {
         return onPaths(worktree, List.of("checkout", "--quiet", "HEAD"), paths);
     }
 
     /**
      * {@code git rm --force -- <paths>}: removes newly added paths from the index and the working tree.
      */
-    static Either<GitFailure, List<ExecutedCommand>> removeAdded(Path worktree, List<String> paths) {
+    static Either<GitFailure, List<ExecutedCommand>> removeAdded(Path worktree, List<RepoPath> paths) {
         return onPaths(worktree, List.of("rm", "--force", "--quiet"), paths);
     }
 
@@ -96,7 +97,7 @@ public final class CliIndex implements Index {
      * {@code git add}; or {@code git rm --quiet} when that side deleted the file.
      */
     @Override
-    public Either<GitFailure, List<ExecutedCommand>> keep(String path, Conflict conflict, Conflict.Version version) {
+    public Either<GitFailure, List<ExecutedCommand>> keep(RepoPath path, Conflict conflict, Conflict.Version version) {
         return GitFailure.sequence(
                 conflict.keeping(version).map(arguments -> () -> onPaths(worktree, arguments, List.of(path))));
     }
@@ -105,7 +106,7 @@ public final class CliIndex implements Index {
      * {@code git checkout --merge -- <path>}: the conflict again, from what the index keeps of it once resolved.
      */
     @Override
-    public Either<GitFailure, List<ExecutedCommand>> restoreConflict(String path) {
+    public Either<GitFailure, List<ExecutedCommand>> restoreConflict(RepoPath path) {
         return onPaths(worktree, List.of("checkout", "--merge"), List.of(path));
     }
 
@@ -113,7 +114,7 @@ public final class CliIndex implements Index {
      * Reads each file for blocks of conflict markers; a file that cannot be read, as one that is not there, has none.
      */
     @Override
-    public Either<GitError, List<MarkedFile>> markers(List<String> paths) {
+    public Either<GitError, List<MarkedFile>> markers(List<RepoPath> paths) {
         Path root = worktree.toAbsolutePath().normalize();
         return Either.right(paths.flatMap(path -> inside(root, path)
                 .toOption()
@@ -127,17 +128,17 @@ public final class CliIndex implements Index {
      * {@code git ls-files --unmerged -- <paths>}: those of them that have more than one stage in the index.
      */
     @Override
-    public Either<GitError, List<String>> unmerged(List<String> paths) {
+    public Either<GitError, List<RepoPath>> unmerged(List<RepoPath> paths) {
         return paths.isEmpty()
                 ? Either.right(List.empty())
                 : GitProcess.read(
                         worktree,
-                        reading(List.of("ls-files", "--unmerged", "-z", "--").appendAll(paths))
+                        reading(List.of("ls-files", "--unmerged", "-z", "--").appendAll(paths.map(RepoPath::value)))
                                 .withLiteralPaths()
                                 .withTimeout(TIMEOUT),
                         raw -> Either.right(List.of(raw.split("\0"))
                                 .filter(entry -> entry.contains("\t"))
-                                .map(entry -> entry.substring(entry.indexOf('\t') + 1))
+                                .map(entry -> new RepoPath(entry.substring(entry.indexOf('\t') + 1)))
                                 .distinct()));
     }
 
@@ -169,13 +170,13 @@ public final class CliIndex implements Index {
      * is, bytes that are not UTF-8 replaced, so a file in another encoding compares as it is.
      */
     @Override
-    public Either<GitError, ConflictFile> conflictFile(String path) {
+    public Either<GitError, ConflictFile> conflictFile(RepoPath path) {
         Path root = worktree.toAbsolutePath().normalize();
         return inside(root, path)
                 .<GitError>mapLeft(refused -> refused)
                 .flatMap(file -> Try.of(() -> new String(Files.readAllBytes(file), StandardCharsets.UTF_8))
                         .toEither()
-                        .mapLeft(failure -> (GitError) new GitError.Unreadable(path, String.valueOf(failure))))
+                        .mapLeft(failure -> (GitError) new GitError.Unreadable(path.value(), String.valueOf(failure))))
                 .flatMap(working -> written(path).map(conflict -> ConflictFile.of(working, conflict)));
     }
 
@@ -183,7 +184,7 @@ public final class CliIndex implements Index {
      * The conflict git writes of the stages of {@code path}: {@code git merge-file -p} of ours, the base and theirs,
      * which exits with the number of conflicts it wrote.
      */
-    private Either<GitError, String> written(String path) {
+    private Either<GitError, String> written(RepoPath path) {
         return Try.of(() -> Files.createTempDirectory("jazygit-conflict"))
                 .toEither()
                 .mapLeft(failure -> (GitError) new GitError.TempFileFailed(failure))
@@ -204,10 +205,10 @@ public final class CliIndex implements Index {
      * Stage {@code number} of {@code path} written to {@code file}; empty when the index has no such stage, as a file
      * added on both sides has no base.
      */
-    private Either<GitError, Path> writeStage(String path, int number, Path file) {
+    private Either<GitError, Path> writeStage(RepoPath path, int number, Path file) {
         String content = GitProcess.read(
                         worktree,
-                        reading("show", ":" + number + ":" + path).withTimeout(TIMEOUT),
+                        reading("show", ":" + number + ":" + path.value()).withTimeout(TIMEOUT),
                         Either::<UnexpectedOutput, String>right)
                 .getOrElse("");
         return Try.of(() -> Files.writeString(file, content)).toEither().mapLeft(failure ->
@@ -233,7 +234,7 @@ public final class CliIndex implements Index {
      * it does, not a failure.
      */
     @Override
-    public Either<GitFailure, List<ExecutedCommand>> solve(String path, boolean rewrite) {
+    public Either<GitFailure, List<ExecutedCommand>> solve(RepoPath path, boolean rewrite) {
         List<List<String>> steps = ConflictTools.mergiraf(path, rewrite);
         return rewrite
                 ? GitFailure.sequence(
@@ -284,7 +285,7 @@ public final class CliIndex implements Index {
      * what is untracked in them. Git leaves ignored files alone, and a repository nested in the working tree.
      * Paths outside the working tree, and the working tree itself, are refused before git runs.
      */
-    static Either<GitFailure, List<ExecutedCommand>> deleteUntracked(Path worktree, List<String> paths) {
+    static Either<GitFailure, List<ExecutedCommand>> deleteUntracked(Path worktree, List<RepoPath> paths) {
         Path root = worktree.toAbsolutePath().normalize();
         return paths.map(path -> inside(root, path))
                 .find(Either::isLeft)
@@ -297,8 +298,8 @@ public final class CliIndex implements Index {
      * {@code path} resolved against the working tree {@code root}, if it is strictly inside it and not
      * inside {@code .git}.
      */
-    static Either<RefusedPath, Path> inside(Path root, String path) {
-        Path target = root.resolve(path).normalize();
+    static Either<RefusedPath, Path> inside(Path root, RepoPath path) {
+        Path target = root.resolve(path.value()).normalize();
         return target.equals(root) || !target.startsWith(root) || target.startsWith(root.resolve(".git"))
                 ? Either.left(new RefusedPath(path))
                 : Either.right(target);
@@ -308,10 +309,12 @@ public final class CliIndex implements Index {
      * Runs {@code subcommand -- paths}; nothing when there are no paths.
      */
     private static Either<GitFailure, List<ExecutedCommand>> onPaths(
-            Path worktree, List<String> subcommand, List<String> paths) {
+            Path worktree, List<String> subcommand, List<RepoPath> paths) {
         return paths.isEmpty()
                 ? GitFailure.nothing()
                 : GitProcess.log(
-                        worktree, git(subcommand.append("--").appendAll(paths)).withLiteralPaths());
+                        worktree,
+                        git(subcommand.append("--").appendAll(paths.map(RepoPath::value)))
+                                .withLiteralPaths());
     }
 }

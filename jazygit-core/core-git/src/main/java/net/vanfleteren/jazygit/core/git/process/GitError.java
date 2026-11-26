@@ -7,6 +7,7 @@ import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.BranchRef;
 import net.vanfleteren.jazygit.core.repo.InProgress;
 import net.vanfleteren.jazygit.core.repo.RemoteBranch;
+import net.vanfleteren.jazygit.core.repo.RepoPath;
 
 /**
  * Why a git operation failed, as data. Turning it into text is up to the caller.
@@ -219,7 +220,7 @@ public sealed interface GitError {
     /**
      * An untracked path that was not deleted because it is not inside the working tree.
      */
-    record RefusedPath(String path) implements GitError {}
+    record RefusedPath(RepoPath path) implements GitError {}
 
     /**
      * The editor could not be started.

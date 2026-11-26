@@ -11,16 +11,17 @@ import io.vavr.collection.HashMap;
 import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.core.gh.model.GhBranch;
 import net.vanfleteren.jazygit.core.gh.model.NewPullRequest;
-import net.vanfleteren.jazygit.core.gh.model.PrNumber;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest.Review;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestDetails.State;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestStack;
+import net.vanfleteren.jazygit.core.gh.model.StackId;
 import net.vanfleteren.jazygit.core.git.model.Fixtures;
 import net.vanfleteren.jazygit.core.repo.BranchName;
+import net.vanfleteren.jazygit.core.repo.ForgeBranch;
+import net.vanfleteren.jazygit.core.repo.PrNumber;
 import net.vanfleteren.jazygit.core.repo.RemoteBranch;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.features.github.create.GitHubCreatePullRequestCmd.CreatePullRequest;
@@ -46,8 +47,8 @@ class StackedPullRequestTest {
     private static PullRequest pr(int number, String head, Option<PullRequestStack> stack) {
         return new PullRequest(
                 new PrNumber(number),
-                new GhBranch(head),
-                Option.of(new GhBranch("main")),
+                new ForgeBranch(head),
+                Option.of(new ForgeBranch("main")),
                 false,
                 Checks.NONE,
                 Review.NONE,
@@ -68,14 +69,14 @@ class StackedPullRequestTest {
 
     private static PullRequestStack stackOf(int position) {
         return new PullRequestStack(
-                12,
+                new StackId(12),
                 position,
                 2,
                 List.of(
                         new PullRequestStack.Entry(
-                                1, new PrNumber(96), State.OPEN, new GhBranch("feat/a"), new GhBranch("main")),
+                                1, new PrNumber(96), State.OPEN, new ForgeBranch("feat/a"), new ForgeBranch("main")),
                         new PullRequestStack.Entry(
-                                2, new PrNumber(95), State.OPEN, new GhBranch("other"), new GhBranch("feat/a"))));
+                                2, new PrNumber(95), State.OPEN, new ForgeBranch("other"), new ForgeBranch("feat/a"))));
     }
 
     private static GitHubNewPullRequestPopup popup(BranchName base, boolean stacked) {
@@ -104,21 +105,21 @@ class StackedPullRequestTest {
     @Test
     void onTheTopOfAStackItIsAddedToIt() {
         PullRequestStack top = new PullRequestStack(
-                12,
+                new StackId(12),
                 1,
                 1,
                 List.of(new PullRequestStack.Entry(
-                        1, new PrNumber(96), State.OPEN, new GhBranch("feat/a"), new GhBranch("main"))));
+                        1, new PrNumber(96), State.OPEN, new ForgeBranch("feat/a"), new ForgeBranch("main"))));
 
         assertEquals(
-                Option.of(Either.right(new Stacking(new PrNumber(96), Option.of(12)))),
+                Option.of(Either.right(new Stacking(new PrNumber(96), Option.of(new StackId(12))))),
                 GitHubCreatePullRequestUpdate.stackOn(model(Option.of(top)), FEAT_A));
     }
 
     @Test
     void notOnTheTopOfAStackItSaysWhy() {
         assertEquals(
-                Option.of(Either.left(new GitHubCreatePullRequestCmd.NotTop(new PrNumber(96), 12))),
+                Option.of(Either.left(new GitHubCreatePullRequestCmd.NotTop(new PrNumber(96), new StackId(12)))),
                 GitHubCreatePullRequestUpdate.stackOn(model(Option.of(stackOf(1))), FEAT_A));
     }
 

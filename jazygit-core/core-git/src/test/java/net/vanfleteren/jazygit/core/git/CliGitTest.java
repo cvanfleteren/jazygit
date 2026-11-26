@@ -593,12 +593,16 @@ class CliGitTest {
                 List.of("git add -- README.md 'new file.txt'"),
                 repository
                         .index()
-                        .stage(List.of("README.md", "new file.txt"))
+                        .stage(List.of(new RepoPath("README.md"), new RepoPath("new file.txt")))
                         .get()
                         .map(ExecutedCommand::line));
         assertEquals(
                 List.of("git rm --cached --force --quiet -- 'new file.txt'"),
-                repository.index().unstageNew(List.of("new file.txt")).get().map(ExecutedCommand::line));
+                repository
+                        .index()
+                        .unstageNew(List.of(new RepoPath("new file.txt")))
+                        .get()
+                        .map(ExecutedCommand::line));
         assertEquals(List.of(), repository.index().unstage(List.of()).get());
         assertEquals(
                 List.of("git commit --quiet -m 'a summary' -m details"),
@@ -1083,7 +1087,7 @@ class CliGitTest {
                 .read()
                 .get()
                 .files()
-                .exists(file -> file.path().equals("a.txt") && file.staged()));
+                .exists(file -> file.path().equals(new RepoPath("a.txt")) && file.staged()));
 
         git("reset", "-q", "--hard", second.value());
         repository
@@ -1095,7 +1099,7 @@ class CliGitTest {
                 .read()
                 .get()
                 .files()
-                .exists(file -> file.path().equals("a.txt") && !file.staged()));
+                .exists(file -> file.path().equals(new RepoPath("a.txt")) && !file.staged()));
 
         git("reset", "-q", "--hard", second.value());
         Files.writeString(repo.resolve("README.md"), "dirty\n");
@@ -1468,7 +1472,7 @@ class CliGitTest {
                 List.of("git add -- missing.txt"),
                 repository
                         .index()
-                        .stage(List.of("missing.txt"))
+                        .stage(List.of(new RepoPath("missing.txt")))
                         .getLeft()
                         .commands()
                         .map(ExecutedCommand::line));
@@ -2545,19 +2549,22 @@ class CliGitTest {
         Files.writeString(repo.resolve("README.md"), "changed\n");
         Files.writeString(repo.resolve("new.txt"), "new\n");
 
-        repository.index().stage(List.of("README.md", "new.txt")).get();
+        repository
+                .index()
+                .stage(List.of(new RepoPath("README.md"), new RepoPath("new.txt")))
+                .get();
         assertEquals(
                 List.of(
-                        new FileEntry("README.md", ChangeType.MODIFIED, true, false),
-                        new FileEntry("new.txt", ChangeType.ADDED, true, false)),
+                        new FileEntry(new RepoPath("README.md"), ChangeType.MODIFIED, true, false),
+                        new FileEntry(new RepoPath("new.txt"), ChangeType.ADDED, true, false)),
                 repository.status().read().get().files());
 
-        repository.index().unstageNew(List.of("new.txt")).get();
-        repository.index().unstage(List.of("README.md")).get();
+        repository.index().unstageNew(List.of(new RepoPath("new.txt"))).get();
+        repository.index().unstage(List.of(new RepoPath("README.md"))).get();
         assertEquals(
                 List.of(
-                        new FileEntry("README.md", ChangeType.MODIFIED, false, true),
-                        new FileEntry("new.txt", ChangeType.UNTRACKED, false, true)),
+                        new FileEntry(new RepoPath("README.md"), ChangeType.MODIFIED, false, true),
+                        new FileEntry(new RepoPath("new.txt"), ChangeType.UNTRACKED, false, true)),
                 repository.status().read().get().files());
     }
 
@@ -2570,25 +2577,33 @@ class CliGitTest {
                         Fixtures.fileEntry("README.md", ChangeType.DELETED)),
                 repository.status().read().get().files());
 
-        repository.index().stage(List.of("READ.md", "README.md")).get();
+        repository
+                .index()
+                .stage(List.of(new RepoPath("READ.md"), new RepoPath("README.md")))
+                .get();
         List<FileEntry> files = repository.status().read().get().files();
-        assertEquals(List.of(FileEntry.renamed("READ.md", "README.md", true, false)), files);
+        assertEquals(
+                List.of(FileEntry.renamed(new RepoPath("READ.md"), new RepoPath("README.md"), true, false)), files);
 
         Diffs diffs = repository.diffs().uncommitted(files, DiffOptions.DEFAULT).get();
         assertTrue(diffs.staged().text().contains("rename from README.md"), diffs.toString());
 
-        repository.index().unstageNew(List.of("READ.md")).get();
-        repository.index().unstage(List.of("README.md")).get();
+        repository.index().unstageNew(List.of(new RepoPath("READ.md"))).get();
+        repository.index().unstage(List.of(new RepoPath("README.md"))).get();
         assertEquals(
                 List.of(
                         Fixtures.fileEntry("READ.md", ChangeType.UNTRACKED),
                         Fixtures.fileEntry("README.md", ChangeType.DELETED)),
                 repository.status().read().get().files());
 
-        repository.index().stage(List.of("READ.md", "README.md")).get();
         repository
                 .index()
-                .discard(new DiscardPlan(List.of(), List.of(), List.of("README.md"), List.of("READ.md")))
+                .stage(List.of(new RepoPath("READ.md"), new RepoPath("README.md")))
+                .get();
+        repository
+                .index()
+                .discard(new DiscardPlan(
+                        List.of(), List.of(), List.of(new RepoPath("README.md")), List.of(new RepoPath("READ.md"))))
                 .get();
         assertEquals(List.of(), repository.status().read().get().files());
     }
@@ -2634,8 +2649,11 @@ class CliGitTest {
 
     @Test
     void stageFailsWithGitsExplanationForAnUnknownPath() {
-        GitError error =
-                repository.index().stage(List.of("missing.txt")).getLeft().error();
+        GitError error = repository
+                .index()
+                .stage(List.of(new RepoPath("missing.txt")))
+                .getLeft()
+                .error();
 
         assertTrue(error instanceof GitError.CommandFailed failed && failed.says("missing.txt"), error.toString());
     }

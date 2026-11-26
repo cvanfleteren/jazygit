@@ -8,6 +8,7 @@ import io.vavr.collection.List;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.core.git.model.ChangeType;
 import net.vanfleteren.jazygit.core.git.model.FileEntry;
+import net.vanfleteren.jazygit.core.repo.RepoPath;
 import net.vanfleteren.jazygit.kernel.state.Loadable;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.TestModels;
@@ -25,10 +26,12 @@ import org.junit.jupiter.api.Test;
  */
 class FilesPanelAllFilesTest {
 
-    private static final FileEntry CHANGED = new FileEntry("src/main/A.java", ChangeType.MODIFIED, false, true);
+    private static final FileEntry CHANGED =
+            new FileEntry(new RepoPath("src/main/A.java"), ChangeType.MODIFIED, false, true);
     // Rows: /, docs/guide, src/main, M A.java, B.java, README.md: directories come first.
-    private static final List<String> ALL =
-            List.of("README.md", "docs/guide/intro.md", "src/main/A.java", "src/main/B.java");
+    private static final List<RepoPath> ALL = List.of(
+                    "README.md", "docs/guide/intro.md", "src/main/A.java", "src/main/B.java")
+            .map(RepoPath::new);
 
     private final FilesPanel panel = new FilesPanel(msg -> {}, () -> {});
 
@@ -76,11 +79,13 @@ class FilesPanelAllFilesTest {
             RenderedText.ofLarge(testRunner, () -> panel.render(model, FilesPanel.PANE));
 
             panel.allTree().selected(5);
-            assertEquals(Option.of(new SelectionMsg.UnchangedFileSelected("README.md")), panel.selectionChange(model));
+            assertEquals(
+                    Option.of(new SelectionMsg.UnchangedFileSelected(new RepoPath("README.md"))),
+                    panel.selectionChange(model));
 
             panel.allTree().selected(1);
             assertEquals(
-                    Option.of(new SelectionMsg.UnchangedDirectorySelected("docs/guide", 1)),
+                    Option.of(new SelectionMsg.UnchangedDirectorySelected(new RepoPath("docs/guide"), 1)),
                     panel.selectionChange(model));
 
             panel.allTree().selected(2);
@@ -89,7 +94,8 @@ class FilesPanelAllFilesTest {
 
             panel.allTree().selected(4);
             assertEquals(
-                    Option.of(new SelectionMsg.UnchangedFileSelected("src/main/B.java")), panel.selectionChange(model));
+                    Option.of(new SelectionMsg.UnchangedFileSelected(new RepoPath("src/main/B.java"))),
+                    panel.selectionChange(model));
             SettledPilot.of(testRunner).quit();
         }
     }
@@ -113,11 +119,13 @@ class FilesPanelAllFilesTest {
     void onlyTheDirectoriesWithoutChangesStartCollapsed() {
         List<FileEntry> files = List.of(
                 CHANGED,
-                FileEntry.unchanged("src/main/B.java"),
-                FileEntry.unchanged("src/test/BTest.java"),
-                FileEntry.unchanged("docs/guide/intro.md"));
+                FileEntry.unchanged(new RepoPath("src/main/B.java")),
+                FileEntry.unchanged(new RepoPath("src/test/BTest.java")),
+                FileEntry.unchanged(new RepoPath("docs/guide/intro.md")));
 
-        assertEquals(HashSet.of("src/test", "docs/guide"), WorkingTreeFilesList.unchangedDirectories(files));
+        assertEquals(
+                HashSet.of(new RepoPath("src/test"), new RepoPath("docs/guide")),
+                WorkingTreeFilesList.unchangedDirectories(files));
     }
 
     @Test

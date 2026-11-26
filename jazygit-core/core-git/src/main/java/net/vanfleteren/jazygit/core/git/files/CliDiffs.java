@@ -29,6 +29,7 @@ import net.vanfleteren.jazygit.core.git.process.TempFiles;
 import net.vanfleteren.jazygit.core.process.Limit;
 import net.vanfleteren.jazygit.core.process.Limited;
 import net.vanfleteren.jazygit.core.repo.PullRequestCommits;
+import net.vanfleteren.jazygit.core.repo.RepoPath;
 import net.vanfleteren.jazygit.core.repo.Revision;
 import net.vanfleteren.jazygit.core.repo.Sha;
 
@@ -100,18 +101,18 @@ public final class CliDiffs implements Diffs {
     }
 
     @Override
-    public Either<GitError, List<String>> treeFiles(Sha sha) {
-        return CliTreeFiles.files(worktree, sha);
+    public Either<GitError, List<RepoPath>> treeFiles(Sha sha) {
+        return CliTreeFiles.files(worktree, sha).map(files -> files.map(RepoPath::new));
     }
 
     @Override
-    public Either<GitError, FileContent> treeContent(Sha sha, String path) {
-        return CliTreeFiles.content(worktree, sha, path, LIMIT);
+    public Either<GitError, FileContent> treeContent(Sha sha, RepoPath path) {
+        return CliTreeFiles.content(worktree, sha, path.value(), LIMIT);
     }
 
     @Override
-    public Either<GitError, String> treeText(Sha sha, String path) {
-        return CliTreeFiles.text(worktree, sha, path);
+    public Either<GitError, String> treeText(Sha sha, RepoPath path) {
+        return CliTreeFiles.text(worktree, sha, path.value());
     }
 
     /**
@@ -129,7 +130,7 @@ public final class CliDiffs implements Diffs {
                                 .appendAll(flags(options))
                                 .append(sha.value())
                                 .append("--")
-                                .appendAll(files.flatMap(CommitFile::paths)))
+                                .appendAll(files.flatMap(CommitFile::paths).map(RepoPath::value)))
                         .withLiteralPaths());
     }
 
@@ -174,7 +175,7 @@ public final class CliDiffs implements Diffs {
                                 .appendAll(flags(options))
                                 .append(range(base, tip))
                                 .append("--")
-                                .appendAll(files.flatMap(CommitFile::paths)))
+                                .appendAll(files.flatMap(CommitFile::paths).map(RepoPath::value)))
                         .withLiteralPaths());
     }
 
@@ -192,10 +193,13 @@ public final class CliDiffs implements Diffs {
             List<FileEntry> files, DiffOptions options) {
         // A rename only shows as one when both of its paths are diffed.
         List<String> staged = files.filter(f -> f.staged() && f.type() != ChangeType.UNTRACKED)
-                .flatMap(f -> f.paths(true));
+                .flatMap(f -> f.paths(true))
+                .map(RepoPath::value);
         List<String> unstaged = files.filter(f -> f.unstaged() && f.type() != ChangeType.UNTRACKED)
-                .flatMap(f -> f.paths(false));
-        List<String> untracked = FileEntry.paths(files, f -> f.type() == ChangeType.UNTRACKED);
+                .flatMap(f -> f.paths(false))
+                .map(RepoPath::value);
+        List<String> untracked =
+                FileEntry.paths(files, f -> f.type() == ChangeType.UNTRACKED).map(RepoPath::value);
         List<String> unstagedDiff = DIFF.appendAll(flags(options)).append("--");
         return tracked(worktree, STAGED.appendAll(flags(options)).append("--"), staged, HashMap.empty())
                 .flatMap(stagedDiff -> unstagedAndUntracked(worktree, unstagedDiff, unstaged, untracked)
@@ -321,7 +325,7 @@ public final class CliDiffs implements Diffs {
     private static Option<Tuple2<CommitFile, Integer>> file(Vector<String> fields, int at) {
         String status = fields.get(at);
         int count = status.startsWith("R") || status.startsWith("C") ? 2 : 1;
-        Vector<String> paths = fields.drop(at + 1).take(count);
+        Vector<RepoPath> paths = fields.drop(at + 1).take(count).map(RepoPath::new);
         return Option.when(
                 paths.size() == count,
                 () -> Tuple.of(

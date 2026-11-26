@@ -1,6 +1,8 @@
 package net.vanfleteren.jazygit.core.gh.model;
 
 import io.vavr.control.Option;
+import net.vanfleteren.jazygit.core.repo.PrNumber;
+import net.vanfleteren.jazygit.core.repo.RepoSlug;
 
 /**
  * Where a pull request, or a review comment of it, is on GitHub's site (ADR 85).
@@ -11,13 +13,13 @@ import io.vavr.control.Option;
  * @param comment    the REST id of the review comment to open it on, if any
  */
 public record PullRequestLink(
-        String host, String repository, PrNumber number, Option<ReviewThread.Comment.RestId> comment) {
+        String host, RepoSlug repository, PrNumber number, Option<ReviewThread.Comment.RestId> comment) {
 
     /**
      * The pull request's own URL, without an anchor.
      */
     public String pullRequest() {
-        return "https://" + host + "/" + repository + "/pull/" + number.value();
+        return "https://" + host + "/" + repository.value() + "/pull/" + number.value();
     }
 
     /**

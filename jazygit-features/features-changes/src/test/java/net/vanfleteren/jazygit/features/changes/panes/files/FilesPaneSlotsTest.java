@@ -14,6 +14,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import net.vanfleteren.jazygit.core.git.model.ChangeType;
 import net.vanfleteren.jazygit.core.git.model.FileEntry;
+import net.vanfleteren.jazygit.core.repo.RepoPath;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.TestModels;
 import net.vanfleteren.jazygit.kernel.ui.Fills;
@@ -30,17 +31,19 @@ import org.junit.jupiter.api.Test;
 class FilesPaneSlotsTest {
 
     private static final Rect AREA = new Rect(0, 0, 60, 10);
-    private static final FileEntry A = new FileEntry("a.txt", ChangeType.MODIFIED, true, false);
-    private static final FileEntry B = new FileEntry("b.txt", ChangeType.MODIFIED, true, false);
+    private static final FileEntry A = new FileEntry(new RepoPath("a.txt"), ChangeType.MODIFIED, true, false);
+    private static final FileEntry B = new FileEntry(new RepoPath("b.txt"), ChangeType.MODIFIED, true, false);
 
     private static final Model MODEL = TestModels.loaded()
             .mapRepo(repo -> repo.withStatus(repo.status().map(status -> status.withFiles(List.of(A, B)))));
 
     // Marks a.txt, and only it.
     private static final FileMark ON_A = file -> Option.when(
-            file.path().equals("a.txt"), () -> new FileMark.Mark(List.of(LoadableList.Seg.of(" ★")), false));
+            file.path().equals(new RepoPath("a.txt")),
+            () -> new FileMark.Mark(List.of(LoadableList.Seg.of(" ★")), false));
     private static final FileMark ON_A_TOO = file -> Option.when(
-            file.path().equals("a.txt"), () -> new FileMark.Mark(List.of(LoadableList.Seg.of(" ☆")), false));
+            file.path().equals(new RepoPath("a.txt")),
+            () -> new FileMark.Mark(List.of(LoadableList.Seg.of(" ☆")), false));
 
     @Test
     void theMarksOfAllFeaturesFollowTheNameOfTheFileTheyMarkInTheOrderOfTheFeatures() throws Exception {
@@ -57,7 +60,8 @@ class FilesPaneSlotsTest {
     @Test
     void oneMarkThatDimsDimsTheWholeRowTheMarksOfOtherFeaturesToo() throws Exception {
         FileMark dimming = file -> Option.when(
-                file.path().equals("a.txt"), () -> new FileMark.Mark(List.of(LoadableList.Seg.of(" ★")), true));
+                file.path().equals(new RepoPath("a.txt")),
+                () -> new FileMark.Mark(List.of(LoadableList.Seg.of(" ★")), true));
         Fills fills = Fills.NONE
                 .with(FilesPane.MARK, model -> Option.of(dimming))
                 .with(FilesPane.MARK, model -> Option.of(ON_A_TOO));

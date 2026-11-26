@@ -11,11 +11,12 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import net.vanfleteren.jazygit.core.gh.CliGitHub;
 import net.vanfleteren.jazygit.core.gh.model.BranchChecks;
-import net.vanfleteren.jazygit.core.gh.model.GhBranch;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.core.gh.process.GhError;
 import net.vanfleteren.jazygit.core.gh.process.GhProcess;
 import net.vanfleteren.jazygit.core.gh.process.GhToken;
+import net.vanfleteren.jazygit.core.repo.ForgeBranch;
+import net.vanfleteren.jazygit.core.repo.RepoSlug;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.DisabledOnOs;
 import org.junit.jupiter.api.condition.OS;
@@ -47,15 +48,15 @@ class BranchesQueryTest {
 
         assertEquals(
                 Either.right(new BranchChecks(
-                        "owner/repo",
+                        new RepoSlug("owner/repo"),
                         HashMap.of(
-                                new GhBranch("feature/login"),
+                                new ForgeBranch("feature/login"),
                                 Checks.PASSING,
-                                new GhBranch("wip"),
+                                new ForgeBranch("wip"),
                                 Checks.NONE,
-                                new GhBranch("main"),
+                                new ForgeBranch("main"),
                                 Checks.FAILING,
-                                new GhBranch("fix"),
+                                new ForgeBranch("fix"),
                                 Checks.PENDING))),
                 branches("["
                         + page(branch("feature/login", "{ \"state\": \"SUCCESS\" }", noSuites) + ", "
@@ -70,15 +71,15 @@ class BranchesQueryTest {
     void aBranchWhoseWorkflowWaitsToStartIsPendingUnlessItsChecksFailed() {
         assertEquals(
                 Either.right(new BranchChecks(
-                        "owner/repo",
+                        new RepoSlug("owner/repo"),
                         HashMap.of(
-                                new GhBranch("main"),
+                                new ForgeBranch("main"),
                                 Checks.PENDING,
-                                new GhBranch("broken"),
+                                new ForgeBranch("broken"),
                                 Checks.FAILING,
-                                new GhBranch("feature"),
+                                new ForgeBranch("feature"),
                                 Checks.PASSING,
-                                new GhBranch("wip"),
+                                new ForgeBranch("wip"),
                                 Checks.NONE))),
                 branches("["
                         + page(branch("main", "null", WAITING_SUITES) + ", "
@@ -91,7 +92,8 @@ class BranchesQueryTest {
     @Test
     void aBranchWhoseTipIsNoCommitHasNoChecks() {
         assertEquals(
-                Either.right(new BranchChecks("owner/repo", HashMap.of(new GhBranch("odd"), Checks.NONE))),
+                Either.right(
+                        new BranchChecks(new RepoSlug("owner/repo"), HashMap.of(new ForgeBranch("odd"), Checks.NONE))),
                 branches("[" + page("{ \"name\": \"odd\", \"target\": { \"__typename\": \"Tree\" } }") + "]"));
     }
 

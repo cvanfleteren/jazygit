@@ -5,6 +5,7 @@ import io.vavr.control.Option;
 import net.vanfleteren.jazygit.core.git.model.CommitFile;
 import net.vanfleteren.jazygit.core.git.model.DiffText;
 import net.vanfleteren.jazygit.core.repo.Commit;
+import net.vanfleteren.jazygit.core.repo.RepoPath;
 import net.vanfleteren.jazygit.core.repo.Sha;
 
 /**
@@ -56,12 +57,12 @@ public sealed interface ScrolledContent {
      * The file at {@code path} without changes, a diff of it against itself: in the working tree, as it is on disk
      * (ADR 108), or in the commit {@code commit} whose files are listed, as it is in it (ADR 128).
      */
-    record Unchanged(String path, DiffText asDiff, Option<Sha> commit) implements ScrolledContent {
+    record Unchanged(RepoPath path, DiffText asDiff, Option<Sha> commit) implements ScrolledContent {
 
         /**
          * The file at {@code path} in the working tree, as it is on disk.
          */
-        public Unchanged(String path, DiffText asDiff) {
+        public Unchanged(RepoPath path, DiffText asDiff) {
             this(path, asDiff, Option.none());
         }
 

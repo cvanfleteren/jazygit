@@ -43,7 +43,7 @@ public record Repo(
         Map<String, Boolean> worktreeChanges,
         Map<BranchName, BaseDistance> baseDistance,
         Map<BranchName, BranchName> parents,
-        Loadable<List<String>> allFiles) {
+        Loadable<List<RepoPath>> allFiles) {
 
     public static final Repo LOADING = new Repo(
             Loadable.loading(),
@@ -80,15 +80,15 @@ public record Repo(
             return status.map(Repo::withResolved);
         }
         return switch (allFiles) {
-            case Loadable.Loaded<List<String>>(List<String> paths) ->
+            case Loadable.Loaded<List<RepoPath>>(List<RepoPath> paths) ->
                 status.map(read -> {
-                    Set<String> changed = read.files().map(FileEntry::path).toSet();
+                    Set<RepoPath> changed = read.files().map(FileEntry::path).toSet();
                     return read.files()
                             .appendAll(paths.filter(path -> !changed.contains(path))
                                     .map(FileEntry::unchanged));
                 });
-            case Loadable.Loading<List<String>>() -> Loadable.loading();
-            case Loadable.Failed<List<String>>(Failure failure) -> new Loadable.Failed<>(failure);
+            case Loadable.Loading<List<RepoPath>>() -> Loadable.loading();
+            case Loadable.Failed<List<RepoPath>>(Failure failure) -> new Loadable.Failed<>(failure);
         };
     }
 
@@ -97,7 +97,7 @@ public record Repo(
      * that is not among them.
      */
     private static List<FileEntry> withResolved(RepoStatus read) {
-        Set<String> changed = read.files().map(FileEntry::path).toSet();
+        Set<RepoPath> changed = read.files().map(FileEntry::path).toSet();
         return read.inProgress().isEmpty()
                 ? read.files()
                 : read.files()

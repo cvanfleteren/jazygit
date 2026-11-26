@@ -14,10 +14,11 @@ public final class FeatureUpdate {
 
     public static Next update(Model model, FeatureMsg msg) {
         return switch (msg) {
-            case FeatureMsg.Owned(String feature, Msg owned) -> model.on(feature) ? owned.apply(model) : Next.of(model);
+            case FeatureMsg.Owned(FeatureId feature, Msg owned) ->
+                model.on(feature) ? owned.apply(model) : Next.of(model);
             case FeatureMsg.FirstOn first ->
                 first.on(model).map(owned -> owned.msg().apply(model)).getOrElse(() -> Next.of(model));
-            case FeatureMsg.Applies(String feature, boolean on) -> applies(model, feature, on);
+            case FeatureMsg.Applies(FeatureId feature, boolean on) -> applies(model, feature, on);
             case FeatureMsg.Claimed(var claim) -> ForgeUpdate.claimed(model, claim);
         };
     }
@@ -26,7 +27,7 @@ public final class FeatureUpdate {
      * {@code model} once the feature {@code feature} said whether it applies to the repository: the features are told
      * when that switches it, and a screen of its that is shown goes back to the repository's once it is off.
      */
-    private static Next applies(Model model, String feature, boolean on) {
+    private static Next applies(Model model, FeatureId feature, boolean on) {
         if (model.on(feature) == on) {
             return Next.of(model);
         }
@@ -39,7 +40,7 @@ public final class FeatureUpdate {
     /**
      * {@code model} with the feature {@code feature} off, until it says it applies: as a repository opens.
      */
-    public static Model off(Model model, String feature) {
+    public static Model off(Model model, FeatureId feature) {
         return model.mapPart(FeatureSwitches.PART, switches -> switches.switched(feature, false));
     }
 }

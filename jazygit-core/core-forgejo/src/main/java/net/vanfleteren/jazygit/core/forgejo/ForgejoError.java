@@ -1,8 +1,10 @@
 package net.vanfleteren.jazygit.core.forgejo;
 
 import io.vavr.control.Option;
+import io.vavr.control.Try;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import net.vanfleteren.jazygit.core.repo.PrNumber;
 import net.vanfleteren.jazygit.lib.json.Decoder;
 
 /**
@@ -61,9 +63,11 @@ public sealed interface ForgejoError {
          * The number of the open pull request that has the same head and base, when this is the 409 of creating one
          * and the message names it (ADR 178).
          */
-        public Option<Long> existing() {
+        public Option<PrNumber> existing() {
             Matcher matcher = EXISTING.matcher(message());
-            return Option.when(status == CONFLICT && matcher.find(), () -> Long.parseLong(matcher.group(1)));
+            return Option.when(status == CONFLICT && matcher.find(), () -> matcher.group(1))
+                    .flatMap(digits ->
+                            Try.of(() -> new PrNumber(Integer.parseInt(digits))).toOption());
         }
     }
 

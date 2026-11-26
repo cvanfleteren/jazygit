@@ -9,13 +9,14 @@ import io.vavr.control.Option;
 import java.time.Instant;
 import net.vanfleteren.jazygit.core.gh.model.Build;
 import net.vanfleteren.jazygit.core.gh.model.CheckRun;
-import net.vanfleteren.jazygit.core.gh.model.GhBranch;
-import net.vanfleteren.jazygit.core.gh.model.PrNumber;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest.Review;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestDetails.Check;
 import net.vanfleteren.jazygit.core.repo.BranchName;
+import net.vanfleteren.jazygit.core.repo.ForgeBranch;
+import net.vanfleteren.jazygit.core.repo.PrNumber;
+import net.vanfleteren.jazygit.core.repo.RepoSlug;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.kernel.state.build.FailedBuild;
 import org.junit.jupiter.api.Test;
@@ -62,15 +63,15 @@ class FailedBuildsTest {
     @Test
     void thePullRequestOfTheBranchIsHandedOverAsTheChangeRequestTheForgeCallsIt() {
         PullRequest pullRequest =
-                new PullRequest(new PrNumber(12), new GhBranch("feat"), false, Checks.FAILING, Review.NONE);
+                new PullRequest(new PrNumber(12), new ForgeBranch("feat"), false, Checks.FAILING, Review.NONE);
         Build build = new Build("CI", "push", 401, 1, new Sha(COMMIT), "Fix", T, List.of(job("verify", "FAILURE")));
 
         assertEquals(
-                Option.of(new FailedBuild.ChangeRequest("pull request", 12)),
+                Option.of(new FailedBuild.ChangeRequest("pull request", new PrNumber(12))),
                 FailedBuilds.of(FEAT, build, Option.of(pullRequest)).changeRequest());
         assertEquals(
-                Option.of(new FailedBuild.ChangeRequest("pull request", 12)),
-                FailedBuilds.of(FEAT, "o/r", List.empty(), Option.of(pullRequest))
+                Option.of(new FailedBuild.ChangeRequest("pull request", new PrNumber(12))),
+                FailedBuilds.of(FEAT, new RepoSlug("o/r"), List.empty(), Option.of(pullRequest))
                         .changeRequest());
         assertEquals(Option.none(), FailedBuilds.of(FEAT, build, Option.none()).changeRequest());
     }
@@ -94,10 +95,10 @@ class FailedBuildsTest {
                 new Check("e2e", Checks.FAILING, Option.of(run(402))),
                 new Check("ci/jenkins", Checks.FAILING, Option.none(), Option.of("https://jenkins.example/7")));
 
-        FailedBuild failed = FailedBuilds.of(FEAT, "o/r", checks, Option.none());
+        FailedBuild failed = FailedBuilds.of(FEAT, new RepoSlug("o/r"), checks, Option.none());
 
         assertEquals(List.of("verify", "e2e", "ci/jenkins"), failed.jobs().map(FailedBuild.Job::name));
-        assertEquals(Option.of("o/r"), failed.repository());
+        assertEquals(Option.of(new RepoSlug("o/r")), failed.repository());
         assertEquals("""
                 gh run view 401 --log-failed --repo o/r
                 gh run view 402 --log-failed --repo o/r
@@ -107,7 +108,7 @@ class FailedBuildsTest {
     @Test
     void nothingFailedIsAFailedBuildWithoutJobs() {
         FailedBuild failed = FailedBuilds.of(
-                FEAT, "o/r", List.of(new Check("verify", Checks.PENDING, Option.none())), Option.none());
+                FEAT, new RepoSlug("o/r"), List.of(new Check("verify", Checks.PENDING, Option.none())), Option.none());
 
         assertFalse(failed.failed());
         assertTrue(failed.running());

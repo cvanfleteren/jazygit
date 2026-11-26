@@ -15,6 +15,7 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 import java.util.function.UnaryOperator;
+import net.vanfleteren.jazygit.kernel.state.FeatureId;
 import net.vanfleteren.jazygit.kernel.state.FeatureMsg;
 import net.vanfleteren.jazygit.kernel.state.Msg;
 import net.vanfleteren.jazygit.kernel.state.PaneId;
@@ -49,14 +50,14 @@ public final class Keymap {
     private final Option<BiFunction<String, List<Option<Msg>>, Msg>> help;
     private final Map<String, List<Scope<?>>> guests;
     // The feature whose keys are being added, if they are of one (ADR 171).
-    private final Option<String> owning;
+    private final Option<FeatureId> owning;
 
     private Keymap(
             Map<String, Section> sections,
             List<Global> globals,
             Option<BiFunction<String, List<Option<Msg>>, Msg>> help,
             Map<String, List<Scope<?>>> guests,
-            Option<String> owning) {
+            Option<FeatureId> owning) {
         this.sections = sections;
         this.globals = globals;
         this.help = help;
@@ -142,7 +143,7 @@ public final class Keymap {
     private void requireOnce(String scopeId) {
         Option<String> twice = boundTwice(bindings(scopeId)
                 .map(binding -> Tuple.of(binding.key(), binding.feature()))
-                .append(Tuple.of(HELP_KEY, Option.<String>none())));
+                .append(Tuple.of(HELP_KEY, Option.<FeatureId>none())));
         Require.that(twice.isEmpty(), () -> "The key \"" + twice.get() + "\" is bound twice in " + scopeId);
     }
 
@@ -151,7 +152,7 @@ public final class Keymap {
      * feature that is always on and another, or twice by one feature. Features that are on or off may bind a key
      * once each (ADR 175).
      */
-    private static Option<String> boundTwice(List<Tuple2<String, Option<String>>> keys) {
+    private static Option<String> boundTwice(List<Tuple2<String, Option<FeatureId>>> keys) {
         return keys.groupBy(Tuple2::_1)
                 .filterValues(bound -> bound.size() > 1
                         && (bound.exists(key -> key._2().isEmpty())
@@ -164,7 +165,7 @@ public final class Keymap {
      * This keymap with the keys {@code adding} adds, of the feature {@code feature}, which is on or off for a
      * repository (ADR 171): what they send does something only while it is on, and the help lists them only then.
      */
-    public Keymap owned(String feature, UnaryOperator<Keymap> adding) {
+    public Keymap owned(FeatureId feature, UnaryOperator<Keymap> adding) {
         Keymap added = adding.apply(new Keymap(sections, globals, help, guests, Option.of(feature)));
         return new Keymap(added.sections, added.globals, added.help, added.guests, owning);
     }
@@ -321,7 +322,7 @@ public final class Keymap {
          * {@code global}, of the feature {@code feature}: what it sends does something only while that is on
          * (ADR 171).
          */
-        static Global of(String feature, Global global) {
+        static Global of(FeatureId feature, Global global) {
             return new Dispatching(
                     global.label(),
                     global.descriptionKey(),
@@ -332,8 +333,10 @@ public final class Keymap {
         /**
          * The feature the key is of, when it is on or off for a repository.
          */
-        default Option<String> feature() {
-            return action() instanceof FeatureMsg.Owned(String feature, var msg) ? Option.of(feature) : Option.none();
+        default Option<FeatureId> feature() {
+            return action() instanceof FeatureMsg.Owned(FeatureId feature, var msg)
+                    ? Option.of(feature)
+                    : Option.none();
         }
 
         /**
@@ -420,7 +423,7 @@ public final class Keymap {
      * @param <S>            what is selected in the panel
      */
     public record Binding<S>(
-            String key, String descriptionKey, Function<Option<S>, Option<Msg>> action, Option<String> feature) {
+            String key, String descriptionKey, Function<Option<S>, Option<Msg>> action, Option<FeatureId> feature) {
 
         /**
          * A key of the kernel, or of a feature that is always on.
@@ -432,7 +435,7 @@ public final class Keymap {
         /**
          * This key, of the feature {@code feature}: what it sends does something only while that is on.
          */
-        Binding<S> of(String feature) {
+        Binding<S> of(FeatureId feature) {
             return new Binding<>(
                     key,
                     descriptionKey,

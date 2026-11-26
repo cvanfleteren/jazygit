@@ -6,6 +6,7 @@ import io.vavr.collection.HashSet;
 import io.vavr.collection.LinkedHashSet;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
+import net.vanfleteren.jazygit.kernel.state.FeatureId;
 import net.vanfleteren.jazygit.kernel.ui.Feature;
 import org.junit.jupiter.api.Test;
 
@@ -21,7 +22,7 @@ class FeaturesWithoutTest {
     private static final List<Feature> FEATURES = List.of(ALWAYS, FORGE, AGENT);
 
     private static Feature deciding(String id) {
-        return Feature.of().applying(id, model -> {
+        return Feature.of().applying(new FeatureId(id), model -> {
             throw new AssertionError("not asked");
         });
     }

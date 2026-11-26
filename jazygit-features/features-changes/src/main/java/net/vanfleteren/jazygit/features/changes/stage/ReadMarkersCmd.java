@@ -3,6 +3,7 @@ package net.vanfleteren.jazygit.features.changes.stage;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.core.git.model.FileEntry;
+import net.vanfleteren.jazygit.core.repo.RepoPath;
 import net.vanfleteren.jazygit.kernel.state.Cmd;
 import net.vanfleteren.jazygit.kernel.state.Env;
 import net.vanfleteren.jazygit.kernel.state.Failure;
@@ -16,7 +17,8 @@ import net.vanfleteren.jazygit.kernel.state.Msg;
  * @param directory  the directory asked to be staged, as {@link StageMsg.Requested} has it
  * @param conflicted the paths of those of {@code files} that are in conflict
  */
-public record ReadMarkersCmd(List<FileEntry> files, Option<String> directory, List<String> conflicted) implements Cmd {
+public record ReadMarkersCmd(List<FileEntry> files, Option<RepoPath> directory, List<RepoPath> conflicted)
+        implements Cmd {
 
     @Override
     public Msg run(Env env) {

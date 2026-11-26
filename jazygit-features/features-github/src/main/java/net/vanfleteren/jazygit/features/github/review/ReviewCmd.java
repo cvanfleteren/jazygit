@@ -3,9 +3,10 @@ package net.vanfleteren.jazygit.features.github.review;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.core.gh.model.NewReviewThread;
-import net.vanfleteren.jazygit.core.gh.model.PrNumber;
 import net.vanfleteren.jazygit.core.gh.model.ReviewThread;
 import net.vanfleteren.jazygit.core.process.ExecutedCommand;
+import net.vanfleteren.jazygit.core.repo.PrNumber;
+import net.vanfleteren.jazygit.core.repo.RepoPath;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.features.github.GitHubFailure;
 import net.vanfleteren.jazygit.features.github.GitHubServices;
@@ -74,7 +75,7 @@ public sealed interface ReviewCmd extends Cmd {
                             .reply(number, comment, body)
                             .mapLeft(GitHubFailure::of)
                             .fold(this::failed, this::succeeded);
-                case Target.Start(Sha commit, String path, var lines) ->
+                case Target.Start(Sha commit, RepoPath path, var lines) ->
                     GitHubServices.of(env)
                             .reviews()
                             .startThread(number, commit, new NewReviewThread(path, lines, body))

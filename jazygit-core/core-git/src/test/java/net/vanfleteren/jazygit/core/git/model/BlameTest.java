@@ -9,6 +9,7 @@ import io.vavr.collection.List;
 import io.vavr.collection.Vector;
 import io.vavr.control.Option;
 import java.time.Instant;
+import net.vanfleteren.jazygit.core.repo.RepoPath;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import org.junit.jupiter.api.Test;
 
@@ -42,14 +43,14 @@ class BlameTest {
         assertEquals(
                 new Blame.Commit(new Sha(FIRST), "Alex Moreau", Instant.ofEpochSecond(1795021394), "first one", true),
                 first.commit());
-        assertEquals("f.txt", first.path());
+        assertEquals(new RepoPath("f.txt"), first.path());
         assertEquals(Option.none(), first.previous());
         Blame.Line second = blame.at(2).get();
         assertEquals("Sam Lee", second.commit().author());
         assertFalse(second.commit().boundary());
-        assertEquals(Option.of(new Blame.Previous(new Sha(FIRST), "f.txt")), second.previous());
+        assertEquals(Option.of(new Blame.Previous(new Sha(FIRST), new RepoPath("f.txt"))), second.previous());
         assertEquals(first.commit(), blame.at(3).get().commit());
-        assertEquals("f.txt", blame.at(3).get().path());
+        assertEquals(new RepoPath("f.txt"), blame.at(3).get().path());
         assertEquals(Option.none(), blame.at(4));
         assertEquals(Option.none(), blame.at(0));
     }
@@ -67,11 +68,11 @@ class BlameTest {
                         "\tb"))
                 .get();
 
-        assertEquals("old.txt", blame.at(1).get().path());
+        assertEquals(new RepoPath("old.txt"), blame.at(1).get().path());
         Blame.Line moved = blame.at(2).get();
-        assertEquals("café new.txt", moved.path());
+        assertEquals(new RepoPath("café new.txt"), moved.path());
         assertEquals(7, moved.original());
-        assertEquals(Option.of(new Blame.Previous(new Sha(SECOND), "café.txt")), moved.previous());
+        assertEquals(Option.of(new Blame.Previous(new Sha(SECOND), new RepoPath("café.txt"))), moved.previous());
     }
 
     @Test
@@ -104,7 +105,7 @@ class BlameTest {
 
     @Test
     void aFileOfABranchWithoutCommitsIsOneRunNotCommittedYet() {
-        Blame blame = Blame.uncommitted(3, "g.txt");
+        Blame blame = Blame.uncommitted(3, new RepoPath("g.txt"));
 
         assertEquals(3, blame.lines().size());
         assertTrue(blame.lines().forAll(line -> !line.commit().committed()));
@@ -172,7 +173,7 @@ class BlameTest {
         return new Blame(times.map(time -> new Blame.Line(
                         new Blame.Commit(sha(time), "A", Instant.ofEpochSecond(time), "s", false),
                         1,
-                        "f.txt",
+                        new RepoPath("f.txt"),
                         Option.<Blame.Previous>none()))
                 .toVector());
     }

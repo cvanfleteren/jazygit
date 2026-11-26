@@ -10,6 +10,7 @@ import java.util.ArrayList;
 import net.vanfleteren.jazygit.core.git.StubGit;
 import net.vanfleteren.jazygit.core.process.ExecutedCommand;
 import net.vanfleteren.jazygit.core.repo.BranchName;
+import net.vanfleteren.jazygit.core.repo.RepoSlug;
 import net.vanfleteren.jazygit.features.agent.settings.AgentProgram;
 import net.vanfleteren.jazygit.kernel.state.Env;
 import net.vanfleteren.jazygit.kernel.state.build.FailedBuild;
@@ -30,7 +31,7 @@ class InvestigateCmdTest {
             "Agent", List.of("agent", AgentProgram.PROMPT), false, Option.none(), Option.of("{account}"));
 
     private static final FailedBuild BUILD = new FailedBuild(
-            Option.of("o/r"),
+            Option.of(new RepoSlug("o/r")),
             new BranchName("main"),
             Option.none(),
             Option.none(),

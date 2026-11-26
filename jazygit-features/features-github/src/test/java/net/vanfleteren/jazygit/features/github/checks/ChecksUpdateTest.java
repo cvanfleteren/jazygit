@@ -12,8 +12,6 @@ import io.vavr.control.Option;
 import java.time.Instant;
 import net.vanfleteren.jazygit.core.gh.StubGitHub;
 import net.vanfleteren.jazygit.core.gh.model.CheckRun;
-import net.vanfleteren.jazygit.core.gh.model.GhBranch;
-import net.vanfleteren.jazygit.core.gh.model.PrNumber;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest.Review;
@@ -24,8 +22,11 @@ import net.vanfleteren.jazygit.core.git.model.Fixtures;
 import net.vanfleteren.jazygit.core.repo.Branch;
 import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.BranchRef;
+import net.vanfleteren.jazygit.core.repo.ForgeBranch;
+import net.vanfleteren.jazygit.core.repo.PrNumber;
 import net.vanfleteren.jazygit.core.repo.RemoteBranch;
 import net.vanfleteren.jazygit.core.repo.RemoteName;
+import net.vanfleteren.jazygit.core.repo.RepoSlug;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.core.repo.Upstream;
 import net.vanfleteren.jazygit.features.github.checks.branches.BranchChecksMsg;
@@ -66,9 +67,9 @@ class ChecksUpdateTest {
                     1,
                     "push")));
     private static final PendingChecks READ =
-            new PendingChecks("owner/repo", HashMap.of(new BranchName("feature"), List.of(PASSED)));
+            new PendingChecks(new RepoSlug("owner/repo"), HashMap.of(new BranchName("feature"), List.of(PASSED)));
     private static final PendingChecks RUNNING = new PendingChecks(
-            "owner/repo",
+            new RepoSlug("owner/repo"),
             HashMap.of(new BranchName("feature"), List.of(PASSED, new Check("ci/status", Checks.PENDING))));
 
     /**
@@ -94,7 +95,7 @@ class ChecksUpdateTest {
 
     // The pull request from feature, shown in its dialog once its details are read.
     private static final PullRequest FEATURE_PR =
-            new PullRequest(new PrNumber(42), new GhBranch("feature"), false, Checks.PENDING, Review.APPROVED);
+            new PullRequest(new PrNumber(42), new ForgeBranch("feature"), false, Checks.PENDING, Review.APPROVED);
     private static final PullRequestDetails DETAILS =
             StubGitHub.of().pullRequests().details(new PrNumber(42)).get();
     private static final PullRequestPopup DIALOG = PullRequestPopup.loading(
@@ -158,7 +159,7 @@ class ChecksUpdateTest {
                 next.model().popup(ChecksPopup.class));
         assertEquals(
                 List.of(new CheckTimesCmd.RecordCheckTimes(
-                        "owner/repo",
+                        new RepoSlug("owner/repo"),
                         List.of(CheckSample.of(PASSED).get()),
                         next.model().now(),
                         false)),
@@ -204,8 +205,8 @@ class ChecksUpdateTest {
     // As gh reads them when the branch is gone on GitHub.
     @Test
     void noChecksReadLeaveTheBranchesAsTheyAre() {
-        Next next =
-                Update.update(shown(), new ChecksMsg.Loaded(FEATURE, new PendingChecks("owner/repo", HashMap.empty())));
+        Next next = Update.update(
+                shown(), new ChecksMsg.Loaded(FEATURE, new PendingChecks(new RepoSlug("owner/repo"), HashMap.empty())));
 
         assertFalse(next.cmds().contains(new LoadBranchChecks()), next.cmds().toString());
         assertEquals(shown().part(GitHubState.PART), next.model().part(GitHubState.PART));
@@ -255,7 +256,7 @@ class ChecksUpdateTest {
         assertEquals(Option.none(), next.model().popup(ChecksPopup.class));
         assertEquals(
                 List.of(new CheckTimesCmd.RecordCheckTimes(
-                        "owner/repo",
+                        new RepoSlug("owner/repo"),
                         List.of(CheckSample.of(PASSED).get()),
                         next.model().now(),
                         false)),

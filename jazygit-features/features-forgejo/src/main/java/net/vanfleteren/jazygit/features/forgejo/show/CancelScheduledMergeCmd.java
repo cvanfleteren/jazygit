@@ -6,6 +6,7 @@ import net.vanfleteren.jazygit.core.forgejo.Forgejo;
 import net.vanfleteren.jazygit.core.forgejo.ForgejoError;
 import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.BranchRef;
+import net.vanfleteren.jazygit.core.repo.PrNumber;
 import net.vanfleteren.jazygit.core.repo.RemoteName;
 import net.vanfleteren.jazygit.features.forgejo.ForgejoFailure;
 import net.vanfleteren.jazygit.features.forgejo.builds.ForgejoServices;
@@ -22,7 +23,7 @@ import net.vanfleteren.jazygit.kernel.state.operation.OperationCmd;
  * busy meanwhile. One no longer scheduled, which Forgejo answers with 404, is told so, as the timeline may say it is
  * when Forgejo dropped it.
  */
-public record CancelScheduledMergeCmd(RemoteName home, BranchName branch, long number, Instant scheduledAt)
+public record CancelScheduledMergeCmd(RemoteName home, BranchName branch, PrNumber number, Instant scheduledAt)
         implements OperationCmd {
 
     static final Operation CANCEL = Operation.of("forgejo.log.title.cancelMerge", "forgejo.error.cancel.failed")

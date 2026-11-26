@@ -3,6 +3,7 @@ package net.vanfleteren.jazygit.features.forgejo.create;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.core.forgejo.ForgejoPullRequest;
 import net.vanfleteren.jazygit.core.repo.BranchName;
+import net.vanfleteren.jazygit.core.repo.PrNumber;
 import net.vanfleteren.jazygit.features.forgejo.create.ForgejoCreatePullRequestCmd.CreatePullRequest;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.Msg;
@@ -45,5 +46,5 @@ public sealed interface ForgejoCreatePullRequestMsg extends Msg {
      * Forgejo did not create the pull request {@code cmd} asked for, as pull request {@code number} is open with the
      * same head and base already.
      */
-    record AlreadyOpen(CreatePullRequest cmd, long number) implements ForgejoCreatePullRequestMsg {}
+    record AlreadyOpen(CreatePullRequest cmd, PrNumber number) implements ForgejoCreatePullRequestMsg {}
 }

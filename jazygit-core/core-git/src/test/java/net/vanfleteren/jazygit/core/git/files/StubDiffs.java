@@ -9,6 +9,7 @@ import net.vanfleteren.jazygit.core.git.model.FileContent;
 import net.vanfleteren.jazygit.core.git.model.FileEntry;
 import net.vanfleteren.jazygit.core.git.process.GitError;
 import net.vanfleteren.jazygit.core.repo.PullRequestCommits;
+import net.vanfleteren.jazygit.core.repo.RepoPath;
 import net.vanfleteren.jazygit.core.repo.Sha;
 
 /**
@@ -27,18 +28,18 @@ public interface StubDiffs extends Diffs {
     }
 
     @Override
-    default Either<GitError, List<String>> treeFiles(Sha sha) {
+    default Either<GitError, List<RepoPath>> treeFiles(Sha sha) {
         return Either.right(List.empty());
     }
 
     @Override
-    default Either<GitError, FileContent> treeContent(Sha sha, String path) {
-        return Either.left(new GitError.Unreadable(path, "not in " + sha.shortSha()));
+    default Either<GitError, FileContent> treeContent(Sha sha, RepoPath path) {
+        return Either.left(new GitError.Unreadable(path.value(), "not in " + sha.shortSha()));
     }
 
     @Override
-    default Either<GitError, String> treeText(Sha sha, String path) {
-        return Either.left(new GitError.Unreadable(path, "not in " + sha.shortSha()));
+    default Either<GitError, String> treeText(Sha sha, RepoPath path) {
+        return Either.left(new GitError.Unreadable(path.value(), "not in " + sha.shortSha()));
     }
 
     @Override

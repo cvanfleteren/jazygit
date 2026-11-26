@@ -16,6 +16,7 @@ import net.vanfleteren.jazygit.core.git.model.ParsedDiff.ParsedFile;
 import net.vanfleteren.jazygit.core.git.model.ParsedDiff.ParsedHunk;
 import net.vanfleteren.jazygit.core.git.model.UnifiedDiff.DiffLine;
 import net.vanfleteren.jazygit.core.git.model.UnifiedDiff.Hunk;
+import net.vanfleteren.jazygit.core.repo.RepoPath;
 
 /**
  * What the diff filters hide of a diff as it is drawn (ADR 144): which hunks, judged on those git gave, and so which
@@ -90,7 +91,7 @@ public record Filtering(
      * they hide nothing of it, or a version of it is shown.
      */
     private Option<Hiding> hiding(ParsedFile drawn, ParsedDiff git, Expansion.Folded folded) {
-        String path = drawn.file().path();
+        RepoPath path = drawn.file().path();
         if (folded.fold(path).version().isDefined()) {
             return Option.none();
         }
@@ -112,9 +113,9 @@ public record Filtering(
                 new Hiding(pieces, shown, all, closed.flatMap(Hidden::filters).distinct(), closed.size()));
     }
 
-    private List<Hidden> hidden(ParsedFile file, String path) {
+    private List<Hidden> hidden(ParsedFile file, RepoPath path) {
         List<DiffFilter> applying = DiffFiltering.applying(filters, path);
-        Option<String> origin = file.file().origin();
+        Option<RepoPath> origin = file.file().origin();
         List<RemarkThread> on = threads.filter(thread -> thread.isOn(path, origin));
         return applying.isEmpty()
                 ? List.empty()

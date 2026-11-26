@@ -5,6 +5,8 @@ import io.vavr.collection.Map;
 import io.vavr.control.Try;
 import java.time.Duration;
 import java.time.Instant;
+import net.vanfleteren.jazygit.core.repo.PrNumber;
+import net.vanfleteren.jazygit.core.repo.RepoSlug;
 
 /**
  * Where the review threads and comments collapsed or opened against their default are kept, per pull request, from
@@ -23,12 +25,13 @@ public interface CollapsedStore {
      */
     CollapsedStore NONE = new CollapsedStore() {
         @Override
-        public Map<String, Boolean> load(String repository, int number) {
+        public Map<String, Boolean> load(RepoSlug repository, PrNumber number) {
             return HashMap.empty();
         }
 
         @Override
-        public Try<Map<String, Boolean>> save(String repository, int number, Map<String, Boolean> flipped, Instant at) {
+        public Try<Map<String, Boolean>> save(
+                RepoSlug repository, PrNumber number, Map<String, Boolean> flipped, Instant at) {
             return Try.success(flipped);
         }
     };
@@ -38,11 +41,11 @@ public interface CollapsedStore {
      * {@code owner/name}, flipped against their default, each with whether that default was collapsed; none when none
      * were kept or they cannot be read.
      */
-    Map<String, Boolean> load(String repository, int number);
+    Map<String, Boolean> load(RepoSlug repository, PrNumber number);
 
     /**
      * Keeps {@code flipped} as the ids flipped of pull request {@code number} of {@code repository}, flipped at
      * {@code at}, and forgets those of the pull requests none was flipped of for {@link #KEPT} before it.
      */
-    Try<Map<String, Boolean>> save(String repository, int number, Map<String, Boolean> flipped, Instant at);
+    Try<Map<String, Boolean>> save(RepoSlug repository, PrNumber number, Map<String, Boolean> flipped, Instant at);
 }

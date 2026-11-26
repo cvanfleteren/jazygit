@@ -3,6 +3,7 @@ package net.vanfleteren.jazygit.kernel.state.diff;
 import io.vavr.collection.List;
 import io.vavr.collection.Seq;
 import io.vavr.control.Option;
+import net.vanfleteren.jazygit.core.repo.RepoPath;
 
 /**
  * Where the cursor of a rich diff stops (ADR 60): what comes before its first file, then for each file its bar, the
@@ -48,7 +49,7 @@ public final class DiffStops {
                 stops.find(stop ->
                                 stop instanceof Anchor.Thread(RemarkThread.Id other, var ignored) && other.equals(id))
                         .orElse(() -> line.flatMap(on -> nearest(stops, on)));
-            case Anchor.OnLine(String path, DiffSide side, int number) ->
+            case Anchor.OnLine(RepoPath path, DiffSide side, int number) ->
                 stops.find(at::equals)
                         .orElse(() -> stops.filter(stop -> stop instanceof Anchor.OnLine(var p, var s, var ignored)
                                         && p.equals(path)
@@ -56,7 +57,7 @@ public final class DiffStops {
                                 .minBy(stop -> Math.abs(((Anchor.OnLine) stop).number() - number)))
                         .orElse(() -> nearestRow(stops, (Anchor.OnLine) at))
                         .orElse(() -> stops.find(new Anchor.File(path)::equals));
-            case Anchor.Gap(String path, int from, var until) ->
+            case Anchor.Gap(RepoPath path, int from, var until) ->
                 stops.find(at::equals)
                         .orElse(() -> stops.filter(
                                         stop -> stop instanceof Anchor.Gap(var p, var f, var u) && p.equals(path))
@@ -64,7 +65,7 @@ public final class DiffStops {
                         .orElse(() -> nearest(stops, new Anchor.OnLine(path, DiffSide.NEW, from)));
             // A marker of hunks filters hide is found by its first hunk, which moves into another marker as those
             // around it are opened or closed: opened, it stays on the marker kept above them, which hides them again.
-            case Anchor.Filtered(String path, var hunks, var opened) ->
+            case Anchor.Filtered(RepoPath path, var hunks, var opened) ->
                 stops.find(at::equals)
                         .orElse(() -> stops.find(stop -> stop instanceof Anchor.Filtered(var p, var h, var o)
                                 && p.equals(path)
@@ -74,7 +75,7 @@ public final class DiffStops {
                                 stops,
                                 new Anchor.OnLine(
                                         path, DiffSide.NEW, hunks.head().newStart())));
-            case Anchor.Node(String path, String pointer, Anchor.OnLine line) ->
+            case Anchor.Node(RepoPath path, String pointer, Anchor.OnLine line) ->
                 stops.find(stop -> stop instanceof Anchor.Node(var p, var o, var ignored)
                                 && p.equals(path)
                                 && o.equals(pointer))

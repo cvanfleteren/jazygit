@@ -109,7 +109,7 @@ public final class Update {
 
     private static Next handle(Model model, Msg msg) {
         // What a feature sends is its own message, a timer's too, once it is on (ADR 171).
-        if (msg instanceof FeatureMsg.Owned(String feature, Msg owned)) {
+        if (msg instanceof FeatureMsg.Owned(FeatureId feature, Msg owned)) {
             return model.on(feature) ? handle(model, owned) : Next.of(model);
         }
         if (msg instanceof FeatureMsg.FirstOn first) {

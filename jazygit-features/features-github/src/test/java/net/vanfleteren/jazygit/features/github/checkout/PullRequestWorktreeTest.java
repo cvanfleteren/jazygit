@@ -11,8 +11,6 @@ import java.nio.file.Path;
 import java.time.Instant;
 import net.vanfleteren.jazygit.core.gh.GitHub;
 import net.vanfleteren.jazygit.core.gh.StubGitHub;
-import net.vanfleteren.jazygit.core.gh.model.GhBranch;
-import net.vanfleteren.jazygit.core.gh.model.PrNumber;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestSummary;
 import net.vanfleteren.jazygit.core.gh.process.GhError;
@@ -26,6 +24,9 @@ import net.vanfleteren.jazygit.core.git.process.GitFailure;
 import net.vanfleteren.jazygit.core.process.ExecutedCommand;
 import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.BranchRef;
+import net.vanfleteren.jazygit.core.repo.ForgeBranch;
+import net.vanfleteren.jazygit.core.repo.PrNumber;
+import net.vanfleteren.jazygit.core.repo.RepoSlug;
 import net.vanfleteren.jazygit.core.repo.Revision;
 import net.vanfleteren.jazygit.features.branches.worktree.add.AddWorktreeCmd;
 import net.vanfleteren.jazygit.features.branches.worktree.add.AddWorktreeMsg;
@@ -53,18 +54,18 @@ class PullRequestWorktreeTest {
         assertEquals(Option.none(), source.busyBranch());
         assertEquals(Option.of(Cmd.Guard.REMOTE_REFS), source.guard());
         assertEquals(List.of("jazygit.pullRequestWorktreeTemplate", ReadWorktreeTemplate.KEY), source.templateKeys());
-        assertEquals(Option.of("owner/repo"), source.repository());
+        assertEquals(Option.of(new RepoSlug("owner/repo")), source.repository());
         assertEquals(LinkedHashMap.of("number", "9"), source.values());
     }
 
     @Test
     void oneOfTheRepositoryIsOnItsOwnBranchWhichIsBusyMeanwhile() {
         PullRequestWorktree own = new PullRequestWorktree(new PullRequestSummary(
-                "owner/repo",
+                new RepoSlug("owner/repo"),
                 new PrNumber(9),
                 "Title",
                 "bob",
-                new GhBranch("patch-1"),
+                new ForgeBranch("patch-1"),
                 false,
                 false,
                 PullRequest.Checks.NONE,
@@ -78,11 +79,11 @@ class PullRequestWorktreeTest {
 
     private static PullRequestSummary pullRequest() {
         return new PullRequestSummary(
-                "owner/repo",
+                new RepoSlug("owner/repo"),
                 new PrNumber(9),
                 "Title",
                 "bob",
-                new GhBranch("patch-1"),
+                new ForgeBranch("patch-1"),
                 false,
                 true,
                 PullRequest.Checks.NONE,

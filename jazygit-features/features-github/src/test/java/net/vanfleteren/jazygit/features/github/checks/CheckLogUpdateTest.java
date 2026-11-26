@@ -26,6 +26,7 @@ import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.BranchRef;
 import net.vanfleteren.jazygit.core.repo.RemoteBranch;
 import net.vanfleteren.jazygit.core.repo.RemoteName;
+import net.vanfleteren.jazygit.core.repo.RepoSlug;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.core.repo.Upstream;
 import net.vanfleteren.jazygit.features.changes.edit.EditCmd;
@@ -101,7 +102,7 @@ class CheckLogUpdateTest {
     }
 
     private static PendingChecks read(List<Check> checks) {
-        return new PendingChecks("owner/repo", HashMap.of(new BranchName("feature"), checks));
+        return new PendingChecks(new RepoSlug("owner/repo"), HashMap.of(new BranchName("feature"), checks));
     }
 
     private static ChecksPopup checks(Model model) {
@@ -212,7 +213,8 @@ class CheckLogUpdateTest {
     void eReadsTheLogOfTheJobPickedInTheBackground() {
         Next next = Update.update(shown(List.of(LINT, VERIFY)), new ChecksMsg.LogRequested());
 
-        CheckLogCmd cmd = new CheckLogCmd("owner/repo", "lint", LINT.run().get());
+        CheckLogCmd cmd =
+                new CheckLogCmd(new RepoSlug("owner/repo"), "lint", LINT.run().get());
         assertEquals(List.of(cmd), next.cmds());
         assertTrue(cmd.background());
         assertEquals(Option.of("lint"), cmd.subject());
@@ -223,20 +225,24 @@ class CheckLogUpdateTest {
         java.util.List<java.util.List<Object>> asked = new java.util.ArrayList<>();
         Env env = new Env(StubGit.of()).with(GitHubServices.GH, StubGitHub.of().withChecks(new StubChecks() {
             @Override
-            public Either<GhFailure, JobLog> jobLog(String repository, long runId, int attempt, long jobId) {
+            public Either<GhFailure, JobLog> jobLog(RepoSlug repository, long runId, int attempt, long jobId) {
                 asked.add(java.util.List.of(repository, runId, attempt, jobId));
                 return Either.right(new JobLog(FILE, 3, List.of(READ)));
             }
         }));
-        CheckLogCmd cmd = new CheckLogCmd("owner/repo", "lint", LINT.run().get());
+        CheckLogCmd cmd =
+                new CheckLogCmd(new RepoSlug("owner/repo"), "lint", LINT.run().get());
 
         assertEquals(new ChecksMsg.LogRead(cmd, FILE.toString(), 3, List.of(READ)), cmd.run(env));
-        assertEquals(java.util.List.of(java.util.List.of("owner/repo", 1L, 1, (long) "lint".hashCode())), asked);
+        assertEquals(
+                java.util.List.of(java.util.List.of(new RepoSlug("owner/repo"), 1L, 1, (long) "lint".hashCode())),
+                asked);
     }
 
     @Test
     void aLogGitHubDoesNotGiveIsAFailedOperation() {
-        CheckLogCmd cmd = new CheckLogCmd("owner/repo", "lint", LINT.run().get());
+        CheckLogCmd cmd =
+                new CheckLogCmd(new RepoSlug("owner/repo"), "lint", LINT.run().get());
 
         assertInstanceOf(
                 OperationMsg.Failed.class, cmd.run(new Env(StubGit.of()).with(GitHubServices.GH, StubGitHub.of())));
@@ -245,7 +251,8 @@ class CheckLogUpdateTest {
     @Test
     void withoutAnEditorSetToOpenFilesTheLogOpensInGitsEditorAndTheReadIsLogged() {
         Model model = shown(List.of(LINT));
-        CheckLogCmd cmd = new CheckLogCmd("owner/repo", "lint", LINT.run().get());
+        CheckLogCmd cmd =
+                new CheckLogCmd(new RepoSlug("owner/repo"), "lint", LINT.run().get());
 
         Next next = Update.update(model, new ChecksMsg.LogRead(cmd, FILE.toString(), 3, List.of(READ)));
 
@@ -257,7 +264,8 @@ class CheckLogUpdateTest {
     @Test
     void theOneEditorSetOpensItAtTheFirstError() {
         Model model = shown(List.of(LINT), NVIM);
-        CheckLogCmd cmd = new CheckLogCmd("owner/repo", "lint", LINT.run().get());
+        CheckLogCmd cmd =
+                new CheckLogCmd(new RepoSlug("owner/repo"), "lint", LINT.run().get());
 
         Next next = Update.update(model, new ChecksMsg.LogRead(cmd, FILE.toString(), 3, List.empty()));
 
@@ -269,7 +277,8 @@ class CheckLogUpdateTest {
     void ofMoreEditorsOneIsChosenOverTheChecksWhichEscapeGoesBackTo() {
         Model model = update(shown(List.of(LINT, VERIFY), NVIM, CODE), new ChecksMsg.Stepped(1))
                 .withListCursor(ListCursor.START.at(0));
-        CheckLogCmd cmd = new CheckLogCmd("owner/repo", "verify", VERIFY.run().get());
+        CheckLogCmd cmd = new CheckLogCmd(
+                new RepoSlug("owner/repo"), "verify", VERIFY.run().get());
 
         Model asking = update(model, new ChecksMsg.LogRead(cmd, FILE.toString(), 7, List.empty()));
         Next chosen = Update.update(asking, new EditMsg.Chosen(CODE));
@@ -288,7 +297,8 @@ class CheckLogUpdateTest {
     void theChecksUnderTheMenuKeepHowFarTheyWereShownToBeWhenWhatChecksTakeChanges() {
         Check e2e = check("e2e", 2, "E2E", Checks.PENDING, "");
         Model model = shown(List.of(e2e, LINT), NVIM, CODE);
-        CheckLogCmd cmd = new CheckLogCmd("owner/repo", "lint", LINT.run().get());
+        CheckLogCmd cmd =
+                new CheckLogCmd(new RepoSlug("owner/repo"), "lint", LINT.run().get());
         Model asking = update(model, new ChecksMsg.LogRead(cmd, FILE.toString(), 3, List.empty()));
         ChecksPopup kept = checks(model).checkTimesChanging(asking);
 
@@ -320,7 +330,8 @@ class CheckLogUpdateTest {
         Model shown = shown(List.of(LINT, VERIFY), NVIM, CODE);
         Next confirmed = Update.update(update(shown, new ChecksMsg.RerunRequested()), new ChecksMsg.RerunConfirmed());
         RerunCmd rerun = (RerunCmd) confirmed.cmds().head();
-        CheckLogCmd cmd = new CheckLogCmd("owner/repo", "lint", LINT.run().get());
+        CheckLogCmd cmd =
+                new CheckLogCmd(new RepoSlug("owner/repo"), "lint", LINT.run().get());
 
         Model back = update(
                 confirmed.model(),
@@ -335,7 +346,8 @@ class CheckLogUpdateTest {
     @Test
     void ofMoreEditorsTheFirstOpensTheLogWhenAnotherPopupIsOverTheChecks() {
         Model asking = update(shown(List.of(LINT, VERIFY), NVIM, CODE), new ChecksMsg.RerunRequested());
-        CheckLogCmd cmd = new CheckLogCmd("owner/repo", "lint", LINT.run().get());
+        CheckLogCmd cmd =
+                new CheckLogCmd(new RepoSlug("owner/repo"), "lint", LINT.run().get());
 
         Next next = Update.update(asking, new ChecksMsg.LogRead(cmd, FILE.toString(), 3, List.empty()));
 

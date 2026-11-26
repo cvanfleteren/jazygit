@@ -4,6 +4,7 @@ import io.vavr.Tuple2;
 import io.vavr.collection.List;
 import io.vavr.collection.Map;
 import io.vavr.control.Option;
+import net.vanfleteren.jazygit.core.repo.RepoPath;
 
 /**
  * Remark threads found by the path of their file, so that the threads of each file of a diff are found without going
@@ -11,7 +12,7 @@ import io.vavr.control.Option;
  *
  * @param byPath for each path, the threads on it, each with where it is among all the threads
  */
-public record RemarksByPath(Map<String, List<Tuple2<RemarkThread, Integer>>> byPath) {
+public record RemarksByPath(Map<RepoPath, List<Tuple2<RemarkThread, Integer>>> byPath) {
 
     /**
      * {@code threads} by the path of their file, and by the path it had before.
@@ -32,7 +33,7 @@ public record RemarksByPath(Map<String, List<Tuple2<RemarkThread, Integer>>> byP
      * The threads on the file with the path {@code path}, renamed from {@code origin} if it was, as
      * {@link RemarkThread#isOn} matches them, in their order.
      */
-    public List<RemarkThread> on(String path, Option<String> origin) {
+    public List<RemarkThread> on(RepoPath path, Option<RepoPath> origin) {
         return List.of(path)
                 .appendAll(origin.filter(old -> !old.equals(path)))
                 .flatMap(each -> byPath.get(each).getOrElse(List.empty()))

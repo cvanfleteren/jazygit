@@ -6,6 +6,7 @@ import io.vavr.collection.List;
 import io.vavr.collection.Vector;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.core.git.model.UnifiedDiff;
+import net.vanfleteren.jazygit.core.repo.RepoPath;
 import net.vanfleteren.jazygit.kernel.state.diff.Anchor.OnLine;
 import net.vanfleteren.jazygit.kernel.state.diff.DiffStops.HunkAt;
 import org.junit.jupiter.api.Test;
@@ -33,7 +34,7 @@ class DiffLinesTest {
             """));
 
     private static OnLine line(DiffSide side, int number) {
-        return new OnLine("a.txt", side, number);
+        return new OnLine(new RepoPath("a.txt"), side, number);
     }
 
     @Test
@@ -100,7 +101,9 @@ class DiffLinesTest {
     @Test
     void noRangeUnlessBothEndsAreLines() {
         assertEquals(Option.none(), LINES.between(line(DiffSide.OLD, 2), line(DiffSide.OLD, 40)));
-        assertEquals(Option.none(), LINES.between(new OnLine("b.png", DiffSide.NEW, 1), line(DiffSide.OLD, 2)));
+        assertEquals(
+                Option.none(),
+                LINES.between(new OnLine(new RepoPath("b.png"), DiffSide.NEW, 1), line(DiffSide.OLD, 2)));
         assertEquals(
                 Option.none(), new DiffLines(Vector.empty()).between(line(DiffSide.OLD, 2), line(DiffSide.OLD, 2)));
     }

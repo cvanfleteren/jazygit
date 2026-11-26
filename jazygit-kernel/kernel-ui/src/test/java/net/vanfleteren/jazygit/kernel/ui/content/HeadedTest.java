@@ -6,6 +6,7 @@ import dev.tamboui.text.Line;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.time.ZoneOffset;
+import net.vanfleteren.jazygit.core.repo.RepoPath;
 import net.vanfleteren.jazygit.kernel.state.AreaId;
 import net.vanfleteren.jazygit.kernel.state.Msg;
 import net.vanfleteren.jazygit.kernel.state.PaneId;
@@ -86,7 +87,7 @@ class HeadedTest {
             Drawn change = Drawn.plain(List.of(Line.from("+x")));
             Drawn stopped = new Drawn(
                     change.rows(),
-                    List.of(new Drawn.Stop(new Drawn.Mark(new Anchor.File("a"), 1, 2, Option.none()), 0)),
+                    List.of(new Drawn.Stop(new Drawn.Mark(new Anchor.File(new RepoPath("a")), 1, 2, Option.none()), 0)),
                     change.places(),
                     change.widest(),
                     change.halves(),

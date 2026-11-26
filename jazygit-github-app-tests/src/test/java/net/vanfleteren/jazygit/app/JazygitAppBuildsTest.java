@@ -32,6 +32,7 @@ import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.BranchRef;
 import net.vanfleteren.jazygit.core.repo.RemoteBranch;
 import net.vanfleteren.jazygit.core.repo.RemoteName;
+import net.vanfleteren.jazygit.core.repo.RemoteUrl;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.core.repo.Upstream;
 import net.vanfleteren.jazygit.features.github.GitHubServices;
@@ -81,9 +82,9 @@ class JazygitAppBuildsTest {
                         // origin is the repository on GitHub the stub's checks are of.
                         .withRemotes(new StubRemotes() {
                             @Override
-                            public Either<GitError, Map<RemoteName, String>> urls() {
-                                return Either.right(
-                                        HashMap.of(new RemoteName("origin"), "https://github.com/owner/repo.git"));
+                            public Either<GitError, Map<RemoteName, RemoteUrl>> urls() {
+                                return Either.right(HashMap.of(
+                                        new RemoteName("origin"), new RemoteUrl("https://github.com/owner/repo.git")));
                             }
                         }))
                 .with(GitHubServices.GH, StubGitHub.of().withChecks(new StubChecks() {

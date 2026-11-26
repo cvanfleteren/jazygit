@@ -9,7 +9,10 @@ import io.vavr.control.Option;
 import java.time.Instant;
 import net.vanfleteren.jazygit.core.git.model.ChangeType;
 import net.vanfleteren.jazygit.core.git.model.CommitFile;
+import net.vanfleteren.jazygit.core.repo.PrNumber;
 import net.vanfleteren.jazygit.core.repo.PullRequestCommits;
+import net.vanfleteren.jazygit.core.repo.RepoPath;
+import net.vanfleteren.jazygit.core.repo.RepoSlug;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.kernel.state.Failure;
 import net.vanfleteren.jazygit.kernel.state.Loadable;
@@ -24,12 +27,13 @@ import org.junit.jupiter.api.Test;
 
 class CommitFilesViewTest {
 
-    private static final Changes PULL_REQUEST = new Changes.OfPullRequest(
-            new PullRequestCommits(7, "owner/repo", "", new Sha("b".repeat(40)), new Sha("a".repeat(40))));
-    private static final CommitFile OPEN = new CommitFile("src/Open.java", ChangeType.MODIFIED);
-    private static final CommitFile RESOLVED = new CommitFile("src/Resolved.java", ChangeType.MODIFIED);
-    private static final CommitFile RENAMED = new CommitFile("New.java", ChangeType.RENAMED, Option.of("Old.java"));
-    private static final CommitFile QUIET = new CommitFile("Quiet.java", ChangeType.ADDED);
+    private static final Changes PULL_REQUEST = new Changes.OfPullRequest(new PullRequestCommits(
+            new PrNumber(7), new RepoSlug("owner/repo"), "", new Sha("b".repeat(40)), new Sha("a".repeat(40))));
+    private static final CommitFile OPEN = new CommitFile(new RepoPath("src/Open.java"), ChangeType.MODIFIED);
+    private static final CommitFile RESOLVED = new CommitFile(new RepoPath("src/Resolved.java"), ChangeType.MODIFIED);
+    private static final CommitFile RENAMED =
+            new CommitFile(new RepoPath("New.java"), ChangeType.RENAMED, Option.of(new RepoPath("Old.java")));
+    private static final CommitFile QUIET = new CommitFile(new RepoPath("Quiet.java"), ChangeType.ADDED);
     private static final List<CommitFile> FILES = List.of(OPEN, RESOLVED, RENAMED, QUIET);
 
     @Test
@@ -97,7 +101,7 @@ class CommitFilesViewTest {
     private static RemarkThread thread(String path, boolean resolved) {
         return new RemarkThread(
                 new RemarkThread.Id("T"),
-                path,
+                new RepoPath(path),
                 Option.none(),
                 RemarkThread.Subject.LINE,
                 Option.of(1),

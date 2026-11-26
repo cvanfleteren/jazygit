@@ -4,6 +4,7 @@ import io.vavr.collection.List;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.core.repo.InProgress;
 import net.vanfleteren.jazygit.core.repo.Plan;
+import net.vanfleteren.jazygit.core.repo.RepoPath;
 import net.vanfleteren.jazygit.kernel.state.popup.Popup;
 
 /**
@@ -13,13 +14,13 @@ import net.vanfleteren.jazygit.kernel.state.popup.Popup;
  *               commits (ADR 198)
  * @param plan   its steps, as git keeps them, which say where it stopped and what continuing goes on with (ADR 199)
  */
-public record InProgressPopup(InProgress inProgress, int conflicts, List<String> marked, Option<Plan> plan)
+public record InProgressPopup(InProgress inProgress, int conflicts, List<RepoPath> marked, Option<Plan> plan)
         implements Popup {
 
     /**
      * Asking about {@code inProgress}, whose steps are not known.
      */
-    public InProgressPopup(InProgress inProgress, int conflicts, List<String> marked) {
+    public InProgressPopup(InProgress inProgress, int conflicts, List<RepoPath> marked) {
         this(inProgress, conflicts, marked, Option.none());
     }
 

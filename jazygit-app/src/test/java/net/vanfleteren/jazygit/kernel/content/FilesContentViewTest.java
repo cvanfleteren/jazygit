@@ -48,10 +48,10 @@ class FilesContentViewTest {
                 new AreaId("stash-changes"),
                 content,
                 new WholeFile.Source.OfStash(
-                        new Sha("5555"), new CommitFile("a.txt", ChangeType.MODIFIED, Option.none())),
-                "a.txt",
+                        new Sha("5555"), new CommitFile(new RepoPath("a.txt"), ChangeType.MODIFIED, Option.none())),
+                new RepoPath("a.txt"),
                 DiffOptions.DEFAULT);
-        return new Version(content, "a.txt", Option.of(FileVersion.NEW), read.file(), Loadable.loading());
+        return new Version(content, new RepoPath("a.txt"), Option.of(FileVersion.NEW), read.file(), Loadable.loading());
     }
 
     @Test
@@ -148,7 +148,7 @@ class FilesContentViewTest {
     @Test
     void theFilesOfACommitShowWhatItChangedInTheHighlightedNodeInTheStyleChosen() {
         Changes of = new Changes.OfCommit(new Sha("aaaa"));
-        CommitFile file = new CommitFile("src/a.txt", ChangeType.MODIFIED);
+        CommitFile file = new CommitFile(new RepoPath("src/a.txt"), ChangeType.MODIFIED);
         Model rich = TestModels.loaded()
                 .mapPreferences(preferences ->
                         preferences.withSettings(preferences.settings().withDiffStyle(DiffStyle.RICH)));
@@ -219,8 +219,8 @@ class FilesContentViewTest {
         Model selected = TestModels.withFilesSelected(
                 SampleData.git(),
                 List.of(
-                        new FileEntry("a.txt", ChangeType.MODIFIED, true, false),
-                        new FileEntry("b.txt", ChangeType.MODIFIED, false, true)));
+                        new FileEntry(new RepoPath("a.txt"), ChangeType.MODIFIED, true, false),
+                        new FileEntry(new RepoPath("b.txt"), ChangeType.MODIFIED, false, true)));
 
         Shown.Stacked diffs = assertInstanceOf(Shown.Stacked.class, ContentView.of(selected, FilesPanel.PANE));
         assertEquals(
@@ -235,8 +235,8 @@ class FilesContentViewTest {
         Model selected = TestModels.withFilesSelected(
                 SampleData.git(),
                 List.of(
-                        new FileEntry("a.txt", ChangeType.MODIFIED, true, false),
-                        new FileEntry("b.txt", ChangeType.MODIFIED, false, true)));
+                        new FileEntry(new RepoPath("a.txt"), ChangeType.MODIFIED, true, false),
+                        new FileEntry(new RepoPath("b.txt"), ChangeType.MODIFIED, false, true)));
         Model rich = selected.mapPreferences(
                 preferences -> preferences.withSettings(preferences.settings().withDiffStyle(DiffStyle.RICH)));
 

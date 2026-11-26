@@ -6,6 +6,7 @@ import io.vavr.control.Try;
 import java.time.Instant;
 import java.util.function.UnaryOperator;
 import lombok.With;
+import net.vanfleteren.jazygit.core.repo.RepoSlug;
 
 /**
  * Where how long the checks of each repository took is kept, from one session to the next (ADR 32). It is state
@@ -19,12 +20,12 @@ public interface CheckTimingsStore {
      */
     CheckTimingsStore NONE = new CheckTimingsStore() {
         @Override
-        public Option<Kept> load(String repository) {
+        public Option<Kept> load(RepoSlug repository) {
             return Option.none();
         }
 
         @Override
-        public Try<Kept> change(String repository, UnaryOperator<Kept> change) {
+        public Try<Kept> change(RepoSlug repository, UnaryOperator<Kept> change) {
             return Try.success(change.apply(Kept.EMPTY));
         }
     };
@@ -32,13 +33,13 @@ public interface CheckTimingsStore {
     /**
      * What is kept of {@code repository}, as {@code owner/name}; none when nothing was kept or it cannot be read.
      */
-    Option<Kept> load(String repository);
+    Option<Kept> load(RepoSlug repository);
 
     /**
      * Keeps what {@code change} makes of what is kept of {@code repository}, as {@code owner/name}, as it is kept
      * now, so that what another jazygit kept meanwhile is not lost; what was kept then.
      */
-    Try<Kept> change(String repository, UnaryOperator<Kept> change);
+    Try<Kept> change(RepoSlug repository, UnaryOperator<Kept> change);
 
     /**
      * What is kept of one repository.

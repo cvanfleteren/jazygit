@@ -19,8 +19,6 @@ import java.util.ArrayList;
 import java.util.function.Supplier;
 import net.vanfleteren.jazygit.core.gh.GitHub;
 import net.vanfleteren.jazygit.core.gh.StubGitHub;
-import net.vanfleteren.jazygit.core.gh.model.GhBranch;
-import net.vanfleteren.jazygit.core.gh.model.PrNumber;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest.Review;
@@ -29,6 +27,7 @@ import net.vanfleteren.jazygit.core.gh.model.PullRequestDetails.Branches;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestDetails.State;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestEdit;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestStack;
+import net.vanfleteren.jazygit.core.gh.model.StackId;
 import net.vanfleteren.jazygit.core.gh.process.GhError;
 import net.vanfleteren.jazygit.core.gh.process.GhFailure;
 import net.vanfleteren.jazygit.core.gh.pullrequests.StubPullRequests;
@@ -41,6 +40,8 @@ import net.vanfleteren.jazygit.core.git.process.GitFailure;
 import net.vanfleteren.jazygit.core.process.ExecutedCommand;
 import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.BranchRef;
+import net.vanfleteren.jazygit.core.repo.ForgeBranch;
+import net.vanfleteren.jazygit.core.repo.PrNumber;
 import net.vanfleteren.jazygit.core.repo.RemoteBranch;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.core.repo.Upstream;
@@ -76,7 +77,7 @@ class EditPullRequestUpdateTest {
     // A local branch that has another name on its remote.
     private static final RemoteBranch ORIGIN_RELEASE = new RemoteBranch("origin", new BranchName("release-2"));
     private static final PullRequest FEATURE_PR =
-            new PullRequest(new PrNumber(42), new GhBranch("feature"), false, Checks.PASSING, Review.APPROVED);
+            new PullRequest(new PrNumber(42), new ForgeBranch("feature"), false, Checks.PASSING, Review.APPROVED);
     private static final PullRequestDetails DETAILS =
             StubGitHub.of().pullRequests().details(new PrNumber(42)).get().withBody("Why");
     private static final PullRequestPopup SHOWN = shown(DETAILS);
@@ -152,7 +153,8 @@ class EditPullRequestUpdateTest {
 
     @Test
     void theBaseIsListedFirstAlsoWhenItIsNotOnTheRemote() {
-        PullRequestDetails gone = DETAILS.withBranches(new Branches(new GhBranch("feature"), new GhBranch("gone")));
+        PullRequestDetails gone =
+                DETAILS.withBranches(new Branches(new ForgeBranch("feature"), new ForgeBranch("gone")));
 
         EditPullRequestPopup popup = Update.update(
                         withBranches().openPopup(shown(gone)), new EditPullRequestMsg.Requested())
@@ -181,8 +183,8 @@ class EditPullRequestUpdateTest {
 
     @Test
     void theBaseOfOneStackedOnAnotherCannotBeChanged() {
-        PullRequestStack second = new PullRequestStack(3, 2, 2, List.empty());
-        PullRequestStack first = new PullRequestStack(3, 1, 2, List.empty());
+        PullRequestStack second = new PullRequestStack(new StackId(3), 2, 2, List.empty());
+        PullRequestStack first = new PullRequestStack(new StackId(3), 1, 2, List.empty());
 
         EditPullRequestPopup above = opened(DETAILS.withStack(Option.of(second)));
         EditPullRequestPopup bottom = opened(DETAILS.withStack(Option.of(first)));
@@ -274,7 +276,7 @@ class EditPullRequestUpdateTest {
         SavePullRequest cmd = new SavePullRequest(
                 FEATURE,
                 new PrNumber(42),
-                new PullRequestEdit(Option.none(), Option.none(), Option.of(new GhBranch("release-2"))),
+                new PullRequestEdit(Option.none(), Option.none(), Option.of(new ForgeBranch("release-2"))),
                 Option.of(true));
         assertEquals(List.of(cmd), next.cmds());
         assertTrue(cmd.changesForge());

@@ -3,6 +3,8 @@ package net.vanfleteren.jazygit.core.gh.model;
 import io.vavr.collection.Map;
 import java.util.Locale;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest.Checks;
+import net.vanfleteren.jazygit.core.repo.ForgeBranch;
+import net.vanfleteren.jazygit.core.repo.RepoSlug;
 
 /**
  * How the CI checks are doing on the tip of each branch of a GitHub repository.
@@ -10,7 +12,7 @@ import net.vanfleteren.jazygit.core.gh.model.PullRequest.Checks;
  * @param repository the repository, as {@code owner/name}
  * @param checks     by the branch
  */
-public record BranchChecks(String repository, Map<GhBranch, Checks> checks) {
+public record BranchChecks(RepoSlug repository, Map<ForgeBranch, Checks> checks) {
 
     /**
      * Whether the git remote {@code url} points at this repository, over ssh or https, with or without
@@ -18,7 +20,7 @@ public record BranchChecks(String repository, Map<GhBranch, Checks> checks) {
      */
     public boolean isAt(String url) {
         String path = url.strip().toLowerCase(Locale.ROOT).replaceAll("/+$", "").replaceAll("\\.git$", "");
-        String name = repository.toLowerCase(Locale.ROOT);
+        String name = repository.value().toLowerCase(Locale.ROOT);
         return path.endsWith("/" + name) || path.endsWith(":" + name);
     }
 }

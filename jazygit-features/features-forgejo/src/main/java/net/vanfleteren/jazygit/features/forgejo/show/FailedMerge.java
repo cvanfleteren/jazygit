@@ -1,6 +1,7 @@
 package net.vanfleteren.jazygit.features.forgejo.show;
 
 import net.vanfleteren.jazygit.core.forgejo.ForgejoMergeStyle;
+import net.vanfleteren.jazygit.core.repo.PrNumber;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.kernel.state.Failure;
 
@@ -15,7 +16,7 @@ import net.vanfleteren.jazygit.kernel.state.Failure;
  * @param standing how the pull request stood when it failed, so that a failure gives way once it changed, as GitHub's
  *                 does (ADR 119)
  */
-public record FailedMerge(long number, ForgejoMergeStyle style, Failure failure, Standing standing) {
+public record FailedMerge(PrNumber number, ForgejoMergeStyle style, Failure failure, Standing standing) {
 
     /**
      * How a pull request stood, as it was last read before it was merged: its head alone, as only one that is no

@@ -10,6 +10,7 @@ import net.vanfleteren.jazygit.core.git.model.MarkedFile;
 import net.vanfleteren.jazygit.core.git.process.GitError;
 import net.vanfleteren.jazygit.core.git.process.GitFailure;
 import net.vanfleteren.jazygit.core.process.ExecutedCommand;
+import net.vanfleteren.jazygit.core.repo.RepoPath;
 
 /**
  * Operations on the index (ADR 69).
@@ -19,12 +20,12 @@ public interface Index {
     /**
      * Stages the changes of {@code paths}.
      */
-    Either<GitFailure, List<ExecutedCommand>> stage(List<String> paths);
+    Either<GitFailure, List<ExecutedCommand>> stage(List<RepoPath> paths);
 
     /**
      * Removes the newly added {@code paths} from the index; they stay in the working tree, untracked.
      */
-    Either<GitFailure, List<ExecutedCommand>> unstageNew(List<String> paths);
+    Either<GitFailure, List<ExecutedCommand>> unstageNew(List<RepoPath> paths);
 
     /**
      * Throws changes away as described by {@code plan}. This cannot be undone.
@@ -34,29 +35,29 @@ public interface Index {
     /**
      * Resets the index entries of {@code paths} to HEAD.
      */
-    Either<GitFailure, List<ExecutedCommand>> unstage(List<String> paths);
+    Either<GitFailure, List<ExecutedCommand>> unstage(List<RepoPath> paths);
 
     /**
      * Resolves the conflict in {@code path} by keeping {@code version}'s side of it (ADR 198): its version, checked
      * out and staged; or, when that side deleted the file, the file removed.
      */
-    Either<GitFailure, List<ExecutedCommand>> keep(String path, Conflict conflict, Conflict.Version version);
+    Either<GitFailure, List<ExecutedCommand>> keep(RepoPath path, Conflict conflict, Conflict.Version version);
 
     /**
      * Puts back the conflict in {@code path}, resolved since the operation stopped, as it was when it stopped.
      */
-    Either<GitFailure, List<ExecutedCommand>> restoreConflict(String path);
+    Either<GitFailure, List<ExecutedCommand>> restoreConflict(RepoPath path);
 
     /**
      * Those of {@code paths} that have conflict markers left in them, as files of the working tree, with where. A
      * file that is not there has none. Only read, so not logged.
      */
-    Either<GitError, List<MarkedFile>> markers(List<String> paths);
+    Either<GitError, List<MarkedFile>> markers(List<RepoPath> paths);
 
     /**
      * Those of {@code paths} that are in conflict, unmerged in the index. Only read, so not logged.
      */
-    Either<GitError, List<String>> unmerged(List<String> paths);
+    Either<GitError, List<RepoPath>> unmerged(List<RepoPath> paths);
 
     /**
      * What a file in conflict can be handed to here (ADR 201): whether git has a merge tool set, whether the user set
@@ -68,12 +69,12 @@ public interface Index {
      * How the file in conflict at {@code path} stands against the conflict git writes of it from the index (ADR 201):
      * with its bases, as written, or edited. The working tree is left as it is. Only read, so not logged.
      */
-    Either<GitError, ConflictFile> conflictFile(String path);
+    Either<GitError, ConflictFile> conflictFile(RepoPath path);
 
     /**
      * Solves what mergiraf can of the conflict in {@code path} (ADR 201): the commands of
      * {@link ConflictTools#mergiraf}, which write the conflict again first when {@code rewrite}, losing what was
      * edited of it. Conflicts left in it are no failure; it stays in conflict, never staged.
      */
-    Either<GitFailure, List<ExecutedCommand>> solve(String path, boolean rewrite);
+    Either<GitFailure, List<ExecutedCommand>> solve(RepoPath path, boolean rewrite);
 }

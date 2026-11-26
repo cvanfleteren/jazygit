@@ -15,6 +15,7 @@ import net.vanfleteren.jazygit.core.git.model.ParsedDiff.ParsedFile;
 import net.vanfleteren.jazygit.core.git.model.ParsedDiff.ParsedHunk;
 import net.vanfleteren.jazygit.core.git.model.ParsedDiff.ParsedLine;
 import net.vanfleteren.jazygit.core.git.model.UnifiedDiff.DiffLine;
+import net.vanfleteren.jazygit.core.repo.RepoPath;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.kernel.state.Loadable;
 
@@ -39,7 +40,7 @@ import net.vanfleteren.jazygit.kernel.state.Loadable;
 @With
 public record Version(
         ScrolledContent content,
-        String path,
+        RepoPath path,
         Option<FileVersion> shown,
         WholeFile read,
         Loadable<DiffText> whole,
@@ -54,7 +55,7 @@ public record Version(
      */
     public Version(
             ScrolledContent content,
-            String path,
+            RepoPath path,
             Option<FileVersion> shown,
             WholeFile read,
             Loadable<DiffText> whole,
@@ -68,7 +69,7 @@ public record Version(
      */
     public Version(
             ScrolledContent content,
-            String path,
+            RepoPath path,
             Option<FileVersion> shown,
             WholeFile read,
             Loadable<DiffText> whole,
@@ -80,7 +81,11 @@ public record Version(
      * A version shown as source.
      */
     public Version(
-            ScrolledContent content, String path, Option<FileVersion> shown, WholeFile read, Loadable<DiffText> whole) {
+            ScrolledContent content,
+            RepoPath path,
+            Option<FileVersion> shown,
+            WholeFile read,
+            Loadable<DiffText> whole) {
         this(content, path, shown, read, whole, false);
     }
 
@@ -316,7 +321,7 @@ public record Version(
      * as the line it starts at. What is no line stays, as does a line shown in both.
      */
     public Anchor moved(Anchor at, Option<FileVersion> to) {
-        Anchor line = at instanceof Anchor.Gap(String gapPath, int from, var until) && gapPath.equals(path)
+        Anchor line = at instanceof Anchor.Gap(RepoPath gapPath, int from, var until) && gapPath.equals(path)
                 ? new Anchor.OnLine(path, DiffSide.NEW, from)
                 : at;
         if (!(line instanceof Anchor.OnLine on) || !on.path().equals(path) || to.isEmpty()) {

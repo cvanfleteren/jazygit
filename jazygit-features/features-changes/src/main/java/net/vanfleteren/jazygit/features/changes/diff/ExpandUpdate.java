@@ -5,6 +5,7 @@ import io.vavr.control.Option;
 import net.vanfleteren.jazygit.core.git.model.CommitFile;
 import net.vanfleteren.jazygit.core.git.model.DiffText;
 import net.vanfleteren.jazygit.core.git.model.Folding;
+import net.vanfleteren.jazygit.core.repo.RepoPath;
 import net.vanfleteren.jazygit.kernel.state.AreaId;
 import net.vanfleteren.jazygit.kernel.state.Cmd;
 import net.vanfleteren.jazygit.kernel.state.Loadable;
@@ -91,7 +92,7 @@ public final class ExpandUpdate {
      * How the file with the path {@code path} of the diff {@code content} shows is read whole: as that diff was read.
      * None for what is no diff, or a file the diff does not have.
      */
-    static Option<Source> source(Model model, ScrolledContent content, String path) {
+    static Option<Source> source(Model model, ScrolledContent content, RepoPath path) {
         return switch (content) {
             case ScrolledContent.Diff(DiffText diff) ->
                 model.repoView()
@@ -121,7 +122,7 @@ public final class ExpandUpdate {
     /**
      * The file with the path {@code path} as {@code diff} changed it.
      */
-    private static Option<CommitFile> changed(DiffText diff, String path) {
+    private static Option<CommitFile> changed(DiffText diff, RepoPath path) {
         return diff.parsed()
                 .files()
                 .iterator()

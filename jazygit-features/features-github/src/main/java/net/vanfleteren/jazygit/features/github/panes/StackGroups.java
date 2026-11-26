@@ -4,11 +4,12 @@ import io.vavr.Tuple;
 import io.vavr.Tuple2;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.core.gh.model.GhBranch;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestStack;
+import net.vanfleteren.jazygit.core.gh.model.StackId;
 import net.vanfleteren.jazygit.core.repo.Branch;
 import net.vanfleteren.jazygit.core.repo.BranchName;
+import net.vanfleteren.jazygit.core.repo.ForgeBranch;
 import net.vanfleteren.jazygit.core.repo.RemoteBranch;
 import net.vanfleteren.jazygit.core.repo.RemoteRef;
 import net.vanfleteren.jazygit.features.branches.panes.branches.BranchGroups;
@@ -45,7 +46,7 @@ public final class StackGroups {
                         model,
                         gitHub,
                         number,
-                        stacked.filter(member -> member._2().number() == number)));
+                        stacked.filter(member -> member._2().number().equals(number))));
     }
 
     /**
@@ -53,7 +54,7 @@ public final class StackGroups {
      * with the stack as it was read with its pull request.
      */
     private static Group group(
-            Model model, GitHubState gitHub, int number, List<Tuple2<Branch, PullRequestStack>> members) {
+            Model model, GitHubState gitHub, StackId number, List<Tuple2<Branch, PullRequestStack>> members) {
         // The stacks of its pull requests are read with each, and the one that lists the most of them says most.
         PullRequestStack stack =
                 members.map(Tuple2::_2).maxBy(read -> read.entries().size()).get();
@@ -77,8 +78,8 @@ public final class StackGroups {
                 List.of(LoadableList.Seg.styled(
                         Messages.get(
                                 "github.stacks.header",
-                                number,
-                                stack.base().map(GhBranch::name).getOrElse("?")),
+                                number.value(),
+                                stack.base().map(ForgeBranch::name).getOrElse("?")),
                         Theme.Classes.PULL_REQUEST)),
                 List.of(LoadableList.Seg.styled(
                                 " " + Messages.get("github.stacks.size", stack.size()), Theme.Classes.DIM))
@@ -117,7 +118,7 @@ public final class StackGroups {
     /**
      * The remote-tracking branch on GitHub of {@code head}, the branch a pull request merges from, if it was fetched.
      */
-    private static Option<RemoteBranch> fetched(Model model, GitHubState gitHub, GhBranch head) {
+    private static Option<RemoteBranch> fetched(Model model, GitHubState gitHub, ForgeBranch head) {
         return model.repo()
                 .remoteBranches()
                 .toOption()

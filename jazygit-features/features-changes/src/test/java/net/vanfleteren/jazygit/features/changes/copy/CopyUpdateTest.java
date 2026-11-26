@@ -9,6 +9,7 @@ import java.util.ArrayList;
 import java.util.function.Supplier;
 import net.vanfleteren.jazygit.core.git.StubGit;
 import net.vanfleteren.jazygit.core.git.model.DiffText;
+import net.vanfleteren.jazygit.core.repo.RepoPath;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.features.changes.diff.ExpandMsg;
 import net.vanfleteren.jazygit.kernel.settings.DiffStyle;
@@ -81,8 +82,8 @@ class CopyUpdateTest {
 
     @Test
     void inTheSplitViewARangeOnOneSideCopiesTheLinesOfThatSide() {
-        Anchor.OnLine leftNine = new Anchor.OnLine("a.txt", DiffSide.OLD, 9);
-        Anchor.OnLine leftEleven = new Anchor.OnLine("a.txt", DiffSide.OLD, 11);
+        Anchor.OnLine leftNine = new Anchor.OnLine(new RepoPath("a.txt"), DiffSide.OLD, 9);
+        Anchor.OnLine leftEleven = new Anchor.OnLine(new RepoPath("a.txt"), DiffSide.OLD, 11);
 
         assertEquals(
                 List.of(new CopyCmd("line9\nchanged\nline11", new CopyNotice.LinesCopied(3))),
@@ -116,14 +117,15 @@ class CopyUpdateTest {
 
     @Test
     void onTheBarOfAFileItsPathIsCopied() {
-        Next next = Update.update(loaded(), new CopyMsg.Asked(at(new Anchor.File("a.txt"), Option.none())));
+        Next next =
+                Update.update(loaded(), new CopyMsg.Asked(at(new Anchor.File(new RepoPath("a.txt")), Option.none())));
 
-        assertEquals(List.of(new CopyCmd("a.txt", new CopyNotice.PathCopied("a.txt"))), next.cmds());
+        assertEquals(List.of(new CopyCmd("a.txt", new CopyNotice.PathCopied(new RepoPath("a.txt")))), next.cmds());
     }
 
     @Test
     void anExpandedLineIsCopiedToo() {
-        Anchor.Gap above = new Anchor.Gap("a.txt", 1, Option.of(7));
+        Anchor.Gap above = new Anchor.Gap(new RepoPath("a.txt"), 1, Option.of(7));
         Next asked = Update.update(loaded(), new ExpandMsg.Asked(at(above, Option.none()), ExpandMsg.Toward.ALL));
         ReadWholeFile read = (ReadWholeFile) asked.cmds().head();
         Model expanded = TestModels.done(
@@ -140,8 +142,8 @@ class CopyUpdateTest {
         Model model = loaded();
 
         Next onLead = Update.update(model, new CopyMsg.Asked(at(new Anchor.Lead(), Option.none())));
-        Next onMarker =
-                Update.update(model, new CopyMsg.Asked(at(new Anchor.Gap("a.txt", 1, Option.of(7)), Option.none())));
+        Next onMarker = Update.update(
+                model, new CopyMsg.Asked(at(new Anchor.Gap(new RepoPath("a.txt"), 1, Option.of(7)), Option.none())));
         Next offTheDiff = Update.update(model, new CopyMsg.Asked(at(right(99), Option.none())));
 
         assertEquals(List.of(), onLead.cmds().appendAll(onMarker.cmds()).appendAll(offTheDiff.cmds()));
@@ -230,7 +232,7 @@ class CopyUpdateTest {
     }
 
     private static Anchor.OnLine right(int number) {
-        return new Anchor.OnLine("a.txt", DiffSide.NEW, number);
+        return new Anchor.OnLine(new RepoPath("a.txt"), DiffSide.NEW, number);
     }
 
     private static Env env(Terminal terminal) {

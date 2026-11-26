@@ -9,6 +9,7 @@ import io.vavr.collection.Map;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.core.forgejo.Forgejo;
 import net.vanfleteren.jazygit.core.repo.RemoteName;
+import net.vanfleteren.jazygit.core.repo.RemoteUrl;
 import net.vanfleteren.jazygit.features.forgejo.ForgejoFeature;
 import net.vanfleteren.jazygit.kernel.state.Cmd;
 import net.vanfleteren.jazygit.kernel.state.Env;
@@ -35,15 +36,15 @@ public record DetectForgejo() implements Cmd {
     @Override
     public Msg run(Env env) {
         Forgejo forgejo = ForgejoServices.of(env);
-        List<Tuple2<RemoteName, String>> urls = env.git()
+        List<Tuple2<RemoteName, RemoteUrl>> urls = env.git()
                 .remotes()
                 .urls()
                 .getOrElse(HashMap::empty)
                 .toList()
                 .sortBy(remote -> remote._1().value());
-        List<Tuple2<Tuple2<RemoteName, String>, Option<Boolean>>> told = urls.flatMap(remote ->
+        List<Tuple2<Tuple2<RemoteName, RemoteUrl>, Option<Boolean>>> told = urls.flatMap(remote ->
                 forgejo.repository(remote._2()).map(repository -> Tuple.of(remote, forgejo.tells(repository))));
-        Map<RemoteName, String> claimed = LinkedHashMap.ofEntries(
+        Map<RemoteName, RemoteUrl> claimed = LinkedHashMap.ofEntries(
                 told.filter(remote -> remote._2().contains(true)).map(Tuple2::_1));
         return new FeatureMsg.Claimed(new ForgeClaim(
                 ForgejoFeature.ID,

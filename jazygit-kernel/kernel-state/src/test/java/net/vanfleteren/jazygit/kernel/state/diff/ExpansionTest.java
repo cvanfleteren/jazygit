@@ -11,6 +11,7 @@ import net.vanfleteren.jazygit.core.git.model.DiffContext;
 import net.vanfleteren.jazygit.core.git.model.DiffOptions;
 import net.vanfleteren.jazygit.core.git.model.DiffText;
 import net.vanfleteren.jazygit.core.git.model.Folding;
+import net.vanfleteren.jazygit.core.repo.RepoPath;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.kernel.state.AreaId;
 import net.vanfleteren.jazygit.kernel.state.Loadable;
@@ -28,15 +29,15 @@ class ExpansionTest {
     private static final ReadWholeFile READ = new ReadWholeFile(
             new AreaId("stash-changes"),
             CONTENT,
-            new Source.OfStash(new Sha("5555"), new CommitFile("a.txt", ChangeType.MODIFIED)),
-            "a.txt",
+            new Source.OfStash(new Sha("5555"), new CommitFile(new RepoPath("a.txt"), ChangeType.MODIFIED)),
+            new RepoPath("a.txt"),
             DiffOptions.DEFAULT);
 
     @Test
     void aFileReadWholeIsFoldedAndTellsHowLongItIs() {
         Expansion.Folded folded = expanded(whole(30, 10, false)).folded(shown(10), DiffContext.DEFAULT);
 
-        assertEquals(new Expansion.Fold(Option.of(30), Expansion.Read.WHOLE), folded.fold("a.txt"));
+        assertEquals(new Expansion.Fold(Option.of(30), Expansion.Read.WHOLE), folded.fold(new RepoPath("a.txt")));
         assertEquals(List.of("@@ -1,13 +1,13 @@"), headers(folded));
     }
 
@@ -44,7 +45,9 @@ class ExpansionTest {
     void aReadCutBeforeTheEndIsFoldedUpToTheCutAndTellsNoLength() {
         Expansion.Folded folded = expanded(whole(30, 10, true)).folded(shown(10), DiffContext.DEFAULT);
 
-        assertEquals(new Expansion.Fold(Option.none(), Expansion.Read.CUT, Option.of(30)), folded.fold("a.txt"));
+        assertEquals(
+                new Expansion.Fold(Option.none(), Expansion.Read.CUT, Option.of(30)),
+                folded.fold(new RepoPath("a.txt")));
         assertEquals(List.of("@@ -1,13 +1,13 @@"), headers(folded));
     }
 
@@ -53,7 +56,7 @@ class ExpansionTest {
         // The read stops at line 20; the file changed at line 25.
         Expansion.Folded folded = expanded(whole(20, 0, true)).folded(shown(25), DiffContext.DEFAULT);
 
-        assertEquals(new Expansion.Fold(Option.none(), Expansion.Read.TOO_LONG), folded.fold("a.txt"));
+        assertEquals(new Expansion.Fold(Option.none(), Expansion.Read.TOO_LONG), folded.fold(new RepoPath("a.txt")));
         assertEquals(List.of("@@ -22,7 +22,7 @@"), headers(folded));
     }
 
@@ -61,7 +64,7 @@ class ExpansionTest {
     void aReadWithoutTheChangesShownIsNotFoldedAsWhenTheFileChangedSince() {
         Expansion.Folded folded = expanded(whole(30, 12, false)).folded(shown(10), DiffContext.DEFAULT);
 
-        assertEquals(Expansion.Fold.UNKNOWN, folded.fold("a.txt"));
+        assertEquals(Expansion.Fold.UNKNOWN, folded.fold(new RepoPath("a.txt")));
         assertEquals(List.of("@@ -7,7 +7,7 @@"), headers(folded));
     }
 
@@ -72,7 +75,7 @@ class ExpansionTest {
         return new Expansion(
                 CONTENT,
                 HashMap.of(
-                        "a.txt",
+                        new RepoPath("a.txt"),
                         new Expansion.Expanded(
                                 READ.file(), new Loadable.Loaded<>(whole), List.of(new Folding.Lines(1, 6)))));
     }

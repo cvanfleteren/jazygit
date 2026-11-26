@@ -9,13 +9,12 @@ import io.vavr.collection.HashSet;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.time.Instant;
-import net.vanfleteren.jazygit.core.gh.model.GhBranch;
-import net.vanfleteren.jazygit.core.gh.model.PrNumber;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest.Review;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestDetails.State;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestStack;
+import net.vanfleteren.jazygit.core.gh.model.StackId;
 import net.vanfleteren.jazygit.core.git.model.*;
 import net.vanfleteren.jazygit.core.git.model.SampleData;
 import net.vanfleteren.jazygit.core.repo.*;
@@ -43,21 +42,24 @@ class StackRowsTest {
 
     // #95 is merged; #96 and #97 are checked out; #98 is only fetched.
     private static final List<PullRequestStack.Entry> ENTRIES = List.of(
-            new PullRequestStack.Entry(1, new PrNumber(95), State.MERGED, new GhBranch("feat/0"), new GhBranch("main")),
-            new PullRequestStack.Entry(2, new PrNumber(96), State.OPEN, new GhBranch("feat/a"), new GhBranch("main")),
-            new PullRequestStack.Entry(3, new PrNumber(97), State.OPEN, new GhBranch("feat/b"), new GhBranch("feat/a")),
             new PullRequestStack.Entry(
-                    4, new PrNumber(98), State.OPEN, new GhBranch("feat/c"), new GhBranch("feat/b")));
+                    1, new PrNumber(95), State.MERGED, new ForgeBranch("feat/0"), new ForgeBranch("main")),
+            new PullRequestStack.Entry(
+                    2, new PrNumber(96), State.OPEN, new ForgeBranch("feat/a"), new ForgeBranch("main")),
+            new PullRequestStack.Entry(
+                    3, new PrNumber(97), State.OPEN, new ForgeBranch("feat/b"), new ForgeBranch("feat/a")),
+            new PullRequestStack.Entry(
+                    4, new PrNumber(98), State.OPEN, new ForgeBranch("feat/c"), new ForgeBranch("feat/b")));
 
     private static PullRequest stacked(int number, String head, int position) {
         return new PullRequest(
                 new PrNumber(number),
-                new GhBranch(head),
+                new ForgeBranch(head),
                 Option.none(),
                 false,
                 Checks.NONE,
                 Review.NONE,
-                Option.of(new PullRequestStack(12, position, ENTRIES.size(), ENTRIES)),
+                Option.of(new PullRequestStack(new StackId(12), position, ENTRIES.size(), ENTRIES)),
                 Option.none());
     }
 
@@ -184,7 +186,7 @@ class StackRowsTest {
             SettledPilot.of(testRunner).quit();
         }
 
-        assertEquals(java.util.List.of(new StackMsg.Toggled(12)), dispatched);
+        assertEquals(java.util.List.of(new StackMsg.Toggled(new StackId(12))), dispatched);
     }
 
     @Test
@@ -204,7 +206,9 @@ class StackRowsTest {
             SettledPilot.of(testRunner).quit();
         }
 
-        assertEquals(java.util.List.of(new StackMsg.Toggled(12), new StackMsg.Toggled(12)), dispatched);
+        assertEquals(
+                java.util.List.of(new StackMsg.Toggled(new StackId(12)), new StackMsg.Toggled(new StackId(12))),
+                dispatched);
     }
 
     @Test
@@ -227,7 +231,7 @@ class StackRowsTest {
         }
 
         assertEquals(selecting(new BranchRef.Local(FEAT_B)), shown);
-        assertEquals(java.util.List.of(new StackMsg.Toggled(12)), dispatched);
+        assertEquals(java.util.List.of(new StackMsg.Toggled(new StackId(12))), dispatched);
     }
 
     /**

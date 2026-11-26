@@ -15,6 +15,7 @@ import net.vanfleteren.jazygit.core.git.model.DiffOptions;
 import net.vanfleteren.jazygit.core.git.model.DiffText;
 import net.vanfleteren.jazygit.core.git.model.FileContent;
 import net.vanfleteren.jazygit.core.git.process.GitError;
+import net.vanfleteren.jazygit.core.repo.RepoPath;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.kernel.state.Env;
 import net.vanfleteren.jazygit.kernel.state.Failure;
@@ -46,10 +47,13 @@ class CommitAllFilesTest {
 
     private static final Sha SHA = new Sha("aaaa");
     private static final Changes COMMIT = new Changes.OfCommit(SHA);
-    private static final CommitFile A = new CommitFile("a.txt", ChangeType.MODIFIED);
-    private static final CommitFile GONE = new CommitFile("gone.txt", ChangeType.DELETED);
+    private static final CommitFile A = new CommitFile(new RepoPath("a.txt"), ChangeType.MODIFIED);
+    private static final CommitFile GONE = new CommitFile(new RepoPath("gone.txt"), ChangeType.DELETED);
     private static final List<CommitFile> ALL = List.of(
-            A, new CommitFile("b.txt", ChangeType.UNCHANGED), new CommitFile("docs/c.txt", ChangeType.UNCHANGED), GONE);
+            A,
+            new CommitFile(new RepoPath("b.txt"), ChangeType.UNCHANGED),
+            new CommitFile(new RepoPath("docs/c.txt"), ChangeType.UNCHANGED),
+            GONE);
     private static final FileContent B = new FileContent.Text(
             DiffText.of("diff --git a/b.txt b/b.txt\n--- a/b.txt\n+++ b/b.txt\n@@ -1,1 +1,1 @@\n b\n"));
 
@@ -57,7 +61,11 @@ class CommitAllFilesTest {
 
     @Test
     void allFilesAreTheChangedOnesWithTheOthersOfTheCommitUnchangedSorted() {
-        assertEquals(ALL, CommitFilesView.merged(List.of(A, GONE), List.of("a.txt", "b.txt", "docs/c.txt")));
+        assertEquals(
+                ALL,
+                CommitFilesView.merged(
+                        List.of(A, GONE),
+                        List.of(new RepoPath("a.txt"), new RepoPath("b.txt"), new RepoPath("docs/c.txt"))));
     }
 
     @Test
@@ -121,10 +129,10 @@ class CommitAllFilesTest {
         program.dispatch(new CommitFilesMsg.Opened(COMMIT, Scopes.COMMITS.pane()));
         program.dispatch(new CommitFilesMsg.AllToggled());
 
-        program.dispatch(new SelectionMsg.UnchangedFileSelected("b.txt"));
+        program.dispatch(new SelectionMsg.UnchangedFileSelected(new RepoPath("b.txt")));
 
         assertEquals(
-                Option.of(new UnchangedNode.File(new Preview<>("b.txt", new Loadable.Loaded<>(B)))),
+                Option.of(new UnchangedNode.File(new Preview<>(new RepoPath("b.txt"), new Loadable.Loaded<>(B)))),
                 program.model().repoView().files().commitFiles().get().unchanged());
         // The working tree's node without changes stays as it is.
         assertEquals(Option.none(), program.model().repoView().files().unchanged());
@@ -134,19 +142,19 @@ class CommitAllFilesTest {
     void readingAFileOfTheCommitIsTheLatestOfItsSlot() {
         Model on = Update.update(withFiles(), new CommitFilesMsg.AllToggled()).model();
 
-        Next selected = Update.update(on, new SelectionMsg.UnchangedFileSelected("b.txt"));
+        Next selected = Update.update(on, new SelectionMsg.UnchangedFileSelected(new RepoPath("b.txt")));
 
-        assertEquals(List.of(new ReadCommitFileContent(COMMIT, "b.txt")), selected.cmds());
+        assertEquals(List.of(new ReadCommitFileContent(COMMIT, new RepoPath("b.txt"))), selected.cmds());
     }
 
     @Test
     void aDirectoryWithoutChangesNeedsNothingRead() {
         Model on = Update.update(withFiles(), new CommitFilesMsg.AllToggled()).model();
 
-        Next selected = Update.update(on, new SelectionMsg.UnchangedDirectorySelected("docs", 1));
+        Next selected = Update.update(on, new SelectionMsg.UnchangedDirectorySelected(new RepoPath("docs"), 1));
 
         assertEquals(
-                Option.of(new UnchangedNode.Directory("docs", 1)),
+                Option.of(new UnchangedNode.Directory(new RepoPath("docs"), 1)),
                 selected.model().repoView().files().commitFiles().get().unchanged());
         assertEquals(List.empty(), selected.cmds());
     }
@@ -156,7 +164,7 @@ class CommitAllFilesTest {
         Model on = Update.update(withFiles(), new CommitFilesMsg.AllToggled()).model();
         Model diff = Update.update(on, new SelectionMsg.CommitFilesSelected(List.of(A)))
                 .model();
-        Model file = Update.update(diff, new SelectionMsg.UnchangedFileSelected("b.txt"))
+        Model file = Update.update(diff, new SelectionMsg.UnchangedFileSelected(new RepoPath("b.txt")))
                 .model();
 
         // The diff read before is shown again, without reading it again.
@@ -174,7 +182,7 @@ class CommitAllFilesTest {
     @Test
     void leavingAllFilesDropsTheNodeWithoutChanges() {
         Model on = Update.update(withFiles(), new CommitFilesMsg.AllToggled()).model();
-        Model file = Update.update(on, new SelectionMsg.UnchangedDirectorySelected("docs", 1))
+        Model file = Update.update(on, new SelectionMsg.UnchangedDirectorySelected(new RepoPath("docs"), 1))
                 .model();
 
         Model off = Update.update(file, new CommitFilesMsg.AllToggled()).model();
@@ -213,14 +221,14 @@ class CommitAllFilesTest {
             }
 
             @Override
-            public Either<GitError, List<String>> treeFiles(Sha sha) {
+            public Either<GitError, List<RepoPath>> treeFiles(Sha sha) {
                 listed.incrementAndGet();
-                return Either.right(List.of("a.txt", "b.txt", "docs/c.txt"));
+                return Either.right(List.of("a.txt", "b.txt", "docs/c.txt").map(RepoPath::new));
             }
 
             @Override
-            public Either<GitError, FileContent> treeContent(Sha sha, String path) {
-                return sha.equals(SHA) && path.equals("b.txt")
+            public Either<GitError, FileContent> treeContent(Sha sha, RepoPath path) {
+                return sha.equals(SHA) && path.equals(new RepoPath("b.txt"))
                         ? Either.right(B)
                         : StubDiffs.super.treeContent(sha, path);
             }

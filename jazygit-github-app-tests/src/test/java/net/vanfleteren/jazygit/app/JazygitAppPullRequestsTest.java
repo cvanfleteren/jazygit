@@ -15,9 +15,7 @@ import io.vavr.collection.List;
 import io.vavr.control.Either;
 import java.time.Instant;
 import net.vanfleteren.jazygit.core.gh.StubGitHub;
-import net.vanfleteren.jazygit.core.gh.model.GhBranch;
 import net.vanfleteren.jazygit.core.gh.model.MyPullRequests;
-import net.vanfleteren.jazygit.core.gh.model.PrNumber;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest.Review;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestList;
@@ -25,6 +23,9 @@ import net.vanfleteren.jazygit.core.gh.model.PullRequestSummary;
 import net.vanfleteren.jazygit.core.gh.process.GhError;
 import net.vanfleteren.jazygit.core.gh.pullrequests.StubPullRequests;
 import net.vanfleteren.jazygit.core.git.model.SampleData;
+import net.vanfleteren.jazygit.core.repo.ForgeBranch;
+import net.vanfleteren.jazygit.core.repo.PrNumber;
+import net.vanfleteren.jazygit.core.repo.RepoSlug;
 import net.vanfleteren.jazygit.features.github.GitHubServices;
 import net.vanfleteren.jazygit.features.github.prs.PrOverview;
 import net.vanfleteren.jazygit.features.github.show.PullRequestPopup;
@@ -122,11 +123,11 @@ class JazygitAppPullRequestsTest {
             return Either.right(new MyPullRequests(
                     new PullRequestList(
                             List.of(new PullRequestSummary(
-                                    "owner/repo",
+                                    new RepoSlug("owner/repo"),
                                     new PrNumber(12),
                                     "Fix the login",
                                     "alice",
-                                    new GhBranch("fix/login"),
+                                    new ForgeBranch("fix/login"),
                                     false,
                                     false,
                                     Checks.PASSING,

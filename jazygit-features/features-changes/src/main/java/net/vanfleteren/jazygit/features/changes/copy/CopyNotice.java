@@ -1,5 +1,6 @@
 package net.vanfleteren.jazygit.features.changes.copy;
 
+import net.vanfleteren.jazygit.core.repo.RepoPath;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.kernel.state.Phrase;
 import net.vanfleteren.jazygit.kernel.state.operation.Notice;
@@ -23,11 +24,11 @@ public sealed interface CopyNotice extends Notice.Phrased {
     /**
      * The terminal was asked to copy the path {@code path} to the clipboard.
      */
-    record PathCopied(String path) implements CopyNotice {
+    record PathCopied(RepoPath path) implements CopyNotice {
 
         @Override
         public Phrase phrase() {
-            return Phrase.of("changes.notice.pathCopied", path);
+            return Phrase.of("changes.notice.pathCopied", path.value());
         }
     }
 

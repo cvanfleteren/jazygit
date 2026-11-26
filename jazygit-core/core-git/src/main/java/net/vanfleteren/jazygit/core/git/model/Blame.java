@@ -12,6 +12,7 @@ import java.util.Comparator;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import net.vanfleteren.jazygit.core.repo.Commit;
+import net.vanfleteren.jazygit.core.repo.RepoPath;
 import net.vanfleteren.jazygit.core.repo.Sha;
 
 /**
@@ -38,7 +39,7 @@ public record Blame(Vector<Line> lines) {
      * {@code count} lines of the file at {@code path}, none of them committed yet: a file of a branch without commits,
      * which has no {@code HEAD} to blame it against (ADR 147).
      */
-    public static Blame uncommitted(int count, String path) {
+    public static Blame uncommitted(int count, RepoPath path) {
         return new Blame(
                 Vector.rangeClosed(1, count).map(number -> new Line(NOT_COMMITTED, number, path, Option.none())));
     }
@@ -106,7 +107,7 @@ public record Blame(Vector<Line> lines) {
      * @param previous the commit before {@code commit} that changed the file, and its path there; none when
      *                 {@code commit} added it
      */
-    public record Line(Commit commit, int original, String path, Option<Previous> previous) {}
+    public record Line(Commit commit, int original, RepoPath path, Option<Previous> previous) {}
 
     /**
      * A commit lines are blamed on.
@@ -130,7 +131,7 @@ public record Blame(Vector<Line> lines) {
     /**
      * The commit before a line's commit that changed its file, and the path of the file in it.
      */
-    public record Previous(Sha sha, String path) {}
+    public record Previous(Sha sha, RepoPath path) {}
 
     /**
      * Where a parse of the porcelain is: the lines read, by their final number, the commits named, the path and what
@@ -139,7 +140,7 @@ public record Blame(Vector<Line> lines) {
     private record Reading(
             Vector<Tuple2<Integer, Line>> lines,
             Map<Sha, Commit> commits,
-            Map<Sha, Tuple2<String, Option<Previous>>> origins,
+            Map<Sha, Tuple2<RepoPath, Option<Previous>>> origins,
             Option<Header> header,
             Map<String, String> details,
             boolean boundary) {
@@ -176,8 +177,9 @@ public record Blame(Vector<Line> lines) {
          */
         private Option<Reading> line(Header at) {
             Option<Commit> commit = commits.get(at.sha()).orElse(this::commit);
-            Option<Tuple2<String, Option<Previous>>> origin = details.get("filename")
+            Option<Tuple2<RepoPath, Option<Previous>>> origin = details.get("filename")
                     .map(UnifiedDiff::path)
+                    .map(RepoPath::new)
                     .map(path -> Tuple.of(path, details.get("previous").flatMap(Reading::previous)))
                     .orElse(() -> origins.get(at.sha()));
             return commit.flatMap(named -> origin.map(from -> new Reading(
@@ -215,7 +217,7 @@ public record Blame(Vector<Line> lines) {
             return space < 0
                     ? Option.none()
                     : Sha.parse(value.substring(0, space))
-                            .map(sha -> new Previous(sha, UnifiedDiff.path(value.substring(space + 1))));
+                            .map(sha -> new Previous(sha, new RepoPath(UnifiedDiff.path(value.substring(space + 1)))));
         }
     }
 

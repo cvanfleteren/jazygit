@@ -4,8 +4,9 @@ import io.vavr.collection.List;
 import io.vavr.control.Option;
 import lombok.With;
 import net.vanfleteren.jazygit.core.gh.model.NewReviewThread;
-import net.vanfleteren.jazygit.core.gh.model.PrNumber;
 import net.vanfleteren.jazygit.core.gh.model.ReviewThread;
+import net.vanfleteren.jazygit.core.repo.PrNumber;
+import net.vanfleteren.jazygit.core.repo.RepoPath;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.features.github.compose.ComposePopup;
 import net.vanfleteren.jazygit.features.github.compose.EditorFile;
@@ -79,7 +80,7 @@ public record ReviewPopup(
          * A thread to start on the pull request at its head commit {@code commit}, on {@code lines} of the file
          * {@code path}, or on the whole file.
          */
-        record Start(Sha commit, String path, Option<NewReviewThread.Lines> lines) implements Target {}
+        record Start(Sha commit, RepoPath path, Option<NewReviewThread.Lines> lines) implements Target {}
 
         /**
          * The comment with the node id {@code comment} of the thread with the id {@code thread}, edited from
@@ -95,7 +96,7 @@ public record ReviewPopup(
      * @param lines the numbers of its first and its last line, if it is on lines
      * @param reply whether it is a reply
      */
-    public record Where(String path, Option<Lines> lines, boolean reply) {}
+    public record Where(RepoPath path, Option<Lines> lines, boolean reply) {}
 
     /**
      * The numbers of the first and the last line of a comment.

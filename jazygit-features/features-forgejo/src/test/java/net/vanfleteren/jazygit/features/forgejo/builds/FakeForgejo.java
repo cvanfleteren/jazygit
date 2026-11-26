@@ -24,7 +24,9 @@ import net.vanfleteren.jazygit.core.forgejo.ForgejoScheduledMerge;
 import net.vanfleteren.jazygit.core.git.StubGit;
 import net.vanfleteren.jazygit.core.git.branches.StubRemotes;
 import net.vanfleteren.jazygit.core.git.process.GitError;
+import net.vanfleteren.jazygit.core.repo.PrNumber;
 import net.vanfleteren.jazygit.core.repo.RemoteName;
+import net.vanfleteren.jazygit.core.repo.RemoteUrl;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.kernel.state.Env;
 
@@ -34,8 +36,8 @@ import net.vanfleteren.jazygit.kernel.state.Env;
 record FakeForgejo(Set<String> hosts, Map<Sha, CommitStatus.State> states) implements Forgejo {
 
     @Override
-    public Option<ForgejoRepository> repository(String remoteUrl) {
-        return ForgejoRepository.of(remoteUrl, FjKeys.NONE.aliases());
+    public Option<ForgejoRepository> repository(RemoteUrl remoteUrl) {
+        return ForgejoRepository.of(remoteUrl.value(), FjKeys.NONE.aliases());
     }
 
     /**
@@ -66,12 +68,12 @@ record FakeForgejo(Set<String> hosts, Map<Sha, CommitStatus.State> states) imple
     }
 
     @Override
-    public Either<ForgejoError, ForgejoPullRequestDetails> pullRequest(ForgejoRepository repository, long number) {
+    public Either<ForgejoError, ForgejoPullRequestDetails> pullRequest(ForgejoRepository repository, PrNumber number) {
         return Either.left(new ForgejoError.Refused(404, "not found"));
     }
 
     @Override
-    public Either<ForgejoError, List<ForgejoReview>> reviews(ForgejoRepository repository, long number) {
+    public Either<ForgejoError, List<ForgejoReview>> reviews(ForgejoRepository repository, PrNumber number) {
         return Either.right(List.empty());
     }
 
@@ -87,7 +89,8 @@ record FakeForgejo(Set<String> hosts, Map<Sha, CommitStatus.State> states) imple
     }
 
     @Override
-    public Either<ForgejoError, ForgejoMerged> merge(ForgejoRepository repository, long number, ForgejoMerge merge) {
+    public Either<ForgejoError, ForgejoMerged> merge(
+            ForgejoRepository repository, PrNumber number, ForgejoMerge merge) {
         return Either.left(new ForgejoError.Refused(404, "not found"));
     }
 
@@ -98,12 +101,12 @@ record FakeForgejo(Set<String> hosts, Map<Sha, CommitStatus.State> states) imple
 
     @Override
     public Either<ForgejoError, Option<ForgejoScheduledMerge>> scheduledMerge(
-            ForgejoRepository repository, long number) {
+            ForgejoRepository repository, PrNumber number) {
         return Either.left(new ForgejoError.Refused(404, "not found"));
     }
 
     @Override
-    public Option<ForgejoError> cancelScheduledMerge(ForgejoRepository repository, long number) {
+    public Option<ForgejoError> cancelScheduledMerge(ForgejoRepository repository, PrNumber number) {
         return Option.of(new ForgejoError.Refused(404, "not found"));
     }
 
@@ -125,17 +128,17 @@ record FakeForgejo(Set<String> hosts, Map<Sha, CommitStatus.State> states) imple
     /**
      * An environment with this Forgejo and remotes of {@code urls}.
      */
-    Env env(Map<RemoteName, String> urls) {
+    Env env(Map<RemoteName, RemoteUrl> urls) {
         return new Env(StubGit.of().withRemotes(new StubRemotes() {
                     @Override
-                    public Either<GitError, Map<RemoteName, String>> urls() {
+                    public Either<GitError, Map<RemoteName, RemoteUrl>> urls() {
                         return Either.right(urls);
                     }
                 }))
                 .with(ForgejoServices.FORGEJO, this);
     }
 
-    static Map<RemoteName, String> origin(String url) {
-        return HashMap.of(new RemoteName("origin"), url);
+    static Map<RemoteName, RemoteUrl> origin(String url) {
+        return HashMap.of(new RemoteName("origin"), new RemoteUrl(url));
     }
 }

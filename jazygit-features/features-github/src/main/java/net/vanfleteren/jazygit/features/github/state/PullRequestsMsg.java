@@ -1,7 +1,7 @@
 package net.vanfleteren.jazygit.features.github.state;
 
 import io.vavr.collection.List;
-import net.vanfleteren.jazygit.core.gh.model.GhBranch;
+import net.vanfleteren.jazygit.core.repo.ForgeBranch;
 import net.vanfleteren.jazygit.kernel.state.Failure;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.Msg;
@@ -20,7 +20,7 @@ public sealed interface PullRequestsMsg extends Msg {
     /**
      * The branches that are protected on GitHub (ADR 72).
      */
-    record ProtectedLoaded(List<GhBranch> branches) implements PullRequestsMsg {}
+    record ProtectedLoaded(List<ForgeBranch> branches) implements PullRequestsMsg {}
 
     record ProtectedLoadFailed(Failure failure) implements PullRequestsMsg {}
 }

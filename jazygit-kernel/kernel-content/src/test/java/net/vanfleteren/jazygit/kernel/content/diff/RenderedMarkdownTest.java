@@ -15,6 +15,7 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 import net.vanfleteren.jazygit.core.git.model.FileVersion;
 import net.vanfleteren.jazygit.core.git.model.ParsedDiff;
+import net.vanfleteren.jazygit.core.repo.RepoPath;
 import net.vanfleteren.jazygit.kernel.state.diff.Anchor;
 import net.vanfleteren.jazygit.kernel.state.diff.DiffSide;
 import net.vanfleteren.jazygit.kernel.state.diff.Expansion;
@@ -145,7 +146,9 @@ class RenderedMarkdownTest {
         List<String> rows = text(RichDiff.drawn(
                                 new Expansion.Folded(
                                         new ParsedDiff(List.empty(), List.of(FileVersion.NEW.of(whole))),
-                                        HashMap.of("README.md", Expansion.Fold.of(FileVersion.NEW, false, 1, true))),
+                                        HashMap.of(
+                                                new RepoPath("README.md"),
+                                                Expansion.Fold.of(FileVersion.NEW, false, 1, true))),
                                 Option.none(),
                                 Option.none(),
                                 RichDiff.Drawing.of(Theme.SpanStyles.NONE).withWidth(40))
@@ -193,23 +196,23 @@ class RenderedMarkdownTest {
         Drawn drawn = drawn(FileVersion.NEW, false);
 
         assertEquals(
-                List.of(new Anchor.File("README.md")),
+                List.of(new Anchor.File(new RepoPath("README.md"))),
                 drawn.stops().map(stop -> stop.mark().anchor()));
         assertEquals(
                 List.of(
                         // A context line is placed by its number in the old file too, after its own (ADR 140).
-                        new Drawn.Place(new Anchor.OnLine("README.md", DiffSide.NEW, 1), 1),
-                        new Drawn.Place(new Anchor.OnLine("README.md", DiffSide.OLD, 1), 1),
-                        new Drawn.Place(new Anchor.OnLine("README.md", DiffSide.NEW, 3), 3),
+                        new Drawn.Place(new Anchor.OnLine(new RepoPath("README.md"), DiffSide.NEW, 1), 1),
+                        new Drawn.Place(new Anchor.OnLine(new RepoPath("README.md"), DiffSide.OLD, 1), 1),
+                        new Drawn.Place(new Anchor.OnLine(new RepoPath("README.md"), DiffSide.NEW, 3), 3),
                         // A blank line goes with the block after it, after that block's own lines.
-                        new Drawn.Place(new Anchor.OnLine("README.md", DiffSide.NEW, 2), 3),
-                        new Drawn.Place(new Anchor.OnLine("README.md", DiffSide.OLD, 2), 3),
-                        new Drawn.Place(new Anchor.OnLine("README.md", DiffSide.NEW, 5), 5),
-                        new Drawn.Place(new Anchor.OnLine("README.md", DiffSide.OLD, 5), 5),
-                        new Drawn.Place(new Anchor.OnLine("README.md", DiffSide.NEW, 4), 5),
-                        new Drawn.Place(new Anchor.OnLine("README.md", DiffSide.OLD, 4), 5),
-                        new Drawn.Place(new Anchor.OnLine("README.md", DiffSide.NEW, 6), 6),
-                        new Drawn.Place(new Anchor.OnLine("README.md", DiffSide.OLD, 6), 6)),
+                        new Drawn.Place(new Anchor.OnLine(new RepoPath("README.md"), DiffSide.NEW, 2), 3),
+                        new Drawn.Place(new Anchor.OnLine(new RepoPath("README.md"), DiffSide.OLD, 2), 3),
+                        new Drawn.Place(new Anchor.OnLine(new RepoPath("README.md"), DiffSide.NEW, 5), 5),
+                        new Drawn.Place(new Anchor.OnLine(new RepoPath("README.md"), DiffSide.OLD, 5), 5),
+                        new Drawn.Place(new Anchor.OnLine(new RepoPath("README.md"), DiffSide.NEW, 4), 5),
+                        new Drawn.Place(new Anchor.OnLine(new RepoPath("README.md"), DiffSide.OLD, 4), 5),
+                        new Drawn.Place(new Anchor.OnLine(new RepoPath("README.md"), DiffSide.NEW, 6), 6),
+                        new Drawn.Place(new Anchor.OnLine(new RepoPath("README.md"), DiffSide.OLD, 6), 6)),
                 drawn.places());
     }
 
@@ -358,7 +361,7 @@ class RenderedMarkdownTest {
         return RichDiff.drawn(
                 new Expansion.Folded(
                         new ParsedDiff(List.empty(), List.of(version.of(whole))),
-                        HashMap.of("README.md", Expansion.Fold.of(version, cut, 1, true))),
+                        HashMap.of(new RepoPath("README.md"), Expansion.Fold.of(version, cut, 1, true))),
                 Option.none(),
                 Option.none(),
                 RichDiff.Drawing.of(styles).withWidth(40));

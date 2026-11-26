@@ -6,8 +6,6 @@ import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.time.Instant;
 import net.vanfleteren.jazygit.core.gh.StubGitHub;
-import net.vanfleteren.jazygit.core.gh.model.GhBranch;
-import net.vanfleteren.jazygit.core.gh.model.PrNumber;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest.Review;
@@ -87,7 +85,7 @@ public final class PullRequestFixtures {
     public static final BranchName FEATURE = PUSHED.name();
 
     static final PullRequest FEATURE_PR =
-            new PullRequest(new PrNumber(42), new GhBranch("feature"), false, Checks.PASSING, Review.APPROVED);
+            new PullRequest(new PrNumber(42), new ForgeBranch("feature"), false, Checks.PASSING, Review.APPROVED);
 
     private PullRequestFixtures() {}
 
@@ -154,20 +152,20 @@ public final class PullRequestFixtures {
                 .model();
     }
 
-    static PullRequestSummary summary(String repository) {
+    static PullRequestSummary summary(RepoSlug repository) {
         return summary(repository, 9);
     }
 
     /**
      * Pull request {@code number} of {@code repository}, from a fork, listed without its commits.
      */
-    static PullRequestSummary summary(String repository, int number) {
+    static PullRequestSummary summary(RepoSlug repository, int number) {
         return new PullRequestSummary(
                 repository,
                 new PrNumber(number),
                 "From a fork",
                 "bob",
-                new GhBranch("patch-1"),
+                new ForgeBranch("patch-1"),
                 false,
                 true,
                 Checks.NONE,
@@ -180,7 +178,7 @@ public final class PullRequestFixtures {
 
         @Override
         public Update.Next apply(Model model) {
-            return PullRequestReads.loaded(model, pullRequests, "owner/repo");
+            return PullRequestReads.loaded(model, pullRequests, new RepoSlug("owner/repo"));
         }
     }
 

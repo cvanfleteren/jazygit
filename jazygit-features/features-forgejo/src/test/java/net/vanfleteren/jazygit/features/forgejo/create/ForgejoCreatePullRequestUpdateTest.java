@@ -14,9 +14,12 @@ import net.vanfleteren.jazygit.core.forgejo.ForgejoPullRequest;
 import net.vanfleteren.jazygit.core.repo.Branch;
 import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.BranchRef;
+import net.vanfleteren.jazygit.core.repo.ForgeBranch;
+import net.vanfleteren.jazygit.core.repo.PrNumber;
 import net.vanfleteren.jazygit.core.repo.RemoteBranch;
 import net.vanfleteren.jazygit.core.repo.RemoteName;
 import net.vanfleteren.jazygit.core.repo.RemoteRef;
+import net.vanfleteren.jazygit.core.repo.RemoteUrl;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.features.branches.branch.pullrequest.CreatePullRequestCmd.ReadTitle;
 import net.vanfleteren.jazygit.features.branches.branch.pullrequest.CreatePullRequestMsg;
@@ -25,6 +28,7 @@ import net.vanfleteren.jazygit.features.forgejo.pulls.ForgejoPullRequests;
 import net.vanfleteren.jazygit.features.forgejo.pulls.PullRequestFixtures;
 import net.vanfleteren.jazygit.features.forgejo.pulls.ReadPullRequests;
 import net.vanfleteren.jazygit.kernel.state.AppError;
+import net.vanfleteren.jazygit.kernel.state.FeatureId;
 import net.vanfleteren.jazygit.kernel.state.Loadable;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.TestModels;
@@ -45,7 +49,13 @@ class ForgejoCreatePullRequestUpdateTest {
     private static final BranchName NEXT = new BranchName("next");
     private static final RemoteName UPSTREAM = new RemoteName("upstream");
     private static final ForgejoPullRequest CREATED = new ForgejoPullRequest(
-            13, "Create it", "feature", Option.of("cvf/nix"), "main", false, "https://code.example.net/cvf/nix/13");
+            new PrNumber(13),
+            "Create it",
+            new ForgeBranch("feature"),
+            Option.of("cvf/nix"),
+            new ForgeBranch("main"),
+            false,
+            "https://code.example.net/cvf/nix/13");
 
     private static RemoteRef remote(RemoteName remote, String name) {
         return new RemoteRef(new RemoteBranch(remote, new BranchName(name)), new Sha("e".repeat(40)), TIME);
@@ -81,8 +91,8 @@ class ForgejoCreatePullRequestUpdateTest {
                 .model()
                 .withPart(
                         ForgeHome.PART,
-                        ForgeHome.NONE.deciding(
-                                Option.of(new ForgeCandidate("forgejo", "Forgejo", ORIGIN, PullRequestFixtures.URL))));
+                        ForgeHome.NONE.deciding(Option.of(new ForgeCandidate(
+                                new FeatureId("forgejo"), "Forgejo", ORIGIN, new RemoteUrl(PullRequestFixtures.URL)))));
     }
 
     private static Model model() {
@@ -191,10 +201,10 @@ class ForgejoCreatePullRequestUpdateTest {
     void oneOpenAlreadyIsNamedAndThePullRequestsAreReadAgain() {
         CreatePullRequest cmd = new CreatePullRequest(ORIGIN, BRANCH, FEATURE, MAIN, "Create it", "", false);
 
-        Next next = update(model(), new ForgejoCreatePullRequestMsg.AlreadyOpen(cmd, 7));
+        Next next = update(model(), new ForgejoCreatePullRequestMsg.AlreadyOpen(cmd, new PrNumber(7)));
 
         assertEquals(
-                Option.of(new CreateFailure.AlreadyOpen(BRANCH, 7)),
+                Option.of(new CreateFailure.AlreadyOpen(BRANCH, new PrNumber(7))),
                 next.model().outcome().error().map(error -> ((AppError.OperationFailed) error).failure()));
         assertTrue(
                 next.cmds().contains(new ReadPullRequests(ORIGIN)), next.cmds().toString());

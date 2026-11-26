@@ -24,7 +24,7 @@ public final class GitHubCreatePullRequestDialogs {
             StackPopups.CreateFirst.class,
             popup -> popup.stack()
                     .map(stack -> Messages.get(
-                            "github.dialog.createFirst.title", popup.branch().value(), String.valueOf(stack)))
+                            "github.dialog.createFirst.title", popup.branch().value(), String.valueOf(stack.value())))
                     .getOrElse(() -> Messages.get(
                             "github.dialog.createFirst.titleNew",
                             popup.branch().value(),
@@ -41,7 +41,8 @@ public final class GitHubCreatePullRequestDialogs {
         String branch = popup.branch().value();
         String base = popup.base().value();
         return popup.stack()
-                .map(stack -> Messages.get("github.dialog.createFirst.onTop", branch, base, String.valueOf(stack)))
+                .map(stack ->
+                        Messages.get("github.dialog.createFirst.onTop", branch, base, String.valueOf(stack.value())))
                 .getOrElse(() -> Messages.get(
                         "github.dialog.createFirst.onPullRequest",
                         branch,

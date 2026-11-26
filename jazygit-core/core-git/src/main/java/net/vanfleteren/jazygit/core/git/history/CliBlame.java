@@ -14,6 +14,7 @@ import net.vanfleteren.jazygit.core.git.process.GitFailure;
 import net.vanfleteren.jazygit.core.git.process.GitOutput;
 import net.vanfleteren.jazygit.core.git.process.GitProcess;
 import net.vanfleteren.jazygit.core.git.process.TempFiles;
+import net.vanfleteren.jazygit.core.repo.RepoPath;
 import net.vanfleteren.jazygit.core.repo.Revision;
 import net.vanfleteren.jazygit.core.repo.Sha;
 
@@ -33,15 +34,15 @@ final class CliBlame {
     static Either<GitError, Blame> blame(Path worktree, BlameAt at, BlameOptions options) {
         String head = GitArgs.revision(new Revision.Head());
         return switch (at) {
-            case BlameAt.InCommit(Sha sha, int parent, String path) ->
+            case BlameAt.InCommit(Sha sha, int parent, RepoPath path) ->
                 read(worktree, options, List.of(GitArgs.parent(new Revision.Commit(sha), parent)), path);
-            case BlameAt.AtMergeBase(Sha base, Sha tip, String path) ->
+            case BlameAt.AtMergeBase(Sha base, Sha tip, RepoPath path) ->
                 mergeBase(worktree, base, tip)
                         .flatMap(fork ->
                                 read(worktree, options, List.of(GitArgs.revision(new Revision.Commit(fork))), path));
-            case BlameAt.AtHead(String path) -> read(worktree, options, List.of(head), path);
-            case BlameAt.OnDisk(String path) -> read(worktree, options, List.empty(), path);
-            case BlameAt.InIndex(String path) ->
+            case BlameAt.AtHead(RepoPath path) -> read(worktree, options, List.of(head), path);
+            case BlameAt.OnDisk(RepoPath path) -> read(worktree, options, List.empty(), path);
+            case BlameAt.InIndex(RepoPath path) ->
                 stagedChange(worktree, path)
                         .flatMap(changed -> changed
                                 ? TempFiles.usingDirectory(
@@ -63,7 +64,7 @@ final class CliBlame {
      * {@code HEAD} holds, and its line would be blamed as not committed yet. A file added with intent to add
      * ({@code git add -N}), which {@code diff --cached} hides by default, is a change: it is not in {@code HEAD}.
      */
-    private static Either<GitError, Boolean> stagedChange(Path worktree, String path) {
+    private static Either<GitError, Boolean> stagedChange(Path worktree, RepoPath path) {
         return GitProcess.ask(
                         worktree,
                         GitCommand.reading(
@@ -73,7 +74,7 @@ final class CliBlame {
                                         "--no-ext-diff",
                                         "--ita-visible-in-index",
                                         "--",
-                                        path)
+                                        path.value())
                                 .withLiteralPaths())
                 .mapLeft(GitFailure::error)
                 .map(Option::isEmpty);
@@ -86,7 +87,7 @@ final class CliBlame {
      * file that holds its target: a link would point nowhere from the temporary directory, and {@code --contents}
      * follows it.
      */
-    private static Either<GitError, Path> staged(Path worktree, Path directory, String path) {
+    private static Either<GitError, Path> staged(Path worktree, Path directory, RepoPath path) {
         return GitProcess.read(
                         worktree,
                         GitCommand.reading(
@@ -96,10 +97,10 @@ final class CliBlame {
                                         "--ignore-skip-worktree-bits",
                                         "--prefix=" + directory + "/",
                                         "--",
-                                        path)
+                                        path.value())
                                 .withLiteralPaths(),
                         Either::right)
-                .map(written -> directory.resolve(path));
+                .map(written -> directory.resolve(path.value()));
     }
 
     /**
@@ -113,14 +114,14 @@ final class CliBlame {
                         .getOrElse(List.empty()));
     }
 
-    private static Either<GitError, Blame> read(Path worktree, BlameOptions options, List<String> at, String path) {
+    private static Either<GitError, Blame> read(Path worktree, BlameOptions options, List<String> at, RepoPath path) {
         return GitProcess.read(
                 worktree,
                 GitCommand.reading(List.of("blame")
                                 .appendAll(flags(options))
                                 .appendAll(at)
                                 .append("--")
-                                .append(path))
+                                .append(path.value()))
                         .withLiteralPaths(),
                 raw -> Blame.parse(raw).toEither(() -> new GitError.UnexpectedOutput(raw)));
     }

@@ -3,8 +3,9 @@ package net.vanfleteren.jazygit.core.gh.stacks;
 import static net.vanfleteren.jazygit.core.gh.process.GhCommand.gh;
 
 import io.vavr.collection.List;
-import net.vanfleteren.jazygit.core.gh.model.PrNumber;
+import net.vanfleteren.jazygit.core.gh.model.StackId;
 import net.vanfleteren.jazygit.core.gh.process.GhCommand;
+import net.vanfleteren.jazygit.core.repo.PrNumber;
 
 /**
  * Making a stack of pull requests on GitHub, adding to its top and taking it apart, through the Stacks REST API, as
@@ -25,15 +26,15 @@ final class StackMutations {
     /**
      * The command that puts {@code pullRequests} on the top of stack {@code stack}, the lowest one first.
      */
-    static GhCommand add(int stack, List<PrNumber> pullRequests) {
-        return post("repos/{owner}/{repo}/stacks/" + stack + "/add", pullRequests);
+    static GhCommand add(StackId stack, List<PrNumber> pullRequests) {
+        return post("repos/{owner}/{repo}/stacks/" + stack.value() + "/add", pullRequests);
     }
 
     /**
      * The command that takes stack {@code stack} apart: its pull requests stay open, with their bases.
      */
-    static GhCommand unstack(int stack) {
-        return gh("api", "--method", "POST", "repos/{owner}/{repo}/stacks/" + stack + "/unstack");
+    static GhCommand unstack(StackId stack) {
+        return gh("api", "--method", "POST", "repos/{owner}/{repo}/stacks/" + stack.value() + "/unstack");
     }
 
     // The numbers go as a JSON array of numbers: -F, unlike -f, sends them typed.

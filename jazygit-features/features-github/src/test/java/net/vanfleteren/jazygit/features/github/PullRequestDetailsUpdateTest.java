@@ -10,8 +10,6 @@ import io.vavr.control.Either;
 import io.vavr.control.Option;
 import java.time.Instant;
 import net.vanfleteren.jazygit.core.gh.StubGitHub;
-import net.vanfleteren.jazygit.core.gh.model.GhBranch;
-import net.vanfleteren.jazygit.core.gh.model.PrNumber;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest.Review;
@@ -104,8 +102,8 @@ class PullRequestDetailsUpdateTest {
 
         PullRequest now = new PullRequest(
                 new PrNumber(42),
-                new GhBranch("feature"),
-                Option.of(new GhBranch("main")),
+                new ForgeBranch("feature"),
+                Option.of(new ForgeBranch("main")),
                 true,
                 Checks.FAILING,
                 Review.CHANGES_REQUESTED,
@@ -242,11 +240,11 @@ class PullRequestDetailsUpdateTest {
     @Test
     void aPullRequestFromThePullRequestsScreenIsShownAndItsDetailsRead() {
         PullRequestSummary summary = new PullRequestSummary(
-                "owner/repo",
+                new RepoSlug("owner/repo"),
                 new PrNumber(9),
                 "From a fork",
                 "bob",
-                new GhBranch("patch-1"),
+                new ForgeBranch("patch-1"),
                 true,
                 true,
                 Checks.FAILING,
@@ -254,8 +252,8 @@ class PullRequestDetailsUpdateTest {
                 Instant.EPOCH,
                 "https://github.com/owner/repo/pull/9");
 
-        Model ofOwnerRepo =
-                loaded().mapPart(GitHubState.PART, gitHub -> gitHub.withRepository(Option.of("owner/repo")));
+        Model ofOwnerRepo = loaded().mapPart(
+                        GitHubState.PART, gitHub -> gitHub.withRepository(Option.of(new RepoSlug("owner/repo"))));
 
         Next shown = Update.update(ofOwnerRepo, new PullRequestMsg.SummaryRequested(summary));
 
@@ -265,7 +263,7 @@ class PullRequestDetailsUpdateTest {
                                 new BranchName("patch-1"),
                                 new PullRequest(
                                         new PrNumber(9),
-                                        new GhBranch("patch-1"),
+                                        new ForgeBranch("patch-1"),
                                         true,
                                         Checks.FAILING,
                                         Review.REQUIRED),
@@ -279,19 +277,19 @@ class PullRequestDetailsUpdateTest {
     @Test
     void aPullRequestOfAnotherRepositoryOpensInTheBrowser() {
         PullRequestSummary elsewhere = new PullRequestSummary(
-                "other/repo",
+                new RepoSlug("other/repo"),
                 new PrNumber(3),
                 "Elsewhere",
                 "carol",
-                new GhBranch("fix"),
+                new ForgeBranch("fix"),
                 false,
                 false,
                 Checks.NONE,
                 Review.NONE,
                 Instant.EPOCH,
                 "https://github.com/other/repo/pull/3");
-        Model ofOwnerRepo =
-                loaded().mapPart(GitHubState.PART, gitHub -> gitHub.withRepository(Option.of("owner/repo")));
+        Model ofOwnerRepo = loaded().mapPart(
+                        GitHubState.PART, gitHub -> gitHub.withRepository(Option.of(new RepoSlug("owner/repo"))));
 
         Next opened = Update.update(ofOwnerRepo, new PullRequestMsg.SummaryRequested(elsewhere));
 

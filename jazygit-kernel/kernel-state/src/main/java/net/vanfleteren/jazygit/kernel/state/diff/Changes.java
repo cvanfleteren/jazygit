@@ -19,7 +19,7 @@ public sealed interface Changes {
     default boolean sameAs(Changes other) {
         return this instanceof OfPullRequest(PullRequestCommits commits, var _)
                 ? other instanceof OfPullRequest(PullRequestCommits those, var _)
-                        && those.number() == commits.number()
+                        && those.number().equals(commits.number())
                         && those.repository().equals(commits.repository())
                         && those.host().equals(commits.host())
                 : equals(other);

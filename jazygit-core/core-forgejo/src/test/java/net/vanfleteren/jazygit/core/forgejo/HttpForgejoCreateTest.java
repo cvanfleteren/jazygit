@@ -14,6 +14,8 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import net.vanfleteren.jazygit.core.repo.ForgeBranch;
+import net.vanfleteren.jazygit.core.repo.PrNumber;
 import net.vanfleteren.jazygit.lib.json.Json;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -25,7 +27,7 @@ import org.junit.jupiter.api.Test;
 class HttpForgejoCreateTest {
 
     private static final ForgejoNewPullRequest NEW =
-            new ForgejoNewPullRequest("anna:feature", "main", "Create it", "Why \"it\"", true);
+            new ForgejoNewPullRequest("anna:feature", new ForgeBranch("main"), "Create it", "Why \"it\"", true);
 
     private HttpServer server;
     private final ConcurrentLinkedQueue<String> asked = new ConcurrentLinkedQueue<>();
@@ -78,11 +80,11 @@ class HttpForgejoCreateTest {
 
         assertEquals(
                 Either.right(new ForgejoPullRequest(
-                        13,
+                        new PrNumber(13),
                         "WIP: Create it",
-                        "feature",
+                        new ForgeBranch("feature"),
                         Option.of("anna/nix"),
-                        "main",
+                        new ForgeBranch("main"),
                         true,
                         "https://code.example.net/cvf/nix/pulls/13")),
                 created);
@@ -100,7 +102,7 @@ class HttpForgejoCreateTest {
                 .createPullRequest(repository("taken"), NEW)
                 .getLeft();
 
-        assertEquals(Option.of(7L), ((ForgejoError.Refused) refused).existing());
+        assertEquals(Option.of(new PrNumber(7)), ((ForgejoError.Refused) refused).existing());
     }
 
     @Test

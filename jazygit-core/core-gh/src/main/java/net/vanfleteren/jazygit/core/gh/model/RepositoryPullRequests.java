@@ -9,7 +9,9 @@ import io.vavr.collection.Map;
 import io.vavr.collection.Set;
 import io.vavr.control.Option;
 import java.util.Locale;
+import net.vanfleteren.jazygit.core.repo.PrNumber;
 import net.vanfleteren.jazygit.core.repo.RemoteName;
+import net.vanfleteren.jazygit.core.repo.RepoSlug;
 
 /**
  * The open pull requests of a repository, forks included.
@@ -21,12 +23,12 @@ import net.vanfleteren.jazygit.core.repo.RemoteName;
  *                   not say
  */
 public record RepositoryPullRequests(
-        String repository, PullRequestList open, Option<String> viewer, Option<PrNumber> latest) {
+        RepoSlug repository, PullRequestList open, Option<String> viewer, Option<PrNumber> latest) {
 
     /**
      * Read as an account GitHub did not name, without the pull request opened last.
      */
-    public RepositoryPullRequests(String repository, PullRequestList open) {
+    public RepositoryPullRequests(RepoSlug repository, PullRequestList open) {
         this(repository, open, Option.none(), Option.none());
     }
 
@@ -43,11 +45,12 @@ public record RepositoryPullRequests(
      * fork is a remote, and its pull requests into the repository are those of its branches (ADR 177). Those from
      * other forks are left out, though a branch of theirs may have the name of one of these.
      */
-    public List<PullRequest> ofBranches(Set<String> forks) {
-        Set<String> own = forks.map(fork -> fork.toLowerCase(Locale.ROOT));
+    public List<PullRequest> ofBranches(Set<RepoSlug> forks) {
+        Set<String> own = forks.map(fork -> fork.value().toLowerCase(Locale.ROOT));
         return open.pullRequests()
                 .filter(summary -> !summary.fromFork()
-                        || summary.headRepository().exists(head -> own.contains(head.toLowerCase(Locale.ROOT))))
+                        || summary.headRepository()
+                                .exists(head -> own.contains(head.value().toLowerCase(Locale.ROOT))))
                 .map(PullRequestSummary::pullRequest);
     }
 
@@ -57,12 +60,12 @@ public record RepositoryPullRequests(
      * repository, one from a fork in those of the fork; every remote of one repository, as {@code origin} and an
      * alias of it. One whose repository is no remote's is left out, as one whose fork was deleted.
      */
-    public Map<PrNumber, Set<RemoteName>> heads(Map<RemoteName, String> remotes) {
-        List<Tuple2<RemoteName, String>> named =
-                remotes.toList().map(remote -> Tuple.of(remote._1(), remote._2().toLowerCase(Locale.ROOT)));
+    public Map<PrNumber, Set<RemoteName>> heads(Map<RemoteName, RepoSlug> remotes) {
+        List<Tuple2<RemoteName, String>> named = remotes.toList()
+                .map(remote -> Tuple.of(remote._1(), remote._2().value().toLowerCase(Locale.ROOT)));
         return HashMap.ofEntries(open.pullRequests()
                 .flatMap(summary -> summary.headRepository()
-                        .map(head -> head.toLowerCase(Locale.ROOT))
+                        .map(head -> head.value().toLowerCase(Locale.ROOT))
                         .map(head -> named.filter(remote -> remote._2().equals(head))
                                 .map(Tuple2::_1)
                                 .toSet())

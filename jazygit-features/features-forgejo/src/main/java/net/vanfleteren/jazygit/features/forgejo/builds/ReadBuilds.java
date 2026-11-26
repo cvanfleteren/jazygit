@@ -11,6 +11,7 @@ import net.vanfleteren.jazygit.core.forgejo.CommitStatus;
 import net.vanfleteren.jazygit.core.forgejo.Forgejo;
 import net.vanfleteren.jazygit.core.forgejo.ForgejoRepository;
 import net.vanfleteren.jazygit.core.repo.RemoteName;
+import net.vanfleteren.jazygit.core.repo.RemoteUrl;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.kernel.state.Cmd;
 import net.vanfleteren.jazygit.kernel.state.Env;
@@ -40,7 +41,7 @@ public record ReadBuilds(List<Tip> tips) implements Cmd {
                 .getOrElse(() -> new BuildsMsg.Read(tips, HashMap.empty(), HashSet.empty()));
     }
 
-    private BuildsMsg.Read read(Forgejo forgejo, Map<RemoteName, String> urls) {
+    private BuildsMsg.Read read(Forgejo forgejo, Map<RemoteName, RemoteUrl> urls) {
         Map<RemoteName, Option<ForgejoRepository>> repositories = HashMap.ofEntries(tips.map(Tip::remote)
                 .distinct()
                 .map(remote -> Tuple.of(

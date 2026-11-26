@@ -13,6 +13,7 @@ import net.vanfleteren.jazygit.core.git.model.Diffs;
 import net.vanfleteren.jazygit.core.git.model.FileEntry;
 import net.vanfleteren.jazygit.core.git.model.FileVersion;
 import net.vanfleteren.jazygit.core.git.model.Fixtures;
+import net.vanfleteren.jazygit.core.repo.RepoPath;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.kernel.settings.DiffStyle;
 import net.vanfleteren.jazygit.kernel.state.AreaId;
@@ -54,10 +55,10 @@ class VersionUpdateTest {
 
     private static final ScrolledContent CONTENT = new ScrolledContent.StashChanges(STASH, CHANGES);
     private static final Source SOURCE =
-            new Source.OfStash(STASH, new CommitFile("a.txt", ChangeType.MODIFIED, Option.none()));
-    private static final Anchor.OnLine REMOVED = new Anchor.OnLine("a.txt", DiffSide.OLD, 10);
-    private static final Anchor.OnLine ADDED = new Anchor.OnLine("a.txt", DiffSide.NEW, 10);
-    private static final Anchor.OnLine TWO = new Anchor.OnLine("a.txt", DiffSide.NEW, 2);
+            new Source.OfStash(STASH, new CommitFile(new RepoPath("a.txt"), ChangeType.MODIFIED, Option.none()));
+    private static final Anchor.OnLine REMOVED = new Anchor.OnLine(new RepoPath("a.txt"), DiffSide.OLD, 10);
+    private static final Anchor.OnLine ADDED = new Anchor.OnLine(new RepoPath("a.txt"), DiffSide.NEW, 10);
+    private static final Anchor.OnLine TWO = new Anchor.OnLine(new RepoPath("a.txt"), DiffSide.NEW, 2);
     private static final String STAGED_CHANGE = HEADER + "@@ -1,2 +1,2 @@\n one\n-two\n+Two\n";
     private static final String UNSTAGED_CHANGE = HEADER + "@@ -1,2 +1,2 @@\n one\n-Two\n+TWO\n";
     /**
@@ -99,7 +100,7 @@ class VersionUpdateTest {
         assertEquals(List.of(), original.cmds());
         assertEquals(Option.of(FileVersion.ORIGINAL), version(original.model()).flatMap(Version::showing));
         // An added line goes to the line after its block in the original, numbered on the right as a context line.
-        Anchor.OnLine after = new Anchor.OnLine("a.txt", DiffSide.NEW, 11);
+        Anchor.OnLine after = new Anchor.OnLine(new RepoPath("a.txt"), DiffSide.NEW, 11);
         assertEquals(Option.of(after), original.model().scrolled().get(AREA).flatMap(Scrolled::cursor));
 
         Next diff = Update.update(original.model(), new VersionMsg.Cycled(at(after)));
@@ -111,7 +112,8 @@ class VersionUpdateTest {
     @Test
     void aFileReadWholeToExpandItWithWhitespaceNotIgnoredIsNotReadAgain() {
         Next expanded = Update.update(
-                loaded(), new ExpandMsg.Asked(at(new Anchor.Gap("a.txt", 1, Option.of(7))), ExpandMsg.Toward.ALL));
+                loaded(),
+                new ExpandMsg.Asked(at(new Anchor.Gap(new RepoPath("a.txt"), 1, Option.of(7))), ExpandMsg.Toward.ALL));
         ReadWholeFile whole = (ReadWholeFile) expanded.cmds().head();
         Model read = TestModels.done(
                         TestModels.running(expanded.model(), whole), whole, new LoadMsg.WholeFileRead(whole, WHOLE))
@@ -179,7 +181,8 @@ class VersionUpdateTest {
         Model ignoring =
                 Update.update(loaded(), new DiffOptionsMsg.WhitespaceToggled()).model();
         Next expanded = Update.update(
-                ignoring, new ExpandMsg.Asked(at(new Anchor.Gap("a.txt", 1, Option.of(7))), ExpandMsg.Toward.ALL));
+                ignoring,
+                new ExpandMsg.Asked(at(new Anchor.Gap(new RepoPath("a.txt"), 1, Option.of(7))), ExpandMsg.Toward.ALL));
         ReadWholeFile whole = (ReadWholeFile) expanded.cmds().head();
         assertTrue(whole.options().ignoreWhitespace());
         Model read = TestModels.done(
@@ -203,7 +206,7 @@ class VersionUpdateTest {
                                 DIRTY.files(), model.preferences().diffOptions(), new Diffs("", unstaged.text())))
                 .model();
         ScrolledContent shown = new ScrolledContent.Diff(unstaged);
-        Anchor.OnLine two = new Anchor.OnLine("a.txt", DiffSide.NEW, 2);
+        Anchor.OnLine two = new Anchor.OnLine(new RepoPath("a.txt"), DiffSide.NEW, 2);
         DiffCursorAt at = new DiffCursorAt(
                 new AreaId("diff-unstaged"),
                 new Scrolled(shown, 0, 0, Option.of(two), Option.none()),
@@ -331,7 +334,7 @@ class VersionUpdateTest {
     @Test
     void fromTheFilesPaneTheChangesOfACommitFileShowItsNewVersion() {
         Changes commit = new Changes.OfCommit(new Sha("aaaa"));
-        CommitFile file = new CommitFile("a.txt", ChangeType.MODIFIED);
+        CommitFile file = new CommitFile(new RepoPath("a.txt"), ChangeType.MODIFIED);
         Model opened = Update.update(rich(), new CommitFilesMsg.Opened(commit, Scopes.COMMITS.pane()))
                 .model();
         opened = Update.update(opened, new LoadMsg.CommitFilesLoaded(commit, List.of(file)))
@@ -400,7 +403,11 @@ class VersionUpdateTest {
      */
     private static ReadVersion read(Model model) {
         return ReadVersion.of(
-                AREA, CONTENT, SOURCE, "a.txt", model.preferences().diffOptions());
+                AREA,
+                CONTENT,
+                SOURCE,
+                new RepoPath("a.txt"),
+                model.preferences().diffOptions());
     }
 
     /**

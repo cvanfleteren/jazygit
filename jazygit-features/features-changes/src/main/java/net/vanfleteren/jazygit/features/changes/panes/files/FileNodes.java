@@ -6,6 +6,7 @@ import io.vavr.control.Option;
 import java.util.function.Predicate;
 import net.vanfleteren.jazygit.core.git.model.FileTree;
 import net.vanfleteren.jazygit.core.git.model.Pathed;
+import net.vanfleteren.jazygit.core.repo.RepoPath;
 import net.vanfleteren.jazygit.kernel.state.Msg;
 import net.vanfleteren.jazygit.kernel.state.load.SelectionMsg;
 import net.vanfleteren.jazygit.kernel.state.view.UnchangedNode;
@@ -63,9 +64,9 @@ final class FileNodes {
     static boolean shows(Option<UnchangedNode> shown, Msg msg) {
         return shown.exists(node -> switch (node) {
             case UnchangedNode.File(var content) ->
-                msg instanceof SelectionMsg.UnchangedFileSelected(String path)
+                msg instanceof SelectionMsg.UnchangedFileSelected(RepoPath path)
                         && content.key().equals(path);
-            case UnchangedNode.Directory(String path, int files) ->
+            case UnchangedNode.Directory(RepoPath path, int files) ->
                 msg.equals(new SelectionMsg.UnchangedDirectorySelected(path, files));
         });
     }
@@ -75,10 +76,11 @@ final class FileNodes {
      * directory, the full path otherwise.
      */
     static String name(FileTree.File<?> file) {
-        String path = file.entry().path();
+        String path = file.entry().path().value();
         String directory = path.substring(0, path.length() - file.name().length());
         return file.entry()
                 .origin()
+                .map(RepoPath::value)
                 .map(from -> from.startsWith(directory) ? from.substring(directory.length()) : from)
                 .map(from -> from + " -> " + file.name())
                 .getOrElse(file.name());
@@ -98,7 +100,7 @@ final class FileNodes {
      * The paths of the directories of {@code files} with none {@code changed} under them, which a tree of all files
      * starts collapsed: of the working tree (ADR 108), or of a commit (ADR 128).
      */
-    static <T extends Pathed> Set<String> unchangedDirectories(List<T> files, Predicate<T> changed) {
+    static <T extends Pathed> Set<RepoPath> unchangedDirectories(List<T> files, Predicate<T> changed) {
         return directories(FileTree.of(files))
                 .filter(dir -> !hasChanges(dir, changed))
                 .map(FileTree.Dir::path)

@@ -2,6 +2,7 @@ package net.vanfleteren.jazygit.core.git.model;
 
 import io.vavr.collection.List;
 import io.vavr.control.Option;
+import net.vanfleteren.jazygit.core.repo.RepoPath;
 
 /**
  * Changed files arranged as a directory tree. A directory whose only child is another directory is
@@ -28,8 +29,8 @@ public sealed interface FileTree<T extends Pathed> {
                 .groupBy(f -> relative(prefix, f).split("/", 2)[0])
                 .toList()
                 .sortBy(entry -> entry._1)
-                .map(entry ->
-                        merged(new Dir<>(entry._1, prefix + entry._1, children(prefix + entry._1 + "/", entry._2))));
+                .map(entry -> merged(new Dir<>(
+                        entry._1, new RepoPath(prefix + entry._1), children(prefix + entry._1 + "/", entry._2))));
         List<FileTree<T>> leaves = nested._2
                 .<FileTree<T>>map(f -> new File<>(relative(prefix, f), f))
                 .sorted((a, b) -> a.name().compareTo(b.name()));
@@ -37,7 +38,7 @@ public sealed interface FileTree<T extends Pathed> {
     }
 
     private static String relative(String prefix, Pathed file) {
-        return file.path().substring(prefix.length());
+        return file.path().value().substring(prefix.length());
     }
 
     /**
@@ -61,7 +62,7 @@ public sealed interface FileTree<T extends Pathed> {
     /**
      * The repository-relative path of this node: of the directory, or of the file.
      */
-    String path();
+    RepoPath path();
 
     /**
      * All files in this node: the file itself, or every file below a directory.
@@ -88,12 +89,12 @@ public sealed interface FileTree<T extends Pathed> {
     /**
      * @param path the full repository-relative path of the directory
      */
-    record Dir<T extends Pathed>(String name, String path, List<FileTree<T>> children) implements FileTree<T> {}
+    record Dir<T extends Pathed>(String name, RepoPath path, List<FileTree<T>> children) implements FileTree<T> {}
 
     record File<T extends Pathed>(String name, T entry) implements FileTree<T> {
 
         @Override
-        public String path() {
+        public RepoPath path() {
             return entry.path();
         }
     }

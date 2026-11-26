@@ -12,6 +12,7 @@ import net.vanfleteren.jazygit.core.repo.Head;
 import net.vanfleteren.jazygit.core.repo.InProgress;
 import net.vanfleteren.jazygit.core.repo.Plan;
 import net.vanfleteren.jazygit.core.repo.Plan.Step;
+import net.vanfleteren.jazygit.core.repo.RepoPath;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.features.changes.panes.commits.CommitsAbove;
 import org.junit.jupiter.api.Test;
@@ -26,7 +27,7 @@ class PlanRowsTest {
     private static final Sha SECOND = new Sha("2".repeat(40));
     private static final Sha THIRD = new Sha("3".repeat(40));
     private static final FileEntry CONFLICTED =
-            FileEntry.conflicted("f", new Conflict(Conflict.Side.UPDATED, Conflict.Side.UPDATED));
+            FileEntry.conflicted(new RepoPath("f"), new Conflict(Conflict.Side.UPDATED, Conflict.Side.UPDATED));
 
     private static RepoStatus stopped(Plan plan, List<FileEntry> files) {
         return new RepoStatus(

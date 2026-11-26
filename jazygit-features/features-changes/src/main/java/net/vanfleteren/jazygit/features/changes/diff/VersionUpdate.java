@@ -11,6 +11,7 @@ import net.vanfleteren.jazygit.core.git.model.FileContent;
 import net.vanfleteren.jazygit.core.git.model.FileEntry;
 import net.vanfleteren.jazygit.core.git.model.FileVersion;
 import net.vanfleteren.jazygit.core.git.model.ParsedDiff.ParsedFile;
+import net.vanfleteren.jazygit.core.repo.RepoPath;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.kernel.state.AreaId;
 import net.vanfleteren.jazygit.kernel.state.Cmd;
@@ -168,7 +169,7 @@ public final class VersionUpdate {
      */
     private static Option<Next> showing(Model model, AreaId area, Scrolled was, ParsedFile file, Shows target) {
         ScrolledContent content = was.content();
-        String path = file.file().path();
+        RepoPath path = file.file().path();
         Option<Version> before = model.repoView().version(area, content);
         boolean reads = before.isEmpty() || before.exists(Version::failed);
         Option<ReadVersion> read = reads
@@ -306,7 +307,8 @@ public final class VersionUpdate {
      * The file with the path {@code path} read whole to expand it in the area {@code area}, if it was read with
      * whitespace not ignored, as a version is.
      */
-    private static Option<Loadable<DiffText>> expanded(Model model, AreaId area, ScrolledContent content, String path) {
+    private static Option<Loadable<DiffText>> expanded(
+            Model model, AreaId area, ScrolledContent content, RepoPath path) {
         return model.repoView()
                 .expansion(area, content)
                 .flatMap(expansion -> expansion.files().get(path))

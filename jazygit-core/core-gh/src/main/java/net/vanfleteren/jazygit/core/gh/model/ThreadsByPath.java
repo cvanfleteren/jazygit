@@ -4,6 +4,7 @@ import io.vavr.Tuple2;
 import io.vavr.collection.List;
 import io.vavr.collection.Map;
 import io.vavr.control.Option;
+import net.vanfleteren.jazygit.core.repo.RepoPath;
 
 /**
  * Review threads found by the path of their file, so that the threads of each file of a diff are found without going
@@ -11,7 +12,7 @@ import io.vavr.control.Option;
  *
  * @param byPath for each path, the threads on it, each with where it is among all the threads
  */
-public record ThreadsByPath(Map<String, List<Tuple2<ReviewThread, Integer>>> byPath) {
+public record ThreadsByPath(Map<RepoPath, List<Tuple2<ReviewThread, Integer>>> byPath) {
 
     /**
      * {@code threads} by the path of their file.
@@ -25,8 +26,8 @@ public record ThreadsByPath(Map<String, List<Tuple2<ReviewThread, Integer>>> byP
      * The threads on the file with the path {@code path}, renamed from {@code origin} if it was, as
      * {@link ReviewThread#isOn} matches them, in their order.
      */
-    public List<ReviewThread> on(String path, Option<String> origin) {
-        Option<String> other = origin.filter(old -> !old.equals(path));
+    public List<ReviewThread> on(RepoPath path, Option<RepoPath> origin) {
+        Option<RepoPath> other = origin.filter(old -> !old.equals(path));
         List<Tuple2<ReviewThread, Integer>> found = List.of(path)
                 .appendAll(other)
                 .flatMap(each -> byPath.get(each).getOrElse(List.empty()))

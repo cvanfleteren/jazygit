@@ -1,6 +1,7 @@
 package net.vanfleteren.jazygit.features.github.stack;
 
 import io.vavr.control.Option;
+import net.vanfleteren.jazygit.core.gh.model.StackId;
 import net.vanfleteren.jazygit.features.github.prs.PrScopes;
 import net.vanfleteren.jazygit.kernel.state.Msg;
 import net.vanfleteren.jazygit.kernel.ui.FeatureAction;
@@ -19,7 +20,7 @@ public final class StackAction {
      * The number of the stack whose header is highlighted in the local branches (ADR 72): the keys of its group there
      * (ADR 167).
      */
-    public static final Keymap.Scope<Integer> STACKS = new Keymap.Scope<>("stacks", "github.panel.stacks.title");
+    public static final Keymap.Scope<StackId> STACKS = new Keymap.Scope<>("stacks", "github.panel.stacks.title");
 
     public static final FeatureAction ACTION = new FeatureAction(StackAction::keys, StackDialogs::popups);
 
@@ -29,8 +30,8 @@ public final class StackAction {
      * What the branches pane knows the group of stack {@code number} by, and keeps it closed by (ADR 167): next to
      * the scope its header's keys act on, so the stack's update and the pane's groups both find it here.
      */
-    public static String groupKey(int number) {
-        return "stack:" + number;
+    public static String groupKey(StackId number) {
+        return "stack:" + number.value();
     }
 
     private static Keymap keys(Keymap keys) {

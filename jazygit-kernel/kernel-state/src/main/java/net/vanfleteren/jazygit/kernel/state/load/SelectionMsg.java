@@ -4,6 +4,7 @@ import io.vavr.collection.List;
 import net.vanfleteren.jazygit.core.git.model.CommitFile;
 import net.vanfleteren.jazygit.core.git.model.FileEntry;
 import net.vanfleteren.jazygit.core.repo.BranchRef;
+import net.vanfleteren.jazygit.core.repo.RepoPath;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.Msg;
@@ -57,13 +58,13 @@ public sealed interface SelectionMsg extends Msg {
      * The user highlighted the file at {@code path} in the files tree while it lists all files, a file without
      * changes: of the working tree (ADR 108), or of the commit whose files it lists (ADR 128).
      */
-    record UnchangedFileSelected(String path) implements SelectionMsg {}
+    record UnchangedFileSelected(RepoPath path) implements SelectionMsg {}
 
     /**
      * The user highlighted the directory at {@code path}, the root when it is empty, in the files tree while it lists
      * all files, with no changes under it; it holds {@code files} files shown (ADR 108, 128).
      */
-    record UnchangedDirectorySelected(String path, int files) implements SelectionMsg {}
+    record UnchangedDirectorySelected(RepoPath path, int files) implements SelectionMsg {}
 
     /**
      * The user highlighted a node of the tree of the files of a commit or a stash; {@code files} are the files

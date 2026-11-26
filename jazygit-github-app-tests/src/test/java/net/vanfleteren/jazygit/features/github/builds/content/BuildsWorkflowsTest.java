@@ -18,6 +18,7 @@ import net.vanfleteren.jazygit.core.gh.process.GhError;
 import net.vanfleteren.jazygit.core.git.StubGit;
 import net.vanfleteren.jazygit.core.git.files.StubDiffs;
 import net.vanfleteren.jazygit.core.git.process.GitError;
+import net.vanfleteren.jazygit.core.repo.RepoPath;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.features.github.GitHubServices;
 import net.vanfleteren.jazygit.features.github.builds.BuildsMsg;
@@ -157,7 +158,8 @@ class BuildsWorkflowsTest {
         String sha = "abcdef0123456789abcdef0123456789abcdef01";
         Env env = new Env(StubGit.of().withDiffs(new StubDiffs() {
                     @Override
-                    public Either<GitError, String> treeText(Sha at, String path) {
+                    public Either<GitError, String> treeText(Sha at, RepoPath file) {
+                        String path = file.value();
                         return at.value().equals(sha) && path.equals(".github/workflows/publish.yml")
                                 ? Either.right("jobs:\n  verify:\n    uses: ./.github/workflows/build.yml\n")
                                 : at.value().equals(sha) && path.equals(".github/workflows/build.yml")
@@ -217,7 +219,8 @@ class BuildsWorkflowsTest {
         String sha = "abcdef0123456789abcdef0123456789abcdef01";
         Env env = new Env(StubGit.of().withDiffs(new StubDiffs() {
                     @Override
-                    public Either<GitError, String> treeText(Sha at, String path) {
+                    public Either<GitError, String> treeText(Sha at, RepoPath file) {
+                        String path = file.value();
                         return Either.right("jobs:\n  test: {}\n");
                     }
                 }))

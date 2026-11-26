@@ -10,6 +10,7 @@ import net.vanfleteren.jazygit.core.git.model.Blame;
 import net.vanfleteren.jazygit.core.git.model.DiffOptions;
 import net.vanfleteren.jazygit.core.git.model.DiffText;
 import net.vanfleteren.jazygit.core.git.model.FileVersion;
+import net.vanfleteren.jazygit.core.repo.RepoPath;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.kernel.state.Loadable;
 import net.vanfleteren.jazygit.kernel.state.diff.Anchor;
@@ -35,30 +36,30 @@ class BlameFooterTest {
     void itSaysTheCommitOfTheLineOfTheCursor() {
         Blame blame = new Blame(Vector.of(FIRST, Blame.NOT_COMMITTED)
                 .zipWithIndex()
-                .map(at -> new Blame.Line(at._1(), at._2() + 1, "a.txt", Option.none())));
+                .map(at -> new Blame.Line(at._1(), at._2() + 1, new RepoPath("a.txt"), Option.none())));
         Version version = blamed(FileVersion.NEW, new Loadable.Loaded<>(blame));
 
         assertEquals(
                 Option.of("aaaaaaa Alex Moreau · 2 months ago · A version cycles"),
-                BlameFooter.text(version, Option.of(new Anchor.OnLine("a.txt", DiffSide.NEW, 1)), NOW));
+                BlameFooter.text(version, Option.of(new Anchor.OnLine(new RepoPath("a.txt"), DiffSide.NEW, 1)), NOW));
         assertEquals(
                 Option.of("Not committed yet"),
-                BlameFooter.text(version, Option.of(new Anchor.OnLine("a.txt", DiffSide.NEW, 2)), NOW));
+                BlameFooter.text(version, Option.of(new Anchor.OnLine(new RepoPath("a.txt"), DiffSide.NEW, 2)), NOW));
         // On the bar of the file, which is no line.
-        assertEquals(Option.of(""), BlameFooter.text(version, Option.of(new Anchor.File("a.txt")), NOW));
+        assertEquals(Option.of(""), BlameFooter.text(version, Option.of(new Anchor.File(new RepoPath("a.txt"))), NOW));
     }
 
     @Test
     void theOriginalFindsItsLinesByTheirAnchorsInTheDiff() {
         Blame blame = new Blame(Vector.of(FIRST, Blame.NOT_COMMITTED)
                 .zipWithIndex()
-                .map(at -> new Blame.Line(at._1(), at._2() + 1, "a.txt", Option.none())));
+                .map(at -> new Blame.Line(at._1(), at._2() + 1, new RepoPath("a.txt"), Option.none())));
         Version version = blamed(FileVersion.ORIGINAL, new Loadable.Loaded<>(blame));
 
         // The removed line is line 2 of the original, on the left.
         assertEquals(
                 Option.of("Not committed yet"),
-                BlameFooter.text(version, Option.of(new Anchor.OnLine("a.txt", DiffSide.OLD, 2)), NOW));
+                BlameFooter.text(version, Option.of(new Anchor.OnLine(new RepoPath("a.txt"), DiffSide.OLD, 2)), NOW));
     }
 
     @Test
@@ -82,9 +83,13 @@ class BlameFooterTest {
         ScrolledContent content = new ScrolledContent.Diff(WHOLE);
         return new Version(
                         content,
-                        "a.txt",
+                        new RepoPath("a.txt"),
                         Option.of(shown),
-                        new WholeFile(content, new WholeFile.Source.OnDisk("a.txt"), "a.txt", DiffOptions.DEFAULT),
+                        new WholeFile(
+                                content,
+                                new WholeFile.Source.OnDisk(new RepoPath("a.txt")),
+                                new RepoPath("a.txt"),
+                                DiffOptions.DEFAULT),
                         new Loadable.Loaded<>(WHOLE))
                 .withBlamed(true)
                 .withBlames(Blames.none(false).with(shown, blame));

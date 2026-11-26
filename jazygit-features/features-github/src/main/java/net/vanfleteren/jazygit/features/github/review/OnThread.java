@@ -2,8 +2,8 @@ package net.vanfleteren.jazygit.features.github.review;
 
 import io.vavr.control.Either;
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.core.gh.model.PrNumber;
 import net.vanfleteren.jazygit.core.gh.model.ReviewThread;
+import net.vanfleteren.jazygit.core.repo.PrNumber;
 import net.vanfleteren.jazygit.features.github.GitHubError.CannotReview.Why;
 import net.vanfleteren.jazygit.features.github.remarks.FromGitHub;
 import net.vanfleteren.jazygit.features.github.remarks.PrFiles;

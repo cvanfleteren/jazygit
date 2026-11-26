@@ -90,16 +90,17 @@ class CliStatusTest {
                 "");
         assertEquals(
                 List.of(
-                        new FileEntry("added.txt", ChangeType.ADDED, true, false),
+                        new FileEntry(new RepoPath("added.txt"), ChangeType.ADDED, true, false),
                         FileEntry.conflicted(
-                                "conflict.txt", new Conflict(Conflict.Side.UPDATED, Conflict.Side.UPDATED)),
-                        new FileEntry("copy.txt", ChangeType.ADDED, true, false),
-                        new FileEntry("deleted.txt", ChangeType.DELETED, false, true),
+                                new RepoPath("conflict.txt"),
+                                new Conflict(Conflict.Side.UPDATED, Conflict.Side.UPDATED)),
+                        new FileEntry(new RepoPath("copy.txt"), ChangeType.ADDED, true, false),
+                        new FileEntry(new RepoPath("deleted.txt"), ChangeType.DELETED, false, true),
                         Fixtures.fileEntry("dir/untracked file.txt", ChangeType.UNTRACKED),
-                        FileEntry.renamed("edited.txt", "before edit.txt", true, true),
-                        FileEntry.renamed("new name.txt", "old name.txt", true, false),
-                        new FileEntry("removed.txt", ChangeType.DELETED, true, false),
-                        new FileEntry("staged.txt", ChangeType.MODIFIED, true, false),
+                        FileEntry.renamed(new RepoPath("edited.txt"), new RepoPath("before edit.txt"), true, true),
+                        FileEntry.renamed(new RepoPath("new name.txt"), new RepoPath("old name.txt"), true, false),
+                        new FileEntry(new RepoPath("removed.txt"), ChangeType.DELETED, true, false),
+                        new FileEntry(new RepoPath("staged.txt"), ChangeType.MODIFIED, true, false),
                         Fixtures.fileEntry("unstaged.txt", ChangeType.MODIFIED)),
                 CliStatus.parse(raw).get().files());
     }
@@ -108,7 +109,7 @@ class CliStatusTest {
     void parsesStagedAndUnstagedChangesOfOneFile() {
         String raw = "# branch.head main\0" + "1 MM N... " + HASHES + " both.txt\0";
         assertEquals(
-                List.of(new FileEntry("both.txt", ChangeType.MODIFIED, true, true)),
+                List.of(new FileEntry(new RepoPath("both.txt"), ChangeType.MODIFIED, true, true)),
                 CliStatus.parse(raw).get().files());
     }
 

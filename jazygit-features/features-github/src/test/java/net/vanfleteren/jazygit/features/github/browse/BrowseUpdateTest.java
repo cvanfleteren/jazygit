@@ -6,8 +6,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.time.Instant;
-import net.vanfleteren.jazygit.core.gh.model.GhBranch;
-import net.vanfleteren.jazygit.core.gh.model.PrNumber;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestSummary;
 import net.vanfleteren.jazygit.core.git.model.*;
@@ -92,11 +90,11 @@ class BrowseUpdateTest {
     @Test
     void aPullRequestOfAnyRepositoryOpensByItsUrl() {
         PullRequestSummary pr = new PullRequestSummary(
-                "other/repo",
+                new RepoSlug("other/repo"),
                 new PrNumber(3),
                 "Elsewhere",
                 "carol",
-                new GhBranch("fix"),
+                new ForgeBranch("fix"),
                 false,
                 false,
                 PullRequest.Checks.NONE,

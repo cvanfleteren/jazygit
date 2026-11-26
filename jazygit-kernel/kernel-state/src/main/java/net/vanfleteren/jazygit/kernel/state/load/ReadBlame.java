@@ -12,6 +12,7 @@ import net.vanfleteren.jazygit.core.git.model.CommitFile;
 import net.vanfleteren.jazygit.core.git.model.FileEntry;
 import net.vanfleteren.jazygit.core.git.model.FileVersion;
 import net.vanfleteren.jazygit.core.repo.PullRequestCommits;
+import net.vanfleteren.jazygit.core.repo.RepoPath;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.kernel.state.AreaId;
 import net.vanfleteren.jazygit.kernel.state.Env;
@@ -138,11 +139,11 @@ public record ReadBlame(AreaId area, WholeFile read, FileVersion version, List<B
      * lines are of, the original of a renamed file at its old path (ADR 147). A file a stash added is in the stash, or
      * among its untracked files in its third parent, which its list of files does not tell apart.
      */
-    static List<BlameAt> at(Source source, FileVersion version, String path) {
+    static List<BlameAt> at(Source source, FileVersion version, RepoPath path) {
         boolean original = version == FileVersion.ORIGINAL;
         return switch (source) {
             case Source.WorkingTree(FileEntry file, boolean staged) -> {
-                String before = file.origin().getOrElse(path);
+                RepoPath before = file.origin().getOrElse(path);
                 yield List.of(
                         staged
                                 ? original ? new BlameAt.AtHead(before) : new BlameAt.InIndex(path)
@@ -160,19 +161,19 @@ public record ReadBlame(AreaId area, WholeFile read, FileVersion version, List<B
                     case Changes.OfPullRequest(PullRequestCommits commits, var _) ->
                         ofRange(commits.base(), commits.head(), file, original, path);
                 };
-            case Source.OnDisk(String onDisk) -> List.of(new BlameAt.OnDisk(onDisk));
-            case Source.AtCommit(Sha sha, String atCommit) -> List.of(new BlameAt.InCommit(sha, atCommit));
+            case Source.OnDisk(RepoPath onDisk) -> List.of(new BlameAt.OnDisk(onDisk));
+            case Source.AtCommit(Sha sha, RepoPath atCommit) -> List.of(new BlameAt.InCommit(sha, atCommit));
         };
     }
 
-    private static List<BlameAt> ofCommit(Sha sha, CommitFile file, boolean original, String path) {
+    private static List<BlameAt> ofCommit(Sha sha, CommitFile file, boolean original, RepoPath path) {
         return List.of(
                 original
                         ? new BlameAt.InCommit(sha, 1, file.origin().getOrElse(path))
                         : new BlameAt.InCommit(sha, path));
     }
 
-    private static List<BlameAt> ofStash(Sha sha, CommitFile file, boolean original, String path) {
+    private static List<BlameAt> ofStash(Sha sha, CommitFile file, boolean original, RepoPath path) {
         if (original) {
             return List.of(new BlameAt.InCommit(sha, 1, file.origin().getOrElse(path)));
         }
@@ -181,7 +182,7 @@ public record ReadBlame(AreaId area, WholeFile read, FileVersion version, List<B
                 : List.of(new BlameAt.InCommit(sha, path));
     }
 
-    private static List<BlameAt> ofRange(Sha base, Sha tip, CommitFile file, boolean original, String path) {
+    private static List<BlameAt> ofRange(Sha base, Sha tip, CommitFile file, boolean original, RepoPath path) {
         return List.of(
                 original
                         ? new BlameAt.AtMergeBase(base, tip, file.origin().getOrElse(path))

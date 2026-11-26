@@ -34,7 +34,8 @@ public final class ListedFiles {
                 Messages.get("panel.commitFiles.tip", branch.value(), sha.shortSha());
             case Changes.OfStash(Sha sha) ->
                 model.repo().stash(sha).map(Stash::ref).getOrElse(sha::shortSha);
-            case Changes.OfPullRequest(var commits, var _) -> "#" + commits.number();
+            case Changes.OfPullRequest(var commits, var _) ->
+                "#" + commits.number().value();
             case Changes.OfBranch(var branch, var base, var sha) ->
                 Messages.get(
                         "panel.commitFiles.branch", branch.value(), base.ref().name());
@@ -66,8 +67,9 @@ public final class ListedFiles {
      * when there is none.
      */
     public static <T extends Pathed> List<T> matching(List<T> files, Option<String> filter) {
-        return filter.map(typed -> files.filter(file -> ListFilter.matches(Option.of(typed), file.path())
-                        || file.origin().exists(origin -> ListFilter.matches(Option.of(typed), origin))))
+        return filter.map(typed -> files.filter(file -> ListFilter.matches(
+                                Option.of(typed), file.path().value())
+                        || file.origin().exists(origin -> ListFilter.matches(Option.of(typed), origin.value()))))
                 .getOrElse(files);
     }
 }

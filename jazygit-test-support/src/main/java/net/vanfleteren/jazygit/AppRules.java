@@ -38,7 +38,7 @@ public final class AppRules {
     static final String BUG = ROOT + ".kernel.state.Failure$Bug";
     static final String START_APP = ROOT + ".app.StartApp";
     static final String EXECUTED_COMMAND = ROOT + ".core.process.ExecutedCommand";
-    static final String GH_BRANCH = ROOT + ".core.gh.model.GhBranch";
+    static final String GH_BRANCH = ROOT + ".core.gh.model.ForgeBranch";
     static final String MARKDOWN_IMAGE = ROOT + ".kernel.ui.markdown.MarkdownImage";
     // The updates, the messages, the popups and the model, which are pure; nested classes included.
     static final String PURE =
@@ -572,7 +572,7 @@ public final class AppRules {
             .allowEmptyShould(true);
     /**
      * Only {@code OnGitHub} names a branch for gh, from the branch on its remote, so the name of a local branch is not
-     * handed to gh for it (ADR 40). A constructor reference, {@code GhBranch::new}, is an access too, so it counts as
+     * handed to gh for it (ADR 40). A constructor reference, {@code ForgeBranch::new}, is an access too, so it counts as
      * a call does.
      */
     @ArchTest
@@ -581,7 +581,7 @@ public final class AppRules {
             .doNotHaveFullyQualifiedName(ROOT + ".features.github.OnGitHub")
             .should()
             .accessTargetWhere(DescribedPredicate.describe(
-                    "a constructor of GhBranch",
+                    "a constructor of ForgeBranch",
                     access -> access.getTargetOwner().getName().equals(GH_BRANCH)
                             && access.getName().equals("<init>")))
             .allowEmptyShould(true);

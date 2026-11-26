@@ -6,6 +6,7 @@ import net.vanfleteren.jazygit.core.git.Git;
 import net.vanfleteren.jazygit.core.git.files.Index;
 import net.vanfleteren.jazygit.core.git.process.GitFailure;
 import net.vanfleteren.jazygit.core.process.ExecutedCommand;
+import net.vanfleteren.jazygit.core.repo.RepoPath;
 import net.vanfleteren.jazygit.kernel.state.operation.GitOperationCmd;
 import net.vanfleteren.jazygit.kernel.state.operation.Operation;
 
@@ -18,7 +19,7 @@ public sealed interface StageCmd extends GitOperationCmd {
 
     Operation UNSTAGE = Operation.of("changes.log.title.unstage", "changes.error.staging.failed");
 
-    record Stage(List<String> paths) implements StageCmd {
+    record Stage(List<RepoPath> paths) implements StageCmd {
 
         @Override
         public Operation operation() {
@@ -35,7 +36,7 @@ public sealed interface StageCmd extends GitOperationCmd {
      * Takes paths out of the index: the {@code added} ones (not in HEAD) become untracked again, the
      * {@code others} are reset to HEAD.
      */
-    record Unstage(List<String> added, List<String> others) implements StageCmd {
+    record Unstage(List<RepoPath> added, List<RepoPath> others) implements StageCmd {
 
         @Override
         public Operation operation() {

@@ -8,6 +8,7 @@ import lombok.With;
 import net.vanfleteren.jazygit.core.git.model.ChangeType;
 import net.vanfleteren.jazygit.core.git.model.CommitFile;
 import net.vanfleteren.jazygit.core.git.model.DiffText;
+import net.vanfleteren.jazygit.core.repo.RepoPath;
 import net.vanfleteren.jazygit.kernel.state.Loadable;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.PaneId;
@@ -61,7 +62,7 @@ public record CommitFilesView(
         boolean followed,
         boolean whole,
         Option<Before> before,
-        Option<String> wanted) {
+        Option<RepoPath> wanted) {
 
     /**
      * How many files that follow the highlight are listed as a tree: more are counted, and listed once asked for.
@@ -117,8 +118,8 @@ public record CommitFilesView(
      * they end at, as unchanged: those changed keep how, also those that are not in it, as a file the commit deleted;
      * sorted by path (ADR 128).
      */
-    public static List<CommitFile> merged(List<CommitFile> changed, List<String> paths) {
-        io.vavr.collection.Set<String> touched = changed.map(CommitFile::path).toSet();
+    public static List<CommitFile> merged(List<CommitFile> changed, List<RepoPath> paths) {
+        io.vavr.collection.Set<RepoPath> touched = changed.map(CommitFile::path).toSet();
         return changed.appendAll(paths.filter(path -> !touched.contains(path))
                         .map(path -> new CommitFile(path, ChangeType.UNCHANGED)))
                 .sortBy(CommitFile::path);

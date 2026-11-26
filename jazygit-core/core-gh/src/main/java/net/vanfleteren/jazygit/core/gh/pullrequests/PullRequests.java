@@ -5,10 +5,11 @@ import io.vavr.control.Either;
 import io.vavr.control.Option;
 import java.nio.file.Path;
 import net.vanfleteren.jazygit.core.gh.model.*;
-import net.vanfleteren.jazygit.core.gh.model.PrNumber;
 import net.vanfleteren.jazygit.core.gh.process.GhError;
 import net.vanfleteren.jazygit.core.gh.process.GhFailure;
 import net.vanfleteren.jazygit.core.process.ExecutedCommand;
+import net.vanfleteren.jazygit.core.repo.ForgeBranch;
+import net.vanfleteren.jazygit.core.repo.PrNumber;
 import net.vanfleteren.jazygit.core.repo.Sha;
 
 /**
@@ -53,7 +54,7 @@ public interface PullRequests {
     /**
      * Creates a pull request from the remote branch {@code head} into {@code base}, as {@code pullRequest} says.
      */
-    Either<GhFailure, Created> create(GhBranch head, GhBranch base, NewPullRequest pullRequest);
+    Either<GhFailure, Created> create(ForgeBranch head, ForgeBranch base, NewPullRequest pullRequest);
 
     /**
      * Checks out pull request {@code number} of the repository in the working tree, from a fork too, as gh does:

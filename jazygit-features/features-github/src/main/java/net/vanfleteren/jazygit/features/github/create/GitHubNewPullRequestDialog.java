@@ -133,7 +133,7 @@ public final class GitHubNewPullRequestDialog implements PopupView {
                                         + Messages.get(
                                                 "github.dialog.newPullRequest.notTop",
                                                 String.valueOf(notTop.below().value()),
-                                                String.valueOf(notTop.stack())))
+                                                String.valueOf(notTop.stack().value())))
                                 .addClass(Theme.Classes.DIM)),
                         stacking -> List.<StyledElement<?>>of(
                                 text(GAP),

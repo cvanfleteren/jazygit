@@ -1,5 +1,7 @@
 package net.vanfleteren.jazygit.core.gh.model;
 
+import net.vanfleteren.jazygit.core.repo.ForgeBranch;
+
 /**
  * What a pull request says and changes, to show it.
  *
@@ -8,4 +10,4 @@ package net.vanfleteren.jazygit.core.gh.model;
  * @param diff      what it changes, as a unified diff, or only its first lines when it is truncated
  * @param truncated whether lines of the diff were left out
  */
-public record PullRequestPreview(GhBranch base, String body, String diff, boolean truncated) {}
+public record PullRequestPreview(ForgeBranch base, String body, String diff, boolean truncated) {}

@@ -6,18 +6,19 @@ import io.vavr.collection.HashMap;
 import io.vavr.collection.List;
 import io.vavr.collection.Map;
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.core.gh.model.GhBranch;
-import net.vanfleteren.jazygit.core.gh.model.PrNumber;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest.Review;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestDetails.State;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestStack;
+import net.vanfleteren.jazygit.core.gh.model.StackId;
 import net.vanfleteren.jazygit.core.git.model.BaseDistance;
 import net.vanfleteren.jazygit.core.git.model.Fixtures;
 import net.vanfleteren.jazygit.core.repo.Branch;
 import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.BranchRef;
+import net.vanfleteren.jazygit.core.repo.ForgeBranch;
+import net.vanfleteren.jazygit.core.repo.PrNumber;
 import net.vanfleteren.jazygit.core.repo.RemoteBranch;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.features.branches.panes.branches.BranchGroups.Entry;
@@ -37,10 +38,12 @@ import org.junit.jupiter.api.Test;
 class StackGroupsTest {
 
     private static final List<PullRequestStack.Entry> ENTRIES = List.of(
-            new PullRequestStack.Entry(1, new PrNumber(96), State.OPEN, new GhBranch("feat/a"), new GhBranch("main")),
-            new PullRequestStack.Entry(2, new PrNumber(97), State.OPEN, new GhBranch("feat/b"), new GhBranch("feat/a")),
             new PullRequestStack.Entry(
-                    3, new PrNumber(98), State.OPEN, new GhBranch("feat/c"), new GhBranch("feat/b")));
+                    1, new PrNumber(96), State.OPEN, new ForgeBranch("feat/a"), new ForgeBranch("main")),
+            new PullRequestStack.Entry(
+                    2, new PrNumber(97), State.OPEN, new ForgeBranch("feat/b"), new ForgeBranch("feat/a")),
+            new PullRequestStack.Entry(
+                    3, new PrNumber(98), State.OPEN, new ForgeBranch("feat/c"), new ForgeBranch("feat/b")));
 
     private static Branch branch(String name) {
         return Fixtures.branch(new BranchName(name), false, new Sha("aaaa"));
@@ -49,12 +52,12 @@ class StackGroupsTest {
     private static PullRequest stacked(int number, String head, int position, List<PullRequestStack.Entry> entries) {
         return new PullRequest(
                 new PrNumber(number),
-                new GhBranch(head),
+                new ForgeBranch(head),
                 Option.none(),
                 false,
                 Checks.NONE,
                 Review.NONE,
-                Option.of(new PullRequestStack(12, position, entries.size(), entries)),
+                Option.of(new PullRequestStack(new StackId(12), position, entries.size(), entries)),
                 Option.none());
     }
 
@@ -94,11 +97,11 @@ class StackGroupsTest {
     void aPullRequestOfTheStackWhoseBranchIsNotCheckedOutIsADimmedLineThatNamesWhyItHasNoLog() {
         List<PullRequestStack.Entry> entries = List.of(
                 new PullRequestStack.Entry(
-                        1, new PrNumber(95), State.MERGED, new GhBranch("feat/0"), new GhBranch("main")),
+                        1, new PrNumber(95), State.MERGED, new ForgeBranch("feat/0"), new ForgeBranch("main")),
                 new PullRequestStack.Entry(
-                        2, new PrNumber(96), State.OPEN, new GhBranch("feat/a"), new GhBranch("feat/0")),
+                        2, new PrNumber(96), State.OPEN, new ForgeBranch("feat/a"), new ForgeBranch("feat/0")),
                 new PullRequestStack.Entry(
-                        3, new PrNumber(97), State.OPEN, new GhBranch("feat/b"), new GhBranch("feat/a")));
+                        3, new PrNumber(97), State.OPEN, new ForgeBranch("feat/b"), new ForgeBranch("feat/a")));
         Model model = withPullRequests(TestModels.loaded(), HashMap.of("feat/b", stacked(97, "feat/b", 3, entries)));
 
         Group group = StackGroups.of(model, List.of(branch("feat/b"))).head();
@@ -156,9 +159,9 @@ class StackGroupsTest {
     void aClosedPullRequestOfTheStackSaysItIsClosed() {
         List<PullRequestStack.Entry> entries = List.of(
                 new PullRequestStack.Entry(
-                        1, new PrNumber(95), State.CLOSED, new GhBranch("feat/0"), new GhBranch("main")),
+                        1, new PrNumber(95), State.CLOSED, new ForgeBranch("feat/0"), new ForgeBranch("main")),
                 new PullRequestStack.Entry(
-                        2, new PrNumber(96), State.OPEN, new GhBranch("feat/a"), new GhBranch("feat/0")));
+                        2, new PrNumber(96), State.OPEN, new ForgeBranch("feat/a"), new ForgeBranch("feat/0")));
         Model model = withPullRequests(TestModels.loaded(), HashMap.of("feat/a", stacked(96, "feat/a", 2, entries)));
 
         Group group = StackGroups.of(model, List.of(branch("feat/a"))).head();
@@ -168,7 +171,7 @@ class StackGroupsTest {
 
     private static PullRequestStack.Entry entry(int position, int number, String head, String base) {
         return new PullRequestStack.Entry(
-                position, new PrNumber(number), State.OPEN, new GhBranch(head), new GhBranch(base));
+                position, new PrNumber(number), State.OPEN, new ForgeBranch(head), new ForgeBranch(base));
     }
 
     @Test
@@ -183,7 +186,7 @@ class StackGroupsTest {
         assertEquals("stack #12 → main", text(group.title()));
         assertEquals(" 3 PRs", text(group.after()));
         assertEquals(StackAction.STACKS, group.keys().scope());
-        assertEquals(12, group.keys().subject());
+        assertEquals(new StackId(12), group.keys().subject());
     }
 
     @Test

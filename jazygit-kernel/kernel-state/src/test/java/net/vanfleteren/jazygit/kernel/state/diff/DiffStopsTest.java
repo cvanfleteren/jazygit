@@ -6,6 +6,7 @@ import io.vavr.collection.List;
 import io.vavr.collection.Seq;
 import io.vavr.control.Option;
 import java.time.Instant;
+import net.vanfleteren.jazygit.core.repo.RepoPath;
 import net.vanfleteren.jazygit.kernel.state.diff.Anchor.OnLine;
 import net.vanfleteren.jazygit.kernel.state.diff.RemarkThread.Subject;
 import org.junit.jupiter.api.Test;
@@ -16,17 +17,17 @@ import org.junit.jupiter.api.Test;
 class DiffStopsTest {
 
     private static final Anchor LEAD = new Anchor.Lead();
-    private static final Anchor A = new Anchor.File("a.txt");
-    private static final Anchor B = new Anchor.File("b.png");
+    private static final Anchor A = new Anchor.File(new RepoPath("a.txt"));
+    private static final Anchor B = new Anchor.File(new RepoPath("b.png"));
 
     private static OnLine line(DiffSide side, int number) {
-        return new OnLine("a.txt", side, number);
+        return new OnLine(new RepoPath("a.txt"), side, number);
     }
 
     private static RemarkThread thread(String id, Subject subject, Option<Integer> line) {
         return new RemarkThread(
                 new RemarkThread.Id(id),
-                "a.txt",
+                new RepoPath("a.txt"),
                 Option.none(),
                 subject,
                 line,
@@ -60,25 +61,28 @@ class DiffStopsTest {
 
     @Test
     void aMarkerThatIsGoneGoesToTheMarkerOfItsFileThatStartsClosestElseToTheLineWhereItStarted() {
-        Anchor.Gap above = new Anchor.Gap("a.txt", 4, Option.of(10));
-        Anchor.Gap after = new Anchor.Gap("a.txt", 11, Option.none());
+        Anchor.Gap above = new Anchor.Gap(new RepoPath("a.txt"), 4, Option.of(10));
+        Anchor.Gap after = new Anchor.Gap(new RepoPath("a.txt"), 11, Option.none());
         List<Anchor> stops = List.of(A, line(DiffSide.NEW, 3), above, line(DiffSide.NEW, 10), after, B);
 
         // Expanding ten lines down from the hunk above moves where the marker starts.
-        assertEquals(Option.of(above), DiffStops.nearest(stops, new Anchor.Gap("a.txt", 1, Option.of(10))));
-        assertEquals(Option.of(after), DiffStops.nearest(stops, new Anchor.Gap("a.txt", 14, Option.none())));
+        assertEquals(
+                Option.of(above), DiffStops.nearest(stops, new Anchor.Gap(new RepoPath("a.txt"), 1, Option.of(10))));
+        assertEquals(
+                Option.of(after), DiffStops.nearest(stops, new Anchor.Gap(new RepoPath("a.txt"), 14, Option.none())));
         // Expanding all of it leaves no marker: the cursor goes to the line where it started.
         assertEquals(
-                Option.of(line(DiffSide.NEW, 10)), DiffStops.nearest(STOPS, new Anchor.Gap("a.txt", 8, Option.of(10))));
+                Option.of(line(DiffSide.NEW, 10)),
+                DiffStops.nearest(STOPS, new Anchor.Gap(new RepoPath("a.txt"), 8, Option.of(10))));
     }
 
     @Test
     void aLineThatIsGoneGoesToTheClosestOfItsSideElseToItsFileElseToTheFirst() {
         assertEquals(Option.of(line(DiffSide.NEW, 10)), DiffStops.nearest(STOPS, line(DiffSide.NEW, 8)));
         assertEquals(Option.of(line(DiffSide.OLD, 2)), DiffStops.nearest(STOPS, line(DiffSide.OLD, 40)));
-        assertEquals(Option.of(B), DiffStops.nearest(STOPS, new OnLine("b.png", DiffSide.NEW, 1)));
-        assertEquals(Option.of(LEAD), DiffStops.nearest(STOPS, new OnLine("c.txt", DiffSide.NEW, 1)));
-        assertEquals(Option.of(LEAD), DiffStops.nearest(STOPS, new Anchor.File("c.txt")));
+        assertEquals(Option.of(B), DiffStops.nearest(STOPS, new OnLine(new RepoPath("b.png"), DiffSide.NEW, 1)));
+        assertEquals(Option.of(LEAD), DiffStops.nearest(STOPS, new OnLine(new RepoPath("c.txt"), DiffSide.NEW, 1)));
+        assertEquals(Option.of(LEAD), DiffStops.nearest(STOPS, new Anchor.File(new RepoPath("c.txt"))));
     }
 
     @Test
@@ -182,28 +186,31 @@ class DiffStopsTest {
 
     @Test
     void aRowOfJsonRenderedIsFoundByItsPathElseAtTheClosestNodeItIsInElseAsItsLine() {
-        Anchor.Node jobs = new Anchor.Node("a.txt", "/jobs", line(DiffSide.NEW, 2));
-        Anchor.Node build = new Anchor.Node("a.txt", "/jobs/0", line(DiffSide.NEW, 3));
+        Anchor.Node jobs = new Anchor.Node(new RepoPath("a.txt"), "/jobs", line(DiffSide.NEW, 2));
+        Anchor.Node build = new Anchor.Node(new RepoPath("a.txt"), "/jobs/0", line(DiffSide.NEW, 3));
         List<Anchor> stops = List.of(A, jobs, build);
 
         // The original draws the same node from another line.
         assertEquals(
-                Option.of(build), DiffStops.nearest(stops, new Anchor.Node("a.txt", "/jobs/0", line(DiffSide.OLD, 9))));
+                Option.of(build),
+                DiffStops.nearest(stops, new Anchor.Node(new RepoPath("a.txt"), "/jobs/0", line(DiffSide.OLD, 9))));
         // A node closed over it.
         assertEquals(
                 Option.of(jobs),
-                DiffStops.nearest(List.of(A, jobs), new Anchor.Node("a.txt", "/jobs/0/steps", line(DiffSide.NEW, 5))));
+                DiffStops.nearest(
+                        List.of(A, jobs),
+                        new Anchor.Node(new RepoPath("a.txt"), "/jobs/0/steps", line(DiffSide.NEW, 5))));
         // Not the node /job, whose path only starts as /jobs does: the row drawn from the closest line.
-        Anchor.Node job = new Anchor.Node("a.txt", "/job", line(DiffSide.NEW, 1));
-        Anchor.Node close = new Anchor.Node("a.txt", "/x", line(DiffSide.NEW, 3));
+        Anchor.Node job = new Anchor.Node(new RepoPath("a.txt"), "/job", line(DiffSide.NEW, 1));
+        Anchor.Node close = new Anchor.Node(new RepoPath("a.txt"), "/x", line(DiffSide.NEW, 3));
         assertEquals(Option.of(close), DiffStops.nearest(List.of(A, job, close), build));
     }
 
     @Test
     void aLineGoesToTheFirstRowOfJsonRenderedDrawnFromTheClosestLine() {
-        Anchor.Node first = new Anchor.Node("a.txt", "/a", line(DiffSide.NEW, 2));
-        Anchor.Node second = new Anchor.Node("a.txt", "/b", line(DiffSide.NEW, 2));
-        Anchor.Node far = new Anchor.Node("a.txt", "/c", line(DiffSide.NEW, 9));
+        Anchor.Node first = new Anchor.Node(new RepoPath("a.txt"), "/a", line(DiffSide.NEW, 2));
+        Anchor.Node second = new Anchor.Node(new RepoPath("a.txt"), "/b", line(DiffSide.NEW, 2));
+        Anchor.Node far = new Anchor.Node(new RepoPath("a.txt"), "/c", line(DiffSide.NEW, 9));
 
         assertEquals(Option.of(first), DiffStops.nearest(List.of(A, first, second, far), line(DiffSide.NEW, 4)));
     }

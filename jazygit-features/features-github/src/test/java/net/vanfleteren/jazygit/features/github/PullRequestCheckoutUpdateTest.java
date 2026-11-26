@@ -8,7 +8,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.time.Instant;
-import net.vanfleteren.jazygit.core.gh.model.GhBranch;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestSummary;
 import net.vanfleteren.jazygit.core.git.model.*;
 import net.vanfleteren.jazygit.core.repo.*;
@@ -46,12 +45,12 @@ class PullRequestCheckoutUpdateTest {
     private static Model ofOwnerRepo(RepoStatus status) {
         return Update.update(loaded(), new LoadMsg.StatusLoaded(status))
                 .model()
-                .mapPart(GitHubState.PART, gitHub -> gitHub.withRepository(Option.of("owner/repo")));
+                .mapPart(GitHubState.PART, gitHub -> gitHub.withRepository(Option.of(new RepoSlug("owner/repo"))));
     }
 
     @Test
     void aPullRequestOfTheRepositoryIsCheckedOutWhenOnlyUntrackedFilesAreAround() {
-        PullRequestSummary pr = summary("owner/repo");
+        PullRequestSummary pr = summary(new RepoSlug("owner/repo"));
 
         Next checkingOut = Update.update(ofOwnerRepo(DIRTY), new CheckoutPullRequestMsg.Requested(pr));
 
@@ -75,13 +74,13 @@ class PullRequestCheckoutUpdateTest {
                                 new Tracking.None(),
                                 Option.of(java.nio.file.Path.of("/repos/linked")))))
                 .model();
-        PullRequestSummary fork = summary("owner/repo");
+        PullRequestSummary fork = summary(new RepoSlug("owner/repo"));
         PullRequestSummary own = new PullRequestSummary(
                 fork.repository(),
                 fork.number(),
                 fork.title(),
                 fork.author(),
-                new GhBranch("patch-1"),
+                new ForgeBranch("patch-1"),
                 false,
                 false,
                 fork.checks(),
@@ -108,7 +107,8 @@ class PullRequestCheckoutUpdateTest {
                 Head.onBranch(new BranchName("main"), new Sha("aaaa")),
                 List.of(Fixtures.fileEntry("a.txt", ChangeType.MODIFIED)));
 
-        Next refused = Update.update(ofOwnerRepo(changed), new CheckoutPullRequestMsg.Requested(summary("owner/repo")));
+        Next refused = Update.update(
+                ofOwnerRepo(changed), new CheckoutPullRequestMsg.Requested(summary(new RepoSlug("owner/repo"))));
 
         assertEquals(List.empty(), refused.cmds());
         assertEquals(
@@ -127,7 +127,7 @@ class PullRequestCheckoutUpdateTest {
                 java.nio.file.Path.of("/repos/app-agent"), Option.none(), false, true, Option.none(), false);
         Model inLinked = Update.update(ofOwnerRepo(changed), new LoadMsg.WorktreesLoaded(List.of(main, linked)))
                 .model();
-        PullRequestSummary pr = summary("owner/repo");
+        PullRequestSummary pr = summary(new RepoSlug("owner/repo"));
         PullRequestCheckout request = new PullRequestCheckout(pr);
 
         // The changes here only stand in the way of checking it out here.
@@ -220,7 +220,7 @@ class PullRequestCheckoutUpdateTest {
 
     @Test
     void inTheMainWorktreeSwitchedToAPullRequestWaitsForTheStatusBeforeCheckingOutOverChanges() {
-        PullRequestSummary pr = summary("owner/repo");
+        PullRequestSummary pr = summary(new RepoSlug("owner/repo"));
         Landing landing = new Landing(BranchesTab.LOCAL, Option.none())
                 .followedBy(new CheckoutMsg.Placed(new PullRequestCheckout(pr)));
         Model model = TestModels.started(TestModels.init("repo", SettingsStore.Loaded.DEFAULT, Option.none(), landing))
@@ -254,7 +254,8 @@ class PullRequestCheckoutUpdateTest {
 
     @Test
     void aPullRequestOfAnotherRepositoryIsNotCheckedOut() {
-        Next refused = Update.update(ofOwnerRepo(CLEAN), new CheckoutPullRequestMsg.Requested(summary("other/repo")));
+        Next refused = Update.update(
+                ofOwnerRepo(CLEAN), new CheckoutPullRequestMsg.Requested(summary(new RepoSlug("other/repo"))));
 
         assertEquals(List.empty(), refused.cmds());
         assertEquals(
@@ -266,7 +267,8 @@ class PullRequestCheckoutUpdateTest {
     void aPullRequestIsNotCheckedOutWhileItIsNotKnownWhichRepositoryThisIs() {
         Model reading = Update.update(loaded(), new LoadMsg.StatusLoaded(CLEAN)).model();
 
-        Next refused = Update.update(reading, new CheckoutPullRequestMsg.Requested(summary("owner/repo")));
+        Next refused =
+                Update.update(reading, new CheckoutPullRequestMsg.Requested(summary(new RepoSlug("owner/repo"))));
 
         assertEquals(List.empty(), refused.cmds());
         assertEquals(
@@ -275,13 +277,13 @@ class PullRequestCheckoutUpdateTest {
     }
 
     private static PullRequestSummary own(String headBranch) {
-        PullRequestSummary fork = summary("owner/repo");
+        PullRequestSummary fork = summary(new RepoSlug("owner/repo"));
         return new PullRequestSummary(
                 fork.repository(),
                 fork.number(),
                 fork.title(),
                 fork.author(),
-                new GhBranch(headBranch),
+                new ForgeBranch(headBranch),
                 false,
                 false,
                 fork.checks(),
@@ -308,7 +310,7 @@ class PullRequestCheckoutUpdateTest {
 
     @Test
     void aPullRequestIsCheckedOutInANewWorktreeNamedAfterItsBranchOrForAForkItsNumberChangesOrNot() {
-        PullRequestSummary fork = summary("owner/repo");
+        PullRequestSummary fork = summary(new RepoSlug("owner/repo"));
 
         Next asked = LocationAsked.located(
                 Update.update(withMainWorktree(DIRTY), new CheckoutPullRequestMsg.WorktreeRequested(fork)));
@@ -349,7 +351,8 @@ class PullRequestCheckoutUpdateTest {
                 here.model().outcome().error());
 
         Next other = LocationAsked.located(Update.update(
-                withMainWorktree(CLEAN), new CheckoutPullRequestMsg.WorktreeRequested(summary("other/repo"))));
+                withMainWorktree(CLEAN),
+                new CheckoutPullRequestMsg.WorktreeRequested(summary(new RepoSlug("other/repo")))));
         assertEquals(Option.none(), other.model().popup(NewWorktreePopup.class));
         assertEquals(
                 Option.of(new GitHubError.OtherRepository("other/repo#9")),
@@ -402,6 +405,7 @@ class PullRequestCheckoutUpdateTest {
         // The branch gh gives one from a fork is not known up front, so nothing is busy for it.
         assertEquals(
                 Option.none(),
-                new AddWorktreeCmd(new PullRequestWorktree(summary("owner/repo")), "/repos/app-pr-9").busyBranch());
+                new AddWorktreeCmd(new PullRequestWorktree(summary(new RepoSlug("owner/repo"))), "/repos/app-pr-9")
+                        .busyBranch());
     }
 }

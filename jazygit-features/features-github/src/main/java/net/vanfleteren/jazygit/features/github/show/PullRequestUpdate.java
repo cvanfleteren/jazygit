@@ -8,13 +8,13 @@ import io.vavr.control.Option;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import net.vanfleteren.jazygit.core.gh.model.MergeMethod;
-import net.vanfleteren.jazygit.core.gh.model.PrNumber;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestDetails;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestSummary;
 import net.vanfleteren.jazygit.core.process.ExecutedCommand;
 import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.BranchRef;
+import net.vanfleteren.jazygit.core.repo.PrNumber;
 import net.vanfleteren.jazygit.core.repo.PullRequestCommits;
 import net.vanfleteren.jazygit.features.changes.diff.CommitFilesMsg;
 import net.vanfleteren.jazygit.features.changes.diff.CommitFilesUpdate;
@@ -496,12 +496,12 @@ public final class PullRequestUpdate {
      * names it by its head branch in the fork, often {@code main}; else any local branch of that name, also once the
      * pull request is closed (ADR 192).
      */
-    private static Option<BranchName> local(Model model, BranchName branch, int number, boolean fromFork) {
+    private static Option<BranchName> local(Model model, BranchName branch, PrNumber number, boolean fromFork) {
         GitHubState gitHub = model.part(GitHubState.PART);
         return model.repo()
                 .branch(branch)
                 .filter(known -> !fromFork
-                        || gitHub.pullRequest(known).exists(pr -> pr.number().value() == number))
+                        || gitHub.pullRequest(known).exists(pr -> pr.number().equals(number)))
                 .map(known -> branch);
     }
 
@@ -509,8 +509,7 @@ public final class PullRequestUpdate {
      * The commits pull request {@code number}, listed with {@code commits}, is diffed between.
      */
     private static PullRequestCommits commits(PrNumber number, PullRequest.Commits commits) {
-        return new PullRequestCommits(
-                number.value(), commits.repository(), commits.host(), commits.base(), commits.head());
+        return new PullRequestCommits(number, commits.repository(), commits.host(), commits.base(), commits.head());
     }
 
     /**

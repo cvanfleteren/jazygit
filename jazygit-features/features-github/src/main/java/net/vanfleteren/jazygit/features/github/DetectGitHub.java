@@ -12,6 +12,7 @@ import java.util.Locale;
 import net.vanfleteren.jazygit.core.gh.GitHub;
 import net.vanfleteren.jazygit.core.gh.model.GhAccount;
 import net.vanfleteren.jazygit.core.repo.RemoteName;
+import net.vanfleteren.jazygit.core.repo.RemoteUrl;
 import net.vanfleteren.jazygit.features.github.settings.GitHubSettings;
 import net.vanfleteren.jazygit.kernel.state.Cmd;
 import net.vanfleteren.jazygit.kernel.state.Env;
@@ -50,7 +51,7 @@ public record DetectGitHub(String executable) implements Cmd {
 
     @Override
     public Msg run(Env env) {
-        Map<RemoteName, String> urls = env.git().remotes().urls().getOrElse(HashMap::empty);
+        Map<RemoteName, RemoteUrl> urls = env.git().remotes().urls().getOrElse(HashMap::empty);
         GitHub gh = GitHubServices.of(env);
         if (urls.isEmpty() || gh.account().version(executable).isLeft()) {
             return new FeatureMsg.Claimed(ForgeClaim.none(GitHubFeature.ID, NAME));
@@ -62,9 +63,9 @@ public record DetectGitHub(String executable) implements Cmd {
                 .getOrElse(List.empty())
                 .map(login -> login.host().toLowerCase(Locale.ROOT))
                 .toSet());
-        Map<RemoteName, String> claimed = LinkedHashMap.ofEntries(urls.toList()
+        Map<RemoteName, RemoteUrl> claimed = LinkedHashMap.ofEntries(urls.toList()
                 .sortBy(remote -> remote._1().value())
-                .filter(remote -> GhAccount.hostOf(remote._2())
+                .filter(remote -> GhAccount.hostOf(remote._2().value())
                         .map(host -> host.toLowerCase(Locale.ROOT))
                         .exists(host -> named(host) || logins.get().contains(host))));
         return new FeatureMsg.Claimed(new ForgeClaim(GitHubFeature.ID, NAME, claimed, HashSet.empty(), base(env)));

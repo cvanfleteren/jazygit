@@ -9,6 +9,7 @@ import net.vanfleteren.jazygit.core.gh.model.PullRequestPreview;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestSummary;
 import net.vanfleteren.jazygit.core.gh.model.RepositoryPullRequests;
 import net.vanfleteren.jazygit.core.repo.RemoteName;
+import net.vanfleteren.jazygit.core.repo.RepoSlug;
 import net.vanfleteren.jazygit.features.github.prs.unseen.UnseenPullRequests;
 import net.vanfleteren.jazygit.kernel.state.Failure;
 import net.vanfleteren.jazygit.kernel.state.Model;
@@ -53,7 +54,7 @@ public sealed interface PrOverviewMsg extends Msg {
      *                whose pull requests into the repository are those of its branches (ADR 177)
      */
     record RepositoryLoaded(
-            RepositoryPullRequests pullRequests, Option<UnseenPullRequests> kept, Map<RemoteName, String> remotes)
+            RepositoryPullRequests pullRequests, Option<UnseenPullRequests> kept, Map<RemoteName, RepoSlug> remotes)
             implements PrOverviewMsg {
 
         /**

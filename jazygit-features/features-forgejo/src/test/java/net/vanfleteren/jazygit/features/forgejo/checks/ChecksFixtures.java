@@ -10,7 +10,10 @@ import net.vanfleteren.jazygit.core.forgejo.ForgejoPullRequest;
 import net.vanfleteren.jazygit.core.forgejo.ForgejoPullRequestDetails;
 import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.BranchRef;
+import net.vanfleteren.jazygit.core.repo.ForgeBranch;
+import net.vanfleteren.jazygit.core.repo.PrNumber;
 import net.vanfleteren.jazygit.core.repo.RemoteBranch;
+import net.vanfleteren.jazygit.core.repo.RepoSlug;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.features.forgejo.show.ForgejoPullRequestPopup;
 import net.vanfleteren.jazygit.features.forgejo.show.ShownPullRequest;
@@ -81,7 +84,7 @@ final class ChecksFixtures {
     }
 
     static Either<Failure, ChecksRead> readOf(Sha sha, List<ForgejoCheck> checks) {
-        return Either.right(new ChecksRead("cvf/nix", sha, checks));
+        return Either.right(new ChecksRead(new RepoSlug("cvf/nix"), sha, checks));
     }
 
     /**
@@ -96,17 +99,23 @@ final class ChecksFixtures {
      */
     static ForgejoPullRequestPopup pullRequest() {
         ForgejoPullRequestDetails details = new ForgejoPullRequestDetails(
-                12,
+                new PrNumber(12),
                 "Show the checks",
                 "cvf",
                 new ForgejoPullRequestDetails.Status(ForgejoPullRequestDetails.State.OPEN, false, true),
-                new ForgejoPullRequestDetails.Branches("feature", "main", PR_HEAD),
+                new ForgejoPullRequestDetails.Branches(new ForgeBranch("feature"), new ForgeBranch("main"), PR_HEAD),
                 new ForgejoPullRequestDetails.Activity(NOW.minusSeconds(3_600), NOW.minusSeconds(60)),
                 new ForgejoPullRequestDetails.Size(1, 1, 1),
                 new ForgejoPullRequestDetails.Conversation(0, List.empty(), List.empty()),
                 "https://code.example.net/cvf/nix/pulls/12");
         ForgejoPullRequest listed = new ForgejoPullRequest(
-                12, "Show the checks", "feature", Option.of("cvf/nix"), "main", false, details.url());
+                new PrNumber(12),
+                "Show the checks",
+                new ForgeBranch("feature"),
+                Option.of("cvf/nix"),
+                new ForgeBranch("main"),
+                false,
+                details.url());
         return ForgejoPullRequestPopup.loading(new BranchName("feature"), FEATURE.remote(), FEATURE, listed, 1)
                 .with(
                         Either.right(new ShownPullRequest(

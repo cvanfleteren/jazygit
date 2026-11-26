@@ -3,10 +3,11 @@ package net.vanfleteren.jazygit.features.github.prs;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.time.Instant;
-import net.vanfleteren.jazygit.core.gh.model.PrNumber;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestList;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestSummary;
 import net.vanfleteren.jazygit.core.gh.model.RepositoryPullRequests;
+import net.vanfleteren.jazygit.core.repo.PrNumber;
+import net.vanfleteren.jazygit.core.repo.RepoSlug;
 import net.vanfleteren.jazygit.features.github.prs.unseen.UnseenPullRequests;
 import net.vanfleteren.jazygit.features.github.state.FailingRead;
 import net.vanfleteren.jazygit.features.github.state.GitHubState;
@@ -66,7 +67,8 @@ public final class PrOverviewUpdate {
      * What {@code msg} does to {@code overview} at {@code now}, while {@code jobs} run, whatever the rest of the model
      * is.
      */
-    static Step update(PrOverview overview, PrOverviewMsg msg, Instant now, Jobs jobs, Option<String> repositoryName) {
+    static Step update(
+            PrOverview overview, PrOverviewMsg msg, Instant now, Jobs jobs, Option<RepoSlug> repositoryName) {
         return switch (msg) {
             // What failed to read before is read again too.
             case PrOverviewMsg.Refresh() -> {
@@ -185,18 +187,17 @@ public final class PrOverviewUpdate {
      */
     static UnseenPullRequests unseen(Option<UnseenPullRequests> before, RepositoryPullRequests read) {
         List<PullRequestSummary> open = read.open().pullRequests();
-        // The settings keep plain numbers, 0 for none.
-        List<Integer> numbers = open.map(pr -> pr.number().value());
-        // The open ones count too, should GitHub not have said which was opened last.
-        int highest =
-                numbers.appendAll(read.latest().map(PrNumber::value)).max().getOrElse(0);
+        List<PrNumber> numbers = open.map(PullRequestSummary::number);
+        // The open ones count too, should GitHub not have said which was opened last; 0 for none, as the settings keep
+        // it.
+        PrNumber highest = numbers.appendAll(read.latest()).max().getOrElse(new PrNumber(0));
         return before.map(kept -> new UnseenPullRequests(
-                        Math.max(kept.highest(), highest),
+                        List.of(kept.highest(), highest).max().get(),
                         kept.numbers()
                                 .retainAll(numbers)
-                                .addAll(open.filter(pr -> pr.number().value() > kept.highest()
+                                .addAll(open.filter(pr -> pr.number().compareTo(kept.highest()) > 0
                                                 && !read.viewer().exists(pr.author()::equalsIgnoreCase))
-                                        .map(pr -> pr.number().value()))))
+                                        .map(PullRequestSummary::number))))
                 .getOrElse(() -> UnseenPullRequests.upTo(highest));
     }
 
@@ -204,14 +205,12 @@ public final class PrOverviewUpdate {
      * {@code step}, with {@code pullRequest} seen, if it is of the repository, {@code repositoryName}, and was not seen
      * yet.
      */
-    private static Step seen(Step step, PullRequestSummary pullRequest, Option<String> repositoryName) {
+    private static Step seen(Step step, PullRequestSummary pullRequest, Option<RepoSlug> repositoryName) {
         PrOverview overview = step.overview();
         return repositoryName.isDefined() && overview.isUnseen(repositoryName, pullRequest)
                 ? kept(
                         new Step(
-                                overview.withUnseen(overview.unseen()
-                                        .map(unseen ->
-                                                unseen.seen(pullRequest.number().value()))),
+                                overview.withUnseen(overview.unseen().map(unseen -> unseen.seen(pullRequest.number()))),
                                 step.cmds()),
                         false,
                         repositoryName.get())
@@ -222,7 +221,7 @@ public final class PrOverviewUpdate {
      * {@code step}, also keeping the unseen pull requests it has of {@code repository} for the next session, unless
      * they are kept {@code already}.
      */
-    private static Step kept(Step step, boolean already, String repository) {
+    private static Step kept(Step step, boolean already, RepoSlug repository) {
         PrOverview overview = step.overview();
         return already
                 ? step

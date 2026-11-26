@@ -252,7 +252,7 @@ public final class AddWorktreeUpdate {
     private static Map<String, String> values(Model model, WorktreeSource source) {
         Map<String, String> onHost = source.repository()
                 .orElse(() -> model.parts().repository())
-                .map(repository -> List.of(repository.split("/", 2)))
+                .map(repository -> List.of(repository.value().split("/", 2)))
                 .filter(parts -> parts.size() == 2)
                 .<Map<String, String>>map(parts -> LinkedHashMap.of("owner", parts.get(0), "name", parts.get(1)))
                 .getOrElse(LinkedHashMap.empty());

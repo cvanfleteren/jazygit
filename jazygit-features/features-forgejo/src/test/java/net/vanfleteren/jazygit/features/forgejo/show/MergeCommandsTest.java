@@ -17,6 +17,8 @@ import net.vanfleteren.jazygit.core.forgejo.ForgejoMergeStyle;
 import net.vanfleteren.jazygit.core.forgejo.ForgejoMerged;
 import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.BranchRef;
+import net.vanfleteren.jazygit.core.repo.PrNumber;
+import net.vanfleteren.jazygit.core.repo.RemoteUrl;
 import net.vanfleteren.jazygit.features.forgejo.ForgejoFailure;
 import net.vanfleteren.jazygit.features.forgejo.pulls.PullRequestFixtures.FakeForgejo;
 import net.vanfleteren.jazygit.features.forgejo.pulls.PullRequestMsg;
@@ -29,7 +31,12 @@ import org.junit.jupiter.api.Test;
 class MergeCommandsTest {
 
     private static final MergePullRequestCmd REBASE = new MergePullRequestCmd(
-            ORIGIN, new BranchName("feature"), 12, ForgejoMergeStyle.REBASE, new FailedMerge.Standing(HEAD), true);
+            ORIGIN,
+            new BranchName("feature"),
+            new PrNumber(12),
+            ForgejoMergeStyle.REBASE,
+            new FailedMerge.Standing(HEAD),
+            true);
 
     private static Phrase phrase(int status, String body) {
         return new MergeFailure(new ForgejoError.Refused(status, body), "code.example.net", "cvf/nix").phrase();
@@ -57,7 +64,7 @@ class MergeCommandsTest {
                 REBASE.run(forgejo.env()));
         assertEquals(
                 new PullRequestMsg.MergeFailed(REBASE, new ForgejoFailure.NoHome()),
-                REBASE.run(forgejo.env(HashMap.of(ORIGIN, "git@github.com:cvf/nix.git"))));
+                REBASE.run(forgejo.env(HashMap.of(ORIGIN, new RemoteUrl("git@github.com:cvf/nix.git")))));
     }
 
     @Test

@@ -16,6 +16,7 @@ import net.vanfleteren.jazygit.core.git.model.ParsedDiff.ParsedFile;
 import net.vanfleteren.jazygit.core.git.model.ParsedDiff.ParsedHunk;
 import net.vanfleteren.jazygit.core.git.model.UnifiedDiff;
 import net.vanfleteren.jazygit.core.git.model.UnifiedDiff.DiffLine;
+import net.vanfleteren.jazygit.core.repo.RepoPath;
 import net.vanfleteren.jazygit.kernel.state.diff.Anchor;
 import net.vanfleteren.jazygit.kernel.state.diff.DiffSide;
 import net.vanfleteren.jazygit.kernel.state.diff.DiffStops;
@@ -171,7 +172,7 @@ public final class RichDiff {
      * The anchor of {@code line} on the left side, by its number in the old file, if it is a context line: the split
      * view has a stop for it there (ADR 139).
      */
-    static Option<Anchor> leftOfContext(String path, DiffLine line) {
+    static Option<Anchor> leftOfContext(RepoPath path, DiffLine line) {
         return Option.when(line.kind() == DiffLine.Kind.CONTEXT, line::oldNumber)
                 .flatMap(number -> number)
                 .map(number -> new Anchor.OnLine(path, DiffSide.OLD, number));

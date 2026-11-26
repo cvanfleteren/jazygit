@@ -12,8 +12,12 @@ import net.vanfleteren.jazygit.core.git.files.Diffs;
 import net.vanfleteren.jazygit.core.git.model.ChangeType;
 import net.vanfleteren.jazygit.core.git.model.CommitFile;
 import net.vanfleteren.jazygit.core.git.model.DiffOptions;
+import net.vanfleteren.jazygit.core.repo.PrNumber;
 import net.vanfleteren.jazygit.core.repo.PullRequestCommits;
 import net.vanfleteren.jazygit.core.repo.RemoteName;
+import net.vanfleteren.jazygit.core.repo.RemoteUrl;
+import net.vanfleteren.jazygit.core.repo.RepoPath;
+import net.vanfleteren.jazygit.core.repo.RepoSlug;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -59,16 +63,17 @@ class CliPullRequestTest {
         git(repo, "checkout", "-q", "main");
         // The base moved on after the branch left it: that is no change of the pull request.
         Sha base = commit(repo, "a.txt", "a\nmore\n", "main moved on");
-        PullRequestCommits commits = new PullRequestCommits(1, "owner/repo", "", base, head);
+        PullRequestCommits commits =
+                new PullRequestCommits(new PrNumber(1), new RepoSlug("owner/repo"), "", base, head);
 
         assertEquals(
-                List.of(new CommitFile("b.txt", ChangeType.ADDED)),
+                List.of(new CommitFile(new RepoPath("b.txt"), ChangeType.ADDED)),
                 CliPullRequest.files(repo, commits, HashMap.empty()).get());
         String diff = CliGit.open(repo)
                 .get()
                 .diffs()
                 .pullRequestFileChanges(
-                        commits, List.of(new CommitFile("b.txt", ChangeType.ADDED)), DiffOptions.DEFAULT)
+                        commits, List.of(new CommitFile(new RepoPath("b.txt"), ChangeType.ADDED)), DiffOptions.DEFAULT)
                 .get()
                 .text();
         assertTrue(diff.contains("diff --git a/b.txt b/b.txt"), diff);
@@ -88,10 +93,13 @@ class CliPullRequestTest {
         Diffs diffs = CliGit.open(repo).get().diffs();
 
         assertEquals(
-                List.of(new CommitFile("b.txt", ChangeType.ADDED)),
+                List.of(new CommitFile(new RepoPath("b.txt"), ChangeType.ADDED)),
                 diffs.rangeFiles(base, tip).get());
         String diff = diffs.rangeFileChanges(
-                        base, tip, List.of(new CommitFile("b.txt", ChangeType.ADDED)), DiffOptions.DEFAULT)
+                        base,
+                        tip,
+                        List.of(new CommitFile(new RepoPath("b.txt"), ChangeType.ADDED)),
+                        DiffOptions.DEFAULT)
                 .get()
                 .text();
         assertTrue(diff.contains("+b"), diff);
@@ -116,10 +124,11 @@ class CliPullRequestTest {
         Sha head = commit(fork, "b.txt", "b\n", "theirs");
         git(fork, "push", "-q", "origin", "HEAD:refs/pull/7/head");
         String refs = git(repo, "for-each-ref");
-        PullRequestCommits commits = new PullRequestCommits(7, "Owner/Repo", "", base, head);
+        PullRequestCommits commits =
+                new PullRequestCommits(new PrNumber(7), new RepoSlug("Owner/Repo"), "", base, head);
 
         assertEquals(
-                List.of(new CommitFile("b.txt", ChangeType.ADDED)),
+                List.of(new CommitFile(new RepoPath("b.txt"), ChangeType.ADDED)),
                 CliPullRequest.files(repo, commits, HashMap.empty()).get());
         assertEquals(refs, git(repo, "for-each-ref"));
         assertFalse(Files.exists(repo.resolve(".git").resolve("FETCH_HEAD")));
@@ -150,10 +159,11 @@ class CliPullRequestTest {
         commit(other, "a.txt", "a\nbase\nlater\n", "later");
         git(other, "push", "-q", "origin", "main");
         String refs = git(repo, "for-each-ref");
-        PullRequestCommits commits = new PullRequestCommits(7, "owner/repo", "", base, head);
+        PullRequestCommits commits =
+                new PullRequestCommits(new PrNumber(7), new RepoSlug("owner/repo"), "", base, head);
 
         assertEquals(
-                List.of(new CommitFile("b.txt", ChangeType.ADDED)),
+                List.of(new CommitFile(new RepoPath("b.txt"), ChangeType.ADDED)),
                 CliPullRequest.files(repo, commits, HashMap.empty()).get());
         assertEquals(refs, git(repo, "for-each-ref"));
     }
@@ -172,7 +182,8 @@ class CliPullRequestTest {
         git(dir, "clone", "-q", elsewhere.toString(), fork.toString());
         Sha head = commit(fork, "b.txt", "b\n", "theirs");
         git(fork, "push", "-q", "origin", "HEAD:refs/pull/7/head");
-        PullRequestCommits commits = new PullRequestCommits(7, "owner/repo", "", base, head);
+        PullRequestCommits commits =
+                new PullRequestCommits(new PrNumber(7), new RepoSlug("owner/repo"), "", base, head);
 
         assertTrue(CliPullRequest.files(repo, commits, HashMap.empty()).isLeft());
         assertThrows(Exception.class, () -> git(repo, "cat-file", "-e", head.value()));
@@ -180,32 +191,45 @@ class CliPullRequestTest {
 
     @Test
     void theRemoteOfARepositoryIsTheOneWhoseUrlNamesIt() {
-        HashMap<RemoteName, String> urls = HashMap.of(
+        HashMap<RemoteName, RemoteUrl> urls = HashMap.of(
                         "upstream", "git@github.com:Owner/Repo.git",
                         "origin", "https://github.com/me/repo",
                         "mirror", "ssh://git@github.com/owner/repo/",
                         "other", "https://github.com/owner/repository.git")
-                .mapKeys(RemoteName::new);
+                .mapKeys(RemoteName::new)
+                .mapValues(RemoteUrl::new);
 
-        assertEquals(Option.of(new RemoteName("mirror")), CliPullRequest.remoteOf(urls, "owner/repo", "github.com"));
-        assertEquals(Option.of(new RemoteName("origin")), CliPullRequest.remoteOf(urls, "me/repo", "github.com"));
-        assertEquals(Option.none(), CliPullRequest.remoteOf(urls, "owner/rep", "github.com"));
+        assertEquals(
+                Option.of(new RemoteName("mirror")),
+                CliPullRequest.remoteOf(urls, new RepoSlug("owner/repo"), "github.com"));
+        assertEquals(
+                Option.of(new RemoteName("origin")),
+                CliPullRequest.remoteOf(urls, new RepoSlug("me/repo"), "github.com"));
+        assertEquals(Option.none(), CliPullRequest.remoteOf(urls, new RepoSlug("owner/rep"), "github.com"));
         assertEquals(
                 Option.of(new RemoteName("upstream")),
-                CliPullRequest.remoteOf(urls.remove(new RemoteName("mirror")), "owner/repo", "github.com"));
+                CliPullRequest.remoteOf(
+                        urls.remove(new RemoteName("mirror")), new RepoSlug("owner/repo"), "github.com"));
     }
 
     @Test
     void aRemoteOnTheHostOfTheRepositoryComesBeforeAMirrorElsewhere() {
-        HashMap<RemoteName, String> urls = HashMap.of(
+        HashMap<RemoteName, RemoteUrl> urls = HashMap.of(
                         "backup", "https://gitlab.com/owner/repo.git",
                         "origin", "git@github.com:owner/repo.git",
                         "work", "https://user@ghe.example.com:8443/owner/repo")
-                .mapKeys(RemoteName::new);
+                .mapKeys(RemoteName::new)
+                .mapValues(RemoteUrl::new);
 
-        assertEquals(Option.of(new RemoteName("origin")), CliPullRequest.remoteOf(urls, "owner/repo", "github.com"));
-        assertEquals(Option.of(new RemoteName("work")), CliPullRequest.remoteOf(urls, "owner/repo", "GHE.example.com"));
+        assertEquals(
+                Option.of(new RemoteName("origin")),
+                CliPullRequest.remoteOf(urls, new RepoSlug("owner/repo"), "github.com"));
+        assertEquals(
+                Option.of(new RemoteName("work")),
+                CliPullRequest.remoteOf(urls, new RepoSlug("owner/repo"), "GHE.example.com"));
         // None on the host, as when an ssh alias names it: the first by name whose path names the repository.
-        assertEquals(Option.of(new RemoteName("backup")), CliPullRequest.remoteOf(urls, "owner/repo", "gh-work"));
+        assertEquals(
+                Option.of(new RemoteName("backup")),
+                CliPullRequest.remoteOf(urls, new RepoSlug("owner/repo"), "gh-work"));
     }
 }

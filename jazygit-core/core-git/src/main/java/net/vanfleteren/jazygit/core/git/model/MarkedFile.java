@@ -1,6 +1,7 @@
 package net.vanfleteren.jazygit.core.git.model;
 
 import io.vavr.collection.List;
+import net.vanfleteren.jazygit.core.repo.RepoPath;
 
 /**
  * A file with conflict markers left in it, and the lines its blocks start at, counted from 1 (ADR 198).
@@ -8,7 +9,7 @@ import io.vavr.collection.List;
  * @param path  the path of the file in the working tree
  * @param lines the line of each {@code <<<<<<< } that a {@code >>>>>>> } closes, in order
  */
-public record MarkedFile(String path, List<Integer> lines) {
+public record MarkedFile(RepoPath path, List<Integer> lines) {
 
     private static final String START = "<<<<<<< ";
     private static final String END = ">>>>>>> ";

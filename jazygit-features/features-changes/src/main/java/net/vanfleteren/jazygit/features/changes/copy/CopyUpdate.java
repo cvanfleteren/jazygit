@@ -1,6 +1,7 @@
 package net.vanfleteren.jazygit.features.changes.copy;
 
 import io.vavr.control.Option;
+import net.vanfleteren.jazygit.core.repo.RepoPath;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.Update.Next;
@@ -37,7 +38,7 @@ public final class CopyUpdate {
             return Option.none();
         }
         return switch (at.cursor()) {
-            case Anchor.File(String path) -> Option.of(new CopyCmd(path, new CopyNotice.PathCopied(path)));
+            case Anchor.File(RepoPath path) -> Option.of(new CopyCmd(path.value(), new CopyNotice.PathCopied(path)));
             case Anchor.OnLine cursor ->
                 model.diffLines(at, at.at().content().richDiff())
                         .between(from(at, cursor), cursor, at.split())

@@ -1,5 +1,6 @@
 package net.vanfleteren.jazygit.features.github.prs;
 
+import net.vanfleteren.jazygit.core.repo.RepoSlug;
 import net.vanfleteren.jazygit.features.github.prs.unseen.UnseenPullRequests;
 import net.vanfleteren.jazygit.features.github.state.GitHubStores;
 import net.vanfleteren.jazygit.kernel.state.Cmd;
@@ -12,7 +13,7 @@ import org.slf4j.LoggerFactory;
  * Keeps {@code unseen} as the unseen pull requests of {@code repository}, as {@code owner/name}, for the next
  * session (ADR 29). That they could not be kept is only written to the debug log: they are only a convenience.
  */
-public record SaveUnseenPullRequests(String repository, UnseenPullRequests unseen) implements Cmd {
+public record SaveUnseenPullRequests(RepoSlug repository, UnseenPullRequests unseen) implements Cmd {
 
     @Override
     public Msg run(Env env) {

@@ -10,6 +10,7 @@ import net.vanfleteren.jazygit.core.git.model.CommitFile;
 import net.vanfleteren.jazygit.core.git.model.DiffText;
 import net.vanfleteren.jazygit.core.git.model.FileContent;
 import net.vanfleteren.jazygit.core.repo.BranchName;
+import net.vanfleteren.jazygit.core.repo.RepoPath;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.features.changes.diff.VersionMsg;
 import net.vanfleteren.jazygit.features.changes.panes.files.FilesPanel;
@@ -45,17 +46,18 @@ class CommitUnchangedContentTest {
         return TestModels.loaded()
                 .mapRepoView(view -> view.mapFiles(files -> files.withCommitFiles(Option.of(CommitFilesView.of(
                                 TIP, Scopes.BRANCHES.pane(), Scopes.FILES.pane())
-                        .withFiles(new Loadable.Loaded<>(List.of(new CommitFile("a.txt", ChangeType.MODIFIED))))
+                        .withFiles(new Loadable.Loaded<>(
+                                List.of(new CommitFile(new RepoPath("a.txt"), ChangeType.MODIFIED))))
                         .withAllFiles(true)
                         .withTree(Option.of(new Loadable.Loaded<>(List.of(
-                                new CommitFile("README.md", ChangeType.UNCHANGED),
-                                new CommitFile("a.txt", ChangeType.MODIFIED)))))
+                                new CommitFile(new RepoPath("README.md"), ChangeType.UNCHANGED),
+                                new CommitFile(new RepoPath("a.txt"), ChangeType.MODIFIED)))))
                         .withUnchanged(Option.of(node))))));
     }
 
     private static Model readme() {
-        return showing(new UnchangedNode.File(
-                new Preview<>("README.md", new Loadable.Loaded<>(new FileContent.Text(DiffText.of(README))))));
+        return showing(new UnchangedNode.File(new Preview<>(
+                new RepoPath("README.md"), new Loadable.Loaded<>(new FileContent.Text(DiffText.of(README))))));
     }
 
     private String screen(Model model) throws Exception {
@@ -76,7 +78,8 @@ class CommitUnchangedContentTest {
 
     @Test
     void aDirectorySaysHowManyFilesItHolds() throws Exception {
-        assertTrue(screen(showing(new UnchangedNode.Directory("docs", 3))).contains("docs · 3 files"));
+        assertTrue(screen(showing(new UnchangedNode.Directory(new RepoPath("docs"), 3)))
+                .contains("docs · 3 files"));
     }
 
     @Test
@@ -94,10 +97,11 @@ class CommitUnchangedContentTest {
     @Test
     void itIsReadWholeFromItsCommit() {
         assertEquals(
-                new WholeFile.Source.AtCommit(TIP_SHA, "README.md"),
-                new ScrolledContent.Unchanged("README.md", DiffText.of(README), Option.of(TIP_SHA)).source());
+                new WholeFile.Source.AtCommit(TIP_SHA, new RepoPath("README.md")),
+                new ScrolledContent.Unchanged(new RepoPath("README.md"), DiffText.of(README), Option.of(TIP_SHA))
+                        .source());
         assertEquals(
-                new WholeFile.Source.OnDisk("README.md"),
-                new ScrolledContent.Unchanged("README.md", DiffText.of(README)).source());
+                new WholeFile.Source.OnDisk(new RepoPath("README.md")),
+                new ScrolledContent.Unchanged(new RepoPath("README.md"), DiffText.of(README)).source());
     }
 }

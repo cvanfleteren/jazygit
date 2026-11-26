@@ -12,6 +12,7 @@ import net.vanfleteren.jazygit.kernel.state.Carried;
 import net.vanfleteren.jazygit.kernel.state.Cmd;
 import net.vanfleteren.jazygit.kernel.state.Env;
 import net.vanfleteren.jazygit.kernel.state.Failure;
+import net.vanfleteren.jazygit.kernel.state.FeatureId;
 import net.vanfleteren.jazygit.kernel.state.FeatureMsg;
 import net.vanfleteren.jazygit.kernel.state.FeatureSwitches;
 import net.vanfleteren.jazygit.kernel.state.FeatureUpdate;
@@ -37,7 +38,7 @@ class FeatureGatedTest {
             .reacting((model, event) -> Next.of(model, new Run("reacted")))
             .filling(KEY, model -> Option.of("filled"))
             .filling(KernelSlots.SPINNING, model -> Option.of(true))
-            .applying("f", model -> new Run("detect"));
+            .applying(new FeatureId("f"), model -> new Run("detect"));
 
     @Test
     void aFeatureThatDecidesNothingIsAsItIs() {
@@ -50,7 +51,7 @@ class FeatureGatedTest {
     void openingARepositorySwitchesItOffAndDetectsWhetherItApplies() {
         Next opened = FEATURE.gated().reactions().head().to(TestModels.loaded(), new KernelEvent.RepositoryOpened());
 
-        assertFalse(opened.model().on("f"));
+        assertFalse(opened.model().on(new FeatureId("f")));
         // What the user chose as the forge before is read too, from which the kernel decides (ADR 177).
         assertEquals(List.of(new ReadForgeChoice(), new Run("detect")), opened.cmds());
     }
@@ -66,7 +67,7 @@ class FeatureGatedTest {
                 .head()
                 .to(Carried.from(decided).into(TestModels.loaded()), new KernelEvent.RepositoryOpened());
 
-        assertTrue(opened.model().on("f"));
+        assertTrue(opened.model().on(new FeatureId("f")));
         assertEquals(List.empty(), opened.cmds());
     }
 
@@ -74,7 +75,7 @@ class FeatureGatedTest {
     void whileItIsOffItsReactionsAndSpinnerDoNothing() {
         Feature gated = FEATURE.gated();
         Model on = TestModels.loaded();
-        Model off = FeatureUpdate.off(on, "f");
+        Model off = FeatureUpdate.off(on, new FeatureId("f"));
         KernelEvent event = new KernelEvent.RepositoryOpened();
 
         assertEquals(
@@ -91,13 +92,13 @@ class FeatureGatedTest {
         Model on = TestModels.loaded();
 
         assertEquals(Option.of("filled"), fills.of(KEY, on));
-        assertEquals(Option.none(), fills.of(KEY, FeatureUpdate.off(on, "f")));
+        assertEquals(Option.none(), fills.of(KEY, FeatureUpdate.off(on, new FeatureId("f"))));
     }
 
     @Test
     void whatItsTimersSendIsItsOwn() {
         assertEquals(
-                new FeatureMsg.Owned("f", new Probe("tick")),
+                new FeatureMsg.Owned(new FeatureId("f"), new Probe("tick")),
                 FEATURE.gated().timers().head().msg().get());
     }
 

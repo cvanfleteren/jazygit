@@ -58,8 +58,8 @@ class FilesPanelTest {
     private static final String MODEL = "core/src/main/java/model";
 
     private static final List<CommitFile> MODEL_AND_TEST = List.of(
-            new CommitFile(MODEL + "/WordDiff.java", ChangeType.MODIFIED),
-            new CommitFile("core/src/test/java/model/WordDiffTest.java", ChangeType.MODIFIED));
+            new CommitFile(new RepoPath(MODEL + "/WordDiff.java"), ChangeType.MODIFIED),
+            new CommitFile(new RepoPath("core/src/test/java/model/WordDiffTest.java"), ChangeType.MODIFIED));
 
     // Rows: /, src, main, A.java, test, ATest.java, BTest.java, README.md.
     private static final List<FileEntry> FILTERED = List.of(
@@ -73,11 +73,11 @@ class FilesPanelTest {
     @Test
     void conflictedFilesShowAMarkerForEachBranchThatChangedThem() throws Exception {
         Model updated = TestModels.loaded(fixed(List.of(
-                FileEntry.conflicted("both.txt", Conflict.of('U', 'U')),
-                FileEntry.conflicted("added.txt", Conflict.of('A', 'A')))));
+                FileEntry.conflicted(new RepoPath("both.txt"), Conflict.of('U', 'U')),
+                FileEntry.conflicted(new RepoPath("added.txt"), Conflict.of('A', 'A')))));
         Model deleted = TestModels.loaded(fixed(List.of(
-                FileEntry.conflicted("theirs-deleted.txt", Conflict.of('U', 'D')),
-                FileEntry.conflicted("ours-deleted.txt", Conflict.of('D', 'U')))));
+                FileEntry.conflicted(new RepoPath("theirs-deleted.txt"), Conflict.of('U', 'D')),
+                FileEntry.conflicted(new RepoPath("ours-deleted.txt"), Conflict.of('D', 'U')))));
 
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(updated, FilesPanel.PANE))) {
             String screen = RenderedText.of(testRunner, () -> panel.render(updated, FilesPanel.PANE));
@@ -113,7 +113,8 @@ class FilesPanelTest {
 
     @Test
     void theHighlightedNodeOnlyShowsWhileThePaneIsInUse() throws Exception {
-        Model model = TestModels.loaded(fixed(List.of(FileEntry.conflicted("both.txt", Conflict.of('U', 'U')))));
+        Model model = TestModels.loaded(
+                fixed(List.of(FileEntry.conflicted(new RepoPath("both.txt"), Conflict.of('U', 'U')))));
 
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(model, FilesPanel.PANE))) {
             assertTrue(rootInHighlight(testRunner, () -> panel.render(model, FilesPanel.PANE)));
@@ -126,7 +127,8 @@ class FilesPanelTest {
 
     @Test
     void theHighlightedNodeTakesNoColumnForASymbol() throws Exception {
-        Model model = TestModels.loaded(fixed(List.of(FileEntry.conflicted("both.txt", Conflict.of('U', 'U')))));
+        Model model = TestModels.loaded(
+                fixed(List.of(FileEntry.conflicted(new RepoPath("both.txt"), Conflict.of('U', 'U')))));
 
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(model, FilesPanel.PANE))) {
             String active = RenderedText.of(testRunner, () -> panel.render(model, FilesPanel.PANE));
@@ -155,9 +157,10 @@ class FilesPanelTest {
     @Test
     void renamedFilesShowWhereTheyCameFrom() throws Exception {
         Model sameDirectory = TestModels.loaded(fixed(List.of(
-                FileEntry.renamed("b.txt", "a.txt", true, false), FileEntry.renamed("c.txt", "old.txt", true, true))));
-        Model otherDirectory =
-                TestModels.loaded(fixed(List.of(FileEntry.renamed("lib/m.txt", "src/m.txt", true, false))));
+                FileEntry.renamed(new RepoPath("b.txt"), new RepoPath("a.txt"), true, false),
+                FileEntry.renamed(new RepoPath("c.txt"), new RepoPath("old.txt"), true, true))));
+        Model otherDirectory = TestModels.loaded(
+                fixed(List.of(FileEntry.renamed(new RepoPath("lib/m.txt"), new RepoPath("src/m.txt"), true, false))));
 
         try (ToolkitTestRunner testRunner =
                 ToolkitTestRunner.runTest(() -> panel.render(sameDirectory, FilesPanel.PANE))) {
@@ -176,7 +179,8 @@ class FilesPanelTest {
     void changesOnlyInTheWorkingTreeShowInTheUnstagedColumn() throws Exception {
         // The rename only in the working tree follows intent-to-add of the new path.
         Model model = TestModels.loaded(fixed(List.of(
-                Fixtures.fileEntry("gone.txt", ChangeType.DELETED), FileEntry.renamed("b.txt", "a.txt", false, true))));
+                Fixtures.fileEntry("gone.txt", ChangeType.DELETED),
+                FileEntry.renamed(new RepoPath("b.txt"), new RepoPath("a.txt"), false, true))));
 
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(model, FilesPanel.PANE))) {
             String screen = RenderedText.of(testRunner, () -> panel.render(model, FilesPanel.PANE));
@@ -289,7 +293,7 @@ class FilesPanelTest {
         java.util.concurrent.atomic.AtomicInteger opened = new java.util.concurrent.atomic.AtomicInteger();
         java.util.List<Msg> sent = new java.util.concurrent.CopyOnWriteArrayList<>();
         FilesPanel opening = new FilesPanel(sent::add, opened::incrementAndGet);
-        FileEntry conflicted = FileEntry.conflicted("both.txt", Conflict.of('U', 'U'));
+        FileEntry conflicted = FileEntry.conflicted(new RepoPath("both.txt"), Conflict.of('U', 'U'));
         Model model = TestModels.loaded(fixed(List.of(conflicted)));
 
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> opening.render(model, FilesPanel.PANE))) {
@@ -438,8 +442,11 @@ class FilesPanelTest {
                         new LoadMsg.CommitFilesLoaded(
                                 of,
                                 List.of(
-                                        new CommitFile("lib/new.txt", ChangeType.RENAMED, Option.of("old.txt")),
-                                        new CommitFile("gone.txt", ChangeType.DELETED))))
+                                        new CommitFile(
+                                                new RepoPath("lib/new.txt"),
+                                                ChangeType.RENAMED,
+                                                Option.of(new RepoPath("old.txt"))),
+                                        new CommitFile(new RepoPath("gone.txt"), ChangeType.DELETED))))
                 .model();
 
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(open, FilesPanel.PANE))) {
@@ -462,9 +469,9 @@ class FilesPanelTest {
         assertEquals(
                 "",
                 highlightedOnOpen(List.of(
-                        new CommitFile("pom.xml", ChangeType.MODIFIED),
-                        new CommitFile("bench/Bench.java", ChangeType.ADDED))));
-        assertEquals("a/b", highlightedOnOpen(List.of(new CommitFile("a/b/c.txt", ChangeType.MODIFIED))));
+                        new CommitFile(new RepoPath("pom.xml"), ChangeType.MODIFIED),
+                        new CommitFile(new RepoPath("bench/Bench.java"), ChangeType.ADDED))));
+        assertEquals("a/b", highlightedOnOpen(List.of(new CommitFile(new RepoPath("a/b/c.txt"), ChangeType.MODIFIED))));
     }
 
     @Test
@@ -498,7 +505,9 @@ class FilesPanelTest {
             RenderedText.of(
                     testRunner,
                     () -> panel.render(
-                            loaded(opened, MODEL_AND_TEST.append(new CommitFile("x/y.txt", ChangeType.ADDED))),
+                            loaded(
+                                    opened,
+                                    MODEL_AND_TEST.append(new CommitFile(new RepoPath("x/y.txt"), ChangeType.ADDED))),
                             FilesPanel.PANE));
             assertEquals("", highlighted(panel));
             SettledPilot.of(testRunner).quit();
@@ -539,12 +548,14 @@ class FilesPanelTest {
             assertFalse(typing.contains("README.md"), typing);
             // The highlight is on the first file that matches, not on the root.
             assertEquals(
-                    "src/test/ATest.java", panel.tree().selectedNode().data().path());
+                    "src/test/ATest.java",
+                    panel.tree().selectedNode().data().path().value());
 
             SettledPilot.of(testRunner).press(KeyCode.DOWN);
             SettledPilot.of(testRunner).pause();
             assertEquals(
-                    "src/test/BTest.java", panel.tree().selectedNode().data().path());
+                    "src/test/BTest.java",
+                    panel.tree().selectedNode().data().path().value());
 
             SettledPilot.of(testRunner).press(KeyCode.ENTER);
             SettledPilot.of(testRunner).pause();
@@ -564,7 +575,8 @@ class FilesPanelTest {
             assertTrue(cleared.contains("Files"), cleared);
             assertFalse(cleared.contains("/Test"), cleared);
             assertEquals(
-                    "src/test/BTest.java", panel.tree().selectedNode().data().path());
+                    "src/test/BTest.java",
+                    panel.tree().selectedNode().data().path().value());
 
             assertEquals(new FileFilterMsg.Opened(), sent.getFirst());
             assertEquals(new FileFilterMsg.Submitted(), sent.get(sent.size() - 2));
@@ -658,7 +670,7 @@ class FilesPanelTest {
             RenderedText.ofLarge(testRunner, () -> panel.render(all, FilesPanel.PANE));
             // The root, src, then src/main: directories come before README.md.
             panel.tree().selected(2);
-            assertEquals("src/main", panel.tree().selectedNode().data().path());
+            assertEquals("src/main", panel.tree().selectedNode().data().path().value());
             panel.tree().selectedNode().expanded(false);
             assertFalse(RenderedText.ofLarge(testRunner, () -> panel.render(all, FilesPanel.PANE))
                     .contains("A.java"));
@@ -667,7 +679,7 @@ class FilesPanelTest {
                     .contains("A.java"));
             // Collapsed by hand while filtered, and opened again by the next filter.
             panel.tree().selected(4);
-            assertEquals("src/test", panel.tree().selectedNode().data().path());
+            assertEquals("src/test", panel.tree().selectedNode().data().path().value());
             panel.tree().selectedNode().expanded(false);
             assertFalse(RenderedText.ofLarge(testRunner, () -> panel.render(filtered, FilesPanel.PANE))
                     .contains("ATest.java"));
@@ -677,13 +689,14 @@ class FilesPanelTest {
             // A file highlighted in a directory that was collapsed before the filter.
             RenderedText.ofLarge(testRunner, () -> panel.render(filtered, FilesPanel.PANE));
             panel.tree().selected(3);
-            assertEquals("src/main/A.java", panel.tree().selectedNode().data().path());
+            assertEquals(
+                    "src/main/A.java", panel.tree().selectedNode().data().path().value());
 
             String cleared = RenderedText.ofLarge(testRunner, () -> panel.render(all, FilesPanel.PANE));
             assertFalse(cleared.contains("A.java"), cleared);
             assertTrue(cleared.contains("ATest.java"), cleared);
             // Hidden again, it gives the highlight to the directory that holds it, not to the first file.
-            assertEquals("src/main", panel.tree().selectedNode().data().path());
+            assertEquals("src/main", panel.tree().selectedNode().data().path().value());
             SettledPilot.of(testRunner).quit();
         }
     }
@@ -764,7 +777,7 @@ class FilesPanelTest {
     void theFilterMatchesTheWholePathOrWhereARenamedFileCameFrom() {
         List<FileEntry> files = List.of(
                 Fixtures.fileEntry("src/main/A.java", ChangeType.MODIFIED),
-                FileEntry.renamed("lib/B.java", "src/old/B.java", true, false));
+                FileEntry.renamed(new RepoPath("lib/B.java"), new RepoPath("src/old/B.java"), true, false));
 
         assertEquals(files, ListedFiles.matching(files, Option.none()));
         assertEquals(files, ListedFiles.matching(files, Option.of("src/")));
@@ -807,7 +820,7 @@ class FilesPanelTest {
     }
 
     private static String highlighted(FilesPanel panel) {
-        return panel.commitTree().selectedNode().data().path();
+        return panel.commitTree().selectedNode().data().path().value();
     }
 
     private static Git fixed(List<FileEntry> files) {

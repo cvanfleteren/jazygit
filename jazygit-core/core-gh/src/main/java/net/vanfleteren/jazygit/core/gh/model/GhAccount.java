@@ -8,6 +8,8 @@ import java.net.URI;
 import java.util.Locale;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import net.vanfleteren.jazygit.core.repo.RemoteUrl;
+import net.vanfleteren.jazygit.core.repo.RepoSlug;
 
 /**
  * An account gh is logged in to, which gh commands for a repository run as.
@@ -68,8 +70,8 @@ public record GhAccount(String host, String user) {
      * The repository of the git remote {@code url}, as {@code owner/name}, without {@code .git}: the last two parts of
      * its path; none for a local path, or a URL without them (ADR 177).
      */
-    public static Option<String> repositoryOf(String url) {
-        String stripped = url.strip();
+    public static Option<RepoSlug> repositoryOf(RemoteUrl url) {
+        String stripped = url.value().strip();
         String path = stripped.contains("://")
                 ? Try.of(() -> URI.create(stripped).getPath())
                         .toOption()
@@ -78,9 +80,9 @@ public record GhAccount(String host, String user) {
                 : stripped.substring(stripped.indexOf(':') + 1);
         List<String> parts = List.of(path.split("/")).filter(part -> !part.isEmpty());
         return Option.when(hostOf(stripped).isDefined() && parts.size() >= 2, () -> parts.takeRight(2))
-                .map(two -> two.head() + "/"
+                .map(two -> new RepoSlug(two.head() + "/"
                         + (two.last().endsWith(".git")
                                 ? two.last().substring(0, two.last().length() - ".git".length())
-                                : two.last()));
+                                : two.last())));
     }
 }

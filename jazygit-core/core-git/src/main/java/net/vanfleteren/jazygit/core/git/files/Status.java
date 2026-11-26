@@ -11,6 +11,7 @@ import net.vanfleteren.jazygit.core.git.model.RepoStatus;
 import net.vanfleteren.jazygit.core.git.process.GitError;
 import net.vanfleteren.jazygit.core.git.process.GitFailure;
 import net.vanfleteren.jazygit.core.process.ExecutedCommand;
+import net.vanfleteren.jazygit.core.repo.RepoPath;
 
 /**
  * What git status says about the working tree and the index, and the stamps that tell whether to read more (ADR 69).
@@ -53,10 +54,10 @@ public interface Status {
      * each once. A file a sparse checkout leaves off the disk is left out; one kept on disk with the skip-worktree bit
      * stays (ADR 108).
      */
-    Either<GitError, List<String>> allFiles();
+    Either<GitError, List<RepoPath>> allFiles();
 
     /**
      * What the file at {@code path} in the working tree holds on disk, read up to the limit of a diff (ADR 79, 108).
      */
-    Either<GitError, FileContent> content(String path);
+    Either<GitError, FileContent> content(RepoPath path);
 }

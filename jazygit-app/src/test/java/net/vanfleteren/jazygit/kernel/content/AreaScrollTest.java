@@ -292,7 +292,8 @@ class AreaScrollTest {
         java.util.concurrent.atomic.AtomicReference<Model> model =
                 new java.util.concurrent.atomic.AtomicReference<>(TestModels.withFilesSelected(
                         SampleData.git(),
-                        List.of(new FileEntry("x".repeat(300) + ".txt", ChangeType.MODIFIED, true, false))));
+                        List.of(new FileEntry(
+                                new RepoPath("x".repeat(300) + ".txt"), ChangeType.MODIFIED, true, false))));
         ContentPanel scrolling = new ContentPanel(
                 Theme.SpanStyles.NONE,
                 () -> {
@@ -390,7 +391,7 @@ class AreaScrollTest {
             return true;
         });
         Changes of = new Changes.OfCommit(new Sha("aaaa"));
-        CommitFile file = new CommitFile("src/a.txt", ChangeType.MODIFIED);
+        CommitFile file = new CommitFile(new RepoPath("src/a.txt"), ChangeType.MODIFIED);
         Model open = Update.update(
                         Update.update(TestModels.loaded(), new CommitFilesMsg.Opened(of, Scopes.COMMITS.pane()))
                                 .model(),

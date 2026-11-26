@@ -14,6 +14,7 @@ import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.BranchRef;
 import net.vanfleteren.jazygit.core.repo.CaughtUpBranch;
 import net.vanfleteren.jazygit.core.repo.RemoteBranch;
+import net.vanfleteren.jazygit.core.repo.RepoSlug;
 import net.vanfleteren.jazygit.core.repo.Revision;
 import net.vanfleteren.jazygit.kernel.state.Cmd.Guard;
 import net.vanfleteren.jazygit.kernel.state.Env;
@@ -61,7 +62,7 @@ public interface WorktreeSource {
      * The repository on the host of the remotes it is of, as {@code owner/name}, if it knows: a pull request of
      * another repository does. Without it, the template takes the one the features name (ADR 134, 169).
      */
-    default Option<String> repository() {
+    default Option<RepoSlug> repository() {
         return Option.none();
     }
 

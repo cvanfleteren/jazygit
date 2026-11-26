@@ -2,6 +2,8 @@ package net.vanfleteren.jazygit.core.forgejo;
 
 import io.vavr.collection.List;
 import java.time.Instant;
+import net.vanfleteren.jazygit.core.repo.ForgeBranch;
+import net.vanfleteren.jazygit.core.repo.PrNumber;
 import net.vanfleteren.jazygit.core.repo.Sha;
 
 /**
@@ -18,7 +20,7 @@ import net.vanfleteren.jazygit.core.repo.Sha;
  * @param url          where it is on the web
  */
 public record ForgejoPullRequestDetails(
-        long number,
+        PrNumber number,
         String title,
         String author,
         Status status,
@@ -49,7 +51,7 @@ public record ForgejoPullRequestDetails(
      * @param base    the branch it merges into
      * @param headSha the commit at the tip of what it merges
      */
-    public record Branches(String head, String base, Sha headSha) {}
+    public record Branches(ForgeBranch head, ForgeBranch base, Sha headSha) {}
 
     /**
      * @param createdAt when it was opened

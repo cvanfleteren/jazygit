@@ -1,8 +1,8 @@
 package net.vanfleteren.jazygit.features.github.review;
 
-import net.vanfleteren.jazygit.core.gh.model.PrNumber;
 import net.vanfleteren.jazygit.core.gh.model.Reactions;
 import net.vanfleteren.jazygit.core.gh.model.ReviewThread;
+import net.vanfleteren.jazygit.core.repo.PrNumber;
 import net.vanfleteren.jazygit.kernel.state.popup.Popup;
 
 /**

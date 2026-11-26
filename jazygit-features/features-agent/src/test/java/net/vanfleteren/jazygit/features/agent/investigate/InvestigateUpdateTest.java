@@ -56,10 +56,10 @@ class InvestigateUpdateTest {
 
     private static FailedBuild build(BranchName branch, List<FailedBuild.Job> jobs, boolean running) {
         return new FailedBuild(
-                Option.of("o/r"),
+                Option.of(new RepoSlug("o/r")),
                 branch,
                 Option.of(new Sha("abc123")),
-                Option.of(new FailedBuild.ChangeRequest("merge request", 12)),
+                Option.of(new FailedBuild.ChangeRequest("merge request", new PrNumber(12))),
                 jobs,
                 running,
                 "read the log of run 401 of o/r");
@@ -211,8 +211,8 @@ class InvestigateUpdateTest {
 
     @Test
     void jazygitsPromptSaysTheBuildIsOfTheBranchOnTheForgeEvenWithoutItsCommit() {
-        FailedBuild tip =
-                new FailedBuild(Option.of("o/r"), FEATURE, Option.none(), Option.none(), List.of(VERIFY), false, "");
+        FailedBuild tip = new FailedBuild(
+                Option.of(new RepoSlug("o/r")), FEATURE, Option.none(), Option.none(), List.of(VERIFY), false, "");
 
         String prompt = Prompt.of(tip, Option.none(), Option.none());
 

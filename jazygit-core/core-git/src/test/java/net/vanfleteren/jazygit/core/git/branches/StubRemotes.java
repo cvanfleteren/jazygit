@@ -18,6 +18,7 @@ import net.vanfleteren.jazygit.core.repo.BranchRef;
 import net.vanfleteren.jazygit.core.repo.PullRequestCommits;
 import net.vanfleteren.jazygit.core.repo.RemoteBranch;
 import net.vanfleteren.jazygit.core.repo.RemoteName;
+import net.vanfleteren.jazygit.core.repo.RemoteUrl;
 
 /**
  * {@link Remotes} for tests: no remotes, and pushing, pulling and fetching succeed without running anything. Fakes
@@ -31,7 +32,7 @@ public interface StubRemotes extends Remotes {
     }
 
     @Override
-    default Either<GitError, Map<RemoteName, String>> urls() {
+    default Either<GitError, Map<RemoteName, RemoteUrl>> urls() {
         return Either.right(HashMap.empty());
     }
 

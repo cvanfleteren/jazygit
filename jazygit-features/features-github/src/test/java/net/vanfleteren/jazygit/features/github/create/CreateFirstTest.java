@@ -5,9 +5,10 @@ import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 
 import io.vavr.collection.List;
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.core.gh.model.PrNumber;
+import net.vanfleteren.jazygit.core.gh.model.StackId;
 import net.vanfleteren.jazygit.core.git.model.Fixtures;
 import net.vanfleteren.jazygit.core.repo.BranchName;
+import net.vanfleteren.jazygit.core.repo.PrNumber;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.features.branches.branch.base.SetBaseCmd;
 import net.vanfleteren.jazygit.features.branches.branch.pullrequest.PushFirstPopup;
@@ -29,7 +30,7 @@ class CreateFirstTest {
     private static final BranchName MAIN = new BranchName("main");
 
     private static final StackPopups.CreateFirst ON_TOP =
-            new StackPopups.CreateFirst(FEATURE, FEAT_A, new PrNumber(96), Option.of(12));
+            new StackPopups.CreateFirst(FEATURE, FEAT_A, new PrNumber(96), Option.of(new StackId(12)));
 
     private static final Model MODEL = TestModels.localBranchesRead(
                     TestModels.loaded(),

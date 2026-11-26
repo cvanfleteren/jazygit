@@ -18,7 +18,7 @@ public sealed interface FeatureMsg extends Msg {
      * {@code msg}, of the feature {@code feature}, as a key or a timer of it sends it: it does something only while
      * the feature is on.
      */
-    record Owned(String feature, Msg msg) implements FeatureMsg {}
+    record Owned(FeatureId feature, Msg msg) implements FeatureMsg {}
 
     /**
      * What one key sends that several features bind alike, as two forges do (ADR 175): what the first of
@@ -38,7 +38,7 @@ public sealed interface FeatureMsg extends Msg {
      * The feature {@code feature} is switched on when {@code on}, else off: as the kernel decided the forge of the
      * repository (ADR 177).
      */
-    record Applies(String feature, boolean on) implements FeatureMsg {}
+    record Applies(FeatureId feature, boolean on) implements FeatureMsg {}
 
     /**
      * A forge found which remotes of the repository are on it, as it opened (ADR 177): the kernel decides from what

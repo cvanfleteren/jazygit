@@ -10,14 +10,16 @@ import io.vavr.collection.Vector;
 import io.vavr.control.Option;
 import java.time.Instant;
 import net.vanfleteren.jazygit.core.gh.model.CommentRights;
-import net.vanfleteren.jazygit.core.gh.model.PrNumber;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestDetails;
 import net.vanfleteren.jazygit.core.gh.model.ReviewRemarks;
 import net.vanfleteren.jazygit.core.gh.model.ReviewThread;
 import net.vanfleteren.jazygit.core.git.model.ChangeType;
 import net.vanfleteren.jazygit.core.git.model.CommitFile;
 import net.vanfleteren.jazygit.core.repo.BranchName;
+import net.vanfleteren.jazygit.core.repo.PrNumber;
 import net.vanfleteren.jazygit.core.repo.PullRequestCommits;
+import net.vanfleteren.jazygit.core.repo.RepoPath;
+import net.vanfleteren.jazygit.core.repo.RepoSlug;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.features.changes.diff.CommitFilesMsg;
 import net.vanfleteren.jazygit.kernel.state.Failure;
@@ -44,14 +46,14 @@ class RemarksUpdateTest {
 
     private static final Sha SHA = new Sha("aaaa");
     private static final Changes COMMIT = new Changes.OfCommit(SHA);
-    private static final CommitFile A = new CommitFile("a.txt", ChangeType.MODIFIED);
-    private static final CommitFile B = new CommitFile("dir/b.txt", ChangeType.ADDED);
+    private static final CommitFile A = new CommitFile(new RepoPath("a.txt"), ChangeType.MODIFIED);
+    private static final CommitFile B = new CommitFile(new RepoPath("dir/b.txt"), ChangeType.ADDED);
 
-    private static final PullRequestCommits COMMITS =
-            new PullRequestCommits(7, "owner/repo", "", new Sha("b".repeat(40)), new Sha("a".repeat(40)));
+    private static final PullRequestCommits COMMITS = new PullRequestCommits(
+            new PrNumber(7), new RepoSlug("owner/repo"), "", new Sha("b".repeat(40)), new Sha("a".repeat(40)));
     private static final Changes PULL_REQUEST = new Changes.OfPullRequest(COMMITS);
     private static final ReviewThread THREAD = new ReviewThread(
-            "a.txt",
+            new RepoPath("a.txt"),
             ReviewThread.Side.RIGHT,
             Option.of(1),
             Option.none(),
@@ -86,7 +88,7 @@ class RemarksUpdateTest {
                 List.of(
                         new LoadCommitFiles(PULL_REQUEST),
                         new RemarksCmd.LoadReviewRemarks(new PrNumber(7), HashSet.empty(), 0),
-                        new RemarksCmd.LoadCollapsed("owner/repo", new PrNumber(7))),
+                        new RemarksCmd.LoadCollapsed(new RepoSlug("owner/repo"), new PrNumber(7))),
                 opened.cmds());
         assertEquals(
                 Option.of(new Loading<>()),
@@ -207,8 +209,8 @@ class RemarksUpdateTest {
                 withFiles(openedPullRequest()),
                 new RemarksMsg.Loaded(new PrNumber(7), remarks("c".repeat(40), "b".repeat(40)), HashSet.empty(), 0));
 
-        Changes now = new Changes.OfPullRequest(
-                new PullRequestCommits(7, "owner/repo", "", new Sha("b".repeat(40)), new Sha("c".repeat(40))));
+        Changes now = new Changes.OfPullRequest(new PullRequestCommits(
+                new PrNumber(7), new RepoSlug("owner/repo"), "", new Sha("b".repeat(40)), new Sha("c".repeat(40))));
         PrFiles view = RemarksState.files(moved.model()).get();
         assertEquals(now, view.of());
         assertEquals(new Loading<>(), view.view().files());
@@ -231,7 +233,12 @@ class RemarksUpdateTest {
 
         assertEquals(
                 new Changes.OfPullRequest(
-                        new PullRequestCommits(7, "owner/repo", "", new Sha("b".repeat(40)), new Sha("c".repeat(40))),
+                        new PullRequestCommits(
+                                new PrNumber(7),
+                                new RepoSlug("owner/repo"),
+                                "",
+                                new Sha("b".repeat(40)),
+                                new Sha("c".repeat(40))),
                         Option.of(new BranchName("feature"))),
                 RemarksState.files(moved.model()).get().of());
     }
@@ -245,8 +252,8 @@ class RemarksUpdateTest {
                 all,
                 new RemarksMsg.Loaded(new PrNumber(7), remarks("c".repeat(40), "b".repeat(40)), HashSet.empty(), 0));
 
-        Changes now = new Changes.OfPullRequest(
-                new PullRequestCommits(7, "owner/repo", "", new Sha("b".repeat(40)), new Sha("c".repeat(40))));
+        Changes now = new Changes.OfPullRequest(new PullRequestCommits(
+                new PrNumber(7), new RepoSlug("owner/repo"), "", new Sha("b".repeat(40)), new Sha("c".repeat(40))));
         PrFiles view = RemarksState.files(moved.model()).get();
         assertTrue(view.view().allFiles());
         assertEquals(Option.of(new Loading<>()), view.view().tree());
@@ -351,7 +358,7 @@ class RemarksUpdateTest {
     void aDeletedCommentLeavesItsThreadAndTheThreadGoesWithItsLastUnlessGitHubHasMore() {
         ReviewThread read = THREAD.withComments(List.of(comment("C")));
         ReviewThread more = new ReviewThread(
-                "a.txt",
+                new RepoPath("a.txt"),
                 ReviewThread.Side.RIGHT,
                 Option.of(1),
                 Option.none(),

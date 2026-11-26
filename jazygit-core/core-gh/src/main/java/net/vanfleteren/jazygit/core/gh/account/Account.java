@@ -4,10 +4,11 @@ import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.core.gh.model.*;
-import net.vanfleteren.jazygit.core.gh.model.PrNumber;
 import net.vanfleteren.jazygit.core.gh.process.GhError;
 import net.vanfleteren.jazygit.core.gh.process.GhFailure;
 import net.vanfleteren.jazygit.core.process.ExecutedCommand;
+import net.vanfleteren.jazygit.core.repo.ForgeBranch;
+import net.vanfleteren.jazygit.core.repo.PrNumber;
 
 /**
  * The gh that runs, the accounts it is logged in to and the one it runs as, and everything it opens in the browser,
@@ -75,5 +76,5 @@ public interface Account {
     /**
      * Opens {@code branch}, as it is named on the remote, in the browser.
      */
-    Either<GhFailure, List<ExecutedCommand>> browse(GhBranch branch);
+    Either<GhFailure, List<ExecutedCommand>> browse(ForgeBranch branch);
 }

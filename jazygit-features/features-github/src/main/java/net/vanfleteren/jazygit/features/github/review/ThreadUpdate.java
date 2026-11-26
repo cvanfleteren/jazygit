@@ -6,7 +6,6 @@ import static net.vanfleteren.jazygit.features.github.review.ReviewLookup.refuse
 
 import io.vavr.collection.List;
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.core.gh.model.PrNumber;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestLink;
 import net.vanfleteren.jazygit.core.gh.model.ReviewThread;
 import net.vanfleteren.jazygit.core.repo.PullRequestCommits;
@@ -81,10 +80,7 @@ public final class ThreadUpdate {
                 .and(
                         view.of() instanceof Changes.OfPullRequest(PullRequestCommits commits, var _)
                                 ? List.of(new RemarksCmd.SaveCollapsed(
-                                        commits.repository(),
-                                        new PrNumber(commits.number()),
-                                        collapsed.toggled(),
-                                        model.now()))
+                                        commits.repository(), commits.number(), collapsed.toggled(), model.now()))
                                 : List.empty());
     }
 
@@ -97,7 +93,7 @@ public final class ThreadUpdate {
                 ? Option.of(new PullRequestLink(
                         commits.host(),
                         commits.repository(),
-                        new PrNumber(commits.number()),
+                        commits.number(),
                         OnThread.of(view, on)
                                 .toOption()
                                 .flatMap(found -> found.comment(on))

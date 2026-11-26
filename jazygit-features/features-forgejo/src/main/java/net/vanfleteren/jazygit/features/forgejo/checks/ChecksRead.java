@@ -3,6 +3,7 @@ package net.vanfleteren.jazygit.features.forgejo.checks;
 import io.vavr.collection.List;
 import net.vanfleteren.jazygit.core.forgejo.CommitStatus;
 import net.vanfleteren.jazygit.core.forgejo.ForgejoCheck;
+import net.vanfleteren.jazygit.core.repo.RepoSlug;
 import net.vanfleteren.jazygit.core.repo.Sha;
 
 /**
@@ -12,7 +13,7 @@ import net.vanfleteren.jazygit.core.repo.Sha;
  * @param sha        the commit they are of
  * @param checks     the checks, in the order their contexts were first posted
  */
-public record ChecksRead(String repository, Sha sha, List<ForgejoCheck> checks) {
+public record ChecksRead(RepoSlug repository, Sha sha, List<ForgejoCheck> checks) {
 
     /**
      * The checks in the order they are listed: the failed ones first, then the running ones, the queued ones and the

@@ -525,7 +525,7 @@ class JazygitAppPilotTest {
             // Only the file in the highlighted "model" directory is requested.
             assertEquals(
                     List.of("src/main/java/net/vanfleteren/jazygit/model/SampleData.java"),
-                    requested.files().map(f -> f.path()).toList());
+                    requested.files().map(f -> f.path().value()).toList());
 
             pilot.quit();
         }

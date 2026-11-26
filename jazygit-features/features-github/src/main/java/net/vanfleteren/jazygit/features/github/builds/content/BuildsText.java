@@ -546,7 +546,7 @@ final class BuildsText {
         private String ranFor(Build build) {
             return build.origin()
                     .pullRequest()
-                    .map(number -> "#" + number)
+                    .map(number -> "#" + number.value())
                     .orElse(build.origin().branch().map(BranchName::value))
                     .getOrElse("–");
         }

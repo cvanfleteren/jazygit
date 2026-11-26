@@ -9,9 +9,11 @@ import net.vanfleteren.jazygit.core.git.branches.StubRemotes;
 import net.vanfleteren.jazygit.core.git.model.SampleData;
 import net.vanfleteren.jazygit.core.git.process.GitError;
 import net.vanfleteren.jazygit.core.repo.RemoteName;
+import net.vanfleteren.jazygit.core.repo.RemoteUrl;
 import net.vanfleteren.jazygit.features.github.GitHubFeature;
 import net.vanfleteren.jazygit.features.github.GitHubServices;
 import net.vanfleteren.jazygit.kernel.state.Env;
+import net.vanfleteren.jazygit.kernel.state.FeatureId;
 import net.vanfleteren.jazygit.kernel.state.FeatureMsg;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.Msg;
@@ -35,7 +37,7 @@ public final class GitHubKeys {
      * What {@code msg} does, without the feature that owns it, if one does.
      */
     public static Msg unwrapped(Msg msg) {
-        return msg instanceof FeatureMsg.Owned(String feature, Msg owned) ? owned : msg;
+        return msg instanceof FeatureMsg.Owned(FeatureId feature, Msg owned) ? owned : msg;
     }
 
     /**
@@ -44,8 +46,9 @@ public final class GitHubKeys {
     public static Git onGitHub(Git git) {
         return git.withRemotes(new StubRemotes() {
             @Override
-            public Either<GitError, Map<RemoteName, String>> urls() {
-                return Either.right(HashMap.of(new RemoteName("origin"), "https://github.com/owner/repo.git"));
+            public Either<GitError, Map<RemoteName, RemoteUrl>> urls() {
+                return Either.right(
+                        HashMap.of(new RemoteName("origin"), new RemoteUrl("https://github.com/owner/repo.git")));
             }
         });
     }

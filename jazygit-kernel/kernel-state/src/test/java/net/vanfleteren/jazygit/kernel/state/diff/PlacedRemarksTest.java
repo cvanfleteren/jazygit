@@ -6,6 +6,7 @@ import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.time.Instant;
 import net.vanfleteren.jazygit.core.git.model.UnifiedDiff;
+import net.vanfleteren.jazygit.core.repo.RepoPath;
 import net.vanfleteren.jazygit.kernel.state.diff.PlacedRemarks.FileRemarks;
 import net.vanfleteren.jazygit.kernel.state.diff.PlacedRemarks.LineRemarks;
 import net.vanfleteren.jazygit.kernel.state.diff.RemarkThread.Subject;
@@ -37,7 +38,7 @@ class PlacedRemarksTest {
             String path, DiffSide side, Option<Integer> line, Option<Integer> start, DiffSide startSide) {
         return new RemarkThread(
                 new RemarkThread.Id("T"),
-                path,
+                new RepoPath(path),
                 Option.none(),
                 Subject.LINE,
                 line,
@@ -193,7 +194,7 @@ class PlacedRemarksTest {
     void aThreadAboutAWholeFileGoesUnderItsBar() {
         RemarkThread onFile = new RemarkThread(
                 new RemarkThread.Id("T"),
-                "a.txt",
+                new RepoPath("a.txt"),
                 Option.none(),
                 Subject.FILE,
                 Option.none(),

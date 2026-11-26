@@ -9,7 +9,6 @@ import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.core.gh.model.CommentRights;
-import net.vanfleteren.jazygit.core.gh.model.PrNumber;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestDetails;
 import net.vanfleteren.jazygit.core.gh.model.ReviewRemarks;
 import net.vanfleteren.jazygit.core.gh.model.ReviewThread;
@@ -46,8 +45,8 @@ class FilesPanelGitHubTest {
     private static final String MODEL = "core/src/main/java/model";
 
     private static final List<CommitFile> MODEL_AND_TEST = List.of(
-            new CommitFile(MODEL + "/WordDiff.java", ChangeType.MODIFIED),
-            new CommitFile("core/src/test/java/model/WordDiffTest.java", ChangeType.MODIFIED));
+            new CommitFile(new RepoPath(MODEL + "/WordDiff.java"), ChangeType.MODIFIED),
+            new CommitFile(new RepoPath("core/src/test/java/model/WordDiffTest.java"), ChangeType.MODIFIED));
 
     // Rows: /, src, main, A.java, test, ATest.java, BTest.java, README.md.
     private static final List<FileEntry> FILTERED = List.of(
@@ -97,7 +96,8 @@ class FilesPanelGitHubTest {
                                         net.vanfleteren.jazygit.kernel.content.PullRequestContentTest.withGitHub(),
                                         new CommitFilesMsg.Opened(of, Scopes.BRANCHES.pane()))
                                 .model(),
-                        new LoadMsg.CommitFilesLoaded(of, List.of(new CommitFile("b.txt", ChangeType.ADDED))))
+                        new LoadMsg.CommitFilesLoaded(
+                                of, List.of(new CommitFile(new RepoPath("b.txt"), ChangeType.ADDED))))
                 .model();
 
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(open, FilesPanel.PANE))) {
@@ -110,8 +110,8 @@ class FilesPanelGitHubTest {
 
     @Test
     void theFilesOfAPullRequestCountTheirUnresolvedRemarksByEitherPathOfARename() throws Exception {
-        Changes of = new Changes.OfPullRequest(
-                new PullRequestCommits(7, "owner/repo", "", new Sha("b".repeat(40)), new Sha("a".repeat(40))));
+        Changes of = new Changes.OfPullRequest(new PullRequestCommits(
+                new PrNumber(7), new RepoSlug("owner/repo"), "", new Sha("b".repeat(40)), new Sha("a".repeat(40))));
         Model open = Update.update(
                         Update.update(
                                         net.vanfleteren.jazygit.kernel.content.PullRequestContentTest.withGitHub(),
@@ -120,8 +120,11 @@ class FilesPanelGitHubTest {
                         new LoadMsg.CommitFilesLoaded(
                                 of,
                                 List.of(
-                                        new CommitFile("new.txt", ChangeType.RENAMED, Option.of("old.txt")),
-                                        new CommitFile("b.txt", ChangeType.MODIFIED))))
+                                        new CommitFile(
+                                                new RepoPath("new.txt"),
+                                                ChangeType.RENAMED,
+                                                Option.of(new RepoPath("old.txt"))),
+                                        new CommitFile(new RepoPath("b.txt"), ChangeType.MODIFIED))))
                 .model();
         // git sees a rename where GitHub sees a file deleted and one added: a remark on the old file has its path.
         Model read = Update.update(
@@ -153,8 +156,8 @@ class FilesPanelGitHubTest {
 
     @Test
     void theFilesOfAPullRequestCanBeListedOnlyWhenTheyHaveRemarks() throws Exception {
-        Changes of = new Changes.OfPullRequest(
-                new PullRequestCommits(7, "owner/repo", "", new Sha("b".repeat(40)), new Sha("a".repeat(40))));
+        Changes of = new Changes.OfPullRequest(new PullRequestCommits(
+                new PrNumber(7), new RepoSlug("owner/repo"), "", new Sha("b".repeat(40)), new Sha("a".repeat(40))));
         Model open = Update.update(
                         Update.update(
                                         net.vanfleteren.jazygit.kernel.content.PullRequestContentTest.withGitHub(),
@@ -163,9 +166,9 @@ class FilesPanelGitHubTest {
                         new LoadMsg.CommitFilesLoaded(
                                 of,
                                 List.of(
-                                        new CommitFile("dir/open.txt", ChangeType.MODIFIED),
-                                        new CommitFile("done.txt", ChangeType.MODIFIED),
-                                        new CommitFile("quiet.txt", ChangeType.MODIFIED))))
+                                        new CommitFile(new RepoPath("dir/open.txt"), ChangeType.MODIFIED),
+                                        new CommitFile(new RepoPath("done.txt"), ChangeType.MODIFIED),
+                                        new CommitFile(new RepoPath("quiet.txt"), ChangeType.MODIFIED))))
                 .model();
         Model unresolved = Update.update(
                         Update.update(
@@ -223,8 +226,8 @@ class FilesPanelGitHubTest {
 
     @Test
     void aHighlightedFileLeftOutOfTheFilesWithRemarksMovesTheHighlightToTheNearestRowListed() throws Exception {
-        Changes of = new Changes.OfPullRequest(
-                new PullRequestCommits(7, "owner/repo", "", new Sha("b".repeat(40)), new Sha("a".repeat(40))));
+        Changes of = new Changes.OfPullRequest(new PullRequestCommits(
+                new PrNumber(7), new RepoSlug("owner/repo"), "", new Sha("b".repeat(40)), new Sha("a".repeat(40))));
         Model opened = Update.update(
                         net.vanfleteren.jazygit.kernel.content.PullRequestContentTest.withGitHub(),
                         new CommitFilesMsg.Opened(of, Scopes.BRANCHES.pane()))
@@ -234,7 +237,8 @@ class FilesPanelGitHubTest {
                         new LoadMsg.CommitFilesLoaded(
                                 of,
                                 List.of("a", "b", "c", "d")
-                                        .map(name -> new CommitFile("dir/" + name + ".txt", ChangeType.MODIFIED))))
+                                        .map(name -> new CommitFile(
+                                                new RepoPath("dir/" + name + ".txt"), ChangeType.MODIFIED))))
                 .model();
         Model reading = Update.update(loaded, new CommitFilesMsg.ListedCycled()).model();
         Model read = Update.update(
@@ -274,7 +278,7 @@ class FilesPanelGitHubTest {
 
     private static ReviewThread remark(String path, DiffSide side, boolean resolved) {
         return new ReviewThread(
-                path,
+                new RepoPath(path),
                 net.vanfleteren.jazygit.features.github.remarks.FromGitHub.side(side),
                 Option.of(1),
                 Option.none(),
@@ -349,7 +353,7 @@ class FilesPanelGitHubTest {
     }
 
     private static String highlighted(FilesPanel panel) {
-        return panel.commitTree().selectedNode().data().path();
+        return panel.commitTree().selectedNode().data().path().value();
     }
 
     private static Git fixed(List<FileEntry> files) {

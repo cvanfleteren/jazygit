@@ -9,14 +9,15 @@ import io.vavr.collection.List;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.core.gh.StubGitHub;
 import net.vanfleteren.jazygit.core.gh.model.GhAccount;
-import net.vanfleteren.jazygit.core.gh.model.GhBranch;
-import net.vanfleteren.jazygit.core.gh.model.PrNumber;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest.Review;
 import net.vanfleteren.jazygit.core.gh.process.GhError;
 import net.vanfleteren.jazygit.core.git.StubGit;
 import net.vanfleteren.jazygit.core.repo.BranchName;
+import net.vanfleteren.jazygit.core.repo.ForgeBranch;
+import net.vanfleteren.jazygit.core.repo.PrNumber;
+import net.vanfleteren.jazygit.core.repo.RepoSlug;
 import net.vanfleteren.jazygit.features.github.GitHubFailure;
 import net.vanfleteren.jazygit.features.github.GitHubServices;
 import net.vanfleteren.jazygit.features.github.checks.branches.LoadBranchChecks;
@@ -50,11 +51,12 @@ class PullRequestReadsTest {
     }
 
     private static final PullRequest FEATURE_PR =
-            new PullRequest(new PrNumber(42), new GhBranch("feature"), false, Checks.PASSING, Review.APPROVED);
+            new PullRequest(new PrNumber(42), new ForgeBranch("feature"), false, Checks.PASSING, Review.APPROVED);
 
     @Test
     void ofSeveralPullRequestsFromTheSameBranchTheNewestIsKeptWhateverTheOrder() {
-        PullRequest older = new PullRequest(new PrNumber(7), new GhBranch("feature"), false, Checks.NONE, Review.NONE);
+        PullRequest older =
+                new PullRequest(new PrNumber(7), new ForgeBranch("feature"), false, Checks.NONE, Review.NONE);
 
         assertEquals(
                 Option.of(FEATURE_PR),
@@ -199,13 +201,17 @@ class PullRequestReadsTest {
     @Test
     void aReadKeepsTheRepositoryOnGitHubWhichAFailedReadLeavesAsItWas() {
         // The templates of where a worktree starts out name it by its owner and name (ADR 134, ADR 168).
-        Model read = PullRequestReads.loaded(loaded(), List.of(FEATURE_PR), "octo/repo")
+        Model read = PullRequestReads.loaded(loaded(), List.of(FEATURE_PR), new RepoSlug("octo/repo"))
                 .model();
         Model failed = PullRequestReads.failed(read, refused("offline")).model();
 
         assertEquals(Option.none(), loaded().part(GitHubState.PART).repository());
-        assertEquals(Option.of("octo/repo"), read.part(GitHubState.PART).repository());
-        assertEquals(Option.of("octo/repo"), failed.part(GitHubState.PART).repository());
+        assertEquals(
+                Option.of(new RepoSlug("octo/repo")),
+                read.part(GitHubState.PART).repository());
+        assertEquals(
+                Option.of(new RepoSlug("octo/repo")),
+                failed.part(GitHubState.PART).repository());
     }
 
     @Test
@@ -224,7 +230,7 @@ class PullRequestReadsTest {
                 first.cmds());
 
         Model read = Update.update(
-                        TestModels.loaded(), new PullRequestsMsg.ProtectedLoaded(List.of(new GhBranch("develop"))))
+                        TestModels.loaded(), new PullRequestsMsg.ProtectedLoaded(List.of(new ForgeBranch("develop"))))
                 .model();
         assertEquals(
                 Option.of(HashSet.of(new BranchName("develop"))),
@@ -246,8 +252,8 @@ class PullRequestReadsTest {
     void theBranchesAreReadAgainWhenGitHubSaysAnotherBaseForOne() {
         PullRequest onA = new PullRequest(
                 new PrNumber(42),
-                new GhBranch("feature"),
-                Option.of(new GhBranch("feat/a")),
+                new ForgeBranch("feature"),
+                Option.of(new ForgeBranch("feat/a")),
                 false,
                 Checks.PASSING,
                 Review.APPROVED,
@@ -266,7 +272,7 @@ class PullRequestReadsTest {
     @Test
     void theBranchesAreReadAgainWhenTheProtectedBranchesAreRead() {
         Next read = Update.update(
-                TestModels.loaded(), new PullRequestsMsg.ProtectedLoaded(List.of(new GhBranch("develop"))));
+                TestModels.loaded(), new PullRequestsMsg.ProtectedLoaded(List.of(new ForgeBranch("develop"))));
 
         assertEquals(
                 List.of(new LoadBranches(BranchBases.in(read.model()))),
@@ -280,7 +286,7 @@ class PullRequestReadsTest {
 
         @Override
         public Next apply(Model model) {
-            return PullRequestReads.loaded(model, pullRequests, "owner/repo");
+            return PullRequestReads.loaded(model, pullRequests, new RepoSlug("owner/repo"));
         }
     }
 

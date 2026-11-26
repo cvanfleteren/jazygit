@@ -10,6 +10,7 @@ import net.vanfleteren.jazygit.core.git.model.ConflictTools;
 import net.vanfleteren.jazygit.core.git.model.FileEntry;
 import net.vanfleteren.jazygit.core.git.model.MarkedFile;
 import net.vanfleteren.jazygit.core.process.ExecutedCommand;
+import net.vanfleteren.jazygit.core.repo.RepoPath;
 import net.vanfleteren.jazygit.features.changes.stage.MarkersLeftPopup;
 import net.vanfleteren.jazygit.features.midway.resolve.ResolveMsg.Chosen;
 import net.vanfleteren.jazygit.features.midway.resolve.ResolveMsg.EditChosen;
@@ -41,7 +42,7 @@ public final class ResolveUpdate {
         return switch (msg) {
             case Kept(FileEntry file, Conflict.Version version) -> keep(model, file, version);
             case Requested(FileEntry file) -> requested(model, file);
-            case ToolsRead(String path, ConflictTools tools, Option<Integer> firstConflict, ConflictFile written) ->
+            case ToolsRead(RepoPath path, ConflictTools tools, Option<Integer> firstConflict, ConflictFile written) ->
                 Next.of(model.popup(ResolvePopup.class)
                         .filter(popup -> popup.file().path().equals(path))
                         .map(popup -> model.openPopup(popup.read(tools, firstConflict, written)))
@@ -56,7 +57,7 @@ public final class ResolveUpdate {
             case HandedBack(
                     ResolveCmd cmd,
                     List<ExecutedCommand> commands,
-                    String path,
+                    RepoPath path,
                     boolean unmerged,
                     Option<MarkedFile> marked) ->
                 OperationUpdate.succeeded(model, cmd, commands)
@@ -73,7 +74,7 @@ public final class ResolveUpdate {
                                 popup.file().path(),
                                 popup.firstConflict()))
                         .getOrElse(() -> Next.of(model));
-            case RestoreRequested(String path) -> restore(model, path);
+            case RestoreRequested(RepoPath path) -> restore(model, path);
             case MarkedKept(Conflict.Version version) ->
                 model.popup(MarkersLeftPopup.class)
                         .flatMap(popup -> marked(popup)
@@ -113,8 +114,8 @@ public final class ResolveUpdate {
      * Opens the file at {@code path} in an editor: at {@code line}, its first conflict, when that was read; else it is
      * read first (ADR 201), by the feature that opens files (ADR 206).
      */
-    private static Next edit(Model model, String path, Option<Integer> line) {
-        return Events.happened(Next.of(model), new KernelEvent.FileToOpen(path, line, Option.none()));
+    private static Next edit(Model model, RepoPath path, Option<Integer> line) {
+        return Events.happened(Next.of(model), new KernelEvent.FileToOpen(path.value(), line, Option.none()));
     }
 
     /**
@@ -164,7 +165,7 @@ public final class ResolveUpdate {
      * What is left to do with the file at {@code path}, handed back by a tool: staging it, when it is still in
      * conflict without markers; its conflicts, when it has markers left; nothing, when git took it as resolved.
      */
-    private static Option<HandedBackNotice> left(String path, boolean unmerged, Option<MarkedFile> marked) {
+    private static Option<HandedBackNotice> left(RepoPath path, boolean unmerged, Option<MarkedFile> marked) {
         return marked.<HandedBackNotice>map(file -> new HandedBackNotice.MarkersLeft(
                         path, file.lines().size(), file.lines().head()))
                 .orElse(() -> Option.when(unmerged, () -> new HandedBackNotice.NoMarkersLeft(path)));
@@ -173,7 +174,7 @@ public final class ResolveUpdate {
     /**
      * Brings back the conflict of the file at {@code path}, if it was resolved since the operation stopped.
      */
-    private static Next restore(Model model, String path) {
+    private static Next restore(Model model, RepoPath path) {
         boolean resolved = model.repo()
                 .status()
                 .toOption()

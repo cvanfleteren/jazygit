@@ -18,6 +18,7 @@ import net.vanfleteren.jazygit.core.git.model.Diffs;
 import net.vanfleteren.jazygit.core.git.model.FileContent;
 import net.vanfleteren.jazygit.core.git.model.FileEntry;
 import net.vanfleteren.jazygit.core.git.model.FileVersion;
+import net.vanfleteren.jazygit.core.repo.RepoPath;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.kernel.settings.DiffStyle;
 import net.vanfleteren.jazygit.kernel.state.AreaId;
@@ -58,8 +59,8 @@ class BlameUpdateTest {
     private static final DiffText CHANGES = DiffText.of(HEADER + "@@ -1,3 +1,3 @@\n one\n-two\n+Two\n three\n");
     private static final DiffText WHOLE = CHANGES;
     private static final ScrolledContent CONTENT = new ScrolledContent.StashChanges(STASH, CHANGES);
-    private static final Anchor.OnLine ADDED = new Anchor.OnLine("a.txt", DiffSide.NEW, 2);
-    private static final Blame BLAME = Blame.uncommitted(3, "a.txt");
+    private static final Anchor.OnLine ADDED = new Anchor.OnLine(new RepoPath("a.txt"), DiffSide.NEW, 2);
+    private static final Blame BLAME = Blame.uncommitted(3, new RepoPath("a.txt"));
     private static final String STAGED_CHANGE = HEADER + "@@ -1,2 +1,2 @@\n one\n-two\n+Two\n";
     private static final String UNSTAGED_CHANGE = HEADER + "@@ -1,2 +1,2 @@\n one\n-Two\n+TWO\n";
     private static final String SAVED_CHANGE = HEADER + "@@ -1,2 +1,3 @@\n one\n-Two\n+TWO\n+three\n";
@@ -72,7 +73,7 @@ class BlameUpdateTest {
 
         ReadBlame read = onlyRead(blamed.cmds());
         assertEquals(FileVersion.NEW, read.version());
-        assertEquals(List.of(new BlameAt.InCommit(STASH, "a.txt")), read.at());
+        assertEquals(List.of(new BlameAt.InCommit(STASH, new RepoPath("a.txt"))), read.at());
         assertEquals(BlameOptions.DEFAULT, read.options());
         assertEquals(Option.of(Loadable.loading()), version(blamed.model()).flatMap(Version::blame));
     }
@@ -101,7 +102,7 @@ class BlameUpdateTest {
 
         ReadBlame blame = onlyRead(original.cmds());
         assertEquals(FileVersion.ORIGINAL, blame.version());
-        assertEquals(List.of(new BlameAt.InCommit(STASH, 1, "a.txt")), blame.at());
+        assertEquals(List.of(new BlameAt.InCommit(STASH, 1, new RepoPath("a.txt"))), blame.at());
         // Back to the new version, through the diff, its blame shows without being read again.
         Model diff =
                 Update.update(original.model(), new VersionMsg.Cycled(at())).model();
@@ -117,9 +118,9 @@ class BlameUpdateTest {
         Blame.Commit commit = new Blame.Commit(older, "Alex Moreau", Instant.EPOCH, "first", false);
         Blame.Commit stash = new Blame.Commit(STASH, "Alex Moreau", Instant.EPOCH, "WIP on main", false);
         Blame blame = new Blame(Vector.of(
-                new Blame.Line(commit, 1, "old.txt", Option.none()),
-                new Blame.Line(stash, 2, "a.txt", Option.none()),
-                new Blame.Line(Blame.NOT_COMMITTED, 3, "a.txt", Option.none())));
+                new Blame.Line(commit, 1, new RepoPath("old.txt"), Option.none()),
+                new Blame.Line(stash, 2, new RepoPath("a.txt"), Option.none()),
+                new Blame.Line(Blame.NOT_COMMITTED, 3, new RepoPath("a.txt"), Option.none())));
         Model read = blameRead(Update.update(newVersion(), new VersionMsg.BlameToggled(at())), blame);
 
         Model opened = Update.update(read, new VersionMsg.LineOpened(onLine(1))).model();
@@ -127,7 +128,7 @@ class BlameUpdateTest {
         CommitFilesView files = opened.repoView().files().commitFiles().get();
         assertEquals(new Changes.OfCommit(older), files.of());
         assertEquals(Scopes.COMMITS.pane(), files.pane());
-        assertEquals(Option.of("old.txt"), files.wanted());
+        assertEquals(Option.of(new RepoPath("old.txt")), files.wanted());
         // A line of the stash shown, and one not committed yet, open nothing.
         assertEquals(
                 Option.none(),
@@ -151,9 +152,9 @@ class BlameUpdateTest {
                 new Sha("2".repeat(40)), "Alex Moreau", Instant.EPOCH, "index on main: 1234567 base", false);
         Blame.Commit stash = new Blame.Commit(STASH, "Alex Moreau", Instant.EPOCH, "WIP on main", false);
         Blame blame = new Blame(Vector.of(
-                new Blame.Line(index, 1, "a.txt", Option.none()),
-                new Blame.Line(stash, 2, "a.txt", Option.none()),
-                new Blame.Line(Blame.NOT_COMMITTED, 3, "a.txt", Option.none())));
+                new Blame.Line(index, 1, new RepoPath("a.txt"), Option.none()),
+                new Blame.Line(stash, 2, new RepoPath("a.txt"), Option.none()),
+                new Blame.Line(Blame.NOT_COMMITTED, 3, new RepoPath("a.txt"), Option.none())));
         Model read = blameRead(Update.update(newVersion(), new VersionMsg.BlameToggled(at())), blame);
         Version blamed = version(read).get();
 
@@ -275,7 +276,8 @@ class BlameUpdateTest {
                 TestModels.running(blamed, read), read, new LoadMsg.VersionRead(read, DiffText.of(SAVED_CHANGE)));
 
         assertEquals(
-                List.of(new BlameAt.OnDisk("a.txt")), onlyRead(saved.cmds()).at());
+                List.of(new BlameAt.OnDisk(new RepoPath("a.txt"))),
+                onlyRead(saved.cmds()).at());
         assertEquals(
                 Option.of(Loadable.loading()),
                 versionIn(saved.model(), AreaId.UNSTAGED).flatMap(Version::blame));
@@ -303,13 +305,14 @@ class BlameUpdateTest {
         DiffText onDisk = DiffText.of("diff --git a/b.txt b/b.txt\n--- a/b.txt\n+++ b/b.txt\n@@ -1,1 +1,1 @@\n b\n");
         Model model = rich().mapRepoView(view -> view.mapFiles(files -> files.withShown(FilesShown.ALL))
                 .mapFiles(files -> files.withUnchanged(Option.of(new UnchangedNode.File(
-                        new Preview<>("b.txt", new Loadable.Loaded<>(new FileContent.Text(onDisk))))))));
+                        new Preview<>(new RepoPath("b.txt"), new Loadable.Loaded<>(new FileContent.Text(onDisk))))))));
 
         Next blamed = Update.update(model, new VersionMsg.FilesBlameToggled());
 
         assertEquals(List.of(), blamed.cmds().filter(ReadVersion.class::isInstance));
         assertEquals(
-                List.of(new BlameAt.OnDisk("b.txt")), onlyRead(blamed.cmds()).at());
+                List.of(new BlameAt.OnDisk(new RepoPath("b.txt"))),
+                onlyRead(blamed.cmds()).at());
         Version version = versionIn(blamed.model(), AreaId.FILE_CONTENT).get();
         assertTrue(version.blamed());
         assertEquals(Option.of(FileVersion.NEW), version.shown());
@@ -325,13 +328,15 @@ class BlameUpdateTest {
 
         Next both = Update.update(stagedOnly, new VersionMsg.FilesBlameToggled());
 
-        assertEquals(List.of(new BlameAt.OnDisk("a.txt")), onlyRead(both.cmds()).at());
+        assertEquals(
+                List.of(new BlameAt.OnDisk(new RepoPath("a.txt"))),
+                onlyRead(both.cmds()).at());
         assertTrue(versionIn(both.model(), AreaId.UNSTAGED).exists(Version::blamed));
         assertTrue(versionIn(both.model(), AreaId.STAGED).exists(Version::blamed));
 
         Next originals = Update.update(blamesRead(both), new VersionMsg.FilesCycled());
         assertEquals(
-                List.of(new BlameAt.InIndex("a.txt"), new BlameAt.AtHead("a.txt")),
+                List.of(new BlameAt.InIndex(new RepoPath("a.txt")), new BlameAt.AtHead(new RepoPath("a.txt"))),
                 originals
                         .cmds()
                         .filter(ReadBlame.class::isInstance)
@@ -346,7 +351,7 @@ class BlameUpdateTest {
 
     @Test
     void bInTheFilesPaneDoesNothingOnAVersionRendered() {
-        List<FileEntry> markdown = List.of(new FileEntry("a.md", ChangeType.MODIFIED, false, true));
+        List<FileEntry> markdown = List.of(new FileEntry(new RepoPath("a.md"), ChangeType.MODIFIED, false, true));
         Model rendered = versionsRead(Update.update(
                 workingTree(markdown, "", UNSTAGED_CHANGE.replace("a.txt", "a.md")),
                 new VersionMsg.FilesRenderToggled()));
@@ -360,7 +365,7 @@ class BlameUpdateTest {
 
     @Test
     void bInTheFilesPaneDoesNothingOnAnUntrackedFile() {
-        List<FileEntry> untracked = List.of(new FileEntry("a.txt", ChangeType.UNTRACKED, false, true));
+        List<FileEntry> untracked = List.of(new FileEntry(new RepoPath("a.txt"), ChangeType.UNTRACKED, false, true));
         Model shown =
                 versionsRead(Update.update(workingTree(untracked, "", ADDED_CHANGE), new VersionMsg.FilesCycled()));
         assertEquals(
@@ -374,7 +379,7 @@ class BlameUpdateTest {
 
     @Test
     void ctrlTToRenderedAndBackShowsTheBlameAgainWithoutReadingIt() {
-        List<FileEntry> markdown = List.of(new FileEntry("a.md", ChangeType.MODIFIED, false, true));
+        List<FileEntry> markdown = List.of(new FileEntry(new RepoPath("a.md"), ChangeType.MODIFIED, false, true));
         Model shown = versionsRead(Update.update(
                 workingTree(markdown, "", UNSTAGED_CHANGE.replace("a.txt", "a.md")), new VersionMsg.FilesCycled()));
         Model blamed = blamesRead(Update.update(shown, new VersionMsg.FilesBlameToggled()));
@@ -395,7 +400,8 @@ class BlameUpdateTest {
      * {@code unstaged} changes read.
      */
     private static Model workingTree(String staged, String unstaged) {
-        return workingTree(List.of(new FileEntry("a.txt", ChangeType.MODIFIED, true, true)), staged, unstaged);
+        return workingTree(
+                List.of(new FileEntry(new RepoPath("a.txt"), ChangeType.MODIFIED, true, true)), staged, unstaged);
     }
 
     private static Model workingTree(List<FileEntry> files, String staged, String unstaged) {
@@ -453,7 +459,7 @@ class BlameUpdateTest {
      */
     private static DiffCursorAt staged(Model model) {
         ScrolledContent content = new ScrolledContent.Diff(DiffText.of(STAGED_CHANGE));
-        Anchor.OnLine two = new Anchor.OnLine("a.txt", DiffSide.NEW, 2);
+        Anchor.OnLine two = new Anchor.OnLine(new RepoPath("a.txt"), DiffSide.NEW, 2);
         return new DiffCursorAt(
                 AreaId.STAGED,
                 model.scrolled(AreaId.STAGED, content),
@@ -494,7 +500,7 @@ class BlameUpdateTest {
     }
 
     private static DiffCursorAt onLine(int number) {
-        Anchor.OnLine line = new Anchor.OnLine("a.txt", DiffSide.NEW, number);
+        Anchor.OnLine line = new Anchor.OnLine(new RepoPath("a.txt"), DiffSide.NEW, number);
         return new DiffCursorAt(
                 AREA,
                 new Scrolled(CONTENT, 0, 0, Option.of(line), Option.none()),

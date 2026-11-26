@@ -14,6 +14,7 @@ import net.vanfleteren.jazygit.core.git.model.ChangeType;
 import net.vanfleteren.jazygit.core.git.model.FileEntry;
 import net.vanfleteren.jazygit.core.git.model.GitMetadata;
 import net.vanfleteren.jazygit.core.git.model.MetadataStamp;
+import net.vanfleteren.jazygit.core.repo.RepoPath;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -138,7 +139,7 @@ class CliMetadataTest {
     void theStampOfADiffChangesWithItsFilesAndTheIndexOnly() throws Exception {
         Files.writeString(main.resolve("a.txt"), "changed");
         Files.writeString(main.resolve("b.txt"), "other");
-        List<FileEntry> files = List.of(new FileEntry("a.txt", ChangeType.MODIFIED, false, true));
+        List<FileEntry> files = List.of(new FileEntry(new RepoPath("a.txt"), ChangeType.MODIFIED, false, true));
         Option<MetadataStamp> before = diffStamp(files);
 
         Files.writeString(main.resolve("b.txt"), "other, edited");
@@ -162,7 +163,9 @@ class CliMetadataTest {
         git(main, "commit", "-m", "lib");
         commit(main.resolve("lib"), "more.txt");
 
-        assertEquals(Option.none(), diffStamp(List.of(new FileEntry("lib", ChangeType.MODIFIED, false, true))));
+        assertEquals(
+                Option.none(),
+                diffStamp(List.of(new FileEntry(new RepoPath("lib"), ChangeType.MODIFIED, false, true))));
     }
 
     @Test

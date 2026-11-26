@@ -6,6 +6,7 @@ import java.time.Duration;
 import java.time.Instant;
 import net.vanfleteren.jazygit.core.gh.timing.CheckHistory;
 import net.vanfleteren.jazygit.core.gh.timing.CheckSample;
+import net.vanfleteren.jazygit.core.repo.RepoSlug;
 import net.vanfleteren.jazygit.features.github.GitHubFailure;
 import net.vanfleteren.jazygit.features.github.GitHubServices;
 import net.vanfleteren.jazygit.features.github.checks.timings.CheckTimingsStore.Kept;
@@ -46,7 +47,7 @@ public sealed interface CheckTimesCmd extends Cmd {
      * Adds {@code samples} to the history kept of {@code repository} at {@code now}, and reads it; with none, only
      * reads it. When {@code topUp}, the checks that ran lately are read from GitHub next, if they were not lately.
      */
-    record RecordCheckTimes(String repository, List<CheckSample> samples, Instant now, boolean topUp)
+    record RecordCheckTimes(RepoSlug repository, List<CheckSample> samples, Instant now, boolean topUp)
             implements CheckTimesCmd {
 
         @Override
@@ -93,7 +94,7 @@ public sealed interface CheckTimesCmd extends Cmd {
      * another jazygit kept that it tried in the last day, it is not tried again; that is decided under the file's
      * lock, so two jazygits do not both try.
      */
-    record TopUpCheckTimes(String repository, Instant now) implements CheckTimesCmd {
+    record TopUpCheckTimes(RepoSlug repository, Instant now) implements CheckTimesCmd {
 
         @Override
         public Option<Label> label() {

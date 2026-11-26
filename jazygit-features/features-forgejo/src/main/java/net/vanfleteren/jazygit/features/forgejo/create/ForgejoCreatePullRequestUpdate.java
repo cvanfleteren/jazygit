@@ -6,6 +6,7 @@ import net.vanfleteren.jazygit.core.forgejo.ForgejoPullRequest;
 import net.vanfleteren.jazygit.core.repo.Branch;
 import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.BranchRef;
+import net.vanfleteren.jazygit.core.repo.PrNumber;
 import net.vanfleteren.jazygit.core.repo.RemoteBranch;
 import net.vanfleteren.jazygit.core.repo.RemoteName;
 import net.vanfleteren.jazygit.core.repo.RemoteRef;
@@ -171,7 +172,7 @@ public final class ForgejoCreatePullRequestUpdate {
      * Failed as the branch has a pull request open already, which the pull requests read before did not have: they
      * are read again, so that {@code o} shows it next.
      */
-    private static Next alreadyOpen(Model model, CreatePullRequest cmd, long number) {
+    private static Next alreadyOpen(Model model, CreatePullRequest cmd, PrNumber number) {
         return OperationUpdate.update(
                         model, new OperationMsg.Failed(cmd, new CreateFailure.AlreadyOpen(cmd.branch(), number)))
                 .and(new ReadPullRequests(cmd.home()));

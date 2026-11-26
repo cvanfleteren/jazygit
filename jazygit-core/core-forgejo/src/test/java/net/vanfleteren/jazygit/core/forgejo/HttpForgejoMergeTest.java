@@ -15,6 +15,7 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import net.vanfleteren.jazygit.core.repo.PrNumber;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -80,7 +81,7 @@ class HttpForgejoMergeTest {
         ForgejoRepository nix = repository("nix");
         Forgejo forgejo = HttpForgejo.of(() -> new FjKeys(HashMap.of(nix.host(), "secret"), HashMap.empty()));
 
-        assertEquals(Either.right(new ForgejoMerged.Merged()), forgejo.merge(nix, 12, SQUASH));
+        assertEquals(Either.right(new ForgejoMerged.Merged()), forgejo.merge(nix, new PrNumber(12), SQUASH));
         assertEquals(
                 List.of("POST application/json token secret {\"Do\":\"squash\",\"head_commit_id\":\"" + HEAD.value()
                         + "\",\"delete_branch_after_merge\":true}"),
@@ -91,7 +92,7 @@ class HttpForgejoMergeTest {
     void aBranchThatCouldNotBeDeletedIsMergedWithItsBranchKept() {
         assertEquals(
                 Either.right(new ForgejoMerged.BranchKept("the head branch is protected")),
-                HttpForgejo.of(() -> FjKeys.NONE).merge(repository("kept"), 12, SQUASH));
+                HttpForgejo.of(() -> FjKeys.NONE).merge(repository("kept"), new PrNumber(12), SQUASH));
     }
 
     @Test
@@ -99,11 +100,12 @@ class HttpForgejoMergeTest {
         Forgejo forgejo = HttpForgejo.of(() -> FjKeys.NONE);
 
         ForgejoError forbidden =
-                forgejo.merge(repository("forbidden"), 12, SQUASH).getLeft();
+                forgejo.merge(repository("forbidden"), new PrNumber(12), SQUASH).getLeft();
         assertEquals(Option.of("user should have specific permission"), ((ForgejoError.Refused) forbidden).stated());
 
-        ForgejoError.Refused conflict = (ForgejoError.Refused)
-                forgejo.merge(repository("conflicting"), 12, SQUASH).getLeft();
+        ForgejoError.Refused conflict =
+                (ForgejoError.Refused) forgejo.merge(repository("conflicting"), new PrNumber(12), SQUASH)
+                        .getLeft();
         assertEquals(409, conflict.status());
         assertEquals(Option.none(), conflict.stated());
     }

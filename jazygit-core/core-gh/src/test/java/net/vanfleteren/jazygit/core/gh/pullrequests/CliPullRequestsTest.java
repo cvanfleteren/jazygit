@@ -9,9 +9,7 @@ import io.vavr.control.Option;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import net.vanfleteren.jazygit.core.gh.CliGitHub;
-import net.vanfleteren.jazygit.core.gh.model.GhBranch;
 import net.vanfleteren.jazygit.core.gh.model.NewPullRequest;
-import net.vanfleteren.jazygit.core.gh.model.PrNumber;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestDetails;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestDetails.*;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestEdit;
@@ -19,6 +17,8 @@ import net.vanfleteren.jazygit.core.gh.process.GhError;
 import net.vanfleteren.jazygit.core.gh.process.GhFailure;
 import net.vanfleteren.jazygit.core.gh.process.GhToken;
 import net.vanfleteren.jazygit.core.process.ExecutedCommand;
+import net.vanfleteren.jazygit.core.repo.ForgeBranch;
+import net.vanfleteren.jazygit.core.repo.PrNumber;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -63,8 +63,8 @@ class CliPullRequestsTest {
                         "--body",
                         ""),
                 CliPullRequests.createCommand(
-                                new GhBranch("feature"),
-                                new GhBranch("main"),
+                                new ForgeBranch("feature"),
+                                new ForgeBranch("main"),
                                 new NewPullRequest("Add login", "", false))
                         .executed()
                         .commandLine());
@@ -83,8 +83,8 @@ class CliPullRequestsTest {
                         "Why",
                         "--draft"),
                 CliPullRequests.createCommand(
-                                new GhBranch("feature"),
-                                new GhBranch("main"),
+                                new ForgeBranch("feature"),
+                                new ForgeBranch("main"),
                                 new NewPullRequest("Add login", "Why", true))
                         .executed()
                         .commandLine());
@@ -114,7 +114,9 @@ class CliPullRequestsTest {
                 CliPullRequests.editCommand(
                                 new PrNumber(12),
                                 new PullRequestEdit(
-                                        Option.of("Add login"), Option.of("Why\n"), Option.of(new GhBranch("release"))))
+                                        Option.of("Add login"),
+                                        Option.of("Why\n"),
+                                        Option.of(new ForgeBranch("release"))))
                         .executed()
                         .commandLine());
     }

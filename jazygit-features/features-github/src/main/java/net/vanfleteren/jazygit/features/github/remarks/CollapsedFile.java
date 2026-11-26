@@ -8,6 +8,8 @@ import io.vavr.control.Option;
 import io.vavr.control.Try;
 import java.nio.file.Path;
 import java.time.Instant;
+import net.vanfleteren.jazygit.core.repo.PrNumber;
+import net.vanfleteren.jazygit.core.repo.RepoSlug;
 import net.vanfleteren.jazygit.kernel.settings.RepositoryTable;
 
 /**
@@ -73,18 +75,19 @@ public final class CollapsedFile implements CollapsedStore {
     }
 
     @Override
-    public Map<String, Boolean> load(String repository, int number) {
-        return table.load(repository)
-                .map(pullRequests -> flipped(pullRequests, String.valueOf(number)))
+    public Map<String, Boolean> load(RepoSlug repository, PrNumber number) {
+        return table.load(repository.value())
+                .map(pullRequests -> flipped(pullRequests, String.valueOf(number.value())))
                 .getOrElse(HashMap.empty());
     }
 
     @Override
-    public Try<Map<String, Boolean>> save(String repository, int number, Map<String, Boolean> flipped, Instant at) {
+    public Try<Map<String, Boolean>> save(
+            RepoSlug repository, PrNumber number, Map<String, Boolean> flipped, Instant at) {
         Instant oldest = at.minus(KEPT);
-        String key = String.valueOf(number);
+        String key = String.valueOf(number.value());
         return table.change(
-                        repository,
+                        repository.value(),
                         pullRequests -> {
                             // A pull request without a time it was flipped at is as old as can be.
                             Map<String, Object> kept = pullRequests.filterKeys(each -> !each.equals(key)

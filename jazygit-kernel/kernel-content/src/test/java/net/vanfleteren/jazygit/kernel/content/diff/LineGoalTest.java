@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import io.vavr.collection.Vector;
 import io.vavr.control.Option;
+import net.vanfleteren.jazygit.core.repo.RepoPath;
 import net.vanfleteren.jazygit.kernel.state.diff.Anchor;
 import net.vanfleteren.jazygit.kernel.state.diff.DiffSide;
 import net.vanfleteren.jazygit.kernel.state.diff.DiffStops;
@@ -21,15 +22,15 @@ class LineGoalTest {
     // out; b.txt: an added line 1.
     private static final Vector<Drawn.Stop> DIFF = Vector.of(
             stop(new Anchor.Lead(), 0),
-            stop(new Anchor.File("a.txt"), 1),
-            stop(new Anchor.Gap("a.txt", 1, Option.some(10)), 2),
+            stop(new Anchor.File(new RepoPath("a.txt")), 1),
+            stop(new Anchor.Gap(new RepoPath("a.txt"), 1, Option.some(10)), 2),
             context("a.txt", 10, 10, 3),
-            stop(new Anchor.OnLine("a.txt", DiffSide.OLD, 11), 4),
-            stop(new Anchor.OnLine("a.txt", DiffSide.NEW, 11), 5),
+            stop(new Anchor.OnLine(new RepoPath("a.txt"), DiffSide.OLD, 11), 4),
+            stop(new Anchor.OnLine(new RepoPath("a.txt"), DiffSide.NEW, 11), 5),
             context("a.txt", 12, 12, 6),
-            stop(new Anchor.Gap("a.txt", 13, Option.none()), 7),
-            stop(new Anchor.File("b.txt"), 8),
-            stop(new Anchor.OnLine("b.txt", DiffSide.NEW, 1), 9));
+            stop(new Anchor.Gap(new RepoPath("a.txt"), 13, Option.none()), 7),
+            stop(new Anchor.File(new RepoPath("b.txt")), 8),
+            stop(new Anchor.OnLine(new RepoPath("b.txt"), DiffSide.NEW, 1), 9));
 
     @Test
     void aLineShownIsTheStopOfItsLineInTheNewFile() {
@@ -47,19 +48,23 @@ class LineGoalTest {
     void aLineOfTheNewFileAMarkerLeavesOutShowsTheLinesAroundItWithinTheMarker() {
         assertEquals(
                 new LineGoal.Hidden(
-                        new Anchor.OnLine("a.txt", DiffSide.NEW, 3), new Anchor.Gap("a.txt", 1, Option.some(9)), 3),
+                        new Anchor.OnLine(new RepoPath("a.txt"), DiffSide.NEW, 3),
+                        new Anchor.Gap(new RepoPath("a.txt"), 1, Option.some(9)),
+                        3),
                 LineGoal.of(DIFF, Vector.empty(), 1, DiffSide.NEW, 3));
         // After the last hunk, how many lines follow is not known.
         assertEquals(
                 new LineGoal.Hidden(
-                        new Anchor.OnLine("a.txt", DiffSide.NEW, 40), new Anchor.Gap("a.txt", 35, Option.some(46)), 6),
+                        new Anchor.OnLine(new RepoPath("a.txt"), DiffSide.NEW, 40),
+                        new Anchor.Gap(new RepoPath("a.txt"), 35, Option.some(46)),
+                        6),
                 LineGoal.of(DIFF, Vector.empty(), 6, DiffSide.NEW, 40));
     }
 
     @Test
     void aLinePastTheEndOfAFileWhoseLengthIsKnownIsTheClosestLineShown() {
         // The file read whole: the marker after the last hunk knows the file ends at line 30.
-        Vector<Drawn.Stop> read = DIFF.update(7, stop(new Anchor.Gap("a.txt", 13, Option.some(31)), 7));
+        Vector<Drawn.Stop> read = DIFF.update(7, stop(new Anchor.Gap(new RepoPath("a.txt"), 13, Option.some(31)), 7));
 
         assertEquals(new LineGoal.OnStop(6, false, 12), LineGoal.of(read, Vector.empty(), 6, DiffSide.NEW, 99));
         assertInstanceOf(LineGoal.Hidden.class, LineGoal.of(read, Vector.empty(), 6, DiffSide.NEW, 30));
@@ -80,9 +85,9 @@ class LineGoalTest {
     @Test
     void aFileWithoutLinesOnTheSideAskedIsNumberedOnItsOtherSide() {
         Vector<Drawn.Stop> deleted = Vector.of(
-                stop(new Anchor.File("gone.txt"), 0),
-                stop(new Anchor.OnLine("gone.txt", DiffSide.OLD, 1), 1),
-                stop(new Anchor.OnLine("gone.txt", DiffSide.OLD, 2), 2));
+                stop(new Anchor.File(new RepoPath("gone.txt")), 0),
+                stop(new Anchor.OnLine(new RepoPath("gone.txt"), DiffSide.OLD, 1), 1),
+                stop(new Anchor.OnLine(new RepoPath("gone.txt"), DiffSide.OLD, 2), 2));
 
         assertEquals(new LineGoal.OnStop(2, true, 2), LineGoal.of(deleted, Vector.empty(), 0, DiffSide.NEW, 2));
         assertEquals(new LineGoal.OnStop(2, false, 2), LineGoal.of(deleted, Vector.empty(), 0, DiffSide.NEW, 9));
@@ -90,7 +95,7 @@ class LineGoalTest {
 
     @Test
     void aVersionRenderedGoesToTheRowOfItsLineElseOfTheLastLineBeforeItDrawn() {
-        Vector<Drawn.Stop> bar = Vector.of(stop(new Anchor.File("README.md"), 0));
+        Vector<Drawn.Stop> bar = Vector.of(stop(new Anchor.File(new RepoPath("README.md")), 0));
         Vector<Drawn.Place> places =
                 Vector.of(place(1, 1), place(2, 1), place(3, 4), place(4, 4), place(9, 7), place(10, 7));
 
@@ -103,7 +108,8 @@ class LineGoalTest {
 
     @Test
     void whatHasNoLinesOfAFileHasNowhereToGo() {
-        Vector<Drawn.Stop> binary = Vector.of(stop(new Anchor.Lead(), 0), stop(new Anchor.File("logo.png"), 1));
+        Vector<Drawn.Stop> binary =
+                Vector.of(stop(new Anchor.Lead(), 0), stop(new Anchor.File(new RepoPath("logo.png")), 1));
 
         assertInstanceOf(LineGoal.Nowhere.class, LineGoal.of(binary, Vector.empty(), 1, DiffSide.NEW, 1));
         assertInstanceOf(LineGoal.Nowhere.class, LineGoal.of(Vector.empty(), Vector.empty(), 0, DiffSide.NEW, 1));
@@ -121,18 +127,18 @@ class LineGoalTest {
     private static Drawn.Stop context(String path, int number, int old, int row) {
         return new Drawn.Stop(
                 new Drawn.Mark(
-                        new Anchor.OnLine(path, DiffSide.NEW, number),
+                        new Anchor.OnLine(new RepoPath(path), DiffSide.NEW, number),
                         1,
                         10,
                         Option.some(HUNK),
                         Option.none(),
                         0,
-                        Option.some(new Anchor.OnLine(path, DiffSide.OLD, old)),
+                        Option.some(new Anchor.OnLine(new RepoPath(path), DiffSide.OLD, old)),
                         0),
                 row);
     }
 
     private static Drawn.Place place(int line, int row) {
-        return new Drawn.Place(new Anchor.OnLine("README.md", DiffSide.NEW, line), row);
+        return new Drawn.Place(new Anchor.OnLine(new RepoPath("README.md"), DiffSide.NEW, line), row);
     }
 }

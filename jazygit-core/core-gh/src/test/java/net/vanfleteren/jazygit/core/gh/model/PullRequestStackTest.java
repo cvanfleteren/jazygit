@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import io.vavr.collection.List;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestDetails.State;
+import net.vanfleteren.jazygit.core.repo.PrNumber;
 import org.junit.jupiter.api.Test;
 
 class PullRequestStackTest {
@@ -13,7 +14,7 @@ class PullRequestStackTest {
      */
     private static PullRequestStack onTopOf(State first, State second, State third) {
         return new PullRequestStack(
-                7,
+                new StackId(7),
                 4,
                 4,
                 List.of(
@@ -37,7 +38,7 @@ class PullRequestStackTest {
     @Test
     void theOnesAboveAreNotMerged() {
         PullRequestStack bottom = new PullRequestStack(
-                7,
+                new StackId(7),
                 1,
                 2,
                 List.of(

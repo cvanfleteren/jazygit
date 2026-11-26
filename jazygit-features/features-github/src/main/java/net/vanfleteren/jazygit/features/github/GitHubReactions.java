@@ -5,6 +5,7 @@ import net.vanfleteren.jazygit.features.github.prs.PullRequestReads;
 import net.vanfleteren.jazygit.features.github.remarks.RemarksUpdate;
 import net.vanfleteren.jazygit.features.github.state.GitHubState;
 import net.vanfleteren.jazygit.kernel.state.Cmd;
+import net.vanfleteren.jazygit.kernel.state.FeatureId;
 import net.vanfleteren.jazygit.kernel.state.KernelEvent;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.Reactions.Reaction;
@@ -47,7 +48,7 @@ final class GitHubReactions {
             case KernelEvent.Fetched _ -> PullRequestReads.poll(Next.of(model));
             // The pull requests, and the new ones among them (ADR 29), show from the start, not only once a fetch is
             // done (ADR 58): from the moment GitHub is found to apply to the repository (ADR 171).
-            case KernelEvent.Switched(String feature, boolean on)
+            case KernelEvent.Switched(FeatureId feature, boolean on)
             when feature.equals(GitHubFeature.ID) && on -> PullRequestReads.load(Next.of(model));
             case KernelEvent.Switched _, KernelEvent.RepositoryOpened _, KernelEvent.TabShown _ -> Next.of(model);
             // The review threads of a pull request whose files were opened, and those collapsed (ADR 55, 63, 171).

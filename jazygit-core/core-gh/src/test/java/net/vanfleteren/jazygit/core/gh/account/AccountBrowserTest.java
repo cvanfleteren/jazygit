@@ -12,14 +12,15 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import net.vanfleteren.jazygit.core.gh.CliGitHub;
 import net.vanfleteren.jazygit.core.gh.model.GhAccount;
-import net.vanfleteren.jazygit.core.gh.model.GhBranch;
-import net.vanfleteren.jazygit.core.gh.model.PrNumber;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestLink;
 import net.vanfleteren.jazygit.core.gh.model.ReviewThread;
 import net.vanfleteren.jazygit.core.gh.process.GhError;
 import net.vanfleteren.jazygit.core.gh.process.GhFailure;
 import net.vanfleteren.jazygit.core.gh.process.GhToken;
 import net.vanfleteren.jazygit.core.process.ExecutedCommand;
+import net.vanfleteren.jazygit.core.repo.ForgeBranch;
+import net.vanfleteren.jazygit.core.repo.PrNumber;
+import net.vanfleteren.jazygit.core.repo.RepoSlug;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.DisabledOnOs;
 import org.junit.jupiter.api.condition.OS;
@@ -33,7 +34,10 @@ import org.junit.jupiter.api.io.TempDir;
 class AccountBrowserTest {
 
     private static final PullRequestLink COMMENT = new PullRequestLink(
-            "github.com", "owner/repo", new PrNumber(7), Option.of(new ReviewThread.Comment.RestId("42")));
+            "github.com",
+            new RepoSlug("owner/repo"),
+            new PrNumber(7),
+            Option.of(new ReviewThread.Comment.RestId("42")));
     private static final GhAccount ACTIVE = new GhAccount("github.com", "cvf");
 
     @TempDir
@@ -123,7 +127,7 @@ class AccountBrowserTest {
 
         assertTrue(github.openPullRequest(new PrNumber(7)).isRight());
         assertEquals("firefox -P work\n", Files.readString(dir.resolve("browser")));
-        assertTrue(github.browse(new GhBranch("feature")).isRight());
+        assertTrue(github.browse(new ForgeBranch("feature")).isRight());
         assertEquals("firefox -P work\n", Files.readString(dir.resolve("browser")));
     }
 

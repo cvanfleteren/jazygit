@@ -9,6 +9,7 @@ import net.vanfleteren.jazygit.core.git.model.Conflict;
 import net.vanfleteren.jazygit.core.git.model.ConflictTools;
 import net.vanfleteren.jazygit.core.git.process.GitFailure;
 import net.vanfleteren.jazygit.core.process.ExecutedCommand;
+import net.vanfleteren.jazygit.core.repo.RepoPath;
 import net.vanfleteren.jazygit.kernel.state.Env;
 import net.vanfleteren.jazygit.kernel.state.Failure;
 import net.vanfleteren.jazygit.kernel.state.Msg;
@@ -30,7 +31,8 @@ public sealed interface ResolveCmd extends GitOperationCmd {
      * whether it is still in conflict and for the markers left in it, for the app to say what is left to do. What
      * cannot be read is taken as nothing left to say.
      */
-    private static Msg handedBack(ResolveCmd cmd, Env env, String path, Either<GitFailure, List<ExecutedCommand>> ran) {
+    private static Msg handedBack(
+            ResolveCmd cmd, Env env, RepoPath path, Either<GitFailure, List<ExecutedCommand>> ran) {
         Index index = env.git().index();
         return ran.fold(
                 failure -> cmd.failed(Failure.of(failure)),
@@ -45,7 +47,7 @@ public sealed interface ResolveCmd extends GitOperationCmd {
     /**
      * Keeps {@code version}'s side of the file at {@code path}, in {@code conflict}.
      */
-    record Keep(String path, Conflict conflict, Conflict.Version version) implements ResolveCmd {
+    record Keep(RepoPath path, Conflict conflict, Conflict.Version version) implements ResolveCmd {
         @Override
         public Operation operation() {
             return KEEP;
@@ -53,7 +55,7 @@ public sealed interface ResolveCmd extends GitOperationCmd {
 
         @Override
         public Option<String> subject() {
-            return Option.of(path);
+            return Option.of(path.value());
         }
 
         @Override
@@ -65,7 +67,7 @@ public sealed interface ResolveCmd extends GitOperationCmd {
     /**
      * Brings back the conflict of the file at {@code path}, resolved since the operation stopped.
      */
-    record Restore(String path) implements ResolveCmd {
+    record Restore(RepoPath path) implements ResolveCmd {
         @Override
         public Operation operation() {
             return RESTORE;
@@ -73,7 +75,7 @@ public sealed interface ResolveCmd extends GitOperationCmd {
 
         @Override
         public Option<String> subject() {
-            return Option.of(path);
+            return Option.of(path.value());
         }
 
         @Override
@@ -85,7 +87,7 @@ public sealed interface ResolveCmd extends GitOperationCmd {
     /**
      * Hands the file at {@code path} to git's merge tool, as {@code tools} says to run it, on the terminal (ADR 201).
      */
-    record MergeTool(String path, ConflictTools tools) implements ResolveCmd {
+    record MergeTool(RepoPath path, ConflictTools tools) implements ResolveCmd {
         @Override
         public Operation operation() {
             return MERGE_TOOL;
@@ -93,7 +95,7 @@ public sealed interface ResolveCmd extends GitOperationCmd {
 
         @Override
         public Option<String> subject() {
-            return Option.of(path);
+            return Option.of(path.value());
         }
 
         @Override
@@ -111,7 +113,7 @@ public sealed interface ResolveCmd extends GitOperationCmd {
      * Solves what mergiraf can of the conflict of the file at {@code path}: written again with its bases first when
      * {@code rewrite}, which loses what was edited of it (ADR 201).
      */
-    record Solve(String path, boolean rewrite) implements ResolveCmd {
+    record Solve(RepoPath path, boolean rewrite) implements ResolveCmd {
         @Override
         public Operation operation() {
             return SOLVE;
@@ -119,7 +121,7 @@ public sealed interface ResolveCmd extends GitOperationCmd {
 
         @Override
         public Option<String> subject() {
-            return Option.of(path);
+            return Option.of(path.value());
         }
 
         @Override

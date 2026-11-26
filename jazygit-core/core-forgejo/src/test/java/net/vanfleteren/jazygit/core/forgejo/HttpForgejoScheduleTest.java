@@ -15,6 +15,7 @@ import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import net.vanfleteren.jazygit.core.repo.PrNumber;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -90,7 +91,11 @@ class HttpForgejoScheduleTest {
     void aMergeWhenTheChecksSucceedIsAskedForSoAndAnswered201Scheduled() {
         assertEquals(
                 Either.right(new ForgejoMerged.Scheduled()),
-                forgejo().merge(repository("nix"), 12, new ForgejoMerge(ForgejoMergeStyle.SQUASH, HEAD, false, true)));
+                forgejo()
+                        .merge(
+                                repository("nix"),
+                                new PrNumber(12),
+                                new ForgejoMerge(ForgejoMergeStyle.SQUASH, HEAD, false, true)));
         assertEquals(
                 List.of("POST {\"Do\":\"squash\",\"head_commit_id\":\"" + HEAD.value()
                         + "\",\"delete_branch_after_merge\":false,\"merge_when_checks_succeed\":true}"),
@@ -109,17 +114,17 @@ class HttpForgejoScheduleTest {
     void theMergeScheduledIsTheLastOfTheTimelineOverItsPages() {
         assertEquals(
                 Either.right(Option.of(new ForgejoScheduledMerge("carl", Instant.parse("2026-11-22T09:30:00Z")))),
-                forgejo().scheduledMerge(repository("nix"), 12));
+                forgejo().scheduledMerge(repository("nix"), new PrNumber(12)));
     }
 
     @Test
     void cancellingIsADeleteAnsweredWith204AndOneNoLongerScheduledWith404() {
-        assertEquals(Option.none(), forgejo().cancelScheduledMerge(repository("nix"), 12));
+        assertEquals(Option.none(), forgejo().cancelScheduledMerge(repository("nix"), new PrNumber(12)));
         assertEquals(List.of("DELETE "), List.ofAll(asked));
         assertEquals(
                 Option.of(404),
                 forgejo()
-                        .cancelScheduledMerge(repository("gone"), 12)
+                        .cancelScheduledMerge(repository("gone"), new PrNumber(12))
                         .map(error -> ((ForgejoError.Refused) error).status()));
     }
 }

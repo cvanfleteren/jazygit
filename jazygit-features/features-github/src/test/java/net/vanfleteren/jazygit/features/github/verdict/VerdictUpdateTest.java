@@ -13,8 +13,6 @@ import io.vavr.control.Either;
 import io.vavr.control.Option;
 import java.time.Instant;
 import net.vanfleteren.jazygit.core.gh.StubGitHub;
-import net.vanfleteren.jazygit.core.gh.model.GhBranch;
-import net.vanfleteren.jazygit.core.gh.model.PrNumber;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest.Review;
@@ -27,7 +25,10 @@ import net.vanfleteren.jazygit.core.gh.model.ReviewRemarks;
 import net.vanfleteren.jazygit.core.gh.model.Verdict;
 import net.vanfleteren.jazygit.core.process.ExecutedCommand;
 import net.vanfleteren.jazygit.core.repo.BranchName;
+import net.vanfleteren.jazygit.core.repo.ForgeBranch;
+import net.vanfleteren.jazygit.core.repo.PrNumber;
 import net.vanfleteren.jazygit.core.repo.PullRequestCommits;
+import net.vanfleteren.jazygit.core.repo.RepoSlug;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.features.changes.diff.CommitFilesMsg;
 import net.vanfleteren.jazygit.features.github.GitHubError;
@@ -57,7 +58,7 @@ class VerdictUpdateTest {
 
     private static final BranchName FEATURE = new BranchName("feature");
     private static final PullRequest FEATURE_PR =
-            new PullRequest(new PrNumber(42), new GhBranch("feature"), false, Checks.PASSING, Review.APPROVED);
+            new PullRequest(new PrNumber(42), new ForgeBranch("feature"), false, Checks.PASSING, Review.APPROVED);
     private static final Reviewing BY_A_REVIEWER = new Reviewing("PR_42", false, false);
     private static final ExecutedCommand GH = ExecutedCommand.of("gh", "api", "graphql");
 
@@ -100,8 +101,8 @@ class VerdictUpdateTest {
         Model opened = Update.update(
                         net.vanfleteren.jazygit.features.github.PullRequestFixtures.loadedWithTheFeature(),
                         new CommitFilesMsg.Opened(
-                                new Changes.OfPullRequest(
-                                        new PullRequestCommits(7, "owner/repo", "", new Sha(base), new Sha(head))),
+                                new Changes.OfPullRequest(new PullRequestCommits(
+                                        new PrNumber(7), new RepoSlug("owner/repo"), "", new Sha(base), new Sha(head))),
                                 Scopes.BRANCHES.pane()))
                 .model();
         return Update.update(opened, new RemarksMsg.Loaded(new PrNumber(7), remarks, HashSet.empty(), 0))

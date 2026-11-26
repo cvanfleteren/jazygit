@@ -7,7 +7,8 @@ import lombok.With;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestList;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestPreview;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestSummary;
-import net.vanfleteren.jazygit.features.github.GitHubFeature;
+import net.vanfleteren.jazygit.core.repo.RepoSlug;
+import net.vanfleteren.jazygit.features.github.GitHubId;
 import net.vanfleteren.jazygit.features.github.prs.unseen.UnseenPullRequests;
 import net.vanfleteren.jazygit.features.github.state.GitHubState;
 import net.vanfleteren.jazygit.features.github.state.PullRequestsError;
@@ -84,7 +85,7 @@ public record PrOverview(
             List.of(REPOSITORY_PANE, REVIEW_REQUESTED_PANE, AUTHORED_PANE),
             WIDTH,
             HEIGHTS,
-            Option.of(GitHubFeature.ID));
+            Option.of(GitHubId.ID));
 
     public static final PrOverview INITIAL = new PrOverview(
             Loadable.loading(),
@@ -117,10 +118,9 @@ public record PrOverview(
     /**
      * Whether {@code pullRequest} is of the repository, {@code repositoryName}, and was opened and not seen yet.
      */
-    public boolean isUnseen(Option<String> repositoryName, PullRequestSummary pullRequest) {
+    public boolean isUnseen(Option<RepoSlug> repositoryName, PullRequestSummary pullRequest) {
         return ofThisRepository(repositoryName, pullRequest).getOrElse(false)
-                && unseen.exists(
-                        read -> read.numbers().contains(pullRequest.number().value()));
+                && unseen.exists(read -> read.numbers().contains(pullRequest.number()));
     }
 
     /**
@@ -136,9 +136,10 @@ public record PrOverview(
      * listed, once that is known: it is known once the pull requests of the repository were read, and why it is not
      * known otherwise, as they are still being read or could not be.
      */
-    public Either<AppError, Boolean> ofThisRepository(Option<String> repositoryName, PullRequestSummary pullRequest) {
+    public Either<AppError, Boolean> ofThisRepository(Option<RepoSlug> repositoryName, PullRequestSummary pullRequest) {
         return repositoryName
-                .map(name -> Either.<AppError, Boolean>right(name.equalsIgnoreCase(pullRequest.repository())))
+                .map(name -> Either.<AppError, Boolean>right(
+                        name.value().equalsIgnoreCase(pullRequest.repository().value())))
                 .getOrElse(() -> Either.left(
                         repository instanceof Loadable.Failed<PullRequestList>(Failure failure)
                                 ? new PullRequestsError.Unavailable(failure)

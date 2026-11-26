@@ -7,12 +7,12 @@ import io.vavr.control.Either;
 import io.vavr.control.Option;
 import java.nio.file.Path;
 import net.vanfleteren.jazygit.core.gh.model.GhAccount;
-import net.vanfleteren.jazygit.core.gh.model.GhBranch;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestDetails.*;
 import net.vanfleteren.jazygit.core.gh.process.GhCommand;
 import net.vanfleteren.jazygit.core.gh.process.GhError;
 import net.vanfleteren.jazygit.core.gh.process.GhProcess;
 import net.vanfleteren.jazygit.core.gh.process.GhToken;
+import net.vanfleteren.jazygit.core.repo.ForgeBranch;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -25,7 +25,7 @@ class CliAccountTest {
     void browsingOpensTheBranchByItsNameOnTheRemote() {
         assertEquals(
                 List.of("gh", "browse", "--branch", "feature/login"),
-                CliAccount.browseCommand(new GhBranch("feature/login")).commandLine("gh"));
+                CliAccount.browseCommand(new ForgeBranch("feature/login")).commandLine("gh"));
     }
 
     @Test
@@ -65,7 +65,7 @@ class CliAccountTest {
 
     @Test
     void ghRunsFromItsExecutableButIsLoggedAsGh() {
-        GhCommand command = CliAccount.browseCommand(new GhBranch("main"));
+        GhCommand command = CliAccount.browseCommand(new ForgeBranch("main"));
 
         assertEquals("/opt/gh/bin/gh", command.commandLine("/opt/gh/bin/gh").head());
         assertEquals(

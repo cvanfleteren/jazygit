@@ -3,7 +3,7 @@ package net.vanfleteren.jazygit.features.github.stack;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.util.function.Consumer;
-import net.vanfleteren.jazygit.core.gh.model.GhBranch;
+import net.vanfleteren.jazygit.core.repo.ForgeBranch;
 import net.vanfleteren.jazygit.kernel.state.Msg;
 import net.vanfleteren.jazygit.kernel.state.popup.PopupMsg;
 import net.vanfleteren.jazygit.kernel.ui.PopupSlot;
@@ -28,7 +28,9 @@ public final class StackDialogs {
             "stack-menu",
             StackPopups.Menu.class,
             menu -> menu.stack()
-                    .map(stack -> Messages.get("github.dialog.stack.title", String.valueOf(stack.number())))
+                    .map(stack -> Messages.get(
+                            "github.dialog.stack.title",
+                            String.valueOf(stack.number().value())))
                     .getOrElse(() -> Messages.get(
                             "github.dialog.stack.titleBranch",
                             menu.branch().map(branch -> branch.name().value()).getOrElse(""))),
@@ -86,7 +88,8 @@ public final class StackDialogs {
                                                     .stack()
                                                     .map(stack -> Messages.get(
                                                             "github.dialog.stackOn.top",
-                                                            String.valueOf(stack.number())))
+                                                            String.valueOf(stack.number()
+                                                                    .value())))
                                                     .getOrElse(""),
                                             Theme.Classes.DIM)))),
             StackMsg.TargetChosen::new);
@@ -98,7 +101,8 @@ public final class StackDialogs {
             "stack-unstack",
             StackPopups.Unstack.class,
             popup -> Messages.get(
-                    "github.dialog.unstack.title", String.valueOf(popup.stack().number())),
+                    "github.dialog.unstack.title",
+                    String.valueOf(popup.stack().number().value())),
             StackDialogs::unstacked,
             () -> new PopupMsg.Confirmed(StackPopups.Unstack.class));
 
@@ -111,7 +115,7 @@ public final class StackDialogs {
             StackPopups.RebaseConfirm.class,
             popup -> Messages.get(
                     "github.dialog.rebaseStack.title",
-                    String.valueOf(popup.cmd().rebase().stack())),
+                    String.valueOf(popup.cmd().rebase().stack().value())),
             StackDialogs::rebased,
             'l',
             popup -> true,
@@ -292,7 +296,7 @@ public final class StackDialogs {
                 .map(change -> Messages.get(
                         "github.dialog.makeStack.change",
                         String.valueOf(change.number().value()),
-                        change.from().map(GhBranch::name).getOrElse("?"),
+                        change.from().map(ForgeBranch::name).getOrElse("?"),
                         change.to().name()));
         List<String> diverged = confirm.diverged()
                 .map(branch -> Messages.get(

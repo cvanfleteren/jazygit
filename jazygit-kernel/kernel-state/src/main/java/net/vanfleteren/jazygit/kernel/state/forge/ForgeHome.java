@@ -6,6 +6,7 @@ import io.vavr.collection.Set;
 import io.vavr.control.Option;
 import lombok.With;
 import net.vanfleteren.jazygit.core.repo.RemoteName;
+import net.vanfleteren.jazygit.kernel.state.FeatureId;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.Part;
 
@@ -21,7 +22,7 @@ import net.vanfleteren.jazygit.kernel.state.Part;
  */
 @With
 public record ForgeHome(
-        Set<String> awaiting,
+        Set<FeatureId> awaiting,
         List<ForgeClaim> claims,
         Option<ForgeChoice> remembered,
         Option<ForgeCandidate> home,
@@ -44,7 +45,7 @@ public record ForgeHome(
     /**
      * These waiting for the claims of {@code feature} too.
      */
-    public ForgeHome awaiting(String feature) {
+    public ForgeHome awaiting(FeatureId feature) {
         return withAwaiting(awaiting.add(feature));
     }
 

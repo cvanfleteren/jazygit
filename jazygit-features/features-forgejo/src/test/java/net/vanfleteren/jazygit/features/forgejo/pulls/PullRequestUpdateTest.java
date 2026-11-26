@@ -18,8 +18,10 @@ import io.vavr.control.Option;
 import net.vanfleteren.jazygit.core.forgejo.CommitStatus;
 import net.vanfleteren.jazygit.core.forgejo.ForgejoError;
 import net.vanfleteren.jazygit.core.repo.BranchName;
+import net.vanfleteren.jazygit.core.repo.PrNumber;
 import net.vanfleteren.jazygit.core.repo.RemoteBranch;
 import net.vanfleteren.jazygit.core.repo.RemoteName;
+import net.vanfleteren.jazygit.core.repo.RemoteUrl;
 import net.vanfleteren.jazygit.features.forgejo.ForgejoFailure;
 import net.vanfleteren.jazygit.features.forgejo.ForgejoFeature;
 import net.vanfleteren.jazygit.features.forgejo.browse.OpenPullRequestCmd;
@@ -29,6 +31,7 @@ import net.vanfleteren.jazygit.features.forgejo.show.LoadPullRequest;
 import net.vanfleteren.jazygit.features.forgejo.show.ShownPullRequest;
 import net.vanfleteren.jazygit.kernel.state.AppError;
 import net.vanfleteren.jazygit.kernel.state.Failure;
+import net.vanfleteren.jazygit.kernel.state.FeatureId;
 import net.vanfleteren.jazygit.kernel.state.KernelEvent;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.Update;
@@ -64,7 +67,7 @@ class PullRequestUpdateTest {
 
         assertEquals(
                 ForgejoPullRequestPopup.loading(FEATURE.branch(), ORIGIN, FEATURE, LISTED, 1), popup(next.model()));
-        assertEquals(List.of(new LoadPullRequest(ORIGIN, 12, 1)), next.cmds());
+        assertEquals(List.of(new LoadPullRequest(ORIGIN, new PrNumber(12), 1)), next.cmds());
     }
 
     @Test
@@ -88,7 +91,7 @@ class PullRequestUpdateTest {
                 .model();
 
         Next again = Update.update(read, new PullRequestMsg.RefreshChosen());
-        assertEquals(List.of(new LoadPullRequest(ORIGIN, 12, 2)), again.cmds());
+        assertEquals(List.of(new LoadPullRequest(ORIGIN, new PrNumber(12), 2)), again.cmds());
         assertTrue(popup(again.model()).asked());
         assertEquals(Option.of(shown("read")), popup(again.model()).shown());
         // While it is read, asking again reads nothing more.
@@ -189,7 +192,8 @@ class PullRequestUpdateTest {
         RemoteName upstream = new RemoteName("upstream");
         Model moved = listed().withPart(
                         ForgeHome.PART,
-                        ForgeHome.NONE.deciding(Option.of(new ForgeCandidate("forgejo", "Forgejo", upstream, URL))));
+                        ForgeHome.NONE.deciding(Option.of(new ForgeCandidate(
+                                new FeatureId("forgejo"), "Forgejo", upstream, new RemoteUrl(URL)))));
 
         Next next = requested(moved, "feature");
         assertEquals(Option.none(), next.model().popup(ForgejoPullRequestPopup.class));
@@ -217,7 +221,8 @@ class PullRequestUpdateTest {
         RemoteName upstream = new RemoteName("upstream");
         Model moved = model().withPart(
                         ForgeHome.PART,
-                        ForgeHome.NONE.deciding(Option.of(new ForgeCandidate("forgejo", "Forgejo", upstream, URL))));
+                        ForgeHome.NONE.deciding(Option.of(new ForgeCandidate(
+                                new FeatureId("forgejo"), "Forgejo", upstream, new RemoteUrl(URL)))));
 
         Model late = PullRequestUpdate.update(
                         moved, new PullRequestMsg.Listed(ORIGIN, Option.of(HashMap.of(FEATURE, LISTED)), Option.none()))

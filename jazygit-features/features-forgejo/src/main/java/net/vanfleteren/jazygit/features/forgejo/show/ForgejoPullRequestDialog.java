@@ -234,7 +234,7 @@ public final class ForgejoPullRequestDialog implements PopupView {
     private String title(ForgejoPullRequestPopup popup) {
         String title = Messages.get(
                 "forgejo.dialog.pullRequest.title",
-                String.valueOf(popup.pullRequest().number()));
+                String.valueOf(popup.pullRequest().number().value()));
         return popup.asked()
                 ? title + " " + TimeText.spinnerFrame(clock.instant())
                 : popup.refreshFailed()
@@ -246,7 +246,7 @@ public final class ForgejoPullRequestDialog implements PopupView {
         return List.of(
                 Line.labelled(
                         "forgejo.dialog.pullRequest.branch",
-                        text(popup.pullRequest().head())),
+                        text(popup.pullRequest().head().name())),
                 Line.blank(),
                 Line.pieces(List.of(
                         text(Messages.get("forgejo.dialog.pullRequest.loading") + " ")
@@ -287,7 +287,8 @@ public final class ForgejoPullRequestDialog implements PopupView {
                         () -> Line.labelled("forgejo.dialog.pullRequest.author", text("@" + pr.author()))))
                 .append(Line.labelled(
                         "forgejo.dialog.pullRequest.branch",
-                        text(pr.branches().head() + " → " + pr.branches().base())))
+                        text(pr.branches().head().name() + " → "
+                                + pr.branches().base().name())))
                 // In the line GitHub's has for the stack, as GitHub's shows its auto-merge (ADR 112).
                 .appendAll(shown.scheduled().map(merge -> scheduled(merge, style, now)))
                 .appendAll(List.of(

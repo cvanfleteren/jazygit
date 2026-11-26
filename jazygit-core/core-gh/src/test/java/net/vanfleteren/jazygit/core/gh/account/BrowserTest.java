@@ -12,13 +12,14 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import net.vanfleteren.jazygit.core.gh.CliGitHub;
 import net.vanfleteren.jazygit.core.gh.model.ChosenBrowser;
-import net.vanfleteren.jazygit.core.gh.model.PrNumber;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestLink;
 import net.vanfleteren.jazygit.core.gh.model.ReviewThread;
 import net.vanfleteren.jazygit.core.gh.process.GhError;
 import net.vanfleteren.jazygit.core.gh.process.GhFailure;
 import net.vanfleteren.jazygit.core.gh.process.GhToken;
 import net.vanfleteren.jazygit.core.process.ExecutedCommand;
+import net.vanfleteren.jazygit.core.repo.PrNumber;
+import net.vanfleteren.jazygit.core.repo.RepoSlug;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -28,7 +29,10 @@ import org.junit.jupiter.api.io.TempDir;
 class BrowserTest {
 
     private static final PullRequestLink COMMENT = new PullRequestLink(
-            "github.com", "owner/repo", new PrNumber(7), Option.of(new ReviewThread.Comment.RestId("42")));
+            "github.com",
+            new RepoSlug("owner/repo"),
+            new PrNumber(7),
+            Option.of(new ReviewThread.Comment.RestId("42")));
 
     @TempDir
     Path dir;
@@ -42,7 +46,7 @@ class BrowserTest {
         assertEquals("https://github.com/owner/repo/pull/7#discussion_r42", COMMENT.url());
         assertEquals(
                 "https://github.com/owner/repo/pull/7",
-                new PullRequestLink("github.com", "owner/repo", new PrNumber(7), Option.none()).url());
+                new PullRequestLink("github.com", new RepoSlug("owner/repo"), new PrNumber(7), Option.none()).url());
     }
 
     @Test
@@ -119,7 +123,10 @@ class BrowserTest {
                 Either.right(List.of(ExecutedCommand.of("gh", "pr", "view", "7", "--web"))),
                 github(HashMap.of("BROWSER", "firefox"), "Linux")
                         .openInBrowser(new PullRequestLink(
-                                "", "owner/repo", new PrNumber(7), Option.of(new ReviewThread.Comment.RestId("42")))));
+                                "",
+                                new RepoSlug("owner/repo"),
+                                new PrNumber(7),
+                                Option.of(new ReviewThread.Comment.RestId("42")))));
     }
 
     @Test

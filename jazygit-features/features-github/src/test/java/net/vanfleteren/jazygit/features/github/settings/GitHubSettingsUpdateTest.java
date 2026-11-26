@@ -23,6 +23,7 @@ import net.vanfleteren.jazygit.core.git.process.GitError;
 import net.vanfleteren.jazygit.core.git.process.GitFailure;
 import net.vanfleteren.jazygit.core.process.ExecutedCommand;
 import net.vanfleteren.jazygit.core.repo.RemoteName;
+import net.vanfleteren.jazygit.core.repo.RemoteUrl;
 import net.vanfleteren.jazygit.features.github.GitHubFailure;
 import net.vanfleteren.jazygit.features.github.GitHubServices;
 import net.vanfleteren.jazygit.features.github.state.GitHubAccount;
@@ -326,9 +327,9 @@ class GitHubSettingsUpdateTest {
                         })
                         .withRemotes(new StubRemotes() {
                             @Override
-                            public Either<GitError, Map<RemoteName, String>> urls() {
-                                return Either.right(
-                                        HashMap.of(new RemoteName("origin"), "git@github.com:team/repo.git"));
+                            public Either<GitError, Map<RemoteName, RemoteUrl>> urls() {
+                                return Either.right(HashMap.of(
+                                        new RemoteName("origin"), new RemoteUrl("git@github.com:team/repo.git")));
                             }
                         }))
                 .with(GitHubServices.GH, StubGitHub.of().withAccount(new StubAccount() {

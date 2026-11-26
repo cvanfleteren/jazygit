@@ -11,16 +11,17 @@ import io.vavr.collection.List;
 import io.vavr.collection.Map;
 import io.vavr.control.Option;
 import java.util.ArrayList;
-import net.vanfleteren.jazygit.core.gh.model.GhBranch;
-import net.vanfleteren.jazygit.core.gh.model.PrNumber;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest.Review;
+import net.vanfleteren.jazygit.core.gh.model.StackId;
 import net.vanfleteren.jazygit.core.git.model.BaseDistance;
 import net.vanfleteren.jazygit.core.git.model.Fixtures;
 import net.vanfleteren.jazygit.core.repo.Branch;
 import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.BranchRef;
+import net.vanfleteren.jazygit.core.repo.ForgeBranch;
+import net.vanfleteren.jazygit.core.repo.PrNumber;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.Msg;
@@ -45,8 +46,8 @@ class StackPickDialogTest {
     private static PullRequest pr(int number, String head, String base) {
         return new PullRequest(
                 new PrNumber(number),
-                new GhBranch(head),
-                Option.of(new GhBranch(base)),
+                new ForgeBranch(head),
+                Option.of(new ForgeBranch(base)),
                 false,
                 Checks.NONE,
                 Review.NONE,
@@ -124,7 +125,7 @@ class StackPickDialogTest {
         StackChoice alone = StackChoice.above(
                 branch("feat/b"), List.of(branch("feat/b")), HashMap.empty(), b -> OPEN.get(b.name()));
 
-        String screen = render(new StackPopups.Pick(alone, Option.none(), Option.of(12)));
+        String screen = render(new StackPopups.Pick(alone, Option.none(), Option.of(new StackId(12))));
 
         assertTrue(screen.contains("No branch is built on feat/b"), screen);
     }
@@ -137,7 +138,7 @@ class StackPickDialogTest {
                 HashMap.of(name("feat/d"), name("feat/c")),
                 b -> OPEN.get(b.name()));
 
-        String screen = render(new StackPopups.Pick(above, Option.none(), Option.of(12)));
+        String screen = render(new StackPopups.Pick(above, Option.none(), Option.of(new StackId(12))));
 
         assertTrue(screen.contains("feat/d has no pull request: Enter creates one on feat/c"), screen);
     }

@@ -7,6 +7,7 @@ import java.util.function.UnaryOperator;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestDetails.Check;
 import net.vanfleteren.jazygit.core.gh.timing.CheckHistory;
 import net.vanfleteren.jazygit.core.gh.timing.CheckSample;
+import net.vanfleteren.jazygit.core.repo.RepoSlug;
 import net.vanfleteren.jazygit.features.github.checks.timings.CheckTimesCmd.RecordCheckTimes;
 import net.vanfleteren.jazygit.features.github.checks.timings.CheckTimesCmd.TopUpCheckTimes;
 import net.vanfleteren.jazygit.features.github.state.GitHubState;
@@ -42,11 +43,11 @@ public final class CheckTimesUpdate {
     private static Next learn(Model model, CheckTimesMsg msg) {
         return switch (msg) {
             case CheckTimesMsg.Recorded(
-                    String repository,
+                    RepoSlug repository,
                     CheckHistory history,
                     Option<Instant> toppedUp,
                     boolean topUp) -> topUpIfDue(learned(model, repository, history, toppedUp), repository, topUp);
-            case CheckTimesMsg.NotRecorded(String repository, List<CheckSample> samples, boolean topUp) ->
+            case CheckTimesMsg.NotRecorded(RepoSlug repository, List<CheckSample> samples, boolean topUp) ->
                 topUpIfDue(
                         learned(
                                 model,
@@ -58,7 +59,7 @@ public final class CheckTimesUpdate {
                                 Option.none()),
                         repository,
                         topUp);
-            case CheckTimesMsg.ToppedUp(String repository, var recent) -> {
+            case CheckTimesMsg.ToppedUp(RepoSlug repository, var recent) -> {
                 Model done = mapKnown(model, repository, CheckTimes::withTopUpDone);
                 List<CheckSample> samples = recent.checks().flatMap(CheckSample::of);
                 List<CheckSample> unknown = known(done, repository)
@@ -68,9 +69,9 @@ public final class CheckTimesUpdate {
                         ? Next.of(done)
                         : Next.of(done, new RecordCheckTimes(repository, unknown, model.now(), false));
             }
-            case CheckTimesMsg.TopUpSkipped(String repository, CheckHistory history, Instant toppedUp) ->
+            case CheckTimesMsg.TopUpSkipped(RepoSlug repository, CheckHistory history, Instant toppedUp) ->
                 Next.of(mapKnown(model, repository, times -> times.withTopUpSkipped(history, toppedUp)));
-            case CheckTimesMsg.TopUpFailed(String repository) ->
+            case CheckTimesMsg.TopUpFailed(RepoSlug repository) ->
                 Next.of(mapKnown(model, repository, CheckTimes::withTopUpDone));
         };
     }
@@ -80,8 +81,8 @@ public final class CheckTimesUpdate {
      * they are new, and the history is read first when it was not yet. When one of them is not done, the checks that
      * ran lately are read from GitHub too, if they were not in the last day.
      */
-    public static Next read(Next next, String repository, List<Check> checks) {
-        if (repository.isEmpty()) {
+    public static Next read(Next next, RepoSlug repository, List<Check> checks) {
+        if (repository.value().isEmpty()) {
             return next;
         }
         Model model = next.model();
@@ -94,11 +95,11 @@ public final class CheckTimesUpdate {
                 : next.and(new RecordCheckTimes(repository, unknown.getOrElse(samples), model.now(), topUp));
     }
 
-    private static Next topUpIfDue(Model model, String repository, boolean topUp) {
+    private static Next topUpIfDue(Model model, RepoSlug repository, boolean topUp) {
         return topUpIfDue(Next.of(model), repository, topUp);
     }
 
-    private static Next topUpIfDue(Next next, String repository, boolean topUp) {
+    private static Next topUpIfDue(Next next, RepoSlug repository, boolean topUp) {
         Model model = next.model();
         return topUp && known(model, repository).exists(times -> times.topUpDue(model.now()))
                 ? next.map(known -> mapKnown(known, repository, times -> times.withTopUp(model.now())))
@@ -106,7 +107,7 @@ public final class CheckTimesUpdate {
                 : next;
     }
 
-    private static Model learned(Model model, String repository, CheckHistory history, Option<Instant> toppedUp) {
+    private static Model learned(Model model, RepoSlug repository, CheckHistory history, Option<Instant> toppedUp) {
         return model.mapPart(
                 GitHubState.PART,
                 gitHub -> gitHub.withCheckTimes(Option.of(known(model, repository)
@@ -114,13 +115,13 @@ public final class CheckTimesUpdate {
                         .getOrElse(() -> CheckTimes.of(repository, history, toppedUp)))));
     }
 
-    private static Option<CheckTimes> known(Model model, String repository) {
+    private static Option<CheckTimes> known(Model model, RepoSlug repository) {
         return model.part(GitHubState.PART)
                 .checkTimes()
                 .filter(times -> times.repository().equals(repository));
     }
 
-    private static Model mapKnown(Model model, String repository, UnaryOperator<CheckTimes> change) {
+    private static Model mapKnown(Model model, RepoSlug repository, UnaryOperator<CheckTimes> change) {
         return model.mapPart(
                 GitHubState.PART,
                 gitHub -> gitHub.withCheckTimes(gitHub.checkTimes()

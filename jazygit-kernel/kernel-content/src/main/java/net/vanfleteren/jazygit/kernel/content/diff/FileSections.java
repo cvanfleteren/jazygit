@@ -18,6 +18,7 @@ import net.vanfleteren.jazygit.core.git.model.ParsedDiff.ParsedHunk;
 import net.vanfleteren.jazygit.core.git.model.ParsedDiff.ParsedLine;
 import net.vanfleteren.jazygit.core.git.model.UnifiedDiff.DiffLine;
 import net.vanfleteren.jazygit.core.git.model.UnifiedDiff.FileDiff;
+import net.vanfleteren.jazygit.core.repo.RepoPath;
 import net.vanfleteren.jazygit.kernel.content.diff.RichDiff.Drawing;
 import net.vanfleteren.jazygit.kernel.content.diff.RichDiff.FileAt;
 import net.vanfleteren.jazygit.kernel.content.diff.RichDiff.Pending;
@@ -125,7 +126,7 @@ final class FileSections {
      * The bar of the file at {@code path}, which says {@code bar}, a stop of the cursor, tinted {@code width} wide. It
      * is padded in a span of its own, which the area draws as far as its edge (ADR 80).
      */
-    static Marked barLine(String bar, String path, int width, Theme.SpanStyles styles) {
+    static Marked barLine(String bar, RepoPath path, int width, Theme.SpanStyles styles) {
         return Marked.of(
                 Rows.kept(Line.from(
                         RichDiff.styled(bar, Theme.Classes.DIFF_FILE_HEADER, styles),
@@ -143,12 +144,12 @@ final class FileSections {
      */
     static String bar(ParsedFile parsed, FileVersion version) {
         FileDiff file = parsed.file();
-        String path = version == FileVersion.ORIGINAL ? file.origin().getOrElse(file.path()) : file.path();
+        RepoPath path = version == FileVersion.ORIGINAL ? file.origin().getOrElse(file.path()) : file.path();
         String what = Messages.get(
                 unchanged(parsed)
                         ? "content.file.unchanged"
                         : version == FileVersion.NEW ? "content.file.newVersion" : "content.file.original");
-        return " " + what + "  " + path + " ";
+        return " " + what + "  " + path.value() + " ";
     }
 
     /**
@@ -163,7 +164,8 @@ final class FileSections {
                     case CONFLICTED -> "content.file.conflicted";
                     default -> "content.file.modified";
                 });
-        String path = file.origin().map(origin -> origin + " → ").getOrElse("") + file.path();
+        String path = file.origin().map(origin -> origin.value() + " → ").getOrElse("")
+                + file.path().value();
         String mode = file.mode()
                 .map(change -> "  " + Messages.get("content.file.mode", change.from(), change.to()))
                 .getOrElse("");
@@ -307,7 +309,7 @@ final class FileSections {
             return all.slice(starts.get(hunk), starts.get(hunk + 1));
         }
 
-        String path() {
+        RepoPath path() {
             return at.parsed().file().path();
         }
 
@@ -332,5 +334,5 @@ final class FileSections {
      * Where a marker goes in a file: in the file with the path {@code path}, after {@code rule}, tinted {@code width}
      * wide when the cursor is on it, in the {@code styles} of the theme.
      */
-    record MarkerAt(String path, Span rule, int width, Theme.SpanStyles styles) {}
+    record MarkerAt(RepoPath path, Span rule, int width, Theme.SpanStyles styles) {}
 }

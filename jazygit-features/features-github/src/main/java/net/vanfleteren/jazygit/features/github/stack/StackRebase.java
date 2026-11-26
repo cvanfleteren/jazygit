@@ -7,6 +7,7 @@ import io.vavr.control.Either;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestDetails.State;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestStack;
+import net.vanfleteren.jazygit.core.gh.model.StackId;
 import net.vanfleteren.jazygit.core.repo.Branch;
 import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.BranchRef;
@@ -17,6 +18,7 @@ import net.vanfleteren.jazygit.core.repo.Revision;
 import net.vanfleteren.jazygit.core.repo.StackLayer;
 import net.vanfleteren.jazygit.features.github.GitHubError;
 import net.vanfleteren.jazygit.features.github.GitHubError.StackRefusal;
+import net.vanfleteren.jazygit.features.github.GitHubError.StackSubject;
 import net.vanfleteren.jazygit.features.github.state.FromGitHub;
 import net.vanfleteren.jazygit.kernel.state.AppError;
 import net.vanfleteren.jazygit.kernel.state.Model;
@@ -42,7 +44,7 @@ public record StackRebase(
     /**
      * The number of the stack.
      */
-    public int stack() {
+    public StackId stack() {
         return push.stack();
     }
 
@@ -61,14 +63,15 @@ public record StackRebase(
      */
     public static Either<AppError, StackRebase> of(Model model, PullRequestStack stack) {
         if (!model.repo().status().toOption().exists(status -> status.files().isEmpty())) {
-            return refused(stack, new StackPush.Refused("", StackRefusal.CHANGES));
+            return refused(stack, new StackPush.Refused(new StackSubject.Worktree(), StackRefusal.CHANGES));
         }
         List<PullRequestStack.Entry> entries = stack.entries().sortBy(PullRequestStack.Entry::position);
         if (stack.base().isEmpty()) {
-            return refused(stack, new StackPush.Refused("#" + stack.number(), StackRefusal.NO_BASE));
+            return refused(stack, new StackPush.Refused(new StackSubject.Whole(stack.number()), StackRefusal.NO_BASE));
         }
         if (entries.forAll(entry -> entry.state() != State.OPEN)) {
-            return refused(stack, new StackPush.Refused("#" + stack.number(), StackRefusal.NOTHING_OPEN));
+            return refused(
+                    stack, new StackPush.Refused(new StackSubject.Whole(stack.number()), StackRefusal.NOTHING_OPEN));
         }
         Either<StackPush.Refused, StackPush> planned = StackPush.of(model, stack);
         if (planned.isLeft()) {
@@ -87,7 +90,8 @@ public record StackRebase(
         RemoteBranch base =
                 new RemoteBranch(push.remote(), FromGitHub.branch(stack.base().get()));
         if (model.repo().remoteBranch(base).isEmpty()) {
-            return refused(stack, new StackPush.Refused(base.shortName(), StackRefusal.BASE_NOT_FETCHED));
+            return refused(
+                    stack, new StackPush.Refused(new StackSubject.OnRemote(base), StackRefusal.BASE_NOT_FETCHED));
         }
         // The merged branches under the first open one: their commits are in the base, but not by their shas.
         Option<PullRequestStack.Entry> merged = entries.takeWhile(entry -> !open(entry))
@@ -97,7 +101,9 @@ public record StackRebase(
                 merged.map(entry -> where(model, push.remote(), entry)).getOrElse(List.of(base.tracking()));
         if (belowBottom.isEmpty()) {
             return refused(
-                    stack, new StackPush.Refused("#" + merged.get().number().value(), StackRefusal.MERGED_UNKNOWN));
+                    stack,
+                    new StackPush.Refused(
+                            new StackSubject.OfPullRequest(merged.get().number()), StackRefusal.MERGED_UNKNOWN));
         }
         List<Tuple2<Branch, RemoteBranch>> targets = push.targets();
         List<StackLayer> layers = targets.zipWithIndex()
@@ -125,7 +131,7 @@ public record StackRebase(
      * another worktree, or is in a merge queue.
      */
     private static Option<StackPush.Refused> unmovable(Branch branch, PullRequestStack.Entry entry) {
-        String name = branch.name().value();
+        StackSubject name = new StackSubject.OfBranch(branch.name());
         if (branch.checkedOutElsewhere()) {
             return Option.of(new StackPush.Refused(name, StackRefusal.OTHER_WORKTREE));
         }

@@ -10,8 +10,6 @@ import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.nio.file.Path;
 import java.time.Instant;
-import net.vanfleteren.jazygit.core.gh.model.GhBranch;
-import net.vanfleteren.jazygit.core.gh.model.PrNumber;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest.Review;
@@ -19,6 +17,7 @@ import net.vanfleteren.jazygit.core.gh.model.PullRequestDetails.State;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestStack;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestStack.Entry;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestSummary;
+import net.vanfleteren.jazygit.core.gh.model.StackId;
 import net.vanfleteren.jazygit.core.git.model.Fixtures;
 import net.vanfleteren.jazygit.core.process.ExecutedCommand;
 import net.vanfleteren.jazygit.core.repo.AllBranches;
@@ -26,9 +25,12 @@ import net.vanfleteren.jazygit.core.repo.Branch;
 import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.BranchRef;
 import net.vanfleteren.jazygit.core.repo.CaughtUpBranch;
+import net.vanfleteren.jazygit.core.repo.ForgeBranch;
+import net.vanfleteren.jazygit.core.repo.PrNumber;
 import net.vanfleteren.jazygit.core.repo.RemoteBranch;
 import net.vanfleteren.jazygit.core.repo.RemoteName;
 import net.vanfleteren.jazygit.core.repo.RemoteRef;
+import net.vanfleteren.jazygit.core.repo.RepoSlug;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.core.repo.Tracking;
 import net.vanfleteren.jazygit.core.repo.Upstream;
@@ -59,34 +61,34 @@ class CheckOutStackTest {
 
     // Stack #12 on main: #95 merged, then feat/a (#96), feat/b (#97) and feat/c (#98), all open.
     private static final List<Entry> ENTRIES = List.of(
-            new Entry(1, new PrNumber(95), State.MERGED, new GhBranch("feat/old"), new GhBranch("main")),
+            new Entry(1, new PrNumber(95), State.MERGED, new ForgeBranch("feat/old"), new ForgeBranch("main")),
             new Entry(
                     2,
                     new PrNumber(96),
                     State.OPEN,
-                    new GhBranch("feat/a"),
-                    new GhBranch("main"),
+                    new ForgeBranch("feat/a"),
+                    new ForgeBranch("main"),
                     Option.of(new Sha("1".repeat(40))),
                     false),
             new Entry(
                     3,
                     new PrNumber(97),
                     State.OPEN,
-                    new GhBranch("feat/b"),
-                    new GhBranch("feat/a"),
+                    new ForgeBranch("feat/b"),
+                    new ForgeBranch("feat/a"),
                     Option.of(new Sha("b".repeat(40))),
                     false),
             new Entry(
                     4,
                     new PrNumber(98),
                     State.OPEN,
-                    new GhBranch("feat/c"),
-                    new GhBranch("feat/b"),
+                    new ForgeBranch("feat/c"),
+                    new ForgeBranch("feat/b"),
                     Option.of(new Sha("c".repeat(40))),
                     false));
 
     private static PullRequestStack stack(List<Entry> entries, int position) {
-        return new PullRequestStack(12, position, entries.size(), entries);
+        return new PullRequestStack(new StackId(12), position, entries.size(), entries);
     }
 
     private static final PullRequestStack STACK = stack(ENTRIES, 2);
@@ -145,7 +147,7 @@ class CheckOutStackTest {
                                 branch.name(),
                                 new PullRequest(
                                         new PrNumber(96 + List.of(A, B, C).indexOf(branch.name())),
-                                        new GhBranch(branch.name().value()),
+                                        new ForgeBranch(branch.name().value()),
                                         Option.none(),
                                         false,
                                         Checks.NONE,
@@ -274,8 +276,8 @@ class CheckOutStackTest {
                         4,
                         new PrNumber(98),
                         State.OPEN,
-                        Option.of(new GhBranch("feat/c")),
-                        Option.of(new GhBranch("feat/b")),
+                        Option.of(new ForgeBranch("feat/c")),
+                        Option.of(new ForgeBranch("feat/b")),
                         Option.of(new Sha("c".repeat(40))),
                         false,
                         true));
@@ -324,7 +326,7 @@ class CheckOutStackTest {
         assertEquals(Status.UPDATE, StackCheckout.status(model(all.update(1, following(A, A_TIP, 0, 0))), STACK));
         // A branch whose commit on GitHub is not known may be behind.
         List<Entry> unknown = ENTRIES.update(
-                1, new Entry(2, new PrNumber(96), State.OPEN, new GhBranch("feat/a"), new GhBranch("main")));
+                1, new Entry(2, new PrNumber(96), State.OPEN, new ForgeBranch("feat/a"), new ForgeBranch("main")));
         assertEquals(Status.UPDATE, StackCheckout.status(model(all), stack(unknown, 2)));
         assertEquals(
                 Status.NOTHING,
@@ -332,7 +334,11 @@ class CheckOutStackTest {
                         ONE_LOCAL,
                         stack(
                                 List.of(new Entry(
-                                        1, new PrNumber(95), State.MERGED, new GhBranch("x"), new GhBranch("main"))),
+                                        1,
+                                        new PrNumber(95),
+                                        State.MERGED,
+                                        new ForgeBranch("x"),
+                                        new ForgeBranch("main"))),
                                 1)));
     }
 
@@ -401,7 +407,7 @@ class CheckOutStackTest {
                 Update.update(confirmed.model(), new StackMsg.CaughtUp(catchUp, List.<ExecutedCommand>empty()));
 
         assertEquals(
-                Option.of(new StackNotice.CheckedOut(12, 2, 1, 0)),
+                Option.of(new StackNotice.CheckedOut(new StackId(12), 2, 1, 0)),
                 done.model().outcome().notice());
         assertTrue(done.cmds().contains(new CheckoutCmd.Checkout(C)));
     }
@@ -427,13 +433,13 @@ class CheckOutStackTest {
         assertTrue(StackDialogs.checkedOut(refused).contains("rename or delete it first"));
     }
 
-    private static PullRequestSummary summary(String repository, Option<PullRequestStack> stack) {
+    private static PullRequestSummary summary(RepoSlug repository, Option<PullRequestStack> stack) {
         return new PullRequestSummary(
                 repository,
                 new PrNumber(97),
                 "Refresh flow",
                 "sam",
-                new GhBranch("feat/b"),
+                new ForgeBranch("feat/b"),
                 false,
                 false,
                 Checks.NONE,
@@ -444,7 +450,7 @@ class CheckOutStackTest {
     }
 
     private static Model ofOwnerRepo(Model model) {
-        return model.mapPart(GitHubState.PART, gitHub -> gitHub.withRepository(Option.of("owner/repo")));
+        return model.mapPart(GitHubState.PART, gitHub -> gitHub.withRepository(Option.of(new RepoSlug("owner/repo"))));
     }
 
     @Test
@@ -453,7 +459,7 @@ class CheckOutStackTest {
 
         Model menu = Update.update(
                         ofOwnerRepo(ONE_LOCAL),
-                        new StackMsg.PullRequestMenuRequested(summary("owner/repo", Option.of(stack))))
+                        new StackMsg.PullRequestMenuRequested(summary(new RepoSlug("owner/repo"), Option.of(stack))))
                 .model();
 
         StackPopups.Menu opened = menu.popup(StackPopups.Menu.class).get();
@@ -466,11 +472,11 @@ class CheckOutStackTest {
     void onThePullRequestsScreenAPullRequestOfAnotherRepositoryOrOutsideAStackOpensNoMenu() {
         Model other = Update.update(
                         ofOwnerRepo(ONE_LOCAL),
-                        new StackMsg.PullRequestMenuRequested(summary("other/repo", Option.of(STACK))))
+                        new StackMsg.PullRequestMenuRequested(summary(new RepoSlug("other/repo"), Option.of(STACK))))
                 .model();
         Model unstacked = Update.update(
                         ofOwnerRepo(ONE_LOCAL),
-                        new StackMsg.PullRequestMenuRequested(summary("owner/repo", Option.none())))
+                        new StackMsg.PullRequestMenuRequested(summary(new RepoSlug("owner/repo"), Option.none())))
                 .model();
 
         assertTrue(other.popup(StackPopups.Menu.class).isEmpty());
@@ -483,7 +489,7 @@ class CheckOutStackTest {
     void whatHappensToEachBranchStartsInOneColumnAlsoAfterABranchOfWideCharacters() {
         BranchName wide = new BranchName("feat/日本語");
         StackCheckout checkout = new StackCheckout(
-                12,
+                new StackId(12),
                 List.of(
                         new StackCheckout.Line(new PrNumber(10), A, origin(A), Kind.UP_TO_DATE, 0, Option.none()),
                         new StackCheckout.Line(

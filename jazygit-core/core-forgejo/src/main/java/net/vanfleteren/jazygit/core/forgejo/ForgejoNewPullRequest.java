@@ -3,6 +3,7 @@ package net.vanfleteren.jazygit.core.forgejo;
 import io.vavr.collection.LinkedHashMap;
 import io.vavr.collection.List;
 import java.util.Locale;
+import net.vanfleteren.jazygit.core.repo.ForgeBranch;
 import net.vanfleteren.jazygit.lib.json.Json;
 
 /**
@@ -15,7 +16,7 @@ import net.vanfleteren.jazygit.lib.json.Json;
  * @param body  what it says, which may be empty
  * @param draft whether it is a draft, which Forgejo tells from a prefix of the title
  */
-public record ForgejoNewPullRequest(String head, String base, String title, String body, boolean draft) {
+public record ForgejoNewPullRequest(String head, ForgeBranch base, String title, String body, boolean draft) {
 
     /**
      * The prefix a draft's title is sent with: the first of Forgejo's {@code WORK_IN_PROGRESS_PREFIXES} by default.
@@ -51,7 +52,7 @@ public record ForgejoNewPullRequest(String head, String base, String title, Stri
     String json() {
         return new Json.JObject(LinkedHashMap.of(
                         "head", new Json.JString(head),
-                        "base", new Json.JString(base),
+                        "base", new Json.JString(base.name()),
                         "title", new Json.JString(sentTitle()),
                         "body", new Json.JString(body)))
                 .text();

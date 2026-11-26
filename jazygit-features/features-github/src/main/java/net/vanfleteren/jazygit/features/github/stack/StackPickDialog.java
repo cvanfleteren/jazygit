@@ -96,7 +96,7 @@ final class StackPickDialog implements PopupView {
                 .orElse(() -> creating.map(text -> List.<StyledElement<?>>of(text(""), text(text))))
                 .getOrElse(List.empty());
         String title = pick.addTo()
-                .map(stack -> Messages.get("github.dialog.addToStack.title", String.valueOf(stack)))
+                .map(stack -> Messages.get("github.dialog.addToStack.title", String.valueOf(stack.value())))
                 .getOrElse(() -> choice.base()
                         .map(base -> Messages.get("github.dialog.makeStack.title", base.value()))
                         .getOrElse(() -> Messages.get("github.dialog.makeStack.titleNoBase")));

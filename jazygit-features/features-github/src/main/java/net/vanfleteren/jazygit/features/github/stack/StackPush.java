@@ -7,11 +7,13 @@ import io.vavr.control.Either;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestDetails.State;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestStack;
+import net.vanfleteren.jazygit.core.gh.model.StackId;
 import net.vanfleteren.jazygit.core.repo.Branch;
 import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.RemoteBranch;
 import net.vanfleteren.jazygit.core.repo.RemoteName;
 import net.vanfleteren.jazygit.features.github.GitHubError.StackRefusal;
+import net.vanfleteren.jazygit.features.github.GitHubError.StackSubject;
 import net.vanfleteren.jazygit.features.github.state.FromGitHub;
 import net.vanfleteren.jazygit.features.github.state.GitHubState;
 import net.vanfleteren.jazygit.kernel.state.Model;
@@ -24,7 +26,7 @@ import net.vanfleteren.jazygit.kernel.state.Model;
  * @param remote   the remote its branches are all pushed to
  * @param branches its open branches, from the bottom up, each with the head of its pull request
  */
-public record StackPush(int stack, RemoteName remote, List<Tuple2<Branch, BranchName>> branches) {
+public record StackPush(StackId stack, RemoteName remote, List<Tuple2<Branch, BranchName>> branches) {
 
     /**
      * Its local branches, from the bottom up.
@@ -57,12 +59,14 @@ public record StackPush(int stack, RemoteName remote, List<Tuple2<Branch, Branch
         Option<PullRequestStack.Entry> missing =
                 open.find(entry -> checkedOut(model, entry).isEmpty());
         if (missing.isDefined()) {
-            return Either.left(new Refused("#" + missing.get().number().value(), StackRefusal.NOT_CHECKED_OUT));
+            return Either.left(
+                    new Refused(new StackSubject.OfPullRequest(missing.get().number()), StackRefusal.NOT_CHECKED_OUT));
         }
         Option<PullRequestStack.Entry> unnamed =
                 open.find(entry -> entry.headBranch().isEmpty());
         if (unnamed.isDefined()) {
-            return Either.left(new Refused("#" + unnamed.get().number().value(), StackRefusal.UNKNOWN_BRANCH));
+            return Either.left(
+                    new Refused(new StackSubject.OfPullRequest(unnamed.get().number()), StackRefusal.UNKNOWN_BRANCH));
         }
         List<Tuple2<Branch, BranchName>> branches = open.map(entry -> Tuple.of(
                 checkedOut(model, entry).get(),
@@ -72,7 +76,8 @@ public record StackPush(int stack, RemoteName remote, List<Tuple2<Branch, Branch
         Option<Branch> elsewhere = branches.map(Tuple2::_1)
                 .find(branch -> !remote.contains(branch.pushTarget().remote()));
         if (elsewhere.isDefined()) {
-            return Either.left(new Refused(elsewhere.get().name().value(), StackRefusal.OTHER_REMOTE));
+            return Either.left(
+                    new Refused(new StackSubject.OfBranch(elsewhere.get().name()), StackRefusal.OTHER_REMOTE));
         }
         return Either.right(new StackPush(stack.number(), remote.getOrElse(RemoteBranch.DEFAULT_REMOTE), branches));
     }
@@ -94,8 +99,8 @@ public record StackPush(int stack, RemoteName remote, List<Tuple2<Branch, Branch
     /**
      * Why a stack is not pushed or rebased, naming the branch or pull request it is about.
      *
-     * @param branch the branch, or {@code #<number>} of a pull request without one
+     * @param branch what of the stack it is about
      * @param why    why
      */
-    public record Refused(String branch, StackRefusal why) {}
+    public record Refused(StackSubject branch, StackRefusal why) {}
 }

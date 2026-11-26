@@ -10,6 +10,7 @@ import io.vavr.control.Either;
 import net.vanfleteren.jazygit.core.gh.model.RecentChecks;
 import net.vanfleteren.jazygit.core.gh.process.GhError;
 import net.vanfleteren.jazygit.core.gh.process.GhProcess;
+import net.vanfleteren.jazygit.core.repo.RepoSlug;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -41,7 +42,7 @@ class RecentChecksQueryTest {
                                 + rollup(VERIFY_PASSED) + ", { \"statusCheckRollup\": null } ] } } }")
                 .get();
 
-        assertEquals("cvanfleteren/jazygit", recent.repository());
+        assertEquals(new RepoSlug("cvanfleteren/jazygit"), recent.repository());
         assertEquals(List.of(VERIFY, VERIFY), recent.checks());
     }
 
@@ -53,7 +54,7 @@ class RecentChecksQueryTest {
     @Test
     void aRepositoryWithoutADefaultBranchHasOnlyThoseOfItsPullRequests() {
         assertEquals(
-                Either.right(new RecentChecks("cvanfleteren/jazygit", List.of(VERIFY))),
+                Either.right(new RecentChecks(new RepoSlug("cvanfleteren/jazygit"), List.of(VERIFY))),
                 recent(rollup(VERIFY_PASSED), "null"));
     }
 

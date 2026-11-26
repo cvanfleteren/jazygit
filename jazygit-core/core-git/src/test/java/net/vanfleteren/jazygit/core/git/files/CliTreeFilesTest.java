@@ -14,6 +14,7 @@ import net.vanfleteren.jazygit.core.git.model.DiffText;
 import net.vanfleteren.jazygit.core.git.model.FileContent;
 import net.vanfleteren.jazygit.core.git.model.ParsedDiff;
 import net.vanfleteren.jazygit.core.git.process.GitError;
+import net.vanfleteren.jazygit.core.repo.RepoPath;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -36,7 +37,9 @@ class CliTreeFilesTest {
         git("add", ".");
         git("commit", "-qm", "other");
 
-        assertEquals(List.of("a.txt", "dir/b.txt"), diffs().treeFiles(main).get());
+        assertEquals(
+                List.of(new RepoPath("a.txt"), new RepoPath("dir/b.txt")),
+                diffs().treeFiles(main).get());
     }
 
     @Test
@@ -46,11 +49,11 @@ class CliTreeFilesTest {
 
         DiffText diff = assertInstanceOf(
                         FileContent.Text.class,
-                        diffs().treeContent(main, "dir/b.txt").get())
+                        diffs().treeContent(main, new RepoPath("dir/b.txt")).get())
                 .asDiff();
 
         ParsedDiff.ParsedFile file = diff.parsed().files().single();
-        assertEquals("dir/b.txt", file.file().path());
+        assertEquals(new RepoPath("dir/b.txt"), file.file().path());
         assertEquals(
                 List.of("one", "two"),
                 file.hunks()
@@ -71,13 +74,14 @@ class CliTreeFilesTest {
 
         assertEquals(
                 new FileContent.Binary(6),
-                diffs().treeContent(head, "image.bin").get());
+                diffs().treeContent(head, new RepoPath("image.bin")).get());
         assertEquals(
-                new FileContent.Link("a.txt"), diffs().treeContent(head, "link").get());
+                new FileContent.Link("a.txt"),
+                diffs().treeContent(head, new RepoPath("link")).get());
         assertEquals(
                 new FileContent.Submodule(Sha.parse(submodule)),
-                diffs().treeContent(head, "sub").get());
-        assertTrue(diffs().treeFiles(head).get().contains("sub"));
+                diffs().treeContent(head, new RepoPath("sub")).get());
+        assertTrue(diffs().treeFiles(head).get().contains(new RepoPath("sub")));
     }
 
     @Test
@@ -85,8 +89,8 @@ class CliTreeFilesTest {
         Sha main = init();
         Files.writeString(repo.resolve("dir/b.txt"), "edited\n");
 
-        assertEquals(Either.right("one\ntwo\n"), diffs().treeText(main, "dir/b.txt"));
-        assertTrue(diffs().treeText(main, "gone.txt").isLeft());
+        assertEquals(Either.right("one\ntwo\n"), diffs().treeText(main, new RepoPath("dir/b.txt")));
+        assertTrue(diffs().treeText(main, new RepoPath("gone.txt")).isLeft());
     }
 
     @Test
@@ -94,7 +98,8 @@ class CliTreeFilesTest {
         Sha main = init();
 
         assertInstanceOf(
-                GitError.Unreadable.class, diffs().treeContent(main, "gone.txt").getLeft());
+                GitError.Unreadable.class,
+                diffs().treeContent(main, new RepoPath("gone.txt")).getLeft());
     }
 
     @Test

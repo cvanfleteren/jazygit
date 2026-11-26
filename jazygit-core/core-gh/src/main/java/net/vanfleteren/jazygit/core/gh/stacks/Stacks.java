@@ -2,9 +2,10 @@ package net.vanfleteren.jazygit.core.gh.stacks;
 
 import io.vavr.collection.List;
 import io.vavr.control.Either;
-import net.vanfleteren.jazygit.core.gh.model.PrNumber;
+import net.vanfleteren.jazygit.core.gh.model.StackId;
 import net.vanfleteren.jazygit.core.gh.process.GhFailure;
 import net.vanfleteren.jazygit.core.process.ExecutedCommand;
+import net.vanfleteren.jazygit.core.repo.PrNumber;
 
 /**
  * Stacks of pull requests on GitHub (ADR 73, ADR 114).
@@ -20,10 +21,10 @@ public interface Stacks {
     /**
      * Puts {@code pullRequests}, the lowest one first, on the top of stack {@code stack}.
      */
-    Either<GhFailure, List<ExecutedCommand>> add(int stack, List<PrNumber> pullRequests);
+    Either<GhFailure, List<ExecutedCommand>> add(StackId stack, List<PrNumber> pullRequests);
 
     /**
      * Takes stack {@code stack} apart on GitHub; its pull requests stay open, with their bases.
      */
-    Either<GhFailure, List<ExecutedCommand>> unstack(int stack);
+    Either<GhFailure, List<ExecutedCommand>> unstack(StackId stack);
 }

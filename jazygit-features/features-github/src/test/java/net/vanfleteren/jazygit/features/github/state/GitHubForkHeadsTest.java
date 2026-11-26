@@ -9,8 +9,6 @@ import io.vavr.collection.HashSet;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.time.Instant;
-import net.vanfleteren.jazygit.core.gh.model.GhBranch;
-import net.vanfleteren.jazygit.core.gh.model.PrNumber;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest.Review;
@@ -20,8 +18,11 @@ import net.vanfleteren.jazygit.core.gh.model.RepositoryPullRequests;
 import net.vanfleteren.jazygit.core.repo.Branch;
 import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.BranchRef;
+import net.vanfleteren.jazygit.core.repo.ForgeBranch;
+import net.vanfleteren.jazygit.core.repo.PrNumber;
 import net.vanfleteren.jazygit.core.repo.RemoteBranch;
 import net.vanfleteren.jazygit.core.repo.RemoteName;
+import net.vanfleteren.jazygit.core.repo.RepoSlug;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.core.repo.Tracking;
 import net.vanfleteren.jazygit.core.repo.Upstream;
@@ -40,8 +41,8 @@ class GitHubForkHeadsTest {
     // Anna's pull request from her fork's main (origin) into the project's main (upstream).
     private static final PullRequest FROM_FORK = new PullRequest(
             new PrNumber(7),
-            new GhBranch("main"),
-            Option.of(new GhBranch("main")),
+            new ForgeBranch("main"),
+            Option.of(new ForgeBranch("main")),
             false,
             Checks.PASSING,
             Review.NONE,
@@ -96,11 +97,11 @@ class GitHubForkHeadsTest {
         // A plain clone with a second remote of the same repository, as an alias.
         RemoteName github = new RemoteName("github");
         PullRequestSummary same = new PullRequestSummary(
-                "project/repo",
+                new RepoSlug("project/repo"),
                 new PrNumber(8),
                 "Same repository",
                 "cvf",
-                new GhBranch("feature"),
+                new ForgeBranch("feature"),
                 false,
                 false,
                 Checks.PASSING,
@@ -111,11 +112,13 @@ class GitHubForkHeadsTest {
                 Option.none(),
                 Option.none(),
                 Option.none(),
-                Option.of("project/repo"));
-        RepositoryPullRequests read = new RepositoryPullRequests("project/repo", new PullRequestList(List.of(same), 1));
+                Option.of(new RepoSlug("project/repo")));
+        RepositoryPullRequests read =
+                new RepositoryPullRequests(new RepoSlug("project/repo"), new PullRequestList(List.of(same), 1));
         GitHubState state = GitHubState.NOT_READ
                 .withListed(read.ofBranches())
-                .withHeads(read.heads(HashMap.of(github, "project/repo", ORIGIN, "Project/Repo")))
+                .withHeads(read.heads(
+                        HashMap.of(github, new RepoSlug("project/repo"), ORIGIN, new RepoSlug("Project/Repo"))))
                 // Both remotes on GitHub, so that their remote branches are looked up.
                 .withBranchChecks(Option.of(new GitHubChecks(HashSet.of(ORIGIN, github), HashMap.empty())));
 

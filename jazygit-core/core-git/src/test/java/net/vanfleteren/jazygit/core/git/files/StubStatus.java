@@ -13,6 +13,7 @@ import net.vanfleteren.jazygit.core.git.process.GitFailure;
 import net.vanfleteren.jazygit.core.process.ExecutedCommand;
 import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.Head;
+import net.vanfleteren.jazygit.core.repo.RepoPath;
 import net.vanfleteren.jazygit.core.repo.Sha;
 
 /**
@@ -48,12 +49,12 @@ public interface StubStatus extends Status {
 
     // No files besides the changed ones, of which there are none.
     @Override
-    default Either<GitError, List<String>> allFiles() {
+    default Either<GitError, List<RepoPath>> allFiles() {
         return Either.right(List.empty());
     }
 
     @Override
-    default Either<GitError, FileContent> content(String path) {
-        return Either.left(new GitError.Unreadable(path, "no such file"));
+    default Either<GitError, FileContent> content(RepoPath path) {
+        return Either.left(new GitError.Unreadable(path.value(), "no such file"));
     }
 }

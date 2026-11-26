@@ -14,6 +14,8 @@ import net.vanfleteren.jazygit.core.gh.model.PullRequestDetails.Conversation;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestDetails.Size;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestDetails.State;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestDetails.Status;
+import net.vanfleteren.jazygit.core.repo.ForgeBranch;
+import net.vanfleteren.jazygit.core.repo.PrNumber;
 import org.junit.jupiter.api.Test;
 
 class PullRequestDetailsTest {
@@ -24,7 +26,7 @@ class PullRequestDetailsTest {
                 "A pull request",
                 "someone",
                 new Status(state, true, PullRequestDetails.Mergeable.UNKNOWN),
-                new Branches(new GhBranch("feature"), new GhBranch("main")),
+                new Branches(new ForgeBranch("feature"), new ForgeBranch("main")),
                 new Activity(Instant.EPOCH, Instant.EPOCH),
                 new Size(0, 0, 0, 1),
                 new Conversation(Review.REQUIRED, List.empty(), 0, PullRequestDetails.ReviewThreads.NONE, List.empty()),
@@ -40,8 +42,8 @@ class PullRequestDetailsTest {
         assertEquals(
                 Option.of(new PullRequest(
                         new PrNumber(42),
-                        new GhBranch("feature"),
-                        Option.of(new GhBranch("main")),
+                        new ForgeBranch("feature"),
+                        Option.of(new ForgeBranch("main")),
                         true,
                         Checks.PASSING,
                         Review.REQUIRED,

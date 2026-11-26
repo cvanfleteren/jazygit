@@ -3,6 +3,7 @@ package net.vanfleteren.jazygit.kernel.state.forge;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.kernel.state.Events;
+import net.vanfleteren.jazygit.kernel.state.FeatureId;
 import net.vanfleteren.jazygit.kernel.state.FeatureMsg;
 import net.vanfleteren.jazygit.kernel.state.FeatureUpdate;
 import net.vanfleteren.jazygit.kernel.state.KernelEvent;
@@ -37,7 +38,7 @@ public final class ForgeUpdate {
      * {@code model} waiting for the claims of {@code feature}, as the repository opens, and reading what the user
      * chose before, once for every forge.
      */
-    public static Next opening(Model model, String feature) {
+    public static Next opening(Model model, FeatureId feature) {
         return Next.of(model.mapPart(ForgeHome.PART, home -> home.awaiting(feature)), new ReadForgeChoice());
     }
 

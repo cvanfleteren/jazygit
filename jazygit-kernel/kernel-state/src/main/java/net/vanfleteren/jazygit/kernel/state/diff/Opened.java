@@ -3,6 +3,7 @@ package net.vanfleteren.jazygit.kernel.state.diff;
 import io.vavr.collection.HashSet;
 import io.vavr.collection.Set;
 import net.vanfleteren.jazygit.core.git.model.DiffFiltering.HunkStart;
+import net.vanfleteren.jazygit.core.repo.RepoPath;
 
 /**
  * The hunks filters hide that the user opened in the diff an area of the content panel shows (ADR 144), each by its
@@ -32,12 +33,12 @@ public record Opened(ScrolledContent content, Set<Hunk> hunks) {
     /**
      * Whether the hunk of the file with the path {@code path} that starts at {@code start} is opened.
      */
-    public boolean has(String path, HunkStart start) {
+    public boolean has(RepoPath path, HunkStart start) {
         return hunks.contains(new Hunk(path, start));
     }
 
     /**
      * A hunk of the file with the path {@code path} that starts at {@code start}.
      */
-    public record Hunk(String path, HunkStart start) {}
+    public record Hunk(RepoPath path, HunkStart start) {}
 }

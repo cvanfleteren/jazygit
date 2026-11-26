@@ -217,10 +217,12 @@ public final class CommentsDialog implements PopupView {
     private static Option<MarkdownAutolinks.Repository> repository(CommentsPopup popup) {
         PullRequestPopup shown = popup.shown();
         return shown.readDetails()
-                .flatMap(read -> MarkdownAutolinks.Repository.of(read.host(), read.repository()))
+                .flatMap(read -> MarkdownAutolinks.Repository.of(
+                        read.host(), read.repository().value()))
                 .orElse(() -> shown.pullRequest()
                         .commits()
-                        .flatMap(commits -> MarkdownAutolinks.Repository.of(commits.host(), commits.repository())));
+                        .flatMap(commits -> MarkdownAutolinks.Repository.of(
+                                commits.host(), commits.repository().value())));
     }
 
     private static String body(PullRequestComment comment) {

@@ -7,6 +7,7 @@ import net.vanfleteren.jazygit.core.git.model.CommitFile;
 import net.vanfleteren.jazygit.core.git.model.FileContent;
 import net.vanfleteren.jazygit.core.git.model.FileEntry;
 import net.vanfleteren.jazygit.core.repo.BranchRef;
+import net.vanfleteren.jazygit.core.repo.RepoPath;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.kernel.state.Cmd;
 import net.vanfleteren.jazygit.kernel.state.Model;
@@ -47,8 +48,8 @@ public final class SelectionUpdate {
             case DivergenceCommitSelected(var sha) -> divergenceCommitSelected(model, sha);
             case BranchCommitSelected(var sha) -> branchCommitSelected(model, sha);
             case FilesSelected(var files) -> filesSelected(model, files);
-            case UnchangedFileSelected(String path) -> unchangedFileSelected(model, path);
-            case UnchangedDirectorySelected(String path, int files) -> unchangedDirectorySelected(model, path, files);
+            case UnchangedFileSelected(RepoPath path) -> unchangedFileSelected(model, path);
+            case UnchangedDirectorySelected(RepoPath path, int files) -> unchangedDirectorySelected(model, path, files);
             case CommitFilesSelected(var files) -> commitFilesSelected(model, files);
             case StashSelected(var sha) -> stashSelected(model, sha);
             case FilesFollowed(var of, var from, var listedIn) -> followed(model, of, from, listedIn);
@@ -155,7 +156,7 @@ public final class SelectionUpdate {
      * Reads the content of the file without changes at {@code path}: in the commit whose files are listed, while they
      * are (ADR 128), else on disk (ADR 108).
      */
-    private static Next unchangedFileSelected(Model model, String path) {
+    private static Next unchangedFileSelected(Model model, RepoPath path) {
         return model.repoView()
                 .files()
                 .commitFiles()
@@ -169,12 +170,12 @@ public final class SelectionUpdate {
                 .getOrElse(() -> workingFileSelected(model, path));
     }
 
-    private static Option<Preview<String, FileContent>> file(Option<UnchangedNode> node) {
+    private static Option<Preview<RepoPath, FileContent>> file(Option<UnchangedNode> node) {
         return node.flatMap(
                 shown -> shown instanceof UnchangedNode.File(var content) ? Option.of(content) : Option.none());
     }
 
-    private static Next workingFileSelected(Model model, String path) {
+    private static Next workingFileSelected(Model model, RepoPath path) {
         return selected(
                 model,
                 path,
@@ -188,7 +189,7 @@ public final class SelectionUpdate {
      * A directory without changes needs nothing read: it says how many files it holds, in the commit whose files are
      * listed, while they are.
      */
-    private static Next unchangedDirectorySelected(Model model, String path, int files) {
+    private static Next unchangedDirectorySelected(Model model, RepoPath path, int files) {
         UnchangedNode node = new UnchangedNode.Directory(path, files);
         return Next.of(model.mapRepoView(repoView -> repoView.files()
                 .commitFiles()

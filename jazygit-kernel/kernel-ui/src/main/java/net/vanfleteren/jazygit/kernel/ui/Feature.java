@@ -16,6 +16,7 @@ import net.vanfleteren.jazygit.kernel.settings.Settings;
 import net.vanfleteren.jazygit.kernel.settings.SettingsStore;
 import net.vanfleteren.jazygit.kernel.state.Cmd;
 import net.vanfleteren.jazygit.kernel.state.Env;
+import net.vanfleteren.jazygit.kernel.state.FeatureId;
 import net.vanfleteren.jazygit.kernel.state.FeatureMsg;
 import net.vanfleteren.jazygit.kernel.state.FeatureUpdate;
 import net.vanfleteren.jazygit.kernel.state.KernelEvent;
@@ -274,7 +275,7 @@ public record Feature(
      * the home, or asks the user which it is. It is asked once a repository is opened; until then, the feature is off.
      * A worktree of the repository shown before is not asked again (ADR 182).
      */
-    public Feature applying(String id, Function<Model, Cmd> detect) {
+    public Feature applying(FeatureId id, Function<Model, Cmd> detect) {
         return new Feature(
                 actions,
                 contents,
@@ -299,7 +300,7 @@ public record Feature(
     }
 
     private Feature gated(Applying applying) {
-        String id = applying.id();
+        FeatureId id = applying.id();
         // A worktree of the repository shown before opens on the forge decided there (ADR 182).
         Reaction detecting =
                 (model, event) -> event instanceof KernelEvent.RepositoryOpened && !ForgeUpdate.known(model)
@@ -378,12 +379,12 @@ public record Feature(
      * @param id     its id, by which the model keeps whether it is on
      * @param detect what finds out in a model which remotes are on it, and answers with {@code FeatureMsg.Claimed}
      */
-    public record Applying(String id, Function<Model, Cmd> detect) {}
+    public record Applying(FeatureId id, Function<Model, Cmd> detect) {}
 
     /**
      * {@code source}, of the feature {@code id}, which shows nothing while that is off.
      */
-    public record GatedSource(String id, ContentSource source) implements ContentSource {
+    public record GatedSource(FeatureId id, ContentSource source) implements ContentSource {
 
         @Override
         public Option<Shown> shown(Model model, Mirrored pane) {
@@ -404,7 +405,7 @@ public record Feature(
     /**
      * {@code reaction}, which answers nothing while the feature {@code id} is off.
      */
-    private record GatedReaction(String id, Reaction reaction) implements Reaction {
+    private record GatedReaction(FeatureId id, Reaction reaction) implements Reaction {
 
         @Override
         public Update.Next to(Model model, KernelEvent event) {

@@ -15,7 +15,10 @@ import net.vanfleteren.jazygit.core.forgejo.ForgejoBranchRules;
 import net.vanfleteren.jazygit.core.forgejo.ForgejoError;
 import net.vanfleteren.jazygit.core.forgejo.ForgejoPullRequest;
 import net.vanfleteren.jazygit.core.forgejo.ForgejoReview;
+import net.vanfleteren.jazygit.core.repo.ForgeBranch;
+import net.vanfleteren.jazygit.core.repo.PrNumber;
 import net.vanfleteren.jazygit.core.repo.RemoteName;
+import net.vanfleteren.jazygit.core.repo.RemoteUrl;
 import net.vanfleteren.jazygit.features.forgejo.ForgejoFailure;
 import net.vanfleteren.jazygit.features.forgejo.pulls.PullRequestFixtures.FakeForgejo;
 import net.vanfleteren.jazygit.features.forgejo.show.LoadPullRequest;
@@ -33,7 +36,13 @@ class PullRequestCommandsTest {
     @Test
     void theOpenPullRequestsOfTheHomeAreKnownByTheBranchTheyMergeThoseOfOthersForksLeftOut() {
         ForgejoPullRequest fromFork = new ForgejoPullRequest(
-                13, "From a fork", "feature", Option.of("someone/nix"), "main", false, "https://x/13");
+                new PrNumber(13),
+                "From a fork",
+                new ForgeBranch("feature"),
+                Option.of("someone/nix"),
+                new ForgeBranch("main"),
+                false,
+                "https://x/13");
         FakeForgejo forgejo = FakeForgejo.of(details("Show")).withOpen(Either.right(List.of(LISTED, fromFork)));
 
         assertEquals(
@@ -45,7 +54,13 @@ class PullRequestCommandsTest {
     void thoseOfTheProjectAForkWasMadeOfAreKnownByTheBranchOfTheForkTheyMerge() {
         // origin is Anna's fork, upstream the project: her pull request is the project's, its branch in her fork.
         ForgejoPullRequest fromAnna = new ForgejoPullRequest(
-                14, "From Anna's fork", "feature", Option.of("Anna/Nix"), "main", false, "https://x/14");
+                new PrNumber(14),
+                "From Anna's fork",
+                new ForgeBranch("feature"),
+                Option.of("Anna/Nix"),
+                new ForgeBranch("main"),
+                false,
+                "https://x/14");
         FakeForgejo forgejo = FakeForgejo.of(details("Show")).withOpen(Either.right(List.of(fromAnna)));
 
         assertEquals(
@@ -54,9 +69,9 @@ class PullRequestCommandsTest {
                 new ReadPullRequests(new RemoteName("upstream"))
                         .run(forgejo.env(HashMap.of(
                                 ORIGIN,
-                                "git@code.example.net:anna/nix.git",
+                                new RemoteUrl("git@code.example.net:anna/nix.git"),
                                 new RemoteName("upstream"),
-                                "https://code.example.net/cvf/nix.git"))));
+                                new RemoteUrl("https://code.example.net/cvf/nix.git")))));
     }
 
     @Test
@@ -65,7 +80,8 @@ class PullRequestCommandsTest {
 
         assertEquals(
                 new PullRequestMsg.PlainHttpChecked(Option.of("http://code.example.net")),
-                new CheckPlainHttp(ORIGIN).run(forgejo.env(HashMap.of(ORIGIN, "http://code.example.net/cvf/nix.git"))));
+                new CheckPlainHttp(ORIGIN)
+                        .run(forgejo.env(HashMap.of(ORIGIN, new RemoteUrl("http://code.example.net/cvf/nix.git")))));
         assertEquals(new PullRequestMsg.PlainHttpChecked(Option.none()), new CheckPlainHttp(ORIGIN).run(forgejo.env()));
     }
 
@@ -76,7 +92,8 @@ class PullRequestCommandsTest {
         assertEquals(
                 new PullRequestMsg.Listed(new RemoteName("github"), Option.none(), Option.none()),
                 new ReadPullRequests(new RemoteName("github"))
-                        .run(forgejo.env(HashMap.of(new RemoteName("github"), "git@github.com:cvf/nix.git"))));
+                        .run(forgejo.env(
+                                HashMap.of(new RemoteName("github"), new RemoteUrl("git@github.com:cvf/nix.git")))));
     }
 
     @Test
@@ -103,7 +120,7 @@ class PullRequestCommandsTest {
                                 Option.of(ForgejoBranchRules.NONE),
                                 1,
                                 Option.none()))),
-                new LoadPullRequest(ORIGIN, 12, 3).run(forgejo.env()));
+                new LoadPullRequest(ORIGIN, new PrNumber(12), 3).run(forgejo.env()));
     }
 
     @Test
@@ -113,7 +130,7 @@ class PullRequestCommandsTest {
         assertEquals(
                 new PullRequestMsg.Read(
                         3, Either.right(new ShownPullRequest(details("Show"), Option.none(), CommitStatus.NONE))),
-                new LoadPullRequest(ORIGIN, 12, 3).run(forgejo.env()));
+                new LoadPullRequest(ORIGIN, new PrNumber(12), 3).run(forgejo.env()));
     }
 
     @Test
@@ -121,11 +138,12 @@ class PullRequestCommandsTest {
         FakeForgejo down = FakeForgejo.failing(Either.left(DOWN), Either.right(List.empty()), DOWN);
         assertEquals(
                 new PullRequestMsg.Read(3, Either.<Failure, ShownPullRequest>left(new ForgejoFailure.Asked(DOWN))),
-                new LoadPullRequest(ORIGIN, 12, 3).run(down.env()));
+                new LoadPullRequest(ORIGIN, new PrNumber(12), 3).run(down.env()));
 
         assertEquals(
                 new PullRequestMsg.Read(3, Either.<Failure, ShownPullRequest>left(new ForgejoFailure.NoHome())),
-                new LoadPullRequest(ORIGIN, 12, 3)
-                        .run(FakeForgejo.of(details("Show")).env(HashMap.of(ORIGIN, "git@github.com:cvf/nix.git"))));
+                new LoadPullRequest(ORIGIN, new PrNumber(12), 3)
+                        .run(FakeForgejo.of(details("Show"))
+                                .env(HashMap.of(ORIGIN, new RemoteUrl("git@github.com:cvf/nix.git")))));
     }
 }

@@ -12,6 +12,7 @@ import net.vanfleteren.jazygit.core.git.model.SampleData;
 import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.Head;
 import net.vanfleteren.jazygit.core.repo.InProgress;
+import net.vanfleteren.jazygit.core.repo.RepoPath;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.features.branches.branch.checkout.CheckoutModels;
 import net.vanfleteren.jazygit.kernel.state.Model;
@@ -64,9 +65,9 @@ class StatusPanelTest {
     @Test
     void showsWhatTheRepositoryIsInTheMiddleOfOnALineOfItsOwn() throws Exception {
         FileEntry conflicted =
-                FileEntry.conflicted("a.txt", new Conflict(Conflict.Side.UPDATED, Conflict.Side.UPDATED));
+                FileEntry.conflicted(new RepoPath("a.txt"), new Conflict(Conflict.Side.UPDATED, Conflict.Side.UPDATED));
         FileEntry alsoConflicted =
-                FileEntry.conflicted("b.txt", new Conflict(Conflict.Side.UPDATED, Conflict.Side.DELETED));
+                FileEntry.conflicted(new RepoPath("b.txt"), new Conflict(Conflict.Side.UPDATED, Conflict.Side.DELETED));
         Head main = Head.onBranch(new BranchName("main"), new Sha("aaaa"));
 
         assertEquals(

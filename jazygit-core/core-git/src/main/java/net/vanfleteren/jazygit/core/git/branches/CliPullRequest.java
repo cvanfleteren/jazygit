@@ -19,6 +19,8 @@ import net.vanfleteren.jazygit.core.git.process.GitFailure;
 import net.vanfleteren.jazygit.core.git.process.GitProcess;
 import net.vanfleteren.jazygit.core.repo.PullRequestCommits;
 import net.vanfleteren.jazygit.core.repo.RemoteName;
+import net.vanfleteren.jazygit.core.repo.RemoteUrl;
+import net.vanfleteren.jazygit.core.repo.RepoSlug;
 import net.vanfleteren.jazygit.core.repo.Revision;
 import net.vanfleteren.jazygit.core.repo.Sha;
 
@@ -71,7 +73,7 @@ final class CliPullRequest {
                 "--no-write-fetch-head",
                 "--refmap=",
                 GitArgs.remote(remote),
-                "refs/pull/" + commits.number() + "/head",
+                "refs/pull/" + commits.number().value() + "/head",
                 commits.base().value());
     }
 
@@ -97,12 +99,12 @@ final class CliPullRequest {
      * host does not have the pull requests, so one on {@code host} is taken first; when none is, as when an ssh alias
      * names it, the first whose path names it. The first by name when several do.
      */
-    static Option<RemoteName> remoteOf(Map<RemoteName, String> urls, String repository, String host) {
-        String wanted = "/" + repository.toLowerCase(Locale.ROOT);
-        List<Tuple2<RemoteName, String>> named = urls.toList()
+    static Option<RemoteName> remoteOf(Map<RemoteName, RemoteUrl> urls, RepoSlug repository, String host) {
+        String wanted = "/" + repository.value().toLowerCase(Locale.ROOT);
+        List<Tuple2<RemoteName, RemoteUrl>> named = urls.toList()
                 .sortBy(remote -> remote._1)
-                .filter(remote -> path(remote._2).endsWith(wanted));
-        return named.find(remote -> host(remote._2).equals(host.toLowerCase(Locale.ROOT)))
+                .filter(remote -> path(remote._2.value()).endsWith(wanted));
+        return named.find(remote -> host(remote._2.value()).equals(host.toLowerCase(Locale.ROOT)))
                 .orElse(named::headOption)
                 .map(Tuple2::_1);
     }

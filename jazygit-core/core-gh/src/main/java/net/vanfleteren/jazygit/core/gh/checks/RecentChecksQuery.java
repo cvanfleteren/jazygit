@@ -18,6 +18,7 @@ import net.vanfleteren.jazygit.core.gh.model.PullRequestDetails.Check;
 import net.vanfleteren.jazygit.core.gh.model.RecentChecks;
 import net.vanfleteren.jazygit.core.gh.process.GhCommand;
 import net.vanfleteren.jazygit.core.gh.timing.CheckTimings;
+import net.vanfleteren.jazygit.core.repo.RepoSlug;
 import net.vanfleteren.jazygit.lib.json.Decoder;
 
 /**
@@ -79,7 +80,7 @@ final class RecentChecksQuery {
     static final Decoder<RecentChecks> DECODER = at(
             "data.repository",
             map3(
-                    field("nameWithOwner", string()),
+                    field("nameWithOwner", string()).map(RepoSlug::new),
                     MERGED,
                     DEFAULT_BRANCH,
                     (repository, merged, defaultBranch) -> new RecentChecks(

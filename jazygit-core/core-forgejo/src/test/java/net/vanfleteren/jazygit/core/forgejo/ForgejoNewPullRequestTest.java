@@ -3,6 +3,8 @@ package net.vanfleteren.jazygit.core.forgejo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import io.vavr.control.Option;
+import net.vanfleteren.jazygit.core.repo.ForgeBranch;
+import net.vanfleteren.jazygit.core.repo.PrNumber;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -13,7 +15,7 @@ class ForgejoNewPullRequestTest {
     private static final ForgejoRepository HOME = new ForgejoRepository("https://code.example.net", "cvf", "nix");
 
     private static ForgejoNewPullRequest titled(String title, boolean draft) {
-        return new ForgejoNewPullRequest("feature", "main", title, "", draft);
+        return new ForgejoNewPullRequest("feature", new ForgeBranch("main"), title, "", draft);
     }
 
     @Test
@@ -54,7 +56,7 @@ class ForgejoNewPullRequestTest {
     void onlyA409NamesAPullRequestOpenAlready() {
         String message = "{\"message\":\"pull request already exists for these targets [id: 1, issue_id: 4]\"}";
 
-        assertEquals(Option.of(4L), new ForgejoError.Refused(409, message).existing());
+        assertEquals(Option.of(new PrNumber(4)), new ForgejoError.Refused(409, message).existing());
         assertEquals(Option.none(), new ForgejoError.Refused(422, message).existing());
         assertEquals(Option.none(), new ForgejoError.Refused(409, "{\"message\":\"conflict\"}").existing());
     }

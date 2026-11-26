@@ -6,6 +6,7 @@ import net.vanfleteren.jazygit.core.gh.model.BranchCheckRuns;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestDetails.Check;
 import net.vanfleteren.jazygit.core.repo.BranchName;
+import net.vanfleteren.jazygit.core.repo.RepoSlug;
 import net.vanfleteren.jazygit.features.github.checks.branches.GitHubChecks;
 import net.vanfleteren.jazygit.features.github.state.FromGitHub;
 
@@ -16,7 +17,7 @@ import net.vanfleteren.jazygit.features.github.state.FromGitHub;
  * @param repository the repository, as {@code owner/name}
  * @param byBranch   the checks on the tip of each of those branches
  */
-public record PendingChecks(String repository, Map<BranchName, List<Check>> byBranch) {
+public record PendingChecks(RepoSlug repository, Map<BranchName, List<Check>> byBranch) {
 
     public static PendingChecks of(BranchCheckRuns runs) {
         return new PendingChecks(runs.repository(), runs.byBranch().mapKeys(FromGitHub::branch));

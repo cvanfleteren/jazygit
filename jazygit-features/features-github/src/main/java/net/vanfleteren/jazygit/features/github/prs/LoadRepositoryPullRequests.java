@@ -6,6 +6,7 @@ import io.vavr.collection.Map;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.core.gh.model.GhAccount;
 import net.vanfleteren.jazygit.core.repo.RemoteName;
+import net.vanfleteren.jazygit.core.repo.RepoSlug;
 import net.vanfleteren.jazygit.features.github.GitHubFailure;
 import net.vanfleteren.jazygit.features.github.GitHubServices;
 import net.vanfleteren.jazygit.features.github.state.GitHubState;
@@ -49,7 +50,7 @@ public record LoadRepositoryPullRequests() implements GitHubState.ListRead {
      * the remotes cannot be listed, none: the pull requests then match the branches by name alone, those of one's
      * fork left out, as before the remotes were known.
      */
-    static Map<RemoteName, String> remotes(Env env) {
+    static Map<RemoteName, RepoSlug> remotes(Env env) {
         return env.git()
                 .remotes()
                 .urls()

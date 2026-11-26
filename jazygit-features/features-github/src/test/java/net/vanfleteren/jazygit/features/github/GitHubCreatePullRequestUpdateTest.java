@@ -12,9 +12,7 @@ import io.vavr.control.Either;
 import io.vavr.control.Option;
 import java.time.Instant;
 import net.vanfleteren.jazygit.core.gh.StubGitHub;
-import net.vanfleteren.jazygit.core.gh.model.GhBranch;
 import net.vanfleteren.jazygit.core.gh.model.NewPullRequest;
-import net.vanfleteren.jazygit.core.gh.model.PrNumber;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest.Review;
@@ -508,7 +506,7 @@ class GitHubCreatePullRequestUpdateTest {
                 new RemoteBranch("origin", MAIN.name()),
                 new NewPullRequest("Login", "", false));
         PullRequest created =
-                new PullRequest(new PrNumber(43), new GhBranch("feature"), false, Checks.NONE, Review.NONE);
+                new PullRequest(new PrNumber(43), new ForgeBranch("feature"), false, Checks.NONE, Review.NONE);
         Model creating = confirmed(cmd.pullRequest()).model();
 
         Next done =

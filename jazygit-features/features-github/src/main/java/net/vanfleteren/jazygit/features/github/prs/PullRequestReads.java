@@ -3,6 +3,7 @@ package net.vanfleteren.jazygit.features.github.prs;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest;
+import net.vanfleteren.jazygit.core.repo.RepoSlug;
 import net.vanfleteren.jazygit.features.github.GitHubFailure;
 import net.vanfleteren.jazygit.features.github.checks.branches.BranchChecksUpdate;
 import net.vanfleteren.jazygit.features.github.state.FailingRead;
@@ -57,7 +58,7 @@ public final class PullRequestReads {
      * {@code model} once the open pull requests of {@code repository}, {@code pullRequests}, were read: the branches
      * show them, and are read again when GitHub says another base for one (ADR 72).
      */
-    public static Next loaded(Model model, List<PullRequest> pullRequests, String repository) {
+    public static Next loaded(Model model, List<PullRequest> pullRequests, RepoSlug repository) {
         return PullRequestsUpdate.branchesAgain(
                 model,
                 GitHubReads.done(

@@ -14,6 +14,7 @@ import net.vanfleteren.jazygit.core.git.StubGit;
 import net.vanfleteren.jazygit.core.git.branches.StubRemotes;
 import net.vanfleteren.jazygit.core.git.process.GitError;
 import net.vanfleteren.jazygit.core.repo.RemoteName;
+import net.vanfleteren.jazygit.core.repo.RemoteUrl;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.features.forgejo.ForgejoFeature;
 import net.vanfleteren.jazygit.kernel.state.Env;
@@ -36,16 +37,18 @@ class ForgejoCommandsTest {
         String github = "git@github.com:cvanfleteren/jazygit.git";
         Msg detected = new DetectForgejo()
                 .run(FORGEJO.env(HashMap.of(
-                        new RemoteName("origin"), github,
-                        new RemoteName("upstream"), REMOTE,
-                        new RemoteName("mine"), "https://code.example.net/me/nix.git")));
+                        new RemoteName("origin"), new RemoteUrl(github),
+                        new RemoteName("upstream"), new RemoteUrl(REMOTE),
+                        new RemoteName("mine"), new RemoteUrl("https://code.example.net/me/nix.git"))));
 
         ForgeClaim claim = ((FeatureMsg.Claimed) detected).claim();
         assertEquals(ForgejoFeature.ID, claim.feature());
         assertEquals(
                 List.of("mine", "upstream"),
                 claim.claimed().keySet().toList().map(RemoteName::value).sorted());
-        assertEquals(REMOTE, claim.claimed().get(new RemoteName("upstream")).get());
+        assertEquals(
+                new RemoteUrl(REMOTE),
+                claim.claimed().get(new RemoteName("upstream")).get());
         assertEquals(HashSet.empty(), claim.unsure());
     }
 
@@ -87,7 +90,7 @@ class ForgejoCommandsTest {
         List<Tip> tips = List.of(new Tip(new RemoteName("origin"), PASSED));
         Env env = new Env(StubGit.of().withRemotes(new StubRemotes() {
                     @Override
-                    public Either<GitError, Map<RemoteName, String>> urls() {
+                    public Either<GitError, Map<RemoteName, RemoteUrl>> urls() {
                         return Either.left(new GitError.TimedOut("remote", Path.of(".")));
                     }
                 }))

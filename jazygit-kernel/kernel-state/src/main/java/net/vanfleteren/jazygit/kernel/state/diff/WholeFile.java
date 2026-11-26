@@ -3,6 +3,7 @@ package net.vanfleteren.jazygit.kernel.state.diff;
 import net.vanfleteren.jazygit.core.git.model.CommitFile;
 import net.vanfleteren.jazygit.core.git.model.DiffOptions;
 import net.vanfleteren.jazygit.core.git.model.FileEntry;
+import net.vanfleteren.jazygit.core.repo.RepoPath;
 import net.vanfleteren.jazygit.core.repo.Sha;
 
 /**
@@ -10,7 +11,7 @@ import net.vanfleteren.jazygit.core.repo.Sha;
  * read again the way {@code source} says, with {@code options}. What shows a file read whole keeps this, not the read
  * itself, which knows where in the model it puts what it read.
  */
-public record WholeFile(ScrolledContent content, Source source, String path, DiffOptions options) {
+public record WholeFile(ScrolledContent content, Source source, RepoPath path, DiffOptions options) {
 
     /**
      * This with {@code chosen} options.
@@ -47,11 +48,11 @@ public record WholeFile(ScrolledContent content, Source source, String path, Dif
         /**
          * The file at {@code path} in the working tree, without changes, as it is on disk (ADR 108).
          */
-        record OnDisk(String path) implements Source {}
+        record OnDisk(RepoPath path) implements Source {}
 
         /**
          * The file at {@code path} in the commit {@code sha}, which it did not change, as it is in it (ADR 128).
          */
-        record AtCommit(Sha sha, String path) implements Source {}
+        record AtCommit(Sha sha, RepoPath path) implements Source {}
     }
 }

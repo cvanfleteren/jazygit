@@ -9,15 +9,16 @@ import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
 import java.time.Instant;
-import net.vanfleteren.jazygit.core.gh.model.GhBranch;
 import net.vanfleteren.jazygit.core.gh.model.MyPullRequests;
-import net.vanfleteren.jazygit.core.gh.model.PrNumber;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest.Review;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestList;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestSummary;
 import net.vanfleteren.jazygit.core.gh.process.GhError;
 import net.vanfleteren.jazygit.core.gh.process.GhProcess;
+import net.vanfleteren.jazygit.core.repo.ForgeBranch;
+import net.vanfleteren.jazygit.core.repo.PrNumber;
+import net.vanfleteren.jazygit.core.repo.RepoSlug;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -52,11 +53,11 @@ class MyPullRequestsQueryTest {
                 Either.right(new MyPullRequests(
                         new PullRequestList(
                                 List.of(new PullRequestSummary(
-                                        "other/repo",
+                                        new RepoSlug("other/repo"),
                                         new PrNumber(9),
                                         "Fix the\tlogin",
                                         "alice",
-                                        new GhBranch("feature/login"),
+                                        new ForgeBranch("feature/login"),
                                         false,
                                         false,
                                         Checks.PASSING,
@@ -66,7 +67,7 @@ class MyPullRequestsQueryTest {
                                         Option.none(),
                                         Option.none(),
                                         Option.none(),
-                                        Option.of(new GhBranch("main")))),
+                                        Option.of(new ForgeBranch("main")))),
                                 52),
                         PullRequestList.EMPTY)),
                 mine(52, fix, 0, ""));

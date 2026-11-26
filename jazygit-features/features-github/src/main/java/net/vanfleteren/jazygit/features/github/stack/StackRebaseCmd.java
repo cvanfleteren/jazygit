@@ -100,7 +100,7 @@ public sealed interface StackRebaseCmd extends Cmd {
 
         @Override
         public Option<String> subject() {
-            return Option.of("#" + rebase.stack());
+            return Option.of("#" + rebase.stack().value());
         }
 
         @Override
@@ -147,7 +147,7 @@ public sealed interface StackRebaseCmd extends Cmd {
 
         @Override
         public Option<String> subject() {
-            return Option.of("#" + push.stack());
+            return Option.of("#" + push.stack().value());
         }
 
         @Override

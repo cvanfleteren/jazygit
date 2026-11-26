@@ -7,6 +7,7 @@ import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.time.Instant;
 import net.vanfleteren.jazygit.core.git.model.DiffText;
+import net.vanfleteren.jazygit.core.repo.RepoPath;
 import net.vanfleteren.jazygit.kernel.content.diff.ShownRemarks;
 import net.vanfleteren.jazygit.kernel.settings.DiffLook;
 import net.vanfleteren.jazygit.kernel.settings.DiffStyle;
@@ -61,10 +62,12 @@ class DiffBodyTest {
         DiffBody body = new DiffBody(changes(DiffStyle.RICH));
 
         assertEquals(
-                Option.of(new DiffStops.HunkAt(0, 0)), body.markedHunk(new Anchor.OnLine("a.txt", DiffSide.OLD, 2)));
+                Option.of(new DiffStops.HunkAt(0, 0)),
+                body.markedHunk(new Anchor.OnLine(new RepoPath("a.txt"), DiffSide.OLD, 2)));
         assertEquals(
-                Option.of(new DiffStops.HunkAt(1, 0)), body.markedHunk(new Anchor.OnLine("b.txt", DiffSide.NEW, 2)));
-        assertEquals(Option.none(), body.markedHunk(new Anchor.OnLine("c.txt", DiffSide.NEW, 2)));
+                Option.of(new DiffStops.HunkAt(1, 0)),
+                body.markedHunk(new Anchor.OnLine(new RepoPath("b.txt"), DiffSide.NEW, 2)));
+        assertEquals(Option.none(), body.markedHunk(new Anchor.OnLine(new RepoPath("c.txt"), DiffSide.NEW, 2)));
     }
 
     @Test

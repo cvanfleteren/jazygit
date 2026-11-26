@@ -7,12 +7,15 @@ import io.vavr.control.Option;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import net.vanfleteren.jazygit.core.repo.PrNumber;
+import net.vanfleteren.jazygit.core.repo.RepoSlug;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 class UnseenPullRequestsFileTest {
 
-    private static final UnseenPullRequests UNSEEN = new UnseenPullRequests(42, TreeSet.of(40, 42));
+    private static final UnseenPullRequests UNSEEN =
+            new UnseenPullRequests(new PrNumber(42), TreeSet.of(new PrNumber(40), new PrNumber(42)));
 
     @TempDir
     Path dir;
@@ -36,23 +39,23 @@ class UnseenPullRequestsFileTest {
 
     @Test
     void aMissingFileHasNoneAndIsNotCreated() {
-        assertEquals(Option.none(), unseen().load("owner/repo"));
+        assertEquals(Option.none(), unseen().load(new RepoSlug("owner/repo")));
         assertFalse(Files.exists(file()));
     }
 
     @Test
     void whatIsKeptIsReadBackPerRepositoryEvenWithADotInItsName() {
-        assertTrue(unseen().save("owner/repo.js", UNSEEN).isSuccess());
-        unseen().save("owner/other", UnseenPullRequests.upTo(7));
+        assertTrue(unseen().save(new RepoSlug("owner/repo.js"), UNSEEN).isSuccess());
+        unseen().save(new RepoSlug("owner/other"), UnseenPullRequests.upTo(new PrNumber(7)));
 
-        assertEquals(Option.of(UNSEEN), unseen().load("owner/repo.js"));
-        assertEquals(Option.of(UnseenPullRequests.upTo(7)), unseen().load("owner/other"));
-        assertEquals(Option.none(), unseen().load("owner/repo"));
+        assertEquals(Option.of(UNSEEN), unseen().load(new RepoSlug("owner/repo.js")));
+        assertEquals(Option.of(UnseenPullRequests.upTo(new PrNumber(7))), unseen().load(new RepoSlug("owner/other")));
+        assertEquals(Option.none(), unseen().load(new RepoSlug("owner/repo")));
     }
 
     @Test
     void eachRepositoryHasAFileOfItsOwn() throws IOException {
-        unseen().save("owner/repo", UNSEEN);
+        unseen().save(new RepoSlug("owner/repo"), UNSEEN);
 
         String written = Files.readString(file());
         assertTrue(written.startsWith("highest = 42"), written);
@@ -60,9 +63,9 @@ class UnseenPullRequestsFileTest {
 
     @Test
     void whatIsNoOwnerAndNameIsNeitherReadNorWritten() {
-        assertTrue(unseen().save("../repo", UNSEEN).isFailure());
-        assertTrue(unseen().save("owner/repo/x", UNSEEN).isFailure());
-        assertEquals(Option.none(), unseen().load("owner"));
+        assertTrue(unseen().save(new RepoSlug("../repo"), UNSEEN).isFailure());
+        assertTrue(unseen().save(new RepoSlug("owner/repo/x"), UNSEEN).isFailure());
+        assertEquals(Option.none(), unseen().load(new RepoSlug("owner")));
         assertFalse(Files.exists(dir.resolve("jazygit")));
     }
 
@@ -70,9 +73,9 @@ class UnseenPullRequestsFileTest {
     void aFileThatCannotBeReadHasNoneAndIsWrittenAnew() throws IOException {
         write("not = [toml");
 
-        assertEquals(Option.none(), unseen().load("owner/repo"));
-        assertTrue(unseen().save("owner/repo", UNSEEN).isSuccess());
-        assertEquals(Option.of(UNSEEN), unseen().load("owner/repo"));
+        assertEquals(Option.none(), unseen().load(new RepoSlug("owner/repo")));
+        assertTrue(unseen().save(new RepoSlug("owner/repo"), UNSEEN).isSuccess());
+        assertEquals(Option.of(UNSEEN), unseen().load(new RepoSlug("owner/repo")));
     }
 
     @Test
@@ -82,6 +85,6 @@ class UnseenPullRequestsFileTest {
                 numbers = [40, "x", 42]
                 """);
 
-        assertEquals(Option.of(UNSEEN), unseen().load("owner/repo"));
+        assertEquals(Option.of(UNSEEN), unseen().load(new RepoSlug("owner/repo")));
     }
 }

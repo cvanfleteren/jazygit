@@ -295,7 +295,7 @@ public final class ForgejoChecksDialog implements PopupView {
                     model.part(ForgejoPullRequests.PART)
                             .open()
                             .flatMap(open -> open.get(popup.onForgejo()))
-                            .map(pr -> new FailedBuild.ChangeRequest("pull request", (int) pr.number())),
+                            .map(pr -> new FailedBuild.ChangeRequest("pull request", pr.number())),
                     failed.map(check -> new FailedBuild.Job(check.name(), check.url())),
                     read.checks().exists(check -> !check.done()),
                     failed.map(check -> check.name() + ": its log is on Forgejo"

@@ -13,8 +13,6 @@ import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.time.Instant;
 import net.vanfleteren.jazygit.core.gh.StubGitHub;
-import net.vanfleteren.jazygit.core.gh.model.GhBranch;
-import net.vanfleteren.jazygit.core.gh.model.PrNumber;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest.Review;
@@ -63,12 +61,12 @@ class PullRequestFilesUpdateTest {
                 Update.update(withPr(), new PullRequestMsg.Requested(FEATURE)).model();
         PullRequestDetails read =
                 StubGitHub.of().pullRequests().details(new PrNumber(42)).get();
-        PullRequestDetails details = read.withRepository("owner/repo")
+        PullRequestDetails details = read.withRepository(new RepoSlug("owner/repo"))
                 .withUrl("https://github.com/owner/repo")
                 .withStatus(read.status().withState(state))
                 .withBranches(new PullRequestDetails.Branches(
-                        new GhBranch("feature"),
-                        new GhBranch("main"),
+                        new ForgeBranch("feature"),
+                        new ForgeBranch("main"),
                         Sha.parse(known ? HEAD_OID : ""),
                         Option.none(),
                         Sha.parse(BASE_OID)));
@@ -78,8 +76,8 @@ class PullRequestFilesUpdateTest {
 
     @Test
     void theFilesOfAPullRequestOpenInTheFilesPaneInPlaceOfTheDialog() {
-        PullRequestCommits commits =
-                new PullRequestCommits(42, "owner/repo", "github.com", new Sha(BASE_OID), new Sha(HEAD_OID));
+        PullRequestCommits commits = new PullRequestCommits(
+                new PrNumber(42), new RepoSlug("owner/repo"), "github.com", new Sha(BASE_OID), new Sha(HEAD_OID));
         // A pull request closed without being merged shows its changes as it did while it was open.
         for (PullRequestDetails.State state : List.of(PullRequestDetails.State.OPEN, PullRequestDetails.State.CLOSED)) {
             Model shown = showingCommits(state, true).withScreen(PrOverview.SCREEN);
@@ -96,7 +94,7 @@ class PullRequestFilesUpdateTest {
                     List.of(
                             new LoadCommitFiles(of),
                             new RemarksCmd.LoadReviewRemarks(new PrNumber(42), HashSet.empty(), 0),
-                            new RemarksCmd.LoadCollapsed("owner/repo", new PrNumber(42))),
+                            new RemarksCmd.LoadCollapsed(new RepoSlug("owner/repo"), new PrNumber(42))),
                     opened.cmds());
             assertTrue(opened.cmds().head().background());
         }
@@ -120,12 +118,12 @@ class PullRequestFilesUpdateTest {
     private static PullRequestDetails readAtCommits(PullRequestDetails.State state) {
         PullRequestDetails read =
                 StubGitHub.of().pullRequests().details(new PrNumber(42)).get();
-        return read.withRepository("owner/repo")
+        return read.withRepository(new RepoSlug("owner/repo"))
                 .withUrl("https://github.com/owner/repo")
                 .withStatus(read.status().withState(state))
                 .withBranches(new PullRequestDetails.Branches(
-                        new GhBranch("feature"),
-                        new GhBranch("main"),
+                        new ForgeBranch("feature"),
+                        new ForgeBranch("main"),
                         Sha.parse(HEAD_OID),
                         Option.none(),
                         Sha.parse(BASE_OID)));
@@ -148,7 +146,12 @@ class PullRequestFilesUpdateTest {
                         new PrNumber(42), lastRead(requested.model()), readAtCommits(PullRequestDetails.State.OPEN)));
 
         Changes of = new Changes.OfPullRequest(
-                new PullRequestCommits(42, "owner/repo", "github.com", new Sha(BASE_OID), new Sha(HEAD_OID)),
+                new PullRequestCommits(
+                        new PrNumber(42),
+                        new RepoSlug("owner/repo"),
+                        "github.com",
+                        new Sha(BASE_OID),
+                        new Sha(HEAD_OID)),
                 Option.of(new BranchName("feature")));
         assertEquals(Option.none(), opened.model().popup(PullRequestPopup.class));
         assertEquals(Screen.REPOSITORY, opened.model().screen());
@@ -187,20 +190,28 @@ class PullRequestFilesUpdateTest {
     void shiftFOnABranchWhosePullRequestIsListedWithItsCommitsShowsItsFilesAtOnce() {
         PullRequest listed = new PullRequest(
                 new PrNumber(42),
-                new GhBranch("feature"),
+                new ForgeBranch("feature"),
                 false,
                 Checks.PASSING,
                 Review.APPROVED,
                 Option.none(),
                 Option.of(new PullRequest.Commits(
-                        "owner/repo", "https://github.com/owner/repo/pull/42", new Sha(BASE_OID), new Sha(HEAD_OID))));
+                        new RepoSlug("owner/repo"),
+                        "https://github.com/owner/repo/pull/42",
+                        new Sha(BASE_OID),
+                        new Sha(HEAD_OID))));
         Model shown = Update.update(model(), PullRequestFixtures.listed(List.of(listed)))
                 .model();
 
         Next opened = Update.update(shown, new PullRequestMsg.FilesRequested(FEATURE));
 
         Changes of = new Changes.OfPullRequest(
-                new PullRequestCommits(42, "owner/repo", "github.com", new Sha(BASE_OID), new Sha(HEAD_OID)),
+                new PullRequestCommits(
+                        new PrNumber(42),
+                        new RepoSlug("owner/repo"),
+                        "github.com",
+                        new Sha(BASE_OID),
+                        new Sha(HEAD_OID)),
                 Option.of(new BranchName("feature")));
         assertEquals(Option.none(), opened.model().popup(PullRequestPopup.class));
         assertEquals(
@@ -210,7 +221,7 @@ class PullRequestFilesUpdateTest {
                 List.of(
                         new LoadCommitFiles(of),
                         new RemarksCmd.LoadReviewRemarks(new PrNumber(42), HashSet.empty(), 0),
-                        new RemarksCmd.LoadCollapsed("owner/repo", new PrNumber(42))),
+                        new RemarksCmd.LoadCollapsed(new RepoSlug("owner/repo"), new PrNumber(42))),
                 opened.cmds());
     }
 
@@ -251,7 +262,7 @@ class PullRequestFilesUpdateTest {
     @Test
     void shiftFOnTheMainBranchWithAPullRequestShowsTheFilesOfThatAsOnAnyBranch() {
         PullRequest fromMain =
-                new PullRequest(new PrNumber(7), new GhBranch("main"), false, Checks.PASSING, Review.APPROVED);
+                new PullRequest(new PrNumber(7), new ForgeBranch("main"), false, Checks.PASSING, Review.APPROVED);
         Model shown = Update.update(model(), PullRequestFixtures.listed(List.of(fromMain)))
                 .model();
 
@@ -304,7 +315,11 @@ class PullRequestFilesUpdateTest {
                         PullRequestFixtures.listed(List.of(
                                 FEATURE_PR,
                                 new PullRequest(
-                                        new PrNumber(43), new GhBranch("ahead"), false, Checks.PASSING, Review.NONE))))
+                                        new PrNumber(43),
+                                        new ForgeBranch("ahead"),
+                                        false,
+                                        Checks.PASSING,
+                                        Review.NONE))))
                 .model();
         Model requested =
                 Update.update(both, new PullRequestMsg.FilesRequested(FEATURE)).model();
@@ -356,7 +371,11 @@ class PullRequestFilesUpdateTest {
                 Option.of(CommitFilesView.of(
                         new Changes.OfPullRequest(
                                 new PullRequestCommits(
-                                        42, "owner/repo", "github.com", new Sha(BASE_OID), new Sha(HEAD_OID)),
+                                        new PrNumber(42),
+                                        new RepoSlug("owner/repo"),
+                                        "github.com",
+                                        new Sha(BASE_OID),
+                                        new Sha(HEAD_OID)),
                                 Option.of(new BranchName("feature"))),
                         new PaneId("branches"),
                         new PaneId("files"))),
@@ -382,11 +401,11 @@ class PullRequestFilesUpdateTest {
     @Test
     void shiftFOnThePullRequestsScreenShowsTheFilesOfAPullRequestAtItsCommits() {
         PullRequestSummary listed = new PullRequestSummary(
-                "owner/repo",
+                new RepoSlug("owner/repo"),
                 new PrNumber(9),
                 "From a fork",
                 "bob",
-                new GhBranch("patch-1"),
+                new ForgeBranch("patch-1"),
                 false,
                 true,
                 Checks.NONE,
@@ -397,12 +416,17 @@ class PullRequestFilesUpdateTest {
                 Option.of(new Sha(BASE_OID)),
                 Option.of(new Sha(HEAD_OID)));
         Model ofOwnerRepo = loaded().withScreen(PrOverview.SCREEN)
-                .mapPart(GitHubState.PART, gitHub -> gitHub.withRepository(Option.of("owner/repo")));
+                .mapPart(GitHubState.PART, gitHub -> gitHub.withRepository(Option.of(new RepoSlug("owner/repo"))));
 
         Next opened = Update.update(ofOwnerRepo, new PullRequestMsg.SummaryFilesRequested(listed));
 
         Changes of = new Changes.OfPullRequest(
-                new PullRequestCommits(9, "owner/repo", "github.com", new Sha(BASE_OID), new Sha(HEAD_OID)),
+                new PullRequestCommits(
+                        new PrNumber(9),
+                        new RepoSlug("owner/repo"),
+                        "github.com",
+                        new Sha(BASE_OID),
+                        new Sha(HEAD_OID)),
                 Option.none());
         assertEquals(Option.none(), opened.model().popup());
         assertEquals(Screen.REPOSITORY, opened.model().screen());
@@ -419,11 +443,11 @@ class PullRequestFilesUpdateTest {
     @Test
     void theFilesOfAForkWhoseBranchIsNamedLikeOneHereAreOfNoBranchHere() {
         PullRequestSummary fromForkMain = new PullRequestSummary(
-                "owner/repo",
+                new RepoSlug("owner/repo"),
                 new PrNumber(9),
                 "From a fork's main",
                 "bob",
-                new GhBranch("main"),
+                new ForgeBranch("main"),
                 false,
                 true,
                 Checks.NONE,
@@ -434,13 +458,18 @@ class PullRequestFilesUpdateTest {
                 Option.of(new Sha(BASE_OID)),
                 Option.of(new Sha(HEAD_OID)));
         Model ofOwnerRepo = loaded().withScreen(PrOverview.SCREEN)
-                .mapPart(GitHubState.PART, gitHub -> gitHub.withRepository(Option.of("owner/repo")));
+                .mapPart(GitHubState.PART, gitHub -> gitHub.withRepository(Option.of(new RepoSlug("owner/repo"))));
 
         Next opened = Update.update(ofOwnerRepo, new PullRequestMsg.SummaryFilesRequested(fromForkMain));
 
         assertEquals(
                 Option.of(new Changes.OfPullRequest(
-                        new PullRequestCommits(9, "owner/repo", "github.com", new Sha(BASE_OID), new Sha(HEAD_OID)),
+                        new PullRequestCommits(
+                                new PrNumber(9),
+                                new RepoSlug("owner/repo"),
+                                "github.com",
+                                new Sha(BASE_OID),
+                                new Sha(HEAD_OID)),
                         Option.none())),
                 opened.model().repoView().files().commitFiles().map(CommitFilesView::of));
     }
@@ -461,11 +490,11 @@ class PullRequestFilesUpdateTest {
                 false,
                 Option.of(new Upstream(new BranchRef.Remote(new RemoteBranch(fork, new BranchName("feature"))), 0, 0)));
         PullRequestSummary fromFork = new PullRequestSummary(
-                "owner/repo",
+                new RepoSlug("owner/repo"),
                 new PrNumber(9),
                 "From my fork",
                 "me",
-                new GhBranch("feature"),
+                new ForgeBranch("feature"),
                 false,
                 true,
                 Checks.NONE,
@@ -480,7 +509,7 @@ class PullRequestFilesUpdateTest {
                 .withScreen(PrOverview.SCREEN)
                 .mapPart(
                         GitHubState.PART,
-                        gitHub -> gitHub.withRepository(Option.of("owner/repo"))
+                        gitHub -> gitHub.withRepository(Option.of(new RepoSlug("owner/repo")))
                                 .withListed(List.of(fromFork.pullRequest()))
                                 .withHeads(HashMap.of(new PrNumber(9), HashSet.of(fork)))
                                 .withForks(HashSet.of(new PrNumber(9)))
@@ -490,7 +519,12 @@ class PullRequestFilesUpdateTest {
 
         assertEquals(
                 Option.of(new Changes.OfPullRequest(
-                        new PullRequestCommits(9, "owner/repo", "github.com", new Sha(BASE_OID), new Sha(HEAD_OID)),
+                        new PullRequestCommits(
+                                new PrNumber(9),
+                                new RepoSlug("owner/repo"),
+                                "github.com",
+                                new Sha(BASE_OID),
+                                new Sha(HEAD_OID)),
                         Option.of(new BranchName("feature")))),
                 opened.model().repoView().files().commitFiles().map(CommitFilesView::of));
     }
@@ -498,11 +532,11 @@ class PullRequestFilesUpdateTest {
     @Test
     void theFilesOfAPullRequestOfThisRepositoryAreOfTheLocalBranchOfItsName() {
         PullRequestSummary fromMain = new PullRequestSummary(
-                "owner/repo",
+                new RepoSlug("owner/repo"),
                 new PrNumber(9),
                 "From main",
                 "bob",
-                new GhBranch("main"),
+                new ForgeBranch("main"),
                 false,
                 false,
                 Checks.NONE,
@@ -513,13 +547,18 @@ class PullRequestFilesUpdateTest {
                 Option.of(new Sha(BASE_OID)),
                 Option.of(new Sha(HEAD_OID)));
         Model ofOwnerRepo = loaded().withScreen(PrOverview.SCREEN)
-                .mapPart(GitHubState.PART, gitHub -> gitHub.withRepository(Option.of("owner/repo")));
+                .mapPart(GitHubState.PART, gitHub -> gitHub.withRepository(Option.of(new RepoSlug("owner/repo"))));
 
         Next opened = Update.update(ofOwnerRepo, new PullRequestMsg.SummaryFilesRequested(fromMain));
 
         assertEquals(
                 Option.of(new Changes.OfPullRequest(
-                        new PullRequestCommits(9, "owner/repo", "github.com", new Sha(BASE_OID), new Sha(HEAD_OID)),
+                        new PullRequestCommits(
+                                new PrNumber(9),
+                                new RepoSlug("owner/repo"),
+                                "github.com",
+                                new Sha(BASE_OID),
+                                new Sha(HEAD_OID)),
                         Option.of(new BranchName("main")))),
                 opened.model().repoView().files().commitFiles().map(CommitFilesView::of));
     }
@@ -527,10 +566,10 @@ class PullRequestFilesUpdateTest {
     @Test
     void shiftFOnThePullRequestsScreenShowsTheFilesOfAPullRequestListedWithoutItsCommitsOnceItIsRead() {
         Model ofOwnerRepo = loaded().withScreen(PrOverview.SCREEN)
-                .mapPart(GitHubState.PART, gitHub -> gitHub.withRepository(Option.of("owner/repo")));
+                .mapPart(GitHubState.PART, gitHub -> gitHub.withRepository(Option.of(new RepoSlug("owner/repo"))));
 
-        Next requested =
-                Update.update(ofOwnerRepo, new PullRequestMsg.SummaryFilesRequested(summary("owner/repo", 42)));
+        Next requested = Update.update(
+                ofOwnerRepo, new PullRequestMsg.SummaryFilesRequested(summary(new RepoSlug("owner/repo"), 42)));
 
         // Its dialog shows it being read meanwhile, over the pull requests screen.
         PullRequestPopup loading =
@@ -546,7 +585,12 @@ class PullRequestFilesUpdateTest {
                         new PrNumber(42), lastRead(requested.model()), readAtCommits(PullRequestDetails.State.OPEN)));
 
         Changes of = new Changes.OfPullRequest(
-                new PullRequestCommits(42, "owner/repo", "github.com", new Sha(BASE_OID), new Sha(HEAD_OID)),
+                new PullRequestCommits(
+                        new PrNumber(42),
+                        new RepoSlug("owner/repo"),
+                        "github.com",
+                        new Sha(BASE_OID),
+                        new Sha(HEAD_OID)),
                 Option.none());
         assertEquals(Option.none(), opened.model().popup(PullRequestPopup.class));
         assertEquals(Screen.REPOSITORY, opened.model().screen());
@@ -558,9 +602,9 @@ class PullRequestFilesUpdateTest {
 
     @Test
     void shiftFOnAPullRequestOfAnotherRepositoryOpensItInTheBrowser() {
-        PullRequestSummary elsewhere = summary("other/repo");
-        Model ofOwnerRepo =
-                loaded().mapPart(GitHubState.PART, gitHub -> gitHub.withRepository(Option.of("owner/repo")));
+        PullRequestSummary elsewhere = summary(new RepoSlug("other/repo"));
+        Model ofOwnerRepo = loaded().mapPart(
+                        GitHubState.PART, gitHub -> gitHub.withRepository(Option.of(new RepoSlug("owner/repo"))));
 
         Next opened = Update.update(ofOwnerRepo, new PullRequestMsg.SummaryFilesRequested(elsewhere));
 

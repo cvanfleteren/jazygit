@@ -160,7 +160,9 @@ class CommitUpdateTest {
 
         Next next = Update.update(asking, new CommitMsg.StageAllConfirmed());
 
-        assertEquals(List.of(new CreateCommitCmd.StageForCommit(List.of("a.txt", "b.txt"))), next.cmds());
+        assertEquals(
+                List.of(new CreateCommitCmd.StageForCommit(List.of(new RepoPath("a.txt"), new RepoPath("b.txt")))),
+                next.cmds());
         assertFalse(next.model().popup(StageAllPopup.class).isDefined());
         assertTrue(Update.update(
                         next.model(),

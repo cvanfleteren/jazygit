@@ -8,6 +8,9 @@ import java.time.Instant;
 import lombok.With;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest.Review;
+import net.vanfleteren.jazygit.core.repo.ForgeBranch;
+import net.vanfleteren.jazygit.core.repo.PrNumber;
+import net.vanfleteren.jazygit.core.repo.RepoSlug;
 import net.vanfleteren.jazygit.core.repo.Sha;
 
 /**
@@ -41,7 +44,7 @@ public record PullRequestDetails(
         Conversation conversation,
         List<Check> checks,
         Option<PullRequestStack> stack,
-        String repository,
+        RepoSlug repository,
         String url,
         String body,
         Merging merging) {
@@ -61,7 +64,7 @@ public record PullRequestDetails(
             Conversation conversation,
             List<Check> checks,
             Option<PullRequestStack> stack,
-            String repository,
+            RepoSlug repository,
             String url,
             String body) {
         this(
@@ -95,7 +98,7 @@ public record PullRequestDetails(
             Conversation conversation,
             List<Check> checks,
             Option<PullRequestStack> stack,
-            String repository,
+            RepoSlug repository,
             String url) {
         this(number, title, author, status, branches, activity, size, conversation, checks, stack, repository, url, "");
     }
@@ -114,7 +117,7 @@ public record PullRequestDetails(
             Conversation conversation,
             List<Check> checks,
             Option<PullRequestStack> stack,
-            String repository) {
+            RepoSlug repository) {
         this(number, title, author, status, branches, activity, size, conversation, checks, stack, repository, "");
     }
 
@@ -131,7 +134,19 @@ public record PullRequestDetails(
             Size size,
             Conversation conversation,
             List<Check> checks) {
-        this(number, title, author, status, branches, activity, size, conversation, checks, Option.none(), "", "");
+        this(
+                number,
+                title,
+                author,
+                status,
+                branches,
+                activity,
+                size,
+                conversation,
+                checks,
+                Option.none(),
+                new RepoSlug(""),
+                "");
     }
 
     /**
@@ -174,7 +189,7 @@ public record PullRequestDetails(
                 () -> new PullRequest(
                         number,
                         branches.head(),
-                        GhBranch.named(branches.base().name()),
+                        ForgeBranch.named(branches.base().name()),
                         status.draft(),
                         Checks.combined(checks.map(Check::state)),
                         conversation.review(),
@@ -304,19 +319,23 @@ public record PullRequestDetails(
      * @param baseCommit the commit its base branch is at, if known, which its changes are diffed against (ADR 55)
      */
     public record Branches(
-            GhBranch head, GhBranch base, Option<Sha> headCommit, Option<Integer> behindBase, Option<Sha> baseCommit) {
+            ForgeBranch head,
+            ForgeBranch base,
+            Option<Sha> headCommit,
+            Option<Integer> behindBase,
+            Option<Sha> baseCommit) {
 
         /**
          * Branches at a commit that is not known, not known to be apart.
          */
-        public Branches(GhBranch head, GhBranch base) {
+        public Branches(ForgeBranch head, ForgeBranch base) {
             this(head, base, Option.none(), Option.none());
         }
 
         /**
          * Branches whose base is at a commit that is not known.
          */
-        public Branches(GhBranch head, GhBranch base, Option<Sha> headCommit, Option<Integer> behindBase) {
+        public Branches(ForgeBranch head, ForgeBranch base, Option<Sha> headCommit, Option<Integer> behindBase) {
             this(head, base, headCommit, behindBase, Option.none());
         }
 

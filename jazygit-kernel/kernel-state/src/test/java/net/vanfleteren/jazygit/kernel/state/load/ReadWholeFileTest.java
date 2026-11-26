@@ -17,7 +17,10 @@ import net.vanfleteren.jazygit.core.git.model.Fixtures;
 import net.vanfleteren.jazygit.core.git.process.GitError;
 import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.BranchRef;
+import net.vanfleteren.jazygit.core.repo.PrNumber;
 import net.vanfleteren.jazygit.core.repo.PullRequestCommits;
+import net.vanfleteren.jazygit.core.repo.RepoPath;
+import net.vanfleteren.jazygit.core.repo.RepoSlug;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.kernel.state.AreaId;
 import net.vanfleteren.jazygit.kernel.state.Env;
@@ -34,9 +37,10 @@ class ReadWholeFileTest {
 
     private static final Sha SHA = new Sha("aaaa");
     private static final Sha BASE = new Sha("bbbb");
-    private static final CommitFile FILE = new CommitFile("a.txt", ChangeType.MODIFIED);
+    private static final CommitFile FILE = new CommitFile(new RepoPath("a.txt"), ChangeType.MODIFIED);
     private static final FileEntry ENTRY = Fixtures.fileEntry("a.txt", ChangeType.MODIFIED);
-    private static final PullRequestCommits COMMITS = new PullRequestCommits(7, "owner/repo", "", BASE, SHA);
+    private static final PullRequestCommits COMMITS =
+            new PullRequestCommits(new PrNumber(7), new RepoSlug("owner/repo"), "", BASE, SHA);
 
     @Test
     void eachDiffIsReadAgainTheWayItWasReadWithTheWholeFileAsContext() {
@@ -67,7 +71,11 @@ class ReadWholeFileTest {
      */
     private static String read(Source source) {
         ReadWholeFile read = new ReadWholeFile(
-                new AreaId("area"), new ScrolledContent.Diff(DiffText.of("")), source, "a.txt", DiffOptions.DEFAULT);
+                new AreaId("area"),
+                new ScrolledContent.Diff(DiffText.of("")),
+                source,
+                new RepoPath("a.txt"),
+                DiffOptions.DEFAULT);
         LoadMsg.WholeFileRead msg = (LoadMsg.WholeFileRead) read.run(new Env(git()));
         assertEquals(read, msg.cmd());
         return msg.whole().text();
@@ -91,12 +99,12 @@ class ReadWholeFileTest {
                     @Override
                     public Either<GitError, DiffText> pullRequestFileChanges(
                             PullRequestCommits commits, List<CommitFile> files, DiffOptions options) {
-                        return said("pull request " + commits.number(), files, options);
+                        return said("pull request " + commits.number().value(), files, options);
                     }
 
                     @Override
                     public Either<GitError, Diffs> uncommitted(List<FileEntry> files, DiffOptions options) {
-                        String paths = files.map(FileEntry::path).mkString(" ");
+                        String paths = files.map(file -> file.path().value()).mkString(" ");
                         String context = options.context().flag();
                         return Either.right(
                                 new Diffs("staged " + paths + " " + context, "unstaged " + paths + " " + context));
@@ -112,7 +120,8 @@ class ReadWholeFileTest {
     }
 
     private static Either<GitError, DiffText> said(String read, List<CommitFile> files, DiffOptions options) {
-        return Either.right(DiffText.of(read + " " + files.map(CommitFile::path).mkString(" ") + " "
-                + options.context().flag()));
+        return Either.right(
+                DiffText.of(read + " " + files.map(file -> file.path().value()).mkString(" ") + " "
+                        + options.context().flag()));
     }
 }

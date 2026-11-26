@@ -8,6 +8,7 @@ import net.vanfleteren.jazygit.core.forgejo.Forgejo;
 import net.vanfleteren.jazygit.core.forgejo.ForgejoPullRequestDetails;
 import net.vanfleteren.jazygit.core.forgejo.ForgejoRepository;
 import net.vanfleteren.jazygit.core.forgejo.ForgejoReview;
+import net.vanfleteren.jazygit.core.repo.PrNumber;
 import net.vanfleteren.jazygit.core.repo.RemoteName;
 import net.vanfleteren.jazygit.features.forgejo.ForgejoFailure;
 import net.vanfleteren.jazygit.features.forgejo.builds.ForgejoServices;
@@ -25,7 +26,7 @@ import org.slf4j.LoggerFactory;
  * its repository lets it be merged (ADR 180), what its base branch requires and whether its merge is scheduled (ADR
  * 181), in the background. What else cannot be read leaves the pull request shown without it, and the log says why.
  */
-public record LoadPullRequest(RemoteName home, long number, long read) implements Cmd {
+public record LoadPullRequest(RemoteName home, PrNumber number, long read) implements Cmd {
 
     @Override
     public boolean background() {
@@ -58,7 +59,7 @@ public record LoadPullRequest(RemoteName home, long number, long read) implement
                 forgejo.mergeSettings(repository)
                         .peekLeft(error -> logged("merge settings", error.why()))
                         .toOption(),
-                forgejo.branchRules(repository, pr.branches().base())
+                forgejo.branchRules(repository, pr.branches().base().name())
                         .peekLeft(error -> logged("rules of the base branch", error.why()))
                         .toOption(),
                 reviews.map(ForgejoReview::approvals).getOrElse(0),
@@ -69,7 +70,7 @@ public record LoadPullRequest(RemoteName home, long number, long read) implement
 
     private void logged(String what, String why) {
         LoggerFactory.getLogger(LoadPullRequest.class)
-                .debug("The {} of pull request {} could not be read: {}", what, number, why);
+                .debug("The {} of pull request {} could not be read: {}", what, number.value(), why);
     }
 
     @Override

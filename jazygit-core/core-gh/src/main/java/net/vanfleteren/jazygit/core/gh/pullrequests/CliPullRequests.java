@@ -9,13 +9,14 @@ import java.nio.file.Path;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import net.vanfleteren.jazygit.core.gh.model.*;
-import net.vanfleteren.jazygit.core.gh.model.PrNumber;
 import net.vanfleteren.jazygit.core.gh.process.GhCommand;
 import net.vanfleteren.jazygit.core.gh.process.GhError;
 import net.vanfleteren.jazygit.core.gh.process.GhFailure;
 import net.vanfleteren.jazygit.core.gh.process.GhProcess;
 import net.vanfleteren.jazygit.core.process.ExecutedCommand;
 import net.vanfleteren.jazygit.core.process.SshAsking;
+import net.vanfleteren.jazygit.core.repo.ForgeBranch;
+import net.vanfleteren.jazygit.core.repo.PrNumber;
 import net.vanfleteren.jazygit.core.repo.Sha;
 
 /**
@@ -54,7 +55,7 @@ public final class CliPullRequests implements PullRequests {
      * The command that creates a pull request from {@code head} into {@code base}: with the title and the body
      * given, so gh does not ask for them, and as a draft if asked.
      */
-    static GhCommand createCommand(GhBranch head, GhBranch base, NewPullRequest pullRequest) {
+    static GhCommand createCommand(ForgeBranch head, ForgeBranch base, NewPullRequest pullRequest) {
         return gh(List.of(
                         "pr",
                         "create",
@@ -118,7 +119,7 @@ public final class CliPullRequests implements PullRequests {
     }
 
     @Override
-    public Either<GhFailure, Created> create(GhBranch head, GhBranch base, NewPullRequest pullRequest) {
+    public Either<GhFailure, Created> create(ForgeBranch head, ForgeBranch base, NewPullRequest pullRequest) {
         return process.run(createCommand(head, base, pullRequest))
                 .map(output -> new Created(createdNumber(output.stdout()), output.log()));
     }

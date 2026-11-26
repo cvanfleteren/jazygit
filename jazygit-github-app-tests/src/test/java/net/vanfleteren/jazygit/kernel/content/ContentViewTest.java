@@ -5,8 +5,6 @@ import static org.junit.jupiter.api.Assertions.*;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.time.Instant;
-import net.vanfleteren.jazygit.core.gh.model.GhBranch;
-import net.vanfleteren.jazygit.core.gh.model.PrNumber;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestPreview;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestSummary;
@@ -44,11 +42,11 @@ class ContentViewTest {
     private final Model model = TestModels.loaded(SampleData.git(), "feature/initial-layout");
 
     private static final PullRequestSummary PULL_REQUEST = new PullRequestSummary(
-            "owner/repo",
+            new RepoSlug("owner/repo"),
             new PrNumber(42),
             "Fix the login",
             "alice",
-            new GhBranch("fix/login"),
+            new ForgeBranch("fix/login"),
             false,
             false,
             PullRequest.Checks.NONE,
@@ -57,7 +55,7 @@ class ContentViewTest {
             "https://github.com/owner/repo/pull/42");
 
     private static final PullRequestPreview READ =
-            new PullRequestPreview(new GhBranch("main"), "Why", "+fixed\n", false);
+            new PullRequestPreview(new ForgeBranch("main"), "Why", "+fixed\n", false);
 
     private static Shown dim(String title, String text) {
         return new Shown.Message(title, text, Tone.DIM);

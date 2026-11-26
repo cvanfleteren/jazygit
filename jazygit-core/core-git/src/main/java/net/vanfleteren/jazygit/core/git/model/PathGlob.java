@@ -2,6 +2,7 @@ package net.vanfleteren.jazygit.core.git.model;
 
 import io.vavr.collection.List;
 import java.util.regex.Pattern;
+import net.vanfleteren.jazygit.core.repo.RepoPath;
 
 /**
  * A glob that picks the files a diff filter applies to (ADR 144). One without a {@code /} is matched against the name
@@ -31,8 +32,9 @@ public record PathGlob(String glob, Regex regex) {
     /**
      * Whether the file at {@code path}, from the root of the repository, is one the glob names.
      */
-    public boolean matches(String path) {
-        String subject = glob.contains("/") ? path : path.substring(path.lastIndexOf('/') + 1);
+    public boolean matches(RepoPath path) {
+        String whole = path.value();
+        String subject = glob.contains("/") ? whole : whole.substring(whole.lastIndexOf('/') + 1);
         return regex.matches(subject);
     }
 

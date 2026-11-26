@@ -12,14 +12,13 @@ import io.vavr.control.Option;
 import java.nio.file.Path;
 import java.time.Instant;
 import net.vanfleteren.jazygit.core.gh.StubGitHub;
-import net.vanfleteren.jazygit.core.gh.model.GhBranch;
-import net.vanfleteren.jazygit.core.gh.model.PrNumber;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest.Review;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestDetails.State;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestStack;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestStack.Entry;
+import net.vanfleteren.jazygit.core.gh.model.StackId;
 import net.vanfleteren.jazygit.core.git.Git;
 import net.vanfleteren.jazygit.core.git.StubGit;
 import net.vanfleteren.jazygit.core.git.branches.StubRemotes;
@@ -33,6 +32,8 @@ import net.vanfleteren.jazygit.core.repo.Branch;
 import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.BranchRef;
 import net.vanfleteren.jazygit.core.repo.CommitMessage;
+import net.vanfleteren.jazygit.core.repo.ForgeBranch;
+import net.vanfleteren.jazygit.core.repo.PrNumber;
 import net.vanfleteren.jazygit.core.repo.RemoteBranch;
 import net.vanfleteren.jazygit.core.repo.RemoteName;
 import net.vanfleteren.jazygit.core.repo.RemoteRef;
@@ -44,6 +45,7 @@ import net.vanfleteren.jazygit.core.repo.Upstream;
 import net.vanfleteren.jazygit.features.changes.commit.create.CommitPopup;
 import net.vanfleteren.jazygit.features.github.GitHubError;
 import net.vanfleteren.jazygit.features.github.GitHubError.StackRefusal;
+import net.vanfleteren.jazygit.features.github.GitHubError.StackSubject;
 import net.vanfleteren.jazygit.features.github.GitHubServices;
 import net.vanfleteren.jazygit.features.github.state.GitHubState;
 import net.vanfleteren.jazygit.kernel.state.AppError;
@@ -75,17 +77,17 @@ class RebaseStackTest {
     }
 
     private static PullRequestStack stack(List<Entry> entries, int position) {
-        return new PullRequestStack(12, position, entries.size(), entries);
+        return new PullRequestStack(new StackId(12), position, entries.size(), entries);
     }
 
     private static final List<Entry> ENTRIES = List.of(
-            new Entry(1, new PrNumber(98), State.OPEN, new GhBranch("feat/c"), new GhBranch("main")),
-            new Entry(2, new PrNumber(99), State.OPEN, new GhBranch("feat/d"), new GhBranch("feat/c")));
+            new Entry(1, new PrNumber(98), State.OPEN, new ForgeBranch("feat/c"), new ForgeBranch("main")),
+            new Entry(2, new PrNumber(99), State.OPEN, new ForgeBranch("feat/d"), new ForgeBranch("feat/c")));
 
     private static PullRequest pr(int number, String head, List<Entry> entries, int position) {
         return new PullRequest(
                 new PrNumber(number),
-                new GhBranch(head),
+                new ForgeBranch(head),
                 Option.none(),
                 false,
                 Checks.NONE,
@@ -162,8 +164,8 @@ class RebaseStackTest {
                         2,
                         new PrNumber(99),
                         State.OPEN,
-                        new GhBranch("feat/d"),
-                        new GhBranch("feat/c"),
+                        new ForgeBranch("feat/d"),
+                        new ForgeBranch("feat/c"),
                         Option.none(),
                         true));
 
@@ -208,7 +210,7 @@ class RebaseStackTest {
         Msg read = new StackRebaseCmd.ReadStack(rebase)
                 .run(new Env(everHad(false)).with(GitHubServices.GH, StubGitHub.of()));
 
-        assertEquals(new StackMsg.StackBehindRemote(12, D, new RemoteBranch("origin", D)), read);
+        assertEquals(new StackMsg.StackBehindRemote(new StackId(12), D, new RemoteBranch("origin", D)), read);
         assertEquals(
                 Option.of("Stack #12 is not rebased: feat/d is behind what was pushed to it; pull it first"),
                 ErrorTexts.errorText(Update.update(behindOrigin(), read).model()));
@@ -252,7 +254,7 @@ class RebaseStackTest {
         Msg read = new StackRebaseCmd.ReadStack(rebase)
                 .run(new Env(everHad(false)).with(GitHubServices.GH, StubGitHub.of()));
 
-        assertEquals(new StackMsg.StackBehindRemote(12, D, new RemoteBranch("origin", D)), read);
+        assertEquals(new StackMsg.StackBehindRemote(new StackId(12), D, new RemoteBranch("origin", D)), read);
         assertEquals(
                 Option.of("Stack #12 is not rebased: feat/d is behind what was pushed to it, which it does not follow;"
                         + " set that as its upstream, then pull it"),
@@ -262,7 +264,7 @@ class RebaseStackTest {
     @Test
     void anOpenPullRequestWithoutALocalBranchCannotBeMoved() {
         List<Entry> three = ENTRIES.append(
-                new Entry(3, new PrNumber(100), State.OPEN, new GhBranch("feat/e"), new GhBranch("feat/d")));
+                new Entry(3, new PrNumber(100), State.OPEN, new ForgeBranch("feat/e"), new ForgeBranch("feat/d")));
 
         assertEquals(Option.of(StackRefusal.NOT_CHECKED_OUT), refusal(model(LOCAL, three), three));
     }
@@ -281,12 +283,12 @@ class RebaseStackTest {
                         1,
                         new PrNumber(97),
                         State.MERGED,
-                        new GhBranch("feat/b"),
-                        new GhBranch("main"),
+                        new ForgeBranch("feat/b"),
+                        new ForgeBranch("main"),
                         Option.of(new Sha("b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0")),
                         false),
-                new Entry(2, new PrNumber(98), State.OPEN, new GhBranch("feat/c"), new GhBranch("feat/b")),
-                new Entry(3, new PrNumber(99), State.OPEN, new GhBranch("feat/d"), new GhBranch("feat/c")));
+                new Entry(2, new PrNumber(98), State.OPEN, new ForgeBranch("feat/c"), new ForgeBranch("feat/b")),
+                new Entry(3, new PrNumber(99), State.OPEN, new ForgeBranch("feat/d"), new ForgeBranch("feat/c")));
 
         assertEquals(
                 new StackLayer(C, List.of(new Revision.Commit(new Sha("b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0")))),
@@ -303,12 +305,12 @@ class RebaseStackTest {
                         1,
                         new PrNumber(97),
                         State.MERGED,
-                        new GhBranch("feat/b"),
-                        new GhBranch("main"),
+                        new ForgeBranch("feat/b"),
+                        new ForgeBranch("main"),
                         Option.of(new Sha("b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0")),
                         false),
-                new Entry(2, new PrNumber(98), State.OPEN, new GhBranch("feat/c"), new GhBranch("feat/b")),
-                new Entry(3, new PrNumber(99), State.OPEN, new GhBranch("feat/d"), new GhBranch("feat/c")));
+                new Entry(2, new PrNumber(98), State.OPEN, new ForgeBranch("feat/c"), new ForgeBranch("feat/b")),
+                new Entry(3, new PrNumber(99), State.OPEN, new ForgeBranch("feat/d"), new ForgeBranch("feat/c")));
         Model known = TestModels.remoteBranchesRead(
                         model(LOCAL.append(branch(b, new Sha("b1b1"))), merged),
                         List.of(
@@ -352,7 +354,8 @@ class RebaseStackTest {
 
     @Test
     void theNumberOfAStackIsNotGrouped() {
-        var refused = new GitHubError.StackNotRebased(1234, "feature", StackRefusal.CHANGES);
+        var refused = new GitHubError.StackNotRebased(
+                new StackId(1234), new StackSubject.OfBranch(new BranchName("feature")), StackRefusal.CHANGES);
 
         assertEquals(
                 "Stack #1234 is not rebased: the worktree has changes; commit or stash them first",
@@ -402,16 +405,16 @@ class RebaseStackTest {
     @Test
     void aMergedBottomNobodyKnowsWhereItWasRefuses() {
         List<Entry> merged = List.of(
-                new Entry(1, new PrNumber(97), State.MERGED, new GhBranch("feat/b"), new GhBranch("main")),
-                new Entry(2, new PrNumber(98), State.OPEN, new GhBranch("feat/c"), new GhBranch("feat/b")),
-                new Entry(3, new PrNumber(99), State.OPEN, new GhBranch("feat/d"), new GhBranch("feat/c")));
+                new Entry(1, new PrNumber(97), State.MERGED, new ForgeBranch("feat/b"), new ForgeBranch("main")),
+                new Entry(2, new PrNumber(98), State.OPEN, new ForgeBranch("feat/c"), new ForgeBranch("feat/b")),
+                new Entry(3, new PrNumber(99), State.OPEN, new ForgeBranch("feat/d"), new ForgeBranch("feat/c")));
 
         assertEquals(Option.of(StackRefusal.MERGED_UNKNOWN), refusal(model(LOCAL, merged), merged));
     }
 
     @Test
     void theMenuReadsTheCommitsThenAsksSayingWhatMergesAreDropped() {
-        Model menu = Update.update(MODEL, new StackMsg.MenuRequested(Option.none(), Option.of(12)))
+        Model menu = Update.update(MODEL, new StackMsg.MenuRequested(Option.none(), Option.of(new StackId(12))))
                 .model();
 
         Update.Next chosen = Update.update(menu, new StackMsg.RebaseChosen());
@@ -460,7 +463,8 @@ class RebaseStackTest {
 
         assertEquals(Option.of(typing), read.model().popup(CommitPopup.class));
         assertEquals(
-                Option.of(new StackNotice.NotAsked(12)), read.model().outcome().notice());
+                Option.of(new StackNotice.NotAsked(new StackId(12))),
+                read.model().outcome().notice());
         assertEquals(List.empty(), read.cmds());
     }
 
@@ -473,7 +477,7 @@ class RebaseStackTest {
                         1,
                         new PrNumber(98),
                         State.OPEN,
-                        Option.of(new GhBranch("feat/c")),
+                        Option.of(new ForgeBranch("feat/c")),
                         Option.none(),
                         Option.none(),
                         false,
@@ -490,8 +494,8 @@ class RebaseStackTest {
     @Test
     void aStackWithNothingOpenIsNotRebased() {
         List<Entry> closed = List.of(
-                new Entry(1, new PrNumber(98), State.MERGED, new GhBranch("feat/c"), new GhBranch("main")),
-                new Entry(2, new PrNumber(99), State.CLOSED, new GhBranch("feat/d"), new GhBranch("feat/c")));
+                new Entry(1, new PrNumber(98), State.MERGED, new ForgeBranch("feat/c"), new ForgeBranch("main")),
+                new Entry(2, new PrNumber(99), State.CLOSED, new ForgeBranch("feat/d"), new ForgeBranch("feat/c")));
 
         assertEquals(Option.of(StackRefusal.NOTHING_OPEN), refusal(model(LOCAL, closed), closed));
         assertEquals(
@@ -507,11 +511,12 @@ class RebaseStackTest {
                         2,
                         new PrNumber(99),
                         State.OPEN,
-                        new GhBranch("feat/d"),
-                        new GhBranch("feat/c"),
+                        new ForgeBranch("feat/d"),
+                        new ForgeBranch("feat/c"),
                         Option.none(),
                         true));
-        Model menu = Update.update(model(LOCAL, queued), new StackMsg.MenuRequested(Option.none(), Option.of(12)))
+        Model menu = Update.update(
+                        model(LOCAL, queued), new StackMsg.MenuRequested(Option.none(), Option.of(new StackId(12))))
                 .model();
 
         Update.Next chosen = Update.update(menu, new StackMsg.RebaseChosen());
@@ -600,7 +605,7 @@ class RebaseStackTest {
 
     @Test
     void pushingTheStackPushesItsOpenBranchesAtOnce() {
-        Model menu = Update.update(MODEL, new StackMsg.MenuRequested(Option.none(), Option.of(12)))
+        Model menu = Update.update(MODEL, new StackMsg.MenuRequested(Option.none(), Option.of(new StackId(12))))
                 .model();
 
         assertEquals(
@@ -612,8 +617,9 @@ class RebaseStackTest {
     @Test
     void pushingAStackWithAPullRequestNotCheckedOutSaysSo() {
         List<Entry> three = ENTRIES.append(
-                new Entry(3, new PrNumber(100), State.OPEN, new GhBranch("feat/e"), new GhBranch("feat/d")));
-        Model menu = Update.update(model(LOCAL, three), new StackMsg.MenuRequested(Option.none(), Option.of(12)))
+                new Entry(3, new PrNumber(100), State.OPEN, new ForgeBranch("feat/e"), new ForgeBranch("feat/d")));
+        Model menu = Update.update(
+                        model(LOCAL, three), new StackMsg.MenuRequested(Option.none(), Option.of(new StackId(12))))
                 .model();
 
         Update.Next chosen = Update.update(menu, new StackMsg.PushChosen());

@@ -9,7 +9,6 @@ import io.vavr.collection.Set;
 import io.vavr.control.Option;
 import lombok.With;
 import net.vanfleteren.jazygit.core.gh.model.MergeStatus;
-import net.vanfleteren.jazygit.core.gh.model.PrNumber;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestDetails;
@@ -19,8 +18,10 @@ import net.vanfleteren.jazygit.core.gh.timing.CheckHistory;
 import net.vanfleteren.jazygit.core.gh.timing.Eta;
 import net.vanfleteren.jazygit.core.repo.Branch;
 import net.vanfleteren.jazygit.core.repo.BranchName;
+import net.vanfleteren.jazygit.core.repo.PrNumber;
 import net.vanfleteren.jazygit.core.repo.RemoteBranch;
 import net.vanfleteren.jazygit.core.repo.RemoteName;
+import net.vanfleteren.jazygit.core.repo.RepoSlug;
 import net.vanfleteren.jazygit.features.github.checks.branches.GitHubChecks;
 import net.vanfleteren.jazygit.features.github.checks.branches.Waiting;
 import net.vanfleteren.jazygit.features.github.checks.timings.CheckTimes;
@@ -84,7 +85,7 @@ public record GitHubState(
         Map<PrNumber, Long> readsFrom,
         Map<Cmd, FailingRead> failing,
         Option<StackChange> stackChange,
-        Option<String> repository,
+        Option<RepoSlug> repository,
         Map<PrNumber, Set<RemoteName>> heads,
         Set<PrNumber> forks) {
 
@@ -159,7 +160,8 @@ public record GitHubState(
         return open.find(pr -> pr.number().equals(number))
                 .flatMap(PullRequest::stack)
                 .map(stack -> open.filter(other -> other.stack()
-                                .exists(its -> its.number() == stack.number() && its.position() < stack.position()))
+                                .exists(its ->
+                                        its.number().equals(stack.number()) && its.position() < stack.position()))
                         .map(PullRequest::number)
                         .sorted())
                 .getOrElse(List.empty());

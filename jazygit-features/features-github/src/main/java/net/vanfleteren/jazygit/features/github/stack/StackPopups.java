@@ -3,12 +3,13 @@ package net.vanfleteren.jazygit.features.github.stack;
 import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.core.gh.model.PrNumber;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestDetails.State;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestStack;
+import net.vanfleteren.jazygit.core.gh.model.StackId;
 import net.vanfleteren.jazygit.core.repo.Branch;
 import net.vanfleteren.jazygit.core.repo.BranchName;
+import net.vanfleteren.jazygit.core.repo.PrNumber;
 import net.vanfleteren.jazygit.features.github.stack.StackChoice.Plan;
 import net.vanfleteren.jazygit.features.github.stack.StackChoice.Refusal;
 import net.vanfleteren.jazygit.kernel.state.popup.ConfirmablePopup;
@@ -102,7 +103,7 @@ public final class StackPopups {
      * @param refused why the last bottom or top chosen was refused, as a key of the messages
      * @param addTo   the stack the branches are put on, whose top is the fixed bottom; none to make a stack
      */
-    public record Pick(StackChoice choice, Option<String> refused, Option<Integer> addTo) implements Popup {
+    public record Pick(StackChoice choice, Option<String> refused, Option<StackId> addTo) implements Popup {
 
         public Pick withChoice(StackChoice next) {
             return new Pick(next, Option.none(), addTo);
@@ -134,7 +135,7 @@ public final class StackPopups {
      * @param below the pull request of {@code base}, which it is stacked on
      * @param stack the stack whose top that pull request is; none when it is in no stack, which stacking makes one of
      */
-    public record CreateFirst(BranchName branch, BranchName base, PrNumber below, Option<Integer> stack)
+    public record CreateFirst(BranchName branch, BranchName base, PrNumber below, Option<StackId> stack)
             implements Popup {}
 
     /**

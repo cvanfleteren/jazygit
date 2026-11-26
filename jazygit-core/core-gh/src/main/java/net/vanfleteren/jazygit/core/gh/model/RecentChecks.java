@@ -2,6 +2,7 @@ package net.vanfleteren.jazygit.core.gh.model;
 
 import io.vavr.collection.List;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestDetails.Check;
+import net.vanfleteren.jazygit.core.repo.RepoSlug;
 
 /**
  * The checks that ran lately on a GitHub repository: on the last commit of the pull requests merged last, and on the
@@ -10,4 +11,4 @@ import net.vanfleteren.jazygit.core.gh.model.PullRequestDetails.Check;
  * @param repository the repository, as {@code owner/name}
  * @param checks     the checks, in no particular order
  */
-public record RecentChecks(String repository, List<Check> checks) {}
+public record RecentChecks(RepoSlug repository, List<Check> checks) {}

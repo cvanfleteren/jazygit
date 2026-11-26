@@ -6,7 +6,6 @@ import static net.vanfleteren.jazygit.lib.json.Decoder.field;
 import static net.vanfleteren.jazygit.lib.json.Decoder.instant;
 import static net.vanfleteren.jazygit.lib.json.Decoder.integer;
 import static net.vanfleteren.jazygit.lib.json.Decoder.list;
-import static net.vanfleteren.jazygit.lib.json.Decoder.longValue;
 import static net.vanfleteren.jazygit.lib.json.Decoder.map2;
 import static net.vanfleteren.jazygit.lib.json.Decoder.map3;
 import static net.vanfleteren.jazygit.lib.json.Decoder.map4;
@@ -25,6 +24,8 @@ import net.vanfleteren.jazygit.core.forgejo.ForgejoPullRequestDetails.Conversati
 import net.vanfleteren.jazygit.core.forgejo.ForgejoPullRequestDetails.Size;
 import net.vanfleteren.jazygit.core.forgejo.ForgejoPullRequestDetails.State;
 import net.vanfleteren.jazygit.core.forgejo.ForgejoPullRequestDetails.Status;
+import net.vanfleteren.jazygit.core.repo.ForgeBranch;
+import net.vanfleteren.jazygit.core.repo.PrNumber;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.lib.json.Decoder;
 
@@ -43,12 +44,12 @@ final class PullRequestJson {
      * A pull request as the list of the open ones gives it.
      */
     private static final Decoder<ForgejoPullRequest> SUMMARY = map7(
-            field("number", longValue()),
+            field("number", integer().map(PrNumber::new)),
             text("title"),
-            at("head", text("ref")),
+            at("head", text("ref")).map(ForgeBranch::new),
             field("head", optionalField("repo", optionalField("full_name", string())))
                     .map(repo -> repo.flatMap(name -> name)),
-            at("base", text("ref")),
+            at("base", text("ref")).map(ForgeBranch::new),
             flag("draft"),
             text("html_url"),
             ForgejoPullRequest::new);
@@ -64,8 +65,8 @@ final class PullRequestJson {
             Status::new);
 
     private static final Decoder<Branches> BRANCHES = map3(
-            at("head", text("ref")),
-            at("base", text("ref")),
+            at("head", text("ref")).map(ForgeBranch::new),
+            at("base", text("ref")).map(ForgeBranch::new),
             at("head", text("sha")).map(Sha::new),
             Branches::new);
 
@@ -85,7 +86,7 @@ final class PullRequestJson {
      * A pull request as it is read to be shown.
      */
     private static final Decoder<ForgejoPullRequestDetails> DETAILS = map4(
-            map3(field("number", longValue()), text("title"), USER, Header::new),
+            map3(field("number", integer().map(PrNumber::new)), text("title"), USER, Header::new),
             STATUS,
             BRANCHES,
             map4(ACTIVITY, SIZE, CONVERSATION, text("html_url"), Rest::new),
@@ -225,7 +226,7 @@ final class PullRequestJson {
                 .map(names -> names.getOrElse(List.empty()).filter(each -> !each.isEmpty()));
     }
 
-    private record Header(long number, String title, String author) {}
+    private record Header(PrNumber number, String title, String author) {}
 
     private record Rest(Activity activity, Size size, Conversation conversation, String url) {}
 }

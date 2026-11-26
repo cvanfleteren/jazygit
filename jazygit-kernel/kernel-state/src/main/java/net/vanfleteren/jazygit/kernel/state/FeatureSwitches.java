@@ -10,7 +10,7 @@ import io.vavr.control.Option;
  *
  * @param off the ids of the features that are off
  */
-public record FeatureSwitches(Set<String> off) {
+public record FeatureSwitches(Set<FeatureId> off) {
 
     /**
      * Every feature on.
@@ -28,14 +28,14 @@ public record FeatureSwitches(Set<String> off) {
     /**
      * Whether the feature {@code feature} is on.
      */
-    public boolean on(String feature) {
+    public boolean on(FeatureId feature) {
         return !off.contains(feature);
     }
 
     /**
      * These with the feature {@code feature} on when {@code on}, else off.
      */
-    public FeatureSwitches switched(String feature, boolean on) {
+    public FeatureSwitches switched(FeatureId feature, boolean on) {
         return new FeatureSwitches(on ? off.remove(feature) : off.add(feature));
     }
 }

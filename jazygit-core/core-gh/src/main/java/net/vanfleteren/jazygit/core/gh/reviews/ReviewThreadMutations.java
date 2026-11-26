@@ -6,10 +6,10 @@ import static net.vanfleteren.jazygit.lib.json.Decoder.string;
 
 import io.vavr.collection.List;
 import net.vanfleteren.jazygit.core.gh.model.NewReviewThread;
-import net.vanfleteren.jazygit.core.gh.model.PrNumber;
 import net.vanfleteren.jazygit.core.gh.model.Reaction;
 import net.vanfleteren.jazygit.core.gh.model.ReviewThread;
 import net.vanfleteren.jazygit.core.gh.process.GhCommand;
+import net.vanfleteren.jazygit.core.repo.PrNumber;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.lib.json.Decoder;
 
@@ -79,7 +79,7 @@ final class ReviewThreadMutations {
                                 "-f",
                                 "commit_id=" + commit.value(),
                                 "-f",
-                                "path=" + thread.path())
+                                "path=" + thread.path().value())
                         .appendAll(place));
     }
 

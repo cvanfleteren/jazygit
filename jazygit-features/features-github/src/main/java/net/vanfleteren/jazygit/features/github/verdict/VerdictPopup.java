@@ -2,9 +2,9 @@ package net.vanfleteren.jazygit.features.github.verdict;
 
 import io.vavr.control.Option;
 import lombok.With;
-import net.vanfleteren.jazygit.core.gh.model.PrNumber;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestDetails.Reviewing;
 import net.vanfleteren.jazygit.core.gh.model.Verdict;
+import net.vanfleteren.jazygit.core.repo.PrNumber;
 import net.vanfleteren.jazygit.features.github.compose.ComposePopup;
 import net.vanfleteren.jazygit.features.github.compose.EditorFile;
 import net.vanfleteren.jazygit.features.github.show.PullRequestPopup;

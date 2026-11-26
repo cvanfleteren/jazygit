@@ -69,8 +69,8 @@ class RichDiffContentTest {
                         .filter(ViewMsg.ContentScrolled.class::isInstance)
                         .map(msg -> ((ViewMsg.ContentScrolled) msg).to().cursor())
                         .containsAll(List.of(
-                                Option.of(new Anchor.OnLine("schema.sql", DiffSide.OLD, 2)),
-                                Option.of(new Anchor.OnLine("schema.sql", DiffSide.NEW, 2)))),
+                                Option.of(new Anchor.OnLine(new RepoPath("schema.sql"), DiffSide.OLD, 2)),
+                                Option.of(new Anchor.OnLine(new RepoPath("schema.sql"), DiffSide.NEW, 2)))),
                 List.ofAll(dispatched)
                         .filter(ViewMsg.ContentScrolled.class::isInstance)
                         .map(msg -> ((ViewMsg.ContentScrolled) msg).to().cursor())
@@ -186,15 +186,15 @@ class RichDiffContentTest {
         }
 
         // After the bar of the second file, the cursor goes on on the left, where it was.
-        Option<Anchor> bar = Option.of(new Anchor.File("b.sql"));
+        Option<Anchor> bar = Option.of(new Anchor.File(new RepoPath("b.sql")));
         assertTrue(kept.contains(bar), kept.toString());
         assertEquals(
-                Option.of(new Anchor.OnLine("b.sql", DiffSide.OLD, 1)),
+                Option.of(new Anchor.OnLine(new RepoPath("b.sql"), DiffSide.OLD, 1)),
                 kept.get(kept.indexOf(bar) + 1),
                 kept.toString());
         // In the other diff, its first line on the new side.
         assertEquals(
-                Option.of(Option.of(new Anchor.OnLine("a.sql", DiffSide.NEW, 1))),
+                Option.of(Option.of(new Anchor.OnLine(new RepoPath("a.sql"), DiffSide.NEW, 1))),
                 anew.find(cursor -> cursor.exists(Anchor.OnLine.class::isInstance)),
                 anew.toString());
     }
@@ -292,7 +292,8 @@ class RichDiffContentTest {
             SettledPilot.of(testRunner).press(KeyCode.DOWN);
             SettledPilot.of(testRunner).pause();
             ViewMsg.ContentScrolled down = (ViewMsg.ContentScrolled) dispatched.getLast();
-            assertEquals(Option.of(new Anchor.File("a.txt")), down.to().cursor());
+            assertEquals(
+                    Option.of(new Anchor.File(new RepoPath("a.txt"))), down.to().cursor());
             assertEquals(0, down.to().row());
             // The cursor moved over lines kept drawn: none is drawn again.
             assertEquals(settled, gutters.get());
@@ -340,7 +341,8 @@ class RichDiffContentTest {
 
             // From the header of the commit, its lead, to the bar of its file.
             ViewMsg.ContentScrolled down = (ViewMsg.ContentScrolled) dispatched.getLast();
-            assertEquals(Option.of(new Anchor.File("a.txt")), down.to().cursor());
+            assertEquals(
+                    Option.of(new Anchor.File(new RepoPath("a.txt"))), down.to().cursor());
             assertEquals(0, down.to().row());
             Model moved = Update.update(model, down).model();
             RenderedText.ofLarge(testRunner, () -> counting.render(moved, area));
@@ -427,7 +429,7 @@ class RichDiffContentTest {
             SettledPilot.of(testRunner).mousePress(MouseButton.LEFT, drawn.x() + 3, beta);
             ViewMsg.ContentScrolled clicked = (ViewMsg.ContentScrolled) dispatched.getLast();
             assertEquals(
-                    Option.of(new Anchor.OnLine("a.txt", DiffSide.NEW, 2)),
+                    Option.of(new Anchor.OnLine(new RepoPath("a.txt"), DiffSide.NEW, 2)),
                     clicked.to().cursor());
             assertEquals(0, clicked.to().row());
 

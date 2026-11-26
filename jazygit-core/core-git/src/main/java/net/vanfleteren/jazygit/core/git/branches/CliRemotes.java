@@ -34,6 +34,7 @@ import net.vanfleteren.jazygit.core.repo.BranchRef;
 import net.vanfleteren.jazygit.core.repo.PullRequestCommits;
 import net.vanfleteren.jazygit.core.repo.RemoteBranch;
 import net.vanfleteren.jazygit.core.repo.RemoteName;
+import net.vanfleteren.jazygit.core.repo.RemoteUrl;
 
 /**
  * The {@link Remotes} of a repository: talks to the remotes through the {@code git} command line tool, with the
@@ -122,7 +123,7 @@ public final class CliRemotes implements Remotes {
     }
 
     @Override
-    public Either<GitError, Map<RemoteName, String>> urls() {
+    public Either<GitError, Map<RemoteName, RemoteUrl>> urls() {
         return remoteUrls(worktree);
     }
 
@@ -148,16 +149,16 @@ public final class CliRemotes implements Remotes {
     /**
      * The URL of each remote, by its name. Only looked up, so not logged.
      */
-    static Either<GitError, Map<RemoteName, String>> remoteUrls(Path worktree) {
-        return setting(worktree, URL_KEY.substring(1));
+    static Either<GitError, Map<RemoteName, RemoteUrl>> remoteUrls(Path worktree) {
+        return setting(worktree, URL_KEY.substring(1)).map(urls -> urls.mapValues(RemoteUrl::new));
     }
 
     /**
      * Parses {@code remote.<name>.url <url>} lines into the URL of each remote; the first, for a remote with
      * several.
      */
-    static Map<RemoteName, String> parseUrls(String raw) {
-        return parseSetting(raw, URL_KEY.substring(1));
+    static Map<RemoteName, RemoteUrl> parseUrls(String raw) {
+        return parseSetting(raw, URL_KEY.substring(1)).mapValues(RemoteUrl::new);
     }
 
     /**
