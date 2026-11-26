@@ -91,6 +91,6 @@ public class AllFilesBenchmark {
      */
     @Benchmark
     public Set<String> startCollapsed() {
-        return FilesPanel.unchangedDirectories(entries);
+        return WorkingTreeFilesList.unchangedDirectories(entries);
     }
 }
