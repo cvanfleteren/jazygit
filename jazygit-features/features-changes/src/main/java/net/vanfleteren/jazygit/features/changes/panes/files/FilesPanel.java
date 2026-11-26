@@ -9,9 +9,7 @@ import dev.tamboui.tui.bindings.Actions;
 import dev.tamboui.tui.event.KeyCode;
 import dev.tamboui.tui.event.KeyEvent;
 import dev.tamboui.tui.event.PasteEvent;
-import io.vavr.collection.HashSet;
 import io.vavr.collection.List;
-import io.vavr.collection.Set;
 import io.vavr.control.Option;
 import java.util.function.Consumer;
 import net.vanfleteren.jazygit.core.git.model.*;
@@ -29,6 +27,7 @@ import net.vanfleteren.jazygit.kernel.state.load.SelectionMsg;
 import net.vanfleteren.jazygit.kernel.state.view.*;
 import net.vanfleteren.jazygit.kernel.state.view.Followed;
 import net.vanfleteren.jazygit.kernel.state.view.Unlisted;
+import net.vanfleteren.jazygit.kernel.ui.Fills;
 import net.vanfleteren.jazygit.kernel.ui.files.ListedFiles;
 import net.vanfleteren.jazygit.kernel.ui.i18n.Messages;
 import net.vanfleteren.jazygit.kernel.ui.keys.Keymap;
@@ -39,6 +38,7 @@ import net.vanfleteren.jazygit.kernel.ui.text.ShownTime;
 import net.vanfleteren.jazygit.kernel.ui.theme.Theme;
 import net.vanfleteren.jazygit.kernel.ui.widgets.BorderBar;
 import net.vanfleteren.jazygit.kernel.ui.widgets.FilterLine;
+import net.vanfleteren.jazygit.kernel.ui.widgets.LoadableList;
 import net.vanfleteren.jazygit.kernel.ui.widgets.Pane;
 import net.vanfleteren.jazygit.kernel.ui.widgets.PaneKeys;
 import net.vanfleteren.jazygit.kernel.ui.widgets.PasteTarget;
@@ -70,13 +70,15 @@ public final class FilesPanel implements FilesLeftPane {
     // (ADR 128).
     private final FileTreeList<CommitFile> commitAllTree;
     private final Keymap keymap = Keymap.standard();
+    // What the features give for the slots of the pane (ADR 172).
+    private final Fills fills;
     private final FilterLine filterLine = new FilterLine();
     // What a paste does: while the filter line is open, it goes in it.
     private final Consumer<PasteEvent> paste;
     // The trees' key handlers also see keys typed in other panes, so they must know whether the pane has focus.
     private boolean focused;
-    // The files resolved since the operation in progress stopped, marked as such (ADR 198); read each render.
-    private Set<String> resolved = HashSet.empty();
+    // What the features mark the files of the working tree with, as last rendered (ADR 172).
+    private List<FileMark> marks = List.empty();
     // Whether the files of a commit the pane lists are counted in place of their tree, as there are many (ADR 141).
     private boolean held;
     // Whether the pane was locked to a list at the last render, which Escape in the working tree lets go of (ADR 149).
@@ -99,13 +101,15 @@ public final class FilesPanel implements FilesLeftPane {
      * @param openDiff called when Enter or Right is pressed on a file or directory, to move focus to its diff
      */
     public FilesPanel(Consumer<Msg> dispatch, Runnable openDiff) {
-        this(dispatch, openDiff, Theme.Highlights.DEFAULT);
+        this(dispatch, openDiff, Theme.Highlights.DEFAULT, Fills.NONE);
     }
 
     /**
      * @param highlights how the highlighted node is shown, also when the pane is not in use
+     * @param fills      what the features give for the slots of {@link FilesPane}
      */
-    public FilesPanel(Consumer<Msg> dispatch, Runnable openDiff, Theme.Highlights highlights) {
+    public FilesPanel(Consumer<Msg> dispatch, Runnable openDiff, Theme.Highlights highlights, Fills fills) {
+        this.fills = fills;
         paste = event -> filter.filter(FileFilter::typing)
                 .forEach(typing -> dispatch.accept(new FileFilterMsg.Edited(filterLine.paste(typing.text(), event))));
         statusTree = new FileTreeList<>(
@@ -222,28 +226,27 @@ public final class FilesPanel implements FilesLeftPane {
      * {@code U} for each branch that updated them: green for the current branch, red for the other.
      */
     private StyledElement<?> drawEntry(FileTree.File<FileEntry> file) {
-        FileEntry entry = file.entry();
-        // A file resolved since the operation stopped says so after its name (ADR 198); one resolved to what HEAD
-        // has, without changes, is dimmed, as it is listed only to be found again.
-        if (resolved.contains(entry.path()) && entry.conflict().isEmpty()) {
-            return entry.changed()
-                    ? Toolkit.row(plainEntry(file), Toolkit.text(" ✓").addClass(Theme.Classes.STAGED))
-                    : Toolkit.row(
-                            Toolkit.text("   " + file.name()).dim(),
-                            Toolkit.text(" ✓").addClass(Theme.Classes.STAGED).dim());
+        // What the features mark the file with comes after its name, as a file resolved since the operation stopped
+        // (ADR 198); a mark may dim the whole row, as for a file listed only to be found again.
+        List<FileMark.Mark> on = marks.flatMap(mark -> mark.of(file.entry()));
+        if (on.isEmpty()) {
+            return plainEntry(file);
         }
-        return plainEntry(file);
+        boolean dims = on.exists(FileMark.Mark::dims);
+        return Toolkit.row(on.flatMap(FileMark.Mark::after)
+                .<StyledElement<?>>map(seg -> segment(seg, dims))
+                .prepend(dims ? plainEntry(file).dim() : plainEntry(file))
+                .toJavaArray(StyledElement[]::new));
     }
 
     /**
-     * How far the resolving of the conflicts of the operation in progress got, once one of them is resolved:
-     * {@code · 2 of 4 resolved} (ADR 198).
+     * {@code seg}, in its colour, dimmed if {@code dims}.
      */
-    static Option<String> resolvedTitle(RepoStatus status) {
-        int done = status.resolved().size();
-        return Option.when(
-                status.inProgress().isDefined() && done > 0,
-                () -> Messages.get("panel.files.resolved", done, done + status.conflicts()));
+    private static StyledElement<?> segment(LoadableList.Seg seg, boolean dims) {
+        StyledElement<?> text = seg.cssClass()
+                .<StyledElement<?>>map(css -> Toolkit.text(seg.text()).addClass(css))
+                .getOrElse(() -> Toolkit.text(seg.text()));
+        return dims ? text.dim() : text;
     }
 
     private static StyledElement<?> plainEntry(FileTree.File<FileEntry> file) {
@@ -634,13 +637,10 @@ public final class FilesPanel implements FilesLeftPane {
                     Loadable<List<FileEntry>> files = workingFiles(model.repo(), all);
                     FileTreeList<FileEntry> tree = workingTree(model.repoView());
                     switching(ID, tree, all ? statusTree : allTree);
-                    Option<RepoStatus> status = model.repo().status().toOption();
-                    resolved = status.map(RepoStatus::resolved)
-                            .getOrElse(List.empty())
-                            .toSet();
+                    marks = fills.all(FilesPane.MARK, model);
                     return Pane.bordered(
                             Messages.get("panel.files.title")
-                                    + status.flatMap(FilesPanel::resolvedTitle).getOrElse("")
+                                    + fills.all(FilesPane.TITLE, model).mkString()
                                     + (all ? Messages.get("panel.files.all") : "")
                                     + filteredTitle()
                                     + lockedTitle(model),

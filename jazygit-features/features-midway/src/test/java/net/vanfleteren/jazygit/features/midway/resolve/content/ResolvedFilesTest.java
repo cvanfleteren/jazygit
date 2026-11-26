@@ -1,4 +1,4 @@
-package net.vanfleteren.jazygit.features.changes.panes.files;
+package net.vanfleteren.jazygit.features.midway.resolve.content;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -11,16 +11,20 @@ import net.vanfleteren.jazygit.core.git.model.FileEntry;
 import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.InProgress;
 import net.vanfleteren.jazygit.core.repo.Sha;
+import net.vanfleteren.jazygit.features.changes.panes.files.FilesPanel;
+import net.vanfleteren.jazygit.features.midway.resolve.ResolveFeature;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.TestModels;
 import net.vanfleteren.jazygit.kernel.ui.RenderedText;
 import net.vanfleteren.jazygit.kernel.ui.SettledPilot;
+import net.vanfleteren.jazygit.kernel.ui.theme.Theme;
 import org.junit.jupiter.api.Test;
 
 /**
- * The files pane while an operation is stopped on conflicts: how many are resolved, and which (ADR 198).
+ * The files pane while an operation is stopped on conflicts: how many are resolved, and which (ADR 198), as the
+ * resolving fills its slots.
  */
-class FilesPanelResolvedTest {
+class ResolvedFilesTest {
 
     private static final InProgress REBASING =
             new InProgress.Rebasing(Option.of(new BranchName("feature")), new Sha("aaaa"), 2, 3);
@@ -29,7 +33,8 @@ class FilesPanelResolvedTest {
     private static final FileEntry RESOLVED = new FileEntry("b.txt", ChangeType.MODIFIED, true, false);
     private static final FileEntry OTHER = new FileEntry("c.txt", ChangeType.MODIFIED, true, false);
 
-    private final FilesPanel panel = new FilesPanel(msg -> {}, () -> {});
+    private final FilesPanel panel =
+            new FilesPanel(msg -> {}, () -> {}, Theme.Highlights.DEFAULT, ResolveFeature.FEATURE.fills());
 
     private static Model stopped(List<String> resolved) {
         return TestModels.loaded()

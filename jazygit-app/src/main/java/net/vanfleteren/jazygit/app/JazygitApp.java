@@ -162,7 +162,7 @@ public class JazygitApp extends ToolkitApp {
                 dispatch,
                 styleEngine,
                 focus::openContent,
-                (openDiff, highlights) -> new FilesPanel(dispatch, openDiff, highlights),
+                (openDiff, highlights) -> new FilesPanel(dispatch, openDiff, highlights, Features.FILLS),
                 highlights -> new BranchesPanel(dispatch, clock, highlights, Features.FILLS),
                 highlights -> new CommitsPanel(dispatch, highlights, Features.FILLS),
                 highlights -> new StashPanel(dispatch, highlights),
