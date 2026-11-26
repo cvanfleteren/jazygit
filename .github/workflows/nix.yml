@@ -37,7 +37,7 @@ jobs:
           repository: ${{ github.event.pull_request.head.repo.full_name || github.repository }}
           ref: ${{ github.head_ref || github.ref }}
 
-      - uses: cachix/install-nix-action@v31
+      - uses: cachix/install-nix-action@v32
 
       - name: Bring mvnHash up to date
         env:
