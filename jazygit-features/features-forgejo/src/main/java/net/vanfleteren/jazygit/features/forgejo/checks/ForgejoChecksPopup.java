@@ -9,7 +9,7 @@ import net.vanfleteren.jazygit.core.forgejo.ForgejoCheck;
 import net.vanfleteren.jazygit.core.repo.BranchRef;
 import net.vanfleteren.jazygit.core.repo.RemoteBranch;
 import net.vanfleteren.jazygit.core.repo.Sha;
-import net.vanfleteren.jazygit.features.forgejo.pulls.ForgejoPullRequestPopup;
+import net.vanfleteren.jazygit.features.forgejo.show.ForgejoPullRequestPopup;
 import net.vanfleteren.jazygit.kernel.state.Failure;
 import net.vanfleteren.jazygit.kernel.state.popup.Popup;
 

@@ -21,6 +21,7 @@ import net.vanfleteren.jazygit.features.changes.diff.CommitFilesUpdate;
 import net.vanfleteren.jazygit.features.changes.fetch.FetchUpdate;
 import net.vanfleteren.jazygit.features.github.browse.BrowsePullRequestCmd;
 import net.vanfleteren.jazygit.features.github.checks.ChecksPopup;
+import net.vanfleteren.jazygit.features.github.checks.timings.CheckTimesUpdate;
 import net.vanfleteren.jazygit.features.github.create.GitHubCreatePullRequestUpdate;
 import net.vanfleteren.jazygit.features.github.prs.PrOverview;
 import net.vanfleteren.jazygit.features.github.prs.PrOverviewUpdate;

@@ -17,7 +17,7 @@ import net.vanfleteren.jazygit.features.changes.edit.EditCmd;
 import net.vanfleteren.jazygit.features.changes.edit.EditorSettings;
 import net.vanfleteren.jazygit.features.changes.edit.OpenFileCmd;
 import net.vanfleteren.jazygit.features.forgejo.builds.ForgejoBuilds;
-import net.vanfleteren.jazygit.features.forgejo.pulls.ForgejoPullRequestPopup;
+import net.vanfleteren.jazygit.features.forgejo.show.ForgejoPullRequestPopup;
 import net.vanfleteren.jazygit.kernel.settings.EditorProgram;
 import net.vanfleteren.jazygit.kernel.settings.Editors;
 import net.vanfleteren.jazygit.kernel.state.AppError;

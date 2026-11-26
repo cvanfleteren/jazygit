@@ -4,7 +4,7 @@ import io.vavr.collection.List;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest;
 import net.vanfleteren.jazygit.features.github.GitHubFailure;
-import net.vanfleteren.jazygit.features.github.state.BranchChecksUpdate;
+import net.vanfleteren.jazygit.features.github.checks.branches.BranchChecksUpdate;
 import net.vanfleteren.jazygit.features.github.state.FailingRead;
 import net.vanfleteren.jazygit.features.github.state.GitHubReads;
 import net.vanfleteren.jazygit.features.github.state.GitHubState;

@@ -19,13 +19,13 @@ import net.vanfleteren.jazygit.kernel.state.Env;
  * @param home    the repository of the home
  * @param remotes the repository of each remote on the host of the home, the home's included
  */
-record ForgejoRemotes(ForgejoRepository home, Map<RemoteName, ForgejoRepository> remotes) {
+public record ForgejoRemotes(ForgejoRepository home, Map<RemoteName, ForgejoRepository> remotes) {
 
     /**
      * The home, {@code home} as the kernel decided it (ADR 177), and the remotes on its host, when the home is on
      * Forgejo; none when it is not, or the remotes could not be listed.
      */
-    static Option<ForgejoRemotes> of(Env env, Forgejo forgejo, RemoteName home) {
+    public static Option<ForgejoRemotes> of(Env env, Forgejo forgejo, RemoteName home) {
         return env.git()
                 .remotes()
                 .urls()

@@ -16,7 +16,10 @@ import net.vanfleteren.jazygit.core.forgejo.ForgejoError;
 import net.vanfleteren.jazygit.core.forgejo.ForgejoPullRequest;
 import net.vanfleteren.jazygit.core.forgejo.ForgejoReview;
 import net.vanfleteren.jazygit.core.repo.RemoteName;
+import net.vanfleteren.jazygit.features.forgejo.ForgejoFailure;
 import net.vanfleteren.jazygit.features.forgejo.pulls.PullRequestFixtures.FakeForgejo;
+import net.vanfleteren.jazygit.features.forgejo.show.LoadPullRequest;
+import net.vanfleteren.jazygit.features.forgejo.show.ShownPullRequest;
 import net.vanfleteren.jazygit.kernel.state.Failure;
 import org.junit.jupiter.api.Test;
 

@@ -1,5 +1,7 @@
 package net.vanfleteren.jazygit.features.github.state;
 
+import net.vanfleteren.jazygit.features.github.checks.timings.CheckTimingsStore;
+import net.vanfleteren.jazygit.features.github.prs.unseen.UnseenPullRequestsStore;
 import net.vanfleteren.jazygit.features.github.remarks.CollapsedStore;
 import net.vanfleteren.jazygit.kernel.state.Env;
 

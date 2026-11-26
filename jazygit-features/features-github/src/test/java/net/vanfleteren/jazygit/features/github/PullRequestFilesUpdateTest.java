@@ -25,6 +25,7 @@ import net.vanfleteren.jazygit.core.repo.*;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.features.changes.diff.CommitFilesMsg;
 import net.vanfleteren.jazygit.features.github.browse.BrowsePullRequestCmd;
+import net.vanfleteren.jazygit.features.github.checks.branches.GitHubChecks;
 import net.vanfleteren.jazygit.features.github.create.GitHubCreatePullRequestCmd.*;
 import net.vanfleteren.jazygit.features.github.prs.PrOverview;
 import net.vanfleteren.jazygit.features.github.remarks.RemarksCmd;

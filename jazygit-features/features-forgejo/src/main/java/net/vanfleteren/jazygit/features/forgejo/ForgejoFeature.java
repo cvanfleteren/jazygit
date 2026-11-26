@@ -12,10 +12,10 @@ import net.vanfleteren.jazygit.features.forgejo.builds.ForgejoServices;
 import net.vanfleteren.jazygit.features.forgejo.checks.ChecksMsg;
 import net.vanfleteren.jazygit.features.forgejo.checks.ForgejoChecksDialog;
 import net.vanfleteren.jazygit.features.forgejo.checks.ShowChecksAction;
-import net.vanfleteren.jazygit.features.forgejo.pulls.ForgejoCreatePullRequestAction;
-import net.vanfleteren.jazygit.features.forgejo.pulls.ForgejoPullRequestDialog;
+import net.vanfleteren.jazygit.features.forgejo.create.ForgejoCreatePullRequestAction;
 import net.vanfleteren.jazygit.features.forgejo.pulls.PullRequestReactions;
-import net.vanfleteren.jazygit.features.forgejo.pulls.ShowPullRequestAction;
+import net.vanfleteren.jazygit.features.forgejo.show.ForgejoPullRequestDialog;
+import net.vanfleteren.jazygit.features.forgejo.show.ShowPullRequestAction;
 import net.vanfleteren.jazygit.kernel.ui.Feature;
 import net.vanfleteren.jazygit.kernel.ui.KernelSlots;
 

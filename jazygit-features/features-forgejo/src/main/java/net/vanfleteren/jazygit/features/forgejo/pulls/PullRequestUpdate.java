@@ -6,6 +6,12 @@ import net.vanfleteren.jazygit.core.repo.Branch;
 import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.RemoteBranch;
 import net.vanfleteren.jazygit.core.repo.RemoteName;
+import net.vanfleteren.jazygit.features.forgejo.browse.OpenPullRequestCmd;
+import net.vanfleteren.jazygit.features.forgejo.create.ForgejoCreatePullRequestUpdate;
+import net.vanfleteren.jazygit.features.forgejo.show.ForgejoPullRequestPopup;
+import net.vanfleteren.jazygit.features.forgejo.show.LoadPullRequest;
+import net.vanfleteren.jazygit.features.forgejo.show.MergeUpdate;
+import net.vanfleteren.jazygit.features.forgejo.show.ShownPullRequest;
 import net.vanfleteren.jazygit.kernel.state.Failure;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.Update.Next;
@@ -142,7 +148,7 @@ public final class PullRequestUpdate {
      * Reads pull request {@code number} again when the dialog shows it, as after its merge was scheduled or cancelled
      * (ADR 181): also while it is read, as that read may have started before; the dialog then waits for this one.
      */
-    static Next readAgain(Next next, long number) {
+    public static Next readAgain(Next next, long number) {
         return next.then(model -> model.popup(ForgejoPullRequestPopup.class)
                 .filter(popup -> popup.pullRequest().number() == number)
                 .map(popup -> readAgain(model, popup))
@@ -160,7 +166,7 @@ public final class PullRequestUpdate {
     /**
      * Whether the pull request {@code popup} shows can be read again now.
      */
-    static boolean refreshable(ForgejoPullRequestPopup popup) {
+    public static boolean refreshable(ForgejoPullRequestPopup popup) {
         return !popup.reading();
     }
 }

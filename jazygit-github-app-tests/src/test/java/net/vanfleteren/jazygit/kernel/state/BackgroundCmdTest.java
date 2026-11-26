@@ -11,13 +11,13 @@ import net.vanfleteren.jazygit.core.gh.model.PrNumber;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest.Review;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestSummary;
+import net.vanfleteren.jazygit.features.github.checks.timings.CheckTimesCmd;
+import net.vanfleteren.jazygit.features.github.checks.timings.LoadBranchCheckRuns;
 import net.vanfleteren.jazygit.features.github.prs.LoadMyPullRequests;
 import net.vanfleteren.jazygit.features.github.prs.LoadPullRequestPreview;
 import net.vanfleteren.jazygit.features.github.remarks.RemarksCmd;
 import net.vanfleteren.jazygit.features.github.settings.GitHubSettingsCmd;
 import net.vanfleteren.jazygit.features.github.show.PullRequestCmd;
-import net.vanfleteren.jazygit.features.github.state.CheckTimesCmd;
-import net.vanfleteren.jazygit.features.github.state.LoadBranchCheckRuns;
 import org.junit.jupiter.api.Test;
 
 /**
