@@ -1,4 +1,4 @@
-package net.vanfleteren.jazygit.kernel.ui.files;
+package net.vanfleteren.jazygit.features.changes.panes.files;
 
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.core.repo.Sha;

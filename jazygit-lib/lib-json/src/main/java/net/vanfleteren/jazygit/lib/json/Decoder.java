@@ -136,6 +136,25 @@ public interface Decoder<T> {
     }
 
     /**
+     * The field at {@code path}, like {@link #at}, but none where the value, or any object on the way to it, is
+     * {@code null}: one {@code Option} rather than one in another for each step. A missing field still fails.
+     */
+    static <T> Decoder<Option<T>> nullableAt(String path, Decoder<T> decoder) {
+        return List.of(path.split("\\.", -1))
+                .foldRight(
+                        nullable(decoder),
+                        (name, rest) -> nullable(field(name, rest)).map(value -> value.flatMap(inner -> inner)));
+    }
+
+    /**
+     * None where {@code decoder} fails, else what it decoded: for a part of an answer that is read leniently, as
+     * the rest reads fine without it.
+     */
+    static <T> Decoder<Option<T>> orNone(Decoder<Option<T>> decoder) {
+        return json -> Either.right(decoder.decode(json).getOrElse(Option.none()));
+    }
+
+    /**
      * Each element of an array, decoded; it fails at the first that does not decode.
      */
     static <T> Decoder<List<T>> list(Decoder<T> decoder) {

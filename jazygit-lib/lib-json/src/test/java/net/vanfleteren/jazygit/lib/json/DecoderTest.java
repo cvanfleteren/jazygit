@@ -15,7 +15,9 @@ import static net.vanfleteren.jazygit.lib.json.Decoder.map2;
 import static net.vanfleteren.jazygit.lib.json.Decoder.map3;
 import static net.vanfleteren.jazygit.lib.json.Decoder.map8;
 import static net.vanfleteren.jazygit.lib.json.Decoder.nullable;
+import static net.vanfleteren.jazygit.lib.json.Decoder.nullableAt;
 import static net.vanfleteren.jazygit.lib.json.Decoder.optionalField;
+import static net.vanfleteren.jazygit.lib.json.Decoder.orNone;
 import static net.vanfleteren.jazygit.lib.json.Decoder.string;
 import static net.vanfleteren.jazygit.lib.json.Decoder.succeed;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -148,6 +150,31 @@ class DecoderTest {
     void aPathOfFieldsIsReadThroughNestedObjects() {
         assertEquals(
                 Either.right(3), decode(at("commits.totalCount", integer()), "{\"commits\": {\"totalCount\": 3}}"));
+    }
+
+    @Test
+    void aNullablePathIsNoneForANullAnywhereOnIt() {
+        Decoder<Option<Integer>> behind = nullableAt("compare.behindBy", integer());
+
+        assertEquals(Either.right(Option.some(2)), decode(behind, "{\"compare\": {\"behindBy\": 2}}"));
+        assertEquals(Either.right(Option.none()), decode(behind, "{\"compare\": {\"behindBy\": null}}"));
+        assertEquals(Either.right(Option.none()), decode(behind, "{\"compare\": null}"));
+        assertEquals(Either.right(Option.none()), decode(behind, "null"));
+    }
+
+    @Test
+    void aNullablePathStillFailsForAMissingField() {
+        assertEquals(
+                Either.left("compare.behindBy: missing"),
+                decode(nullableAt("compare.behindBy", integer()), "{\"compare\": {}}"));
+    }
+
+    @Test
+    void orNoneIsNoneWhereItFails() {
+        Decoder<Option<Integer>> behind = orNone(nullableAt("compare.behindBy", integer()));
+
+        assertEquals(Either.right(Option.none()), decode(behind, "{\"name\": \"main\"}"));
+        assertEquals(Either.right(Option.some(2)), decode(behind, "{\"compare\": {\"behindBy\": 2}}"));
     }
 
     @Test

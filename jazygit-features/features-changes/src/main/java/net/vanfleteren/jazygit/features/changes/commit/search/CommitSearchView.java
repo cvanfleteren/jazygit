@@ -28,7 +28,7 @@ public record CommitSearchView(Option<String> line, Option<CommitSearch> search)
             .rereading((model, view) -> view.loads())
             .knowingCommits((view, sha) -> view.search().flatMap(search -> search.commit(sha)))
             .reacting((model, view, event) -> switch (event) {
-                case KernelEvent.LogRead() -> new Next(model, List.narrow(view.loads()));
+                case KernelEvent.LogRead() -> Next.of(model).and(List.narrow(view.loads()));
                 case KernelEvent.OperationDone _,
                         KernelEvent.Fetched _,
                         KernelEvent.RepositoryOpened _,

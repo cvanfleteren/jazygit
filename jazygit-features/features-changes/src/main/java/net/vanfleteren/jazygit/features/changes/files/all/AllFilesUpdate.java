@@ -29,9 +29,8 @@ public final class AllFilesUpdate {
      */
     private static Next toggled(Model model) {
         FilesShown shown = model.repoView().files().shown().toggled();
-        return new Next(
-                model.mapRepoView(view -> view.mapFiles(files ->
-                        files.withShown(shown).withUnchanged(shown.all() ? files.unchanged() : Option.none()))),
-                shown.all() ? List.<Cmd>of(new LoadAllFiles()) : List.empty());
+        return Next.of(model.mapRepoView(view -> view.mapFiles(files ->
+                        files.withShown(shown).withUnchanged(shown.all() ? files.unchanged() : Option.none()))))
+                .and(shown.all() ? List.<Cmd>of(new LoadAllFiles()) : List.empty());
     }
 }

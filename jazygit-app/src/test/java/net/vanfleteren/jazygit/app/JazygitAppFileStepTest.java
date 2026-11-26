@@ -34,6 +34,7 @@ import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.features.changes.diff.DiffFilterSettings;
 import net.vanfleteren.jazygit.features.changes.files.step.FileStepNotice;
 import net.vanfleteren.jazygit.features.changes.panes.commits.CommitsPanel;
+import net.vanfleteren.jazygit.features.changes.panes.files.FilesPanel;
 import net.vanfleteren.jazygit.kernel.settings.DiffStyle;
 import net.vanfleteren.jazygit.kernel.settings.Settings;
 import net.vanfleteren.jazygit.kernel.settings.SettingsStore;
@@ -46,7 +47,6 @@ import net.vanfleteren.jazygit.kernel.state.view.Preview;
 import net.vanfleteren.jazygit.kernel.state.view.UnchangedNode;
 import net.vanfleteren.jazygit.kernel.ui.SettledPilot;
 import net.vanfleteren.jazygit.kernel.ui.content.ContentSources;
-import net.vanfleteren.jazygit.kernel.ui.files.FilesPanel;
 import org.junit.jupiter.api.Test;
 
 /**

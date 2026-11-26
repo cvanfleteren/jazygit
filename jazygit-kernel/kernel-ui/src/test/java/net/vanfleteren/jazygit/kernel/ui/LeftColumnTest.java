@@ -23,7 +23,10 @@ import net.vanfleteren.jazygit.kernel.state.PaneId;
 import net.vanfleteren.jazygit.kernel.state.TestModels;
 import net.vanfleteren.jazygit.kernel.state.preferences.Screen;
 import net.vanfleteren.jazygit.kernel.state.preferences.TestScreens;
+import net.vanfleteren.jazygit.kernel.state.view.FileStepMsg;
+import net.vanfleteren.jazygit.kernel.state.view.Followed;
 import net.vanfleteren.jazygit.kernel.ui.keys.Scopes;
+import net.vanfleteren.jazygit.kernel.ui.screen.FilesLeftPane;
 import net.vanfleteren.jazygit.kernel.ui.screen.LeftPane;
 import net.vanfleteren.jazygit.kernel.ui.screen.ScreenSpec;
 import net.vanfleteren.jazygit.kernel.ui.screen.Screens;
@@ -35,7 +38,8 @@ class LeftColumnTest {
 
     private static final Rect AREA = new Rect(0, 0, 40, 60);
 
-    // The branches, commits and stash panes live in groups of features (ADR 158): a pane of its id stands in for each.
+    // The panes live in groups of features (ADR 158): a pane of its id stands in for each.
+    private static final FilesLeftPane FILES = filesStandIn();
     private static final LeftPane BRANCHES = standIn(Scopes.BRANCHES.pane());
     private static final LeftPane COMMITS = standIn(PaneId.COMMITS);
     private static final LeftPane STASH = standIn(PaneId.STASH);
@@ -44,6 +48,7 @@ class LeftColumnTest {
             msg -> {},
             StyleEngine.create(),
             id -> {},
+            (openDiff, highlights) -> FILES,
             highlights -> BRANCHES,
             highlights -> COMMITS,
             highlights -> STASH,
@@ -114,6 +119,7 @@ class LeftColumnTest {
                 msg -> {},
                 StyleEngine.create(),
                 id -> {},
+                (openDiff, highlights) -> FILES,
                 highlights -> BRANCHES,
                 highlights -> COMMITS,
                 highlights -> STASH,
@@ -159,6 +165,36 @@ class LeftColumnTest {
                 .map(y -> List.range(area.x(), area.right())
                         .map(x -> buffer.get(x, y).symbol())
                         .mkString());
+    }
+
+    private static FilesLeftPane filesStandIn() {
+        LeftPane pane = standIn(PaneId.FILES);
+        return new FilesLeftPane() {
+            @Override
+            public PaneId pane() {
+                return pane.pane();
+            }
+
+            @Override
+            public Panel render(Model model, Option<Focus> focus, Option<PaneId> inUse) {
+                return pane.render(model, focus, inUse);
+            }
+
+            @Override
+            public Option<Msg> selectionChange(Model model) {
+                return Option.none();
+            }
+
+            @Override
+            public boolean step(Model model, FileStepMsg.Step step) {
+                return false;
+            }
+
+            @Override
+            public Option<Msg> followChange(Model model, Option<PaneId> inUse, Option<Followed> branches) {
+                return Option.none();
+            }
+        };
     }
 
     private static LeftPane standIn(PaneId id) {

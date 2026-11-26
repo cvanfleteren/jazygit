@@ -1,4 +1,4 @@
-package net.vanfleteren.jazygit.kernel.ui.files;
+package net.vanfleteren.jazygit.features.changes.panes.files;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -7,6 +7,7 @@ import dev.tamboui.tui.event.KeyCode;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.time.Instant;
+import java.util.concurrent.atomic.AtomicReference;
 import net.vanfleteren.jazygit.core.git.model.ChangeType;
 import net.vanfleteren.jazygit.core.git.model.CommitFile;
 import net.vanfleteren.jazygit.core.repo.Sha;
@@ -18,6 +19,8 @@ import net.vanfleteren.jazygit.kernel.state.TestModels;
 import net.vanfleteren.jazygit.kernel.state.diff.Changes;
 import net.vanfleteren.jazygit.kernel.state.load.SelectionMsg;
 import net.vanfleteren.jazygit.kernel.state.view.CommitFilesView;
+import net.vanfleteren.jazygit.kernel.state.view.Unlisted;
+import net.vanfleteren.jazygit.kernel.state.view.UnlistedFor;
 import net.vanfleteren.jazygit.kernel.ui.RenderedText;
 import net.vanfleteren.jazygit.kernel.ui.SettledPilot;
 import net.vanfleteren.jazygit.kernel.ui.keys.Scopes;
@@ -92,6 +95,34 @@ class FilesPanelKeptWhileReadTest {
         }
 
         assertEquals(java.util.List.of(new SelectionMsg.WholeListed()), sent);
+    }
+
+    @Test
+    void enterListsNothingOnceTheCountedFilesGiveWayToARowWithNoneToList() throws Exception {
+        List<CommitFile> many = List.range(0, CommitFilesView.FOLLOWED_LIMIT + 1)
+                .map(i -> new CommitFile("f" + i + ".txt", ChangeType.MODIFIED));
+        Model counted = listing(FIRST.withFiles(new Loadable.Loaded<>(many)));
+        // A group of branches highlighted next: it has no files to list (ADR 141).
+        Model unlisted = TestModels.loaded()
+                .withNow(NOW)
+                .mapRepoView(repoView -> repoView.mapFiles(files ->
+                        files.withUnlisted(Option.of(new UnlistedFor(new Unlisted.Group(), Scopes.BRANCHES.pane())))));
+        AtomicReference<Model> model = new AtomicReference<>(counted);
+        java.util.List<Msg> sent = new java.util.ArrayList<>();
+        FilesPanel panel = new FilesPanel(sent::add, () -> {});
+        try (ToolkitTestRunner testRunner =
+                ToolkitTestRunner.runTest(() -> panel.render(model.get(), FilesPanel.PANE))) {
+            RenderedText.ofLarge(testRunner, () -> panel.render(model.get(), FilesPanel.PANE));
+            model.set(unlisted);
+            String screen = RenderedText.ofLarge(testRunner, () -> panel.render(model.get(), FilesPanel.PANE));
+            assertTrue(screen.contains("A group: its branches list their files"), screen);
+
+            SettledPilot.focus(testRunner, FilesPanel.ID);
+            SettledPilot.of(testRunner).press(KeyCode.ENTER);
+            SettledPilot.of(testRunner).quit();
+        }
+
+        assertFalse(sent.contains(new SelectionMsg.WholeListed()), sent::toString);
     }
 
     @Test

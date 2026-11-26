@@ -12,6 +12,7 @@ import net.vanfleteren.jazygit.kernel.state.AreaId;
 import net.vanfleteren.jazygit.kernel.state.Failure;
 import net.vanfleteren.jazygit.kernel.state.Loadable;
 import net.vanfleteren.jazygit.kernel.state.Model;
+import net.vanfleteren.jazygit.kernel.state.PaneId;
 import net.vanfleteren.jazygit.kernel.state.diff.RemarkThread;
 import net.vanfleteren.jazygit.kernel.state.diff.ScrolledContent;
 import net.vanfleteren.jazygit.kernel.state.diff.StatedRemarks;
@@ -23,7 +24,7 @@ import net.vanfleteren.jazygit.kernel.ui.content.ContentSource;
 import net.vanfleteren.jazygit.kernel.ui.content.Mirrored;
 import net.vanfleteren.jazygit.kernel.ui.content.Shown;
 import net.vanfleteren.jazygit.kernel.ui.content.ShownChanges;
-import net.vanfleteren.jazygit.kernel.ui.files.FilesPanel;
+import net.vanfleteren.jazygit.kernel.ui.files.ListedFiles;
 import net.vanfleteren.jazygit.kernel.ui.i18n.Messages;
 
 /**
@@ -36,7 +37,7 @@ record CommitFilesSource() implements ContentSource {
     /**
      * What a commit or a stash changed in the files highlighted in the tree of them the files pane lists.
      */
-    static final ContentArea AREA = ContentArea.of(AreaId.COMMIT_FILE, FilesPanel.PANE);
+    static final ContentArea AREA = ContentArea.of(AreaId.COMMIT_FILE, PaneId.FILES);
 
     @Override
     public Option<Shown> shown(Model model, Mirrored pane) {
@@ -53,7 +54,7 @@ record CommitFilesSource() implements ContentSource {
 
     private static Shown commitFiles(Model model, CommitFilesView view) {
         DiffOptions options = model.preferences().diffOptions();
-        String name = FilesPanel.changesName(model, view.of());
+        String name = ListedFiles.changesName(model, view.of());
         String title = Shows.titled(Messages.get("panel.commitFiles.titleFor", name), options);
         // A node the commit did not change, among all its files, shows as it is in it (ADR 128).
         Option<Shown> unchanged = view.unchanged()
@@ -67,13 +68,13 @@ record CommitFilesSource() implements ContentSource {
             return unchanged.get();
         }
         // When only the files with review threads are listed and none is, nothing is highlighted (ADR 57).
-        Option<Shown> nothingListed = FilesPanel.nothingListed(view.listed())
+        Option<Shown> nothingListed = ListedFiles.nothingListed(view.listed())
                 .filter(nothing -> !view.listedFiles(model).toOption().exists(List::nonEmpty))
                 .map(nothing -> Shown.whenLoaded(title, view.listedFiles(model), listed -> Shown.dim(title, nothing)))
                 // Nor when the filter hides all files listed (ADR 105).
                 .orElse(() -> view.listedFiles(model)
                         .toOption()
-                        .filter(listed -> FilesPanel.noneMatch(model, listed))
+                        .filter(listed -> ListedFiles.noneMatch(model, listed))
                         .map(listed -> Shown.dim(title, Messages.get("panel.files.noMatches"))));
         return nothingListed.getOrElse(() -> view.diff()
                 .map(Preview::shown)

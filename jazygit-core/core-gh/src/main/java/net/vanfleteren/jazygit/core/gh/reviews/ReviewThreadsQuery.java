@@ -14,6 +14,7 @@ import static net.vanfleteren.jazygit.lib.json.Decoder.map5;
 import static net.vanfleteren.jazygit.lib.json.Decoder.map6;
 import static net.vanfleteren.jazygit.lib.json.Decoder.map8;
 import static net.vanfleteren.jazygit.lib.json.Decoder.nullable;
+import static net.vanfleteren.jazygit.lib.json.Decoder.nullableAt;
 import static net.vanfleteren.jazygit.lib.json.Decoder.string;
 
 import io.vavr.Tuple;
@@ -59,8 +60,8 @@ final class ReviewThreadsQuery {
             reactionGroups { content viewerHasReacted reactors { totalCount } } } } } } } } }""".formatted(COMMENTS);
 
     // Who wrote it; empty when GitHub does not say, as for a deleted account.
-    static final Decoder<String> AUTHOR = field("author", nullable(field("login", nullable(string()))))
-            .map(author -> author.flatMap(login -> login).getOrElse(""));
+    static final Decoder<String> AUTHOR =
+            field("author", nullableAt("login", string())).map(login -> login.getOrElse(""));
 
     // What the viewer may do with a comment.
     static final Decoder<CommentRights> COMMENT_RIGHTS = map3(

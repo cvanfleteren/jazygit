@@ -30,6 +30,7 @@ import net.vanfleteren.jazygit.kernel.state.view.NoLog;
 import net.vanfleteren.jazygit.kernel.state.view.Preview;
 import net.vanfleteren.jazygit.kernel.state.view.UnchangedNode;
 import net.vanfleteren.jazygit.kernel.state.view.UnlistedFor;
+import net.vanfleteren.jazygit.kernel.state.view.ViewIntent;
 
 /**
  * The panes' highlights, and the data loaded for them.
@@ -57,8 +58,14 @@ public final class SelectionUpdate {
             case SelectionMsg.FilesLockedAt(var at) ->
                 Next.of(model.mapRepoView(repoView -> repoView.mapFiles(
                         files -> files.withLocked(files.locked().map(lock -> lock.at(at))))));
+            // Escape in the working tree the locked list follows lets go there, and goes back to that list (ADR 149,
+            // 207); Escape in the list itself keeps the focus where it is.
             case SelectionMsg.FilesUnlocked() ->
-                Next.of(model.mapRepoView(repoView -> repoView.mapFiles(files -> files.withLocked(Option.none()))));
+                Next.of(model.mapRepoView(repoView -> repoView.mapFiles(files -> files.withLocked(Option.none()))))
+                        .asking(model.repoView()
+                                .files()
+                                .backTo()
+                                .map(list -> ViewIntent.ToPane.from(PaneId.FILES, list)));
         };
     }
 

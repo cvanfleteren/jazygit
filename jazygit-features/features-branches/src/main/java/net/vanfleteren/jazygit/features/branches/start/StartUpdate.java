@@ -41,9 +41,8 @@ public final class StartUpdate {
     public static Next update(Model model, StartMsg msg) {
         return switch (msg) {
             case StartMsg.InitChosen() ->
-                new Next(
-                        model,
-                        model.popup(NoRepositoryPopup.class)
+                Next.of(model)
+                        .and(model.popup(NoRepositoryPopup.class)
                                 .filter(NoRepositoryPopup::exists)
                                 .<Cmd>map(popup -> new StartCmd.Init(popup.directory()))
                                 .toList());
@@ -54,9 +53,8 @@ public final class StartUpdate {
                         .map(popup -> model.openPopup(new OpenRecentPopup(popup)))
                         .getOrElse(model));
             case StartMsg.FolderConfirmed() ->
-                new Next(
-                        model,
-                        model.popup(OpenFolderPopup.class)
+                Next.of(model)
+                        .and(model.popup(OpenFolderPopup.class)
                                 .filter(popup -> !popup.text().isBlank())
                                 .<Cmd>map(popup -> new StartCmd.Open(
                                         popup.outside().directory(),
@@ -64,9 +62,8 @@ public final class StartUpdate {
                                 .toList());
             case StartMsg.FolderCancelled() -> open(model, OpenFolderPopup.class, OpenFolderPopup::outside);
             case StartMsg.RecentPicked(String directory) ->
-                new Next(
-                        model,
-                        model.popup(OpenRecentPopup.class)
+                Next.of(model)
+                        .and(model.popup(OpenRecentPopup.class)
                                 .<Cmd>map(popup -> new StartCmd.Open(directory, directory))
                                 .toList());
             case StartMsg.RecentCancelled() -> open(model, OpenRecentPopup.class, OpenRecentPopup::outside);

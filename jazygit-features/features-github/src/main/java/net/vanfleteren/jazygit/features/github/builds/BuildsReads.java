@@ -39,7 +39,8 @@ public final class BuildsReads {
                     List<Cmd> cmds = files.<Cmd>map(ReadWorkflows::new)
                             .appendAll(Option.when(repo, LoadRepoWorkflows::new))
                             .appendAll(runs.map(id -> new LoadWorkflowRuns(id, Option.none())));
-                    return new Next(model.withPart(BuildsView.PART, Option.of(asked)), cmds, false);
+                    return Next.of(model.withPart(BuildsView.PART, Option.of(asked)))
+                            .and(cmds);
                 })
                 .getOrElse(() -> Next.of(model));
     }
@@ -48,7 +49,6 @@ public final class BuildsReads {
      * {@code next}, then reading what its model's builds show and is not read yet.
      */
     public static Next after(Next next) {
-        Next more = next(next.model());
-        return new Next(more.model(), next.cmds().appendAll(more.cmds()), next.quit());
+        return next.then(BuildsReads::next);
     }
 }
