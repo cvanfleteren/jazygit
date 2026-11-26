@@ -1,3 +1,5 @@
+a test PR from mats
+
 # Contributing to jazygit
 
 ## Reporting a bug
