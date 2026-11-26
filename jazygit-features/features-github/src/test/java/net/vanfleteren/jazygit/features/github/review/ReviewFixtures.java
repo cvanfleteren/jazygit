@@ -9,7 +9,6 @@ import io.vavr.collection.Set;
 import io.vavr.control.Option;
 import java.time.Instant;
 import net.vanfleteren.jazygit.core.gh.model.CommentRights;
-import net.vanfleteren.jazygit.core.gh.model.PrNumber;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestDetails;
 import net.vanfleteren.jazygit.core.gh.model.Reactions;
 import net.vanfleteren.jazygit.core.gh.model.ReviewRemarks;
@@ -20,6 +19,7 @@ import net.vanfleteren.jazygit.core.git.model.ChangeType;
 import net.vanfleteren.jazygit.core.git.model.CommitFile;
 import net.vanfleteren.jazygit.core.git.model.DiffText;
 import net.vanfleteren.jazygit.core.git.model.Folding;
+import net.vanfleteren.jazygit.core.repo.PrNumber;
 import net.vanfleteren.jazygit.core.repo.PullRequestCommits;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.features.changes.diff.CommitFilesMsg;
@@ -45,7 +45,8 @@ final class ReviewFixtures {
 
     static final String HEAD = "a".repeat(40);
     static final String BASE = "b".repeat(40);
-    static final PullRequestCommits COMMITS = new PullRequestCommits(7, "owner/repo", "", new Sha(BASE), new Sha(HEAD));
+    static final PullRequestCommits COMMITS =
+            new PullRequestCommits(new PrNumber(7), "owner/repo", "", new Sha(BASE), new Sha(HEAD));
     static final CommitFile A = new CommitFile("a.txt", ChangeType.MODIFIED);
     static final AreaId AREA = new AreaId("commit-file-changes");
     // Line 2 of a.txt changed, in a first hunk; line 10 in a second.

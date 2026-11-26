@@ -7,6 +7,7 @@ import java.time.Instant;
 import net.vanfleteren.jazygit.core.forgejo.ForgejoMergeStyle;
 import net.vanfleteren.jazygit.core.forgejo.ForgejoPullRequest;
 import net.vanfleteren.jazygit.core.repo.Branch;
+import net.vanfleteren.jazygit.core.repo.PrNumber;
 import net.vanfleteren.jazygit.core.repo.RemoteBranch;
 import net.vanfleteren.jazygit.core.repo.RemoteName;
 import net.vanfleteren.jazygit.features.forgejo.show.FailedMerge;
@@ -32,8 +33,8 @@ public record ForgejoPullRequests(
         Option<Map<RemoteBranch, ForgejoPullRequest>> open,
         Option<Failure> failure,
         long reads,
-        Map<Long, FailedMerge> failedMerges,
-        Map<Long, Scheduling> scheduled) {
+        Map<PrNumber, FailedMerge> failedMerges,
+        Map<PrNumber, Scheduling> scheduled) {
 
     public static final ForgejoPullRequests NONE =
             new ForgejoPullRequests(Option.none(), Option.none(), Option.none(), 0, HashMap.empty(), HashMap.empty());
@@ -75,11 +76,12 @@ public record ForgejoPullRequests(
                 stillOpen(scheduled, same, read));
     }
 
-    private static <T> Map<Long, T> stillOpen(
-            Map<Long, T> byNumber, boolean same, Option<Map<RemoteBranch, ForgejoPullRequest>> read) {
+    private static <T> Map<PrNumber, T> stillOpen(
+            Map<PrNumber, T> byNumber, boolean same, Option<Map<RemoteBranch, ForgejoPullRequest>> read) {
         return !same
                 ? HashMap.empty()
-                : read.map(prs -> byNumber.filterKeys(number -> prs.values().exists(pr -> pr.number() == number)))
+                : read.map(prs -> byNumber.filterKeys(
+                                number -> prs.values().exists(pr -> pr.number().equals(number))))
                         .getOrElse(byNumber);
     }
 
@@ -101,7 +103,7 @@ public record ForgejoPullRequests(
      * The style jazygit scheduled the merge of pull request {@code number} as, if it did, for the merge its timeline
      * shows scheduled.
      */
-    public Option<ForgejoMergeStyle> style(long number) {
+    public Option<ForgejoMergeStyle> style(PrNumber number) {
         return scheduled
                 .get(number)
                 .flatMap(kept -> kept instanceof Scheduling.Ours(var style, var _) ? Option.of(style) : Option.none());
@@ -126,8 +128,8 @@ public record ForgejoPullRequests(
      * is forgotten once another is scheduled. One it does not show, as its timeline could not be read, keeps them.
      */
     public ForgejoPullRequests readShown(ShownPullRequest shown) {
-        long number = shown.pullRequest().number();
-        Map<Long, Scheduling> kept = shown.scheduled()
+        PrNumber number = shown.pullRequest().number();
+        Map<PrNumber, Scheduling> kept = shown.scheduled()
                 .flatMap(merge -> scheduled.get(number).map(was -> keptOnceShown(was, merge.at())))
                 .map(now -> now.fold(() -> scheduled.remove(number), is -> scheduled.put(number, is)))
                 .getOrElse(scheduled);
@@ -162,7 +164,7 @@ public record ForgejoPullRequests(
     /**
      * These once pull request {@code number} was merged: a merge of it that failed before is forgotten.
      */
-    public ForgejoPullRequests merged(long number) {
+    public ForgejoPullRequests merged(PrNumber number) {
         return new ForgejoPullRequests(
                 home, open, failure, reads, failedMerges.remove(number), scheduled.remove(number));
     }
@@ -172,7 +174,7 @@ public record ForgejoPullRequests(
      * before is forgotten, as a new merge takes its place, as on GitHub (ADR 112). Its style is of the merge the next
      * read shows scheduled.
      */
-    public ForgejoPullRequests mergeScheduled(long number, ForgejoMergeStyle style) {
+    public ForgejoPullRequests mergeScheduled(PrNumber number, ForgejoMergeStyle style) {
         return new ForgejoPullRequests(
                 home,
                 open,
@@ -185,7 +187,7 @@ public record ForgejoPullRequests(
     /**
      * These once the merge of pull request {@code number} was cancelled.
      */
-    public ForgejoPullRequests unscheduled(long number) {
+    public ForgejoPullRequests unscheduled(PrNumber number) {
         return new ForgejoPullRequests(home, open, failure, reads, failedMerges, scheduled.remove(number));
     }
 
@@ -193,7 +195,7 @@ public record ForgejoPullRequests(
      * These once Forgejo said no merge of pull request {@code number} is scheduled, when its timeline said one was at
      * {@code at}: that one is not shown any more, as Forgejo dropped it (ADR 181).
      */
-    public ForgejoPullRequests dropped(long number, Instant at) {
+    public ForgejoPullRequests dropped(PrNumber number, Instant at) {
         return new ForgejoPullRequests(
                 home, open, failure, reads, failedMerges, scheduled.put(number, new Scheduling.Dropped(at)));
     }

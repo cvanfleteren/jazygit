@@ -13,6 +13,7 @@ import java.nio.file.Path;
 import java.time.Instant;
 import net.vanfleteren.jazygit.core.git.model.*;
 import net.vanfleteren.jazygit.core.repo.*;
+import net.vanfleteren.jazygit.core.repo.PrNumber;
 import net.vanfleteren.jazygit.features.agent.settings.AgentProgram;
 import net.vanfleteren.jazygit.features.agent.settings.Agents;
 import net.vanfleteren.jazygit.kernel.settings.Entries;
@@ -59,7 +60,7 @@ class InvestigateUpdateTest {
                 Option.of("o/r"),
                 branch,
                 Option.of(new Sha("abc123")),
-                Option.of(new FailedBuild.ChangeRequest("merge request", 12)),
+                Option.of(new FailedBuild.ChangeRequest("merge request", new PrNumber(12))),
                 jobs,
                 running,
                 "read the log of run 401 of o/r");

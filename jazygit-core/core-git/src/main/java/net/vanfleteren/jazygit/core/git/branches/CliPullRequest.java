@@ -71,7 +71,7 @@ final class CliPullRequest {
                 "--no-write-fetch-head",
                 "--refmap=",
                 GitArgs.remote(remote),
-                "refs/pull/" + commits.number() + "/head",
+                "refs/pull/" + commits.number().value() + "/head",
                 commits.base().value());
     }
 

@@ -13,10 +13,10 @@ import static net.vanfleteren.jazygit.lib.json.Decoder.succeed;
 
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.core.gh.graphql.SummaryFragment;
-import net.vanfleteren.jazygit.core.gh.model.PrNumber;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestList;
 import net.vanfleteren.jazygit.core.gh.model.RepositoryPullRequests;
 import net.vanfleteren.jazygit.core.gh.process.GhCommand;
+import net.vanfleteren.jazygit.core.repo.PrNumber;
 import net.vanfleteren.jazygit.lib.json.Decoder;
 
 /**

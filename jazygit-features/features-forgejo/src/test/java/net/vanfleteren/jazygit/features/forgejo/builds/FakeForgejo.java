@@ -24,6 +24,7 @@ import net.vanfleteren.jazygit.core.forgejo.ForgejoScheduledMerge;
 import net.vanfleteren.jazygit.core.git.StubGit;
 import net.vanfleteren.jazygit.core.git.branches.StubRemotes;
 import net.vanfleteren.jazygit.core.git.process.GitError;
+import net.vanfleteren.jazygit.core.repo.PrNumber;
 import net.vanfleteren.jazygit.core.repo.RemoteName;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.kernel.state.Env;
@@ -66,12 +67,12 @@ record FakeForgejo(Set<String> hosts, Map<Sha, CommitStatus.State> states) imple
     }
 
     @Override
-    public Either<ForgejoError, ForgejoPullRequestDetails> pullRequest(ForgejoRepository repository, long number) {
+    public Either<ForgejoError, ForgejoPullRequestDetails> pullRequest(ForgejoRepository repository, PrNumber number) {
         return Either.left(new ForgejoError.Refused(404, "not found"));
     }
 
     @Override
-    public Either<ForgejoError, List<ForgejoReview>> reviews(ForgejoRepository repository, long number) {
+    public Either<ForgejoError, List<ForgejoReview>> reviews(ForgejoRepository repository, PrNumber number) {
         return Either.right(List.empty());
     }
 
@@ -87,7 +88,8 @@ record FakeForgejo(Set<String> hosts, Map<Sha, CommitStatus.State> states) imple
     }
 
     @Override
-    public Either<ForgejoError, ForgejoMerged> merge(ForgejoRepository repository, long number, ForgejoMerge merge) {
+    public Either<ForgejoError, ForgejoMerged> merge(
+            ForgejoRepository repository, PrNumber number, ForgejoMerge merge) {
         return Either.left(new ForgejoError.Refused(404, "not found"));
     }
 
@@ -98,12 +100,12 @@ record FakeForgejo(Set<String> hosts, Map<Sha, CommitStatus.State> states) imple
 
     @Override
     public Either<ForgejoError, Option<ForgejoScheduledMerge>> scheduledMerge(
-            ForgejoRepository repository, long number) {
+            ForgejoRepository repository, PrNumber number) {
         return Either.left(new ForgejoError.Refused(404, "not found"));
     }
 
     @Override
-    public Option<ForgejoError> cancelScheduledMerge(ForgejoRepository repository, long number) {
+    public Option<ForgejoError> cancelScheduledMerge(ForgejoRepository repository, PrNumber number) {
         return Option.of(new ForgejoError.Refused(404, "not found"));
     }
 

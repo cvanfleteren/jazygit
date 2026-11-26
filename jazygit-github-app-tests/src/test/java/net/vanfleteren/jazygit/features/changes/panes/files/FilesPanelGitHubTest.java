@@ -9,7 +9,6 @@ import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.core.gh.model.CommentRights;
-import net.vanfleteren.jazygit.core.gh.model.PrNumber;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestDetails;
 import net.vanfleteren.jazygit.core.gh.model.ReviewRemarks;
 import net.vanfleteren.jazygit.core.gh.model.ReviewThread;
@@ -20,6 +19,7 @@ import net.vanfleteren.jazygit.core.git.files.StubStatus;
 import net.vanfleteren.jazygit.core.git.model.*;
 import net.vanfleteren.jazygit.core.git.process.GitError;
 import net.vanfleteren.jazygit.core.repo.*;
+import net.vanfleteren.jazygit.core.repo.PrNumber;
 import net.vanfleteren.jazygit.features.changes.diff.CommitFilesMsg;
 import net.vanfleteren.jazygit.features.github.remarks.RemarksMsg;
 import net.vanfleteren.jazygit.kernel.state.Model;
@@ -110,8 +110,8 @@ class FilesPanelGitHubTest {
 
     @Test
     void theFilesOfAPullRequestCountTheirUnresolvedRemarksByEitherPathOfARename() throws Exception {
-        Changes of = new Changes.OfPullRequest(
-                new PullRequestCommits(7, "owner/repo", "", new Sha("b".repeat(40)), new Sha("a".repeat(40))));
+        Changes of = new Changes.OfPullRequest(new PullRequestCommits(
+                new PrNumber(7), "owner/repo", "", new Sha("b".repeat(40)), new Sha("a".repeat(40))));
         Model open = Update.update(
                         Update.update(
                                         net.vanfleteren.jazygit.kernel.content.PullRequestContentTest.withGitHub(),
@@ -153,8 +153,8 @@ class FilesPanelGitHubTest {
 
     @Test
     void theFilesOfAPullRequestCanBeListedOnlyWhenTheyHaveRemarks() throws Exception {
-        Changes of = new Changes.OfPullRequest(
-                new PullRequestCommits(7, "owner/repo", "", new Sha("b".repeat(40)), new Sha("a".repeat(40))));
+        Changes of = new Changes.OfPullRequest(new PullRequestCommits(
+                new PrNumber(7), "owner/repo", "", new Sha("b".repeat(40)), new Sha("a".repeat(40))));
         Model open = Update.update(
                         Update.update(
                                         net.vanfleteren.jazygit.kernel.content.PullRequestContentTest.withGitHub(),
@@ -223,8 +223,8 @@ class FilesPanelGitHubTest {
 
     @Test
     void aHighlightedFileLeftOutOfTheFilesWithRemarksMovesTheHighlightToTheNearestRowListed() throws Exception {
-        Changes of = new Changes.OfPullRequest(
-                new PullRequestCommits(7, "owner/repo", "", new Sha("b".repeat(40)), new Sha("a".repeat(40))));
+        Changes of = new Changes.OfPullRequest(new PullRequestCommits(
+                new PrNumber(7), "owner/repo", "", new Sha("b".repeat(40)), new Sha("a".repeat(40))));
         Model opened = Update.update(
                         net.vanfleteren.jazygit.kernel.content.PullRequestContentTest.withGitHub(),
                         new CommitFilesMsg.Opened(of, Scopes.BRANCHES.pane()))

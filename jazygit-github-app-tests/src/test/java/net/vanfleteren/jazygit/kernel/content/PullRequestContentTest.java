@@ -11,12 +11,12 @@ import io.vavr.control.Option;
 import java.time.Instant;
 import java.util.stream.Collectors;
 import net.vanfleteren.jazygit.core.gh.model.GhBranch;
-import net.vanfleteren.jazygit.core.gh.model.PrNumber;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestPreview;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestSummary;
 import net.vanfleteren.jazygit.core.git.model.*;
 import net.vanfleteren.jazygit.core.repo.*;
+import net.vanfleteren.jazygit.core.repo.PrNumber;
 import net.vanfleteren.jazygit.features.changes.panes.files.FilesPanel;
 import net.vanfleteren.jazygit.features.github.prs.content.PullRequestBody;
 import net.vanfleteren.jazygit.kernel.settings.DiffStyle;
@@ -345,8 +345,8 @@ public class PullRequestContentTest {
     }
 
     private static Changes pullRequestChanges() {
-        return new Changes.OfPullRequest(
-                new PullRequestCommits(7, "owner/repo", "", new Sha("b".repeat(40)), new Sha("a".repeat(40))));
+        return new Changes.OfPullRequest(new PullRequestCommits(
+                new PrNumber(7), "owner/repo", "", new Sha("b".repeat(40)), new Sha("a".repeat(40))));
     }
 
     /**

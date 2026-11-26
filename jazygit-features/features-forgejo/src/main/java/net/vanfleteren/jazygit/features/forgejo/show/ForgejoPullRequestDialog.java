@@ -234,7 +234,7 @@ public final class ForgejoPullRequestDialog implements PopupView {
     private String title(ForgejoPullRequestPopup popup) {
         String title = Messages.get(
                 "forgejo.dialog.pullRequest.title",
-                String.valueOf(popup.pullRequest().number()));
+                String.valueOf(popup.pullRequest().number().value()));
         return popup.asked()
                 ? title + " " + TimeText.spinnerFrame(clock.instant())
                 : popup.refreshFailed()

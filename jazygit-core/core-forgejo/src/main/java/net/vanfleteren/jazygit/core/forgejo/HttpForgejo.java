@@ -28,6 +28,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.function.Supplier;
 import java.util.function.UnaryOperator;
+import net.vanfleteren.jazygit.core.repo.PrNumber;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.lib.json.Decoder;
 
@@ -185,8 +186,8 @@ public final class HttpForgejo implements Forgejo {
     }
 
     @Override
-    public Either<ForgejoError, ForgejoPullRequestDetails> pullRequest(ForgejoRepository repository, long number) {
-        return get(repository, repo(repository) + "/pulls/" + number)
+    public Either<ForgejoError, ForgejoPullRequestDetails> pullRequest(ForgejoRepository repository, PrNumber number) {
+        return get(repository, repo(repository) + "/pulls/" + number.value())
                 .flatMap(body -> decoded(PullRequestJson.details(), body));
     }
 
@@ -195,10 +196,10 @@ public final class HttpForgejo implements Forgejo {
      * pull request (ADR 176).
      */
     @Override
-    public Either<ForgejoError, List<ForgejoReview>> reviews(ForgejoRepository repository, long number) {
+    public Either<ForgejoError, List<ForgejoReview>> reviews(ForgejoRepository repository, PrNumber number) {
         return pages(
                 repository,
-                repo(repository) + "/pulls/" + number + "/reviews?",
+                repo(repository) + "/pulls/" + number.value() + "/reviews?",
                 PullRequestJson.reviews(),
                 1,
                 List.empty());
@@ -238,10 +239,11 @@ public final class HttpForgejo implements Forgejo {
      * scheduled.
      */
     @Override
-    public Either<ForgejoError, ForgejoMerged> merge(ForgejoRepository repository, long number, ForgejoMerge merge) {
+    public Either<ForgejoError, ForgejoMerged> merge(
+            ForgejoRepository repository, PrNumber number, ForgejoMerge merge) {
         return send(
                         repository,
-                        repo(repository) + "/pulls/" + number + "/merge",
+                        repo(repository) + "/pulls/" + number.value() + "/merge",
                         request -> request.header("Content-Type", "application/json")
                                 .POST(HttpRequest.BodyPublishers.ofString(merge.json(), StandardCharsets.UTF_8)),
                         merge.whenChecksSucceed() ? CREATED : OK)
@@ -267,10 +269,10 @@ public final class HttpForgejo implements Forgejo {
      */
     @Override
     public Either<ForgejoError, Option<ForgejoScheduledMerge>> scheduledMerge(
-            ForgejoRepository repository, long number) {
+            ForgejoRepository repository, PrNumber number) {
         return pages(
                         repository,
-                        repo(repository) + "/issues/" + number + "/timeline?",
+                        repo(repository) + "/issues/" + number.value() + "/timeline?",
                         PullRequestJson.mergeEvents(),
                         1,
                         List.<Option<ForgejoScheduledMerge.Event>>empty())
@@ -281,10 +283,10 @@ public final class HttpForgejo implements Forgejo {
      * {@inheritDoc} With fj's token, which Forgejo needs for it; answered with 204.
      */
     @Override
-    public Option<ForgejoError> cancelScheduledMerge(ForgejoRepository repository, long number) {
+    public Option<ForgejoError> cancelScheduledMerge(ForgejoRepository repository, PrNumber number) {
         return send(
                         repository,
-                        repo(repository) + "/pulls/" + number + "/merge",
+                        repo(repository) + "/pulls/" + number.value() + "/merge",
                         HttpRequest.Builder::DELETE,
                         NO_CONTENT)
                 .swap()

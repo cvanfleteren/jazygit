@@ -12,6 +12,7 @@ import net.vanfleteren.jazygit.core.git.files.Diffs;
 import net.vanfleteren.jazygit.core.git.model.ChangeType;
 import net.vanfleteren.jazygit.core.git.model.CommitFile;
 import net.vanfleteren.jazygit.core.git.model.DiffOptions;
+import net.vanfleteren.jazygit.core.repo.PrNumber;
 import net.vanfleteren.jazygit.core.repo.PullRequestCommits;
 import net.vanfleteren.jazygit.core.repo.RemoteName;
 import net.vanfleteren.jazygit.core.repo.Sha;
@@ -59,7 +60,7 @@ class CliPullRequestTest {
         git(repo, "checkout", "-q", "main");
         // The base moved on after the branch left it: that is no change of the pull request.
         Sha base = commit(repo, "a.txt", "a\nmore\n", "main moved on");
-        PullRequestCommits commits = new PullRequestCommits(1, "owner/repo", "", base, head);
+        PullRequestCommits commits = new PullRequestCommits(new PrNumber(1), "owner/repo", "", base, head);
 
         assertEquals(
                 List.of(new CommitFile("b.txt", ChangeType.ADDED)),
@@ -116,7 +117,7 @@ class CliPullRequestTest {
         Sha head = commit(fork, "b.txt", "b\n", "theirs");
         git(fork, "push", "-q", "origin", "HEAD:refs/pull/7/head");
         String refs = git(repo, "for-each-ref");
-        PullRequestCommits commits = new PullRequestCommits(7, "Owner/Repo", "", base, head);
+        PullRequestCommits commits = new PullRequestCommits(new PrNumber(7), "Owner/Repo", "", base, head);
 
         assertEquals(
                 List.of(new CommitFile("b.txt", ChangeType.ADDED)),
@@ -150,7 +151,7 @@ class CliPullRequestTest {
         commit(other, "a.txt", "a\nbase\nlater\n", "later");
         git(other, "push", "-q", "origin", "main");
         String refs = git(repo, "for-each-ref");
-        PullRequestCommits commits = new PullRequestCommits(7, "owner/repo", "", base, head);
+        PullRequestCommits commits = new PullRequestCommits(new PrNumber(7), "owner/repo", "", base, head);
 
         assertEquals(
                 List.of(new CommitFile("b.txt", ChangeType.ADDED)),
@@ -172,7 +173,7 @@ class CliPullRequestTest {
         git(dir, "clone", "-q", elsewhere.toString(), fork.toString());
         Sha head = commit(fork, "b.txt", "b\n", "theirs");
         git(fork, "push", "-q", "origin", "HEAD:refs/pull/7/head");
-        PullRequestCommits commits = new PullRequestCommits(7, "owner/repo", "", base, head);
+        PullRequestCommits commits = new PullRequestCommits(new PrNumber(7), "owner/repo", "", base, head);
 
         assertTrue(CliPullRequest.files(repo, commits, HashMap.empty()).isLeft());
         assertThrows(Exception.class, () -> git(repo, "cat-file", "-e", head.value()));

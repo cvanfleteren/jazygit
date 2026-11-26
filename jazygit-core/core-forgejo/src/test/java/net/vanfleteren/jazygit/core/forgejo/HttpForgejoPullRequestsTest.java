@@ -21,6 +21,7 @@ import net.vanfleteren.jazygit.core.forgejo.ForgejoPullRequestDetails.Size;
 import net.vanfleteren.jazygit.core.forgejo.ForgejoPullRequestDetails.State;
 import net.vanfleteren.jazygit.core.forgejo.ForgejoPullRequestDetails.Status;
 import net.vanfleteren.jazygit.core.forgejo.ForgejoReview.Verdict;
+import net.vanfleteren.jazygit.core.repo.PrNumber;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -149,7 +150,7 @@ class HttpForgejoPullRequestsTest {
         assertEquals(52, open.size());
         assertEquals(
                 new ForgejoPullRequest(
-                        51,
+                        new PrNumber(51),
                         "Pull request 51",
                         "branch-51",
                         Option.of("cvf/nix"),
@@ -185,7 +186,7 @@ class HttpForgejoPullRequestsTest {
     void aPullRequestIsReadAsItIsShown() {
         assertEquals(
                 new ForgejoPullRequestDetails(
-                        12,
+                        new PrNumber(12),
                         "Show the pull request",
                         "cvf",
                         new Status(State.OPEN, true, true),
@@ -195,14 +196,15 @@ class HttpForgejoPullRequestsTest {
                         new Conversation(4, List.of("feature", "ui"), List.of("anna")),
                         "https://code.example.net/cvf/nix/pulls/12"),
                 HttpForgejo.of(() -> FjKeys.NONE)
-                        .pullRequest(repository("nix"), 12)
+                        .pullRequest(repository("nix"), new PrNumber(12))
                         .get());
     }
 
     @Test
     void theReviewsOfAPullRequestAreReadInTheOrderTheyWereGiven() {
-        List<ForgejoReview> reviews =
-                HttpForgejo.of(() -> FjKeys.NONE).reviews(repository("nix"), 12).get();
+        List<ForgejoReview> reviews = HttpForgejo.of(() -> FjKeys.NONE)
+                .reviews(repository("nix"), new PrNumber(12))
+                .get();
 
         assertEquals(
                 List.of(
@@ -217,8 +219,9 @@ class HttpForgejoPullRequestsTest {
 
     @Test
     void theReviewsAreReadAPageAtATimeSoTheLatestCount() {
-        List<ForgejoReview> reviews =
-                HttpForgejo.of(() -> FjKeys.NONE).reviews(repository("long"), 1).get();
+        List<ForgejoReview> reviews = HttpForgejo.of(() -> FjKeys.NONE)
+                .reviews(repository("long"), new PrNumber(1))
+                .get();
 
         assertEquals(51, reviews.size());
         assertEquals(Option.of(Verdict.CHANGES_REQUESTED), ForgejoReview.standing(reviews));
@@ -229,7 +232,7 @@ class HttpForgejoPullRequestsTest {
         assertInstanceOf(
                 ForgejoError.Refused.class,
                 HttpForgejo.of(() -> FjKeys.NONE)
-                        .pullRequest(repository("other"), 1)
+                        .pullRequest(repository("other"), new PrNumber(1))
                         .getLeft());
     }
 }

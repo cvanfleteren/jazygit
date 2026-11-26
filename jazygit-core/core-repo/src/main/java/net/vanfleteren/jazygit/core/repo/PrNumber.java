@@ -1,4 +1,4 @@
-package net.vanfleteren.jazygit.core.gh.model;
+package net.vanfleteren.jazygit.core.repo;
 
 /**
  * The number of a pull request in its repository, e.g. 42 for {@code #42}. Ordered by number, so by when they were

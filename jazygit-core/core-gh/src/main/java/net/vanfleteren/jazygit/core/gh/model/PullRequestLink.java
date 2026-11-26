@@ -1,6 +1,7 @@
 package net.vanfleteren.jazygit.core.gh.model;
 
 import io.vavr.control.Option;
+import net.vanfleteren.jazygit.core.repo.PrNumber;
 
 /**
  * Where a pull request, or a review comment of it, is on GitHub's site (ADR 85).

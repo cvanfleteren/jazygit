@@ -52,7 +52,7 @@ public final class Prompt {
                 build.commit().map(Sha::value).getOrElse(""),
                 PR,
                 build.changeRequest()
-                        .map(request -> String.valueOf(request.number()))
+                        .map(request -> String.valueOf(request.number().value()))
                         .getOrElse(""),
                 FAILURES,
                 failures(build),
@@ -93,7 +93,7 @@ public final class Prompt {
                 .map(sha -> "git log " + sha.value() + "..HEAD and git log HEAD.." + sha.value())
                 .getOrElse("git log @{upstream}..HEAD and git log HEAD..@{upstream}");
         String request = build.changeRequest()
-                .map(change -> " (" + change.noun() + " #" + change.number() + ")")
+                .map(change -> " (" + change.noun() + " #" + change.number().value() + ")")
                 .getOrElse("");
         return "The CI build of branch " + build.branch().value() + where + request + " failed," + commit + ".\n"
                 + "That build is of the branch on the forge, and may differ from what is checked out here: local"

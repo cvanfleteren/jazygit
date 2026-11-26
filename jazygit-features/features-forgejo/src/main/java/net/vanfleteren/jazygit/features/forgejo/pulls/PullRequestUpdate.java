@@ -4,6 +4,7 @@ import io.vavr.control.Either;
 import net.vanfleteren.jazygit.core.forgejo.ForgejoPullRequest;
 import net.vanfleteren.jazygit.core.repo.Branch;
 import net.vanfleteren.jazygit.core.repo.BranchName;
+import net.vanfleteren.jazygit.core.repo.PrNumber;
 import net.vanfleteren.jazygit.core.repo.RemoteBranch;
 import net.vanfleteren.jazygit.core.repo.RemoteName;
 import net.vanfleteren.jazygit.features.forgejo.browse.OpenPullRequestCmd;
@@ -148,9 +149,9 @@ public final class PullRequestUpdate {
      * Reads pull request {@code number} again when the dialog shows it, as after its merge was scheduled or cancelled
      * (ADR 181): also while it is read, as that read may have started before; the dialog then waits for this one.
      */
-    public static Next readAgain(Next next, long number) {
+    public static Next readAgain(Next next, PrNumber number) {
         return next.then(model -> model.popup(ForgejoPullRequestPopup.class)
-                .filter(popup -> popup.pullRequest().number() == number)
+                .filter(popup -> popup.pullRequest().number().equals(number))
                 .map(popup -> readAgain(model, popup))
                 .getOrElse(() -> Next.of(model)));
     }

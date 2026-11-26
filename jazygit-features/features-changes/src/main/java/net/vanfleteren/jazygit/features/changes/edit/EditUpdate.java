@@ -127,7 +127,8 @@ public final class EditUpdate {
             case Changes.OfTip(BranchName branch, var _) -> unless(current, branch);
             case Changes.OfPullRequest(var commits, var branch) ->
                 branch.map(of -> unless(current, of))
-                        .getOrElse(() -> Option.of(new EditError.NotCheckedOut("#" + commits.number())));
+                        .getOrElse(() -> Option.of(new EditError.NotCheckedOut(
+                                "#" + commits.number().value())));
         };
     }
 

@@ -14,6 +14,7 @@ import net.vanfleteren.jazygit.core.forgejo.ForgejoPullRequest;
 import net.vanfleteren.jazygit.core.repo.Branch;
 import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.BranchRef;
+import net.vanfleteren.jazygit.core.repo.PrNumber;
 import net.vanfleteren.jazygit.core.repo.RemoteBranch;
 import net.vanfleteren.jazygit.core.repo.RemoteName;
 import net.vanfleteren.jazygit.core.repo.RemoteRef;
@@ -46,7 +47,13 @@ class ForgejoCreatePullRequestUpdateTest {
     private static final BranchName NEXT = new BranchName("next");
     private static final RemoteName UPSTREAM = new RemoteName("upstream");
     private static final ForgejoPullRequest CREATED = new ForgejoPullRequest(
-            13, "Create it", "feature", Option.of("cvf/nix"), "main", false, "https://code.example.net/cvf/nix/13");
+            new PrNumber(13),
+            "Create it",
+            "feature",
+            Option.of("cvf/nix"),
+            "main",
+            false,
+            "https://code.example.net/cvf/nix/13");
 
     private static RemoteRef remote(RemoteName remote, String name) {
         return new RemoteRef(new RemoteBranch(remote, new BranchName(name)), new Sha("e".repeat(40)), TIME);
@@ -192,10 +199,10 @@ class ForgejoCreatePullRequestUpdateTest {
     void oneOpenAlreadyIsNamedAndThePullRequestsAreReadAgain() {
         CreatePullRequest cmd = new CreatePullRequest(ORIGIN, BRANCH, FEATURE, MAIN, "Create it", "", false);
 
-        Next next = update(model(), new ForgejoCreatePullRequestMsg.AlreadyOpen(cmd, 7));
+        Next next = update(model(), new ForgejoCreatePullRequestMsg.AlreadyOpen(cmd, new PrNumber(7)));
 
         assertEquals(
-                Option.of(new CreateFailure.AlreadyOpen(BRANCH, 7)),
+                Option.of(new CreateFailure.AlreadyOpen(BRANCH, new PrNumber(7))),
                 next.model().outcome().error().map(error -> ((AppError.OperationFailed) error).failure()));
         assertTrue(
                 next.cmds().contains(new ReadPullRequests(ORIGIN)), next.cmds().toString());

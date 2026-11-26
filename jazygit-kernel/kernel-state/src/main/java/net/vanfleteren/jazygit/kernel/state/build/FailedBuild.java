@@ -3,6 +3,7 @@ package net.vanfleteren.jazygit.kernel.state.build;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.core.repo.BranchName;
+import net.vanfleteren.jazygit.core.repo.PrNumber;
 import net.vanfleteren.jazygit.core.repo.Sha;
 
 /**
@@ -42,7 +43,7 @@ public record FailedBuild(
      * @param noun   what the forge calls it, as in {@code pull request}
      * @param number its number there
      */
-    public record ChangeRequest(String noun, int number) {}
+    public record ChangeRequest(String noun, PrNumber number) {}
 
     /**
      * A job that failed, or a commit status, as of an outside CI.

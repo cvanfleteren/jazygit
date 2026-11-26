@@ -3,6 +3,7 @@ package net.vanfleteren.jazygit.core.forgejo;
 import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
+import net.vanfleteren.jazygit.core.repo.PrNumber;
 import net.vanfleteren.jazygit.core.repo.Sha;
 
 /**
@@ -35,12 +36,13 @@ public interface Forgejo {
         }
 
         @Override
-        public Either<ForgejoError, ForgejoPullRequestDetails> pullRequest(ForgejoRepository repository, long number) {
+        public Either<ForgejoError, ForgejoPullRequestDetails> pullRequest(
+                ForgejoRepository repository, PrNumber number) {
             return Either.left(new ForgejoError.Unreachable("no Forgejo"));
         }
 
         @Override
-        public Either<ForgejoError, List<ForgejoReview>> reviews(ForgejoRepository repository, long number) {
+        public Either<ForgejoError, List<ForgejoReview>> reviews(ForgejoRepository repository, PrNumber number) {
             return Either.left(new ForgejoError.Unreachable("no Forgejo"));
         }
 
@@ -57,7 +59,7 @@ public interface Forgejo {
 
         @Override
         public Either<ForgejoError, ForgejoMerged> merge(
-                ForgejoRepository repository, long number, ForgejoMerge merge) {
+                ForgejoRepository repository, PrNumber number, ForgejoMerge merge) {
             return Either.left(new ForgejoError.Unreachable("no Forgejo"));
         }
 
@@ -68,12 +70,12 @@ public interface Forgejo {
 
         @Override
         public Either<ForgejoError, Option<ForgejoScheduledMerge>> scheduledMerge(
-                ForgejoRepository repository, long number) {
+                ForgejoRepository repository, PrNumber number) {
             return Either.left(new ForgejoError.Unreachable("no Forgejo"));
         }
 
         @Override
-        public Option<ForgejoError> cancelScheduledMerge(ForgejoRepository repository, long number) {
+        public Option<ForgejoError> cancelScheduledMerge(ForgejoRepository repository, PrNumber number) {
             return Option.of(new ForgejoError.Unreachable("no Forgejo"));
         }
 
@@ -134,12 +136,12 @@ public interface Forgejo {
     /**
      * Pull request {@code number} of {@code repository}, as it is shown.
      */
-    Either<ForgejoError, ForgejoPullRequestDetails> pullRequest(ForgejoRepository repository, long number);
+    Either<ForgejoError, ForgejoPullRequestDetails> pullRequest(ForgejoRepository repository, PrNumber number);
 
     /**
      * The reviews of pull request {@code number} of {@code repository}, in the order they were given.
      */
-    Either<ForgejoError, List<ForgejoReview>> reviews(ForgejoRepository repository, long number);
+    Either<ForgejoError, List<ForgejoReview>> reviews(ForgejoRepository repository, PrNumber number);
 
     /**
      * Creates {@code pullRequest} in {@code repository} (ADR 178): the pull request as Forgejo answers it, or why it
@@ -157,7 +159,7 @@ public interface Forgejo {
      * Merges pull request {@code number} of {@code repository} as {@code merge} says (ADR 180), at once, or schedules
      * it for when its checks succeed (ADR 181): how that went, or why Forgejo did not do it.
      */
-    Either<ForgejoError, ForgejoMerged> merge(ForgejoRepository repository, long number, ForgejoMerge merge);
+    Either<ForgejoError, ForgejoMerged> merge(ForgejoRepository repository, PrNumber number, ForgejoMerge merge);
 
     /**
      * What {@code branch} of {@code repository} requires before a pull request is merged into it (ADR 181).
@@ -168,13 +170,13 @@ public interface Forgejo {
      * The merge of pull request {@code number} of {@code repository} scheduled for when its checks succeed, as its
      * timeline tells it (ADR 181); none when none is.
      */
-    Either<ForgejoError, Option<ForgejoScheduledMerge>> scheduledMerge(ForgejoRepository repository, long number);
+    Either<ForgejoError, Option<ForgejoScheduledMerge>> scheduledMerge(ForgejoRepository repository, PrNumber number);
 
     /**
      * Cancels the merge of pull request {@code number} of {@code repository} scheduled for when its checks succeed
      * (ADR 181): none once cancelled, else why not, as the 404 of one that is no longer scheduled.
      */
-    Option<ForgejoError> cancelScheduledMerge(ForgejoRepository repository, long number);
+    Option<ForgejoError> cancelScheduledMerge(ForgejoRepository repository, PrNumber number);
 
     /**
      * The checks on {@code sha} in {@code repository}, one for each context a status was posted for, timed from its

@@ -20,6 +20,7 @@ import net.vanfleteren.jazygit.core.forgejo.ForgejoMergeStyle;
 import net.vanfleteren.jazygit.core.forgejo.ForgejoMerged;
 import net.vanfleteren.jazygit.core.forgejo.ForgejoPullRequestDetails;
 import net.vanfleteren.jazygit.core.repo.BranchName;
+import net.vanfleteren.jazygit.core.repo.PrNumber;
 import net.vanfleteren.jazygit.core.repo.RemoteName;
 import net.vanfleteren.jazygit.features.changes.fetch.FetchCmd;
 import net.vanfleteren.jazygit.features.forgejo.pulls.ForgejoPullRequests;
@@ -40,8 +41,8 @@ class MergeUpdateTest {
 
     private static final FailedMerge.Standing STANDING = new FailedMerge.Standing(HEAD);
 
-    private static final MergePullRequestCmd SQUASH =
-            new MergePullRequestCmd(ORIGIN, new BranchName("feature"), 12, ForgejoMergeStyle.SQUASH, STANDING, true);
+    private static final MergePullRequestCmd SQUASH = new MergePullRequestCmd(
+            ORIGIN, new BranchName("feature"), new PrNumber(12), ForgejoMergeStyle.SQUASH, STANDING, true);
 
     /**
      * {@link PullRequestFixtures#listed()} with the dialog of the pull request of {@code feature} showing
@@ -79,7 +80,7 @@ class MergeUpdateTest {
 
         assertEquals(
                 List.of(new MergePullRequestCmd(
-                        ORIGIN, new BranchName("feature"), 12, ForgejoMergeStyle.MERGE, STANDING, false)),
+                        ORIGIN, new BranchName("feature"), new PrNumber(12), ForgejoMergeStyle.MERGE, STANDING, false)),
                 next.cmds());
     }
 
@@ -134,7 +135,7 @@ class MergeUpdateTest {
         Model failedBefore = listed().mapPart(
                         ForgejoPullRequests.PART,
                         prs -> prs.mergeFailed(new FailedMerge(
-                                12,
+                                new PrNumber(12),
                                 ForgejoMergeStyle.SQUASH,
                                 new MergeFailure(new ForgejoError.Unreachable("x"), "h", "r"),
                                 STANDING)));
@@ -170,7 +171,7 @@ class MergeUpdateTest {
         Next next = Update.update(listed(), new PullRequestMsg.MergeFailed(SQUASH, refused));
 
         assertEquals(
-                HashMap.of(12L, new FailedMerge(12, ForgejoMergeStyle.SQUASH, refused, STANDING)),
+                HashMap.of(12L, new FailedMerge(new PrNumber(12), ForgejoMergeStyle.SQUASH, refused, STANDING)),
                 prs(next.model()).failedMerges());
         assertEquals(
                 Option.of(refused),
@@ -199,7 +200,10 @@ class MergeUpdateTest {
     void theFailedMergesAreDroppedOnceThePullRequestsAreOfAnotherHome() {
         // Another repository numbers its pull requests anew: its #12 is not the one that failed.
         FailedMerge failed = new FailedMerge(
-                12, ForgejoMergeStyle.SQUASH, new MergeFailure(new ForgejoError.Unreachable("x"), "h", "r"), STANDING);
+                new PrNumber(12),
+                ForgejoMergeStyle.SQUASH,
+                new MergeFailure(new ForgejoError.Unreachable("x"), "h", "r"),
+                STANDING);
         ForgejoPullRequests kept = prs(listed()).mergeFailed(failed);
 
         ForgejoPullRequests other =
@@ -211,7 +215,10 @@ class MergeUpdateTest {
     @Test
     void aFailedMergeIsDroppedOnceItsPullRequestIsNoLongerOpen() {
         FailedMerge failed = new FailedMerge(
-                12, ForgejoMergeStyle.SQUASH, new MergeFailure(new ForgejoError.Unreachable("x"), "h", "r"), STANDING);
+                new PrNumber(12),
+                ForgejoMergeStyle.SQUASH,
+                new MergeFailure(new ForgejoError.Unreachable("x"), "h", "r"),
+                STANDING);
         Model kept = listed().mapPart(ForgejoPullRequests.PART, prs -> prs.mergeFailed(failed));
 
         Model stillOpen = Update.update(

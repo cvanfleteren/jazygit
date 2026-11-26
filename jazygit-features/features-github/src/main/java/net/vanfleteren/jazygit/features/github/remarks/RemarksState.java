@@ -3,7 +3,7 @@ package net.vanfleteren.jazygit.features.github.remarks;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.util.function.Function;
-import net.vanfleteren.jazygit.core.gh.model.PrNumber;
+import net.vanfleteren.jazygit.core.repo.PrNumber;
 import net.vanfleteren.jazygit.core.repo.PullRequestCommits;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.Part;
@@ -34,7 +34,7 @@ public record RemarksState(Option<PrRemarks> open) {
     static Option<StatedRemarks> remarks(RemarksState state, Changes changes) {
         return changes instanceof Changes.OfPullRequest(PullRequestCommits commits, var _)
                 ? state.open
-                        .filter(read -> read.number().value() == commits.number())
+                        .filter(read -> read.number().equals(commits.number()))
                         .map(read -> read.stated(commits))
                 : Option.none();
     }
@@ -54,7 +54,7 @@ public record RemarksState(Option<PrRemarks> open) {
         return view.of() instanceof Changes.OfPullRequest(PullRequestCommits commits, var _)
                 ? model.part(PART)
                         .open
-                        .filter(read -> read.number().value() == commits.number())
+                        .filter(read -> read.number().equals(commits.number()))
                         .map(read -> new PrFiles(view, commits, read))
                 : Option.none();
     }

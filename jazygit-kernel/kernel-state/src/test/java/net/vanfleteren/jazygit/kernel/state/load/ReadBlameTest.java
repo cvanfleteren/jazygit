@@ -23,6 +23,7 @@ import net.vanfleteren.jazygit.core.git.process.GitError;
 import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.BranchRef;
 import net.vanfleteren.jazygit.core.repo.Head;
+import net.vanfleteren.jazygit.core.repo.PrNumber;
 import net.vanfleteren.jazygit.core.repo.PullRequestCommits;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.kernel.state.AreaId;
@@ -51,7 +52,8 @@ class ReadBlameTest {
     private static final CommitFile RENAMED = new CommitFile("a.txt", ChangeType.RENAMED, Option.of("old.txt"));
     private static final CommitFile ADDED = new CommitFile("a.txt", ChangeType.ADDED);
     private static final FileEntry ENTRY = new FileEntry("a.txt", ChangeType.MODIFIED, true, true);
-    private static final PullRequestCommits COMMITS = new PullRequestCommits(7, "owner/repo", "", BASE, SHA);
+    private static final PullRequestCommits COMMITS =
+            new PullRequestCommits(new PrNumber(7), "owner/repo", "", BASE, SHA);
     private static final DiffText WHOLE =
             DiffText.of("diff --git a/a.txt b/a.txt\n--- a/a.txt\n+++ b/a.txt\n@@ -1,2 +1,2 @@\n one\n-two\n+Two\n");
 

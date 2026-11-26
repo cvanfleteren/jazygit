@@ -2,6 +2,7 @@ package net.vanfleteren.jazygit.core.forgejo;
 
 import io.vavr.collection.List;
 import java.time.Instant;
+import net.vanfleteren.jazygit.core.repo.PrNumber;
 import net.vanfleteren.jazygit.core.repo.Sha;
 
 /**
@@ -18,7 +19,7 @@ import net.vanfleteren.jazygit.core.repo.Sha;
  * @param url          where it is on the web
  */
 public record ForgejoPullRequestDetails(
-        long number,
+        PrNumber number,
         String title,
         String author,
         Status status,

@@ -1,6 +1,6 @@
 package net.vanfleteren.jazygit.features.github.show;
 
-import net.vanfleteren.jazygit.core.gh.model.PrNumber;
+import net.vanfleteren.jazygit.core.repo.PrNumber;
 import net.vanfleteren.jazygit.kernel.state.popup.Popup;
 
 /**

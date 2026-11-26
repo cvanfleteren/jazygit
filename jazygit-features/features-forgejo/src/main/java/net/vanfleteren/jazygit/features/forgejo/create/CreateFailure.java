@@ -5,6 +5,7 @@ import io.vavr.control.Option;
 import net.vanfleteren.jazygit.core.forgejo.ForgejoError;
 import net.vanfleteren.jazygit.core.process.ExecutedCommand;
 import net.vanfleteren.jazygit.core.repo.BranchName;
+import net.vanfleteren.jazygit.core.repo.PrNumber;
 import net.vanfleteren.jazygit.kernel.state.Failure;
 import net.vanfleteren.jazygit.kernel.state.Phrase;
 
@@ -35,11 +36,11 @@ public sealed interface CreateFailure extends Failure.Phrased {
     /**
      * {@code branch} has pull request {@code number} already, which the pull requests read before did not have.
      */
-    record AlreadyOpen(BranchName branch, long number) implements CreateFailure {
+    record AlreadyOpen(BranchName branch, PrNumber number) implements CreateFailure {
 
         @Override
         public Phrase phrase() {
-            return Phrase.of("forgejo.error.create.exists", branch.value(), String.valueOf(number));
+            return Phrase.of("forgejo.error.create.exists", branch.value(), String.valueOf(number.value()));
         }
     }
 

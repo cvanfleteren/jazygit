@@ -57,8 +57,7 @@ public final class FailedBuilds {
     }
 
     private static FailedBuild.ChangeRequest request(PullRequest pullRequest) {
-        return new FailedBuild.ChangeRequest(
-                "pull request", pullRequest.number().value());
+        return new FailedBuild.ChangeRequest("pull request", pullRequest.number());
     }
 
     /**

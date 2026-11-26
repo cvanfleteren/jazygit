@@ -19,6 +19,7 @@ import net.vanfleteren.jazygit.core.forgejo.ForgejoMerge;
 import net.vanfleteren.jazygit.core.forgejo.ForgejoMergeStyle;
 import net.vanfleteren.jazygit.core.forgejo.ForgejoMerged;
 import net.vanfleteren.jazygit.core.repo.BranchName;
+import net.vanfleteren.jazygit.core.repo.PrNumber;
 import net.vanfleteren.jazygit.features.forgejo.pulls.PullRequestFixtures.FakeForgejo;
 import net.vanfleteren.jazygit.features.forgejo.pulls.PullRequestMsg;
 import net.vanfleteren.jazygit.kernel.state.operation.OperationMsg;
@@ -34,13 +35,14 @@ class ScheduleCommandsTest {
     private static final MergePullRequestCmd WHEN_READY = new MergePullRequestCmd(
             ORIGIN,
             BRANCH,
-            12,
+            new PrNumber(12),
             ForgejoMergeStyle.REBASE,
             new FailedMerge.Standing(HEAD),
             false,
             Option.of(REQUIRED),
             0);
-    private static final CancelScheduledMergeCmd CANCEL = new CancelScheduledMergeCmd(ORIGIN, BRANCH, 12, TIME);
+    private static final CancelScheduledMergeCmd CANCEL =
+            new CancelScheduledMergeCmd(ORIGIN, BRANCH, new PrNumber(12), TIME);
 
     private static CommitStatus checks(CommitStatus.State state) {
         return new CommitStatus(state, List.of(new CommitStatus.Status("ci", state, "")));

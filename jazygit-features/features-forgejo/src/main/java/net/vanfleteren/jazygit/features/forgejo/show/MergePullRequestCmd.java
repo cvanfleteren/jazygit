@@ -9,6 +9,7 @@ import net.vanfleteren.jazygit.core.forgejo.ForgejoMergeStyle;
 import net.vanfleteren.jazygit.core.forgejo.ForgejoRepository;
 import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.BranchRef;
+import net.vanfleteren.jazygit.core.repo.PrNumber;
 import net.vanfleteren.jazygit.core.repo.RemoteName;
 import net.vanfleteren.jazygit.features.forgejo.ForgejoFailure;
 import net.vanfleteren.jazygit.features.forgejo.builds.ForgejoServices;
@@ -33,7 +34,7 @@ import net.vanfleteren.jazygit.kernel.state.operation.OperationCmd;
 public record MergePullRequestCmd(
         RemoteName home,
         BranchName branch,
-        long number,
+        PrNumber number,
         ForgejoMergeStyle style,
         FailedMerge.Standing standing,
         boolean deleteBranch,
@@ -56,7 +57,7 @@ public record MergePullRequestCmd(
     public MergePullRequestCmd(
             RemoteName home,
             BranchName branch,
-            long number,
+            PrNumber number,
             ForgejoMergeStyle style,
             FailedMerge.Standing standing,
             boolean deleteBranch) {

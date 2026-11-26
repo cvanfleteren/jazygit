@@ -14,6 +14,7 @@ import net.vanfleteren.jazygit.core.gh.model.PullRequestDetails.Conversation;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestDetails.Size;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestDetails.State;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestDetails.Status;
+import net.vanfleteren.jazygit.core.repo.PrNumber;
 import org.junit.jupiter.api.Test;
 
 class PullRequestDetailsTest {

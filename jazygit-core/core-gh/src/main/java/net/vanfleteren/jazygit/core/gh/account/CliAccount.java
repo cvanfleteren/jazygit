@@ -9,7 +9,6 @@ import java.nio.file.Path;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import net.vanfleteren.jazygit.core.gh.model.*;
-import net.vanfleteren.jazygit.core.gh.model.PrNumber;
 import net.vanfleteren.jazygit.core.gh.process.GhCommand;
 import net.vanfleteren.jazygit.core.gh.process.GhError;
 import net.vanfleteren.jazygit.core.gh.process.GhError.UnexpectedOutput;
@@ -20,6 +19,7 @@ import net.vanfleteren.jazygit.core.gh.process.SshHost;
 import net.vanfleteren.jazygit.core.process.Exec;
 import net.vanfleteren.jazygit.core.process.ExecFailure;
 import net.vanfleteren.jazygit.core.process.ExecutedCommand;
+import net.vanfleteren.jazygit.core.repo.PrNumber;
 
 /**
  * {@link Account} through gh, for the repository in a working tree (ADR 114).

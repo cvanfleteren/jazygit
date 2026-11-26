@@ -31,6 +31,7 @@ import net.vanfleteren.jazygit.core.git.process.GitError;
 import net.vanfleteren.jazygit.core.repo.Branch;
 import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.BranchRef;
+import net.vanfleteren.jazygit.core.repo.PrNumber;
 import net.vanfleteren.jazygit.core.repo.RemoteBranch;
 import net.vanfleteren.jazygit.core.repo.RemoteName;
 import net.vanfleteren.jazygit.core.repo.Sha;
@@ -58,7 +59,7 @@ public final class PullRequestFixtures {
     public static final RemoteBranch FEATURE = new RemoteBranch(ORIGIN, new BranchName("feature"));
 
     public static final ForgejoPullRequest LISTED = new ForgejoPullRequest(
-            12,
+            new PrNumber(12),
             "Show the pull request",
             "feature",
             Option.of("cvf/nix"),
@@ -116,7 +117,7 @@ public final class PullRequestFixtures {
 
     public static ForgejoPullRequestDetails details(String title) {
         return new ForgejoPullRequestDetails(
-                12,
+                new PrNumber(12),
                 title,
                 "cvf",
                 new ForgejoPullRequestDetails.Status(ForgejoPullRequestDetails.State.OPEN, false, true),
@@ -232,8 +233,8 @@ public final class PullRequestFixtures {
 
         @Override
         public Either<ForgejoError, ForgejoMerged> merge(
-                ForgejoRepository repository, long number, ForgejoMerge asked) {
-            return repository.equals(NIX) && number == 12
+                ForgejoRepository repository, PrNumber number, ForgejoMerge asked) {
+            return repository.equals(NIX) && number.value() == 12
                     ? merging.merge().apply(asked)
                     : Either.left(new ForgejoError.Refused(404, "{\"message\":\"not this pull request\"}"));
         }
@@ -245,12 +246,12 @@ public final class PullRequestFixtures {
 
         @Override
         public Either<ForgejoError, Option<ForgejoScheduledMerge>> scheduledMerge(
-                ForgejoRepository repository, long number) {
+                ForgejoRepository repository, PrNumber number) {
             return merging.scheduled();
         }
 
         @Override
-        public Option<ForgejoError> cancelScheduledMerge(ForgejoRepository repository, long number) {
+        public Option<ForgejoError> cancelScheduledMerge(ForgejoRepository repository, PrNumber number) {
             return merging.cancel();
         }
 
@@ -324,12 +325,13 @@ public final class PullRequestFixtures {
         }
 
         @Override
-        public Either<ForgejoError, ForgejoPullRequestDetails> pullRequest(ForgejoRepository repository, long number) {
+        public Either<ForgejoError, ForgejoPullRequestDetails> pullRequest(
+                ForgejoRepository repository, PrNumber number) {
             return details;
         }
 
         @Override
-        public Either<ForgejoError, List<ForgejoReview>> reviews(ForgejoRepository repository, long number) {
+        public Either<ForgejoError, List<ForgejoReview>> reviews(ForgejoRepository repository, PrNumber number) {
             return reviews;
         }
 

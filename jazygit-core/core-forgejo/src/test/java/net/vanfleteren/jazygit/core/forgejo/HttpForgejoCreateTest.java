@@ -14,6 +14,7 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import net.vanfleteren.jazygit.core.repo.PrNumber;
 import net.vanfleteren.jazygit.lib.json.Json;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -78,7 +79,7 @@ class HttpForgejoCreateTest {
 
         assertEquals(
                 Either.right(new ForgejoPullRequest(
-                        13,
+                        new PrNumber(13),
                         "WIP: Create it",
                         "feature",
                         Option.of("anna/nix"),

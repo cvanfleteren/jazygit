@@ -10,10 +10,10 @@ import io.vavr.control.Option;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import net.vanfleteren.jazygit.core.gh.model.GhBranch;
-import net.vanfleteren.jazygit.core.gh.model.PrNumber;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest;
 import net.vanfleteren.jazygit.core.repo.Branch;
 import net.vanfleteren.jazygit.core.repo.BranchName;
+import net.vanfleteren.jazygit.core.repo.PrNumber;
 
 /**
  * The branches a stack can be made of from one branch, and the bottom and the top chosen among them (ADR 73): the

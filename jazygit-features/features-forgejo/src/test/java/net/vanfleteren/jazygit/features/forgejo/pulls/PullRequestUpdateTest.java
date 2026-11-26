@@ -18,6 +18,7 @@ import io.vavr.control.Option;
 import net.vanfleteren.jazygit.core.forgejo.CommitStatus;
 import net.vanfleteren.jazygit.core.forgejo.ForgejoError;
 import net.vanfleteren.jazygit.core.repo.BranchName;
+import net.vanfleteren.jazygit.core.repo.PrNumber;
 import net.vanfleteren.jazygit.core.repo.RemoteBranch;
 import net.vanfleteren.jazygit.core.repo.RemoteName;
 import net.vanfleteren.jazygit.features.forgejo.ForgejoFailure;
@@ -65,7 +66,7 @@ class PullRequestUpdateTest {
 
         assertEquals(
                 ForgejoPullRequestPopup.loading(FEATURE.branch(), ORIGIN, FEATURE, LISTED, 1), popup(next.model()));
-        assertEquals(List.of(new LoadPullRequest(ORIGIN, 12, 1)), next.cmds());
+        assertEquals(List.of(new LoadPullRequest(ORIGIN, new PrNumber(12), 1)), next.cmds());
     }
 
     @Test
@@ -89,7 +90,7 @@ class PullRequestUpdateTest {
                 .model();
 
         Next again = Update.update(read, new PullRequestMsg.RefreshChosen());
-        assertEquals(List.of(new LoadPullRequest(ORIGIN, 12, 2)), again.cmds());
+        assertEquals(List.of(new LoadPullRequest(ORIGIN, new PrNumber(12), 2)), again.cmds());
         assertTrue(popup(again.model()).asked());
         assertEquals(Option.of(shown("read")), popup(again.model()).shown());
         // While it is read, asking again reads nothing more.

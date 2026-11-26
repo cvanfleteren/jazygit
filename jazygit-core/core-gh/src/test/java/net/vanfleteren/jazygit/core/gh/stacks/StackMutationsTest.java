@@ -3,8 +3,8 @@ package net.vanfleteren.jazygit.core.gh.stacks;
 import static org.junit.jupiter.api.Assertions.*;
 
 import io.vavr.collection.List;
-import net.vanfleteren.jazygit.core.gh.model.PrNumber;
 import net.vanfleteren.jazygit.core.gh.process.GhCommand;
+import net.vanfleteren.jazygit.core.repo.PrNumber;
 import org.junit.jupiter.api.Test;
 
 /**

@@ -17,6 +17,7 @@ import net.vanfleteren.jazygit.core.git.model.Fixtures;
 import net.vanfleteren.jazygit.core.git.process.GitError;
 import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.BranchRef;
+import net.vanfleteren.jazygit.core.repo.PrNumber;
 import net.vanfleteren.jazygit.core.repo.PullRequestCommits;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.kernel.state.AreaId;
@@ -36,7 +37,8 @@ class ReadWholeFileTest {
     private static final Sha BASE = new Sha("bbbb");
     private static final CommitFile FILE = new CommitFile("a.txt", ChangeType.MODIFIED);
     private static final FileEntry ENTRY = Fixtures.fileEntry("a.txt", ChangeType.MODIFIED);
-    private static final PullRequestCommits COMMITS = new PullRequestCommits(7, "owner/repo", "", BASE, SHA);
+    private static final PullRequestCommits COMMITS =
+            new PullRequestCommits(new PrNumber(7), "owner/repo", "", BASE, SHA);
 
     @Test
     void eachDiffIsReadAgainTheWayItWasReadWithTheWholeFileAsContext() {

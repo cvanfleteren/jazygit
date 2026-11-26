@@ -17,6 +17,7 @@ import net.vanfleteren.jazygit.core.forgejo.ForgejoError;
 import net.vanfleteren.jazygit.core.forgejo.ForgejoNewPullRequest;
 import net.vanfleteren.jazygit.core.forgejo.ForgejoPullRequest;
 import net.vanfleteren.jazygit.core.repo.BranchName;
+import net.vanfleteren.jazygit.core.repo.PrNumber;
 import net.vanfleteren.jazygit.core.repo.RemoteBranch;
 import net.vanfleteren.jazygit.core.repo.RemoteName;
 import net.vanfleteren.jazygit.features.forgejo.create.ForgejoCreatePullRequestCmd.CheckHead;
@@ -36,7 +37,13 @@ class ForgejoCreatePullRequestCommandsTest {
     private static final BranchName MAIN = new BranchName("main");
     private static final RemoteName UPSTREAM = new RemoteName("upstream");
     private static final ForgejoPullRequest CREATED = new ForgejoPullRequest(
-            13, "Create it", "feature", Option.of("cvf/nix"), "main", false, "https://code.example.net/cvf/nix/13");
+            new PrNumber(13),
+            "Create it",
+            "feature",
+            Option.of("cvf/nix"),
+            "main",
+            false,
+            "https://code.example.net/cvf/nix/13");
 
     /**
      * origin is Anna's fork, upstream the project, the home.
@@ -117,7 +124,7 @@ class ForgejoCreatePullRequestCommandsTest {
                 409, "{\"message\":\"pull request already exists for these targets [id: 81, issue_id: 7]\"}");
 
         assertEquals(
-                new ForgejoCreatePullRequestMsg.AlreadyOpen(cmd, 7),
+                new ForgejoCreatePullRequestMsg.AlreadyOpen(cmd, new PrNumber(7)),
                 cmd.run(answering(Either.left(taken)).ahead(HashMap.of(ORIGIN, URL), 2)));
     }
 

@@ -3,8 +3,8 @@ package net.vanfleteren.jazygit.core.gh.stacks;
 import static net.vanfleteren.jazygit.core.gh.process.GhCommand.gh;
 
 import io.vavr.collection.List;
-import net.vanfleteren.jazygit.core.gh.model.PrNumber;
 import net.vanfleteren.jazygit.core.gh.process.GhCommand;
+import net.vanfleteren.jazygit.core.repo.PrNumber;
 
 /**
  * Making a stack of pull requests on GitHub, adding to its top and taking it apart, through the Stacks REST API, as

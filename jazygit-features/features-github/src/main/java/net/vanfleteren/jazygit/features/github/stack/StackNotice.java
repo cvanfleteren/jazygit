@@ -1,6 +1,6 @@
 package net.vanfleteren.jazygit.features.github.stack;
 
-import net.vanfleteren.jazygit.core.gh.model.PrNumber;
+import net.vanfleteren.jazygit.core.repo.PrNumber;
 import net.vanfleteren.jazygit.kernel.state.Phrase;
 import net.vanfleteren.jazygit.kernel.state.operation.Notice;
 

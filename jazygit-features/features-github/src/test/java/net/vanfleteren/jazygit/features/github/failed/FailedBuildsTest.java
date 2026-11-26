@@ -10,12 +10,12 @@ import java.time.Instant;
 import net.vanfleteren.jazygit.core.gh.model.Build;
 import net.vanfleteren.jazygit.core.gh.model.CheckRun;
 import net.vanfleteren.jazygit.core.gh.model.GhBranch;
-import net.vanfleteren.jazygit.core.gh.model.PrNumber;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest.Review;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestDetails.Check;
 import net.vanfleteren.jazygit.core.repo.BranchName;
+import net.vanfleteren.jazygit.core.repo.PrNumber;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.kernel.state.build.FailedBuild;
 import org.junit.jupiter.api.Test;
@@ -66,10 +66,10 @@ class FailedBuildsTest {
         Build build = new Build("CI", "push", 401, 1, new Sha(COMMIT), "Fix", T, List.of(job("verify", "FAILURE")));
 
         assertEquals(
-                Option.of(new FailedBuild.ChangeRequest("pull request", 12)),
+                Option.of(new FailedBuild.ChangeRequest("pull request", new PrNumber(12))),
                 FailedBuilds.of(FEAT, build, Option.of(pullRequest)).changeRequest());
         assertEquals(
-                Option.of(new FailedBuild.ChangeRequest("pull request", 12)),
+                Option.of(new FailedBuild.ChangeRequest("pull request", new PrNumber(12))),
                 FailedBuilds.of(FEAT, "o/r", List.empty(), Option.of(pullRequest))
                         .changeRequest());
         assertEquals(Option.none(), FailedBuilds.of(FEAT, build, Option.none()).changeRequest());

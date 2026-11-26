@@ -2,9 +2,9 @@ package net.vanfleteren.jazygit.core.gh.stacks;
 
 import io.vavr.collection.List;
 import io.vavr.control.Either;
-import net.vanfleteren.jazygit.core.gh.model.PrNumber;
 import net.vanfleteren.jazygit.core.gh.process.GhFailure;
 import net.vanfleteren.jazygit.core.process.ExecutedCommand;
+import net.vanfleteren.jazygit.core.repo.PrNumber;
 
 /**
  * {@link Stacks} for tests: changing the stacks succeeds without running anything. Fakes override what they need.

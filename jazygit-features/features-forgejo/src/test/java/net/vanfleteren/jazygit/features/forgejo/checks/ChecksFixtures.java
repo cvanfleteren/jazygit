@@ -10,6 +10,7 @@ import net.vanfleteren.jazygit.core.forgejo.ForgejoPullRequest;
 import net.vanfleteren.jazygit.core.forgejo.ForgejoPullRequestDetails;
 import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.BranchRef;
+import net.vanfleteren.jazygit.core.repo.PrNumber;
 import net.vanfleteren.jazygit.core.repo.RemoteBranch;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.features.forgejo.show.ForgejoPullRequestPopup;
@@ -96,7 +97,7 @@ final class ChecksFixtures {
      */
     static ForgejoPullRequestPopup pullRequest() {
         ForgejoPullRequestDetails details = new ForgejoPullRequestDetails(
-                12,
+                new PrNumber(12),
                 "Show the checks",
                 "cvf",
                 new ForgejoPullRequestDetails.Status(ForgejoPullRequestDetails.State.OPEN, false, true),
@@ -106,7 +107,7 @@ final class ChecksFixtures {
                 new ForgejoPullRequestDetails.Conversation(0, List.empty(), List.empty()),
                 "https://code.example.net/cvf/nix/pulls/12");
         ForgejoPullRequest listed = new ForgejoPullRequest(
-                12, "Show the checks", "feature", Option.of("cvf/nix"), "main", false, details.url());
+                new PrNumber(12), "Show the checks", "feature", Option.of("cvf/nix"), "main", false, details.url());
         return ForgejoPullRequestPopup.loading(new BranchName("feature"), FEATURE.remote(), FEATURE, listed, 1)
                 .with(
                         Either.right(new ShownPullRequest(
