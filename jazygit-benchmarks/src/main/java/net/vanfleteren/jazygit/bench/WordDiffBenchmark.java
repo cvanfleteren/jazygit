@@ -1,6 +1,5 @@
 package net.vanfleteren.jazygit.bench;
 
-import io.vavr.Tuple;
 import io.vavr.collection.List;
 import java.util.concurrent.TimeUnit;
 import net.vanfleteren.jazygit.core.git.model.UnifiedDiff;
@@ -9,7 +8,6 @@ import net.vanfleteren.jazygit.core.git.model.UnifiedDiff.FileDiff;
 import net.vanfleteren.jazygit.core.git.model.UnifiedDiff.Hunk;
 import net.vanfleteren.jazygit.core.git.model.WordDiff;
 import net.vanfleteren.jazygit.core.git.model.WordDiff.Budget;
-import net.vanfleteren.jazygit.core.git.model.WordDiff.HunkWords;
 import net.vanfleteren.jazygit.core.git.model.WordDiff.LineWords;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
@@ -64,7 +62,7 @@ public class WordDiffBenchmark {
      */
     @Benchmark
     public List<List<LineWords>> segments() {
-        return compared(hunks);
+        return WordDiff.hunks(hunks, Budget.FULL);
     }
 
     /**
@@ -72,19 +70,8 @@ public class WordDiffBenchmark {
      */
     @Benchmark
     public List<List<LineWords>> parseAndSegments() {
-        return compared(UnifiedDiff.parse(diff).files().flatMap(FileDiff::hunks).map(Hunk::lines));
-    }
-
-    /**
-     * The words of the lines of each of {@code hunks}, which share one budget, as a diff spends it.
-     */
-    private static List<List<LineWords>> compared(List<List<DiffLine>> hunks) {
-        return hunks.foldLeft(Tuple.of(List.<List<LineWords>>empty(), Budget.FULL), (done, hunk) -> {
-                    HunkWords words = WordDiff.hunk(hunk, done._2);
-                    return Tuple.of(done._1.prepend(words.lines()), words.left());
-                })
-                ._1
-                .reverse();
+        return WordDiff.hunks(
+                UnifiedDiff.parse(diff).files().flatMap(FileDiff::hunks).map(Hunk::lines), Budget.FULL);
     }
 
     /**

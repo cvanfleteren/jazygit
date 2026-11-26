@@ -12,7 +12,6 @@ import net.vanfleteren.jazygit.core.git.model.UnifiedDiff.DiffLine;
 import net.vanfleteren.jazygit.core.git.model.UnifiedDiff.FileDiff;
 import net.vanfleteren.jazygit.core.git.model.UnifiedDiff.Hunk;
 import net.vanfleteren.jazygit.core.git.model.WordDiff.Budget;
-import net.vanfleteren.jazygit.core.git.model.WordDiff.HunkWords;
 import net.vanfleteren.jazygit.core.git.model.WordDiff.LineWords;
 import net.vanfleteren.jazygit.core.git.model.WordDiff.Segment;
 import net.vanfleteren.jazygit.core.git.model.syntax.DiffLexer;
@@ -39,29 +38,38 @@ public record ParsedDiff(List<String> preamble, List<ParsedFile> files) {
      * {@link Budget}, spent on them in order.
      */
     public static ParsedDiff of(String text) {
+        return of(text, Budget.FULL);
+    }
+
+    /**
+     * {@code text} parsed, its words compared with {@code budget} for all its hunks, and its code lexed.
+     */
+    static ParsedDiff of(String text, Budget budget) {
         UnifiedDiff diff = UnifiedDiff.parse(text);
+        List<List<LineWords>> words =
+                WordDiff.hunks(diff.files().flatMap(FileDiff::hunks).map(Hunk::lines), budget);
+        // Each file takes the words of as many hunks as it has, from those left by the files before it.
         return new ParsedDiff(
                 diff.preamble(),
                 diff.files()
-                        .foldLeft(
-                                Tuple.of(List.<ParsedFile>empty(), Budget.FULL),
-                                (done, file) -> file(file, done._2).map1(done._1::prepend))
+                        .foldLeft(Tuple.of(List.<ParsedFile>empty(), words), (done, file) -> {
+                            Tuple2<List<List<LineWords>>, List<List<LineWords>>> taken =
+                                    done._2.splitAt(file.hunks().size());
+                            return Tuple.of(done._1.prepend(file(file, taken._1)), taken._2);
+                        })
                         ._1
                         .reverse());
     }
 
     /**
-     * {@code file} with its words compared, with {@code budget} left, and its code lexed; and what is left of the
-     * budget for the files after it.
+     * {@code file}, whose hunks have the words {@code words}, with its code lexed.
      */
-    private static Tuple2<ParsedFile, Budget> file(FileDiff file, Budget budget) {
-        return file.hunks()
-                .zip(HIGHLIGHTER.tokens(file))
-                .foldLeft(Tuple.of(List.<ParsedHunk>empty(), budget), (done, lexed) -> {
-                    HunkWords words = WordDiff.hunk(lexed._1.lines(), done._2);
-                    return Tuple.of(done._1.prepend(hunk(lexed._1, words.lines(), lexed._2)), words.left());
-                })
-                .map1(hunks -> new ParsedFile(file, hunks.reverse()));
+    private static ParsedFile file(FileDiff file, List<List<LineWords>> words) {
+        return new ParsedFile(
+                file,
+                file.hunks()
+                        .zip(HIGHLIGHTER.tokens(file))
+                        .zipWith(words, (lexed, lines) -> hunk(lexed._1, lines, lexed._2)));
     }
 
     /**

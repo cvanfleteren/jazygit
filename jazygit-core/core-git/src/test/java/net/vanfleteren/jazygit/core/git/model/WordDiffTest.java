@@ -13,7 +13,6 @@ import java.util.stream.IntStream;
 import net.vanfleteren.jazygit.core.git.model.UnifiedDiff.DiffLine;
 import net.vanfleteren.jazygit.core.git.model.UnifiedDiff.DiffLine.Kind;
 import net.vanfleteren.jazygit.core.git.model.WordDiff.Budget;
-import net.vanfleteren.jazygit.core.git.model.WordDiff.HunkWords;
 import net.vanfleteren.jazygit.core.git.model.WordDiff.LineWords;
 import net.vanfleteren.jazygit.core.git.model.WordDiff.Segment;
 import org.junit.jupiter.api.Test;
@@ -288,15 +287,10 @@ class WordDiffTest {
     }
 
     /**
-     * The segments of each line of each of {@code hunks}, which share {@code budget}, as a diff spends it.
+     * The segments of each line of each of {@code hunks}, which share {@code budget}, as {@link WordDiff#hunks} spends it.
      */
     private static List<List<List<Segment>>> segments(List<List<DiffLine>> hunks, Budget budget) {
-        return hunks.foldLeft(Tuple.of(List.<List<List<Segment>>>empty(), budget), (done, hunk) -> {
-                    HunkWords words = WordDiff.hunk(hunk, done._2);
-                    return Tuple.of(done._1.prepend(words.lines().map(LineWords::segments)), words.left());
-                })
-                ._1
-                .reverse();
+        return WordDiff.hunks(hunks, budget).map(lines -> lines.map(LineWords::segments));
     }
 
     private static Segment changed(boolean changed, String text) {

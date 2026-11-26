@@ -36,12 +36,25 @@ public final class WordDiff {
     private WordDiff() {}
 
     /**
+     * The words of each line of each of {@code hunks}, the hunks of a diff in order, which share {@code budget}: it is
+     * spent on them in that order, as {@link #hunk} tells for one.
+     */
+    public static List<List<LineWords>> hunks(List<List<DiffLine>> hunks, Budget budget) {
+        return hunks.foldLeft(Tuple.of(List.<List<LineWords>>empty(), budget), (done, lines) -> {
+                    HunkWords words = hunk(lines, done._2);
+                    return Tuple.of(done._1.prepend(words.lines()), words.left());
+                })
+                ._1
+                .reverse();
+    }
+
+    /**
      * The words of each line of {@code lines}, a hunk, with {@code budget} left of the cells the hunks of a diff share,
      * and what is left of it for the hunks after this one: one unchanged segment for a line that is not part of a
      * pair, or whose pair changed too much or was not compared as the budget was spent; else the parts it shares with
      * its pair, and those it does not.
      */
-    public static HunkWords hunk(List<DiffLine> lines, Budget budget) {
+    static HunkWords hunk(List<DiffLine> lines, Budget budget) {
         Vector<DiffLine> indexed = lines.toVector();
         // Unfolded rather than recursive, as a hunk can be longer than the stack is deep.
         List<Block> blocks = List.unfoldRight(
