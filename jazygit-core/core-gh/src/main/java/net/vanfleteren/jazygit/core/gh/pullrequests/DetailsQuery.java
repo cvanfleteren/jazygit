@@ -16,7 +16,9 @@ import static net.vanfleteren.jazygit.lib.json.Decoder.map5;
 import static net.vanfleteren.jazygit.lib.json.Decoder.map6;
 import static net.vanfleteren.jazygit.lib.json.Decoder.map8;
 import static net.vanfleteren.jazygit.lib.json.Decoder.nullable;
+import static net.vanfleteren.jazygit.lib.json.Decoder.nullableAt;
 import static net.vanfleteren.jazygit.lib.json.Decoder.optionalField;
+import static net.vanfleteren.jazygit.lib.json.Decoder.orNone;
 import static net.vanfleteren.jazygit.lib.json.Decoder.string;
 import static net.vanfleteren.jazygit.lib.json.Decoder.succeed;
 
@@ -104,14 +106,7 @@ final class DetailsQuery {
      * tell, as for a base branch that is gone. It is read leniently, as the rest of the details read fine without it
      * (ADR 58).
      */
-    static final Decoder<Option<Option<Option<Integer>>>> COMPARED =
-            nullable(field("compare", nullable(field("behindBy", nullable(integer())))));
-
-    static final Decoder<Option<Integer>> BEHIND = field(
-            "baseRef",
-            json -> Either.right(COMPARED.decode(json)
-                    .toOption()
-                    .flatMap(ref -> ref.flatMap(compare -> compare).flatMap(behind -> behind))));
+    static final Decoder<Option<Integer>> BEHIND = field("baseRef", orNone(nullableAt("compare.behindBy", integer())));
 
     // How far behind its base it is only counts while it is open, at a commit that is known.
     static final Decoder<Branches> BRANCHES = map5(
