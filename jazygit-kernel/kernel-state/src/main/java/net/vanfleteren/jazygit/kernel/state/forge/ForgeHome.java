@@ -15,9 +15,7 @@ import net.vanfleteren.jazygit.kernel.state.Part;
  *
  * @param awaiting   the forges that have not told their claims yet
  * @param claims     what the forges claimed, in the order they told it
- * @param remembered what the user chose before, once read: nothing when they chose nothing, else a remote, or none
- *                   for no forge
- * @param read       whether what the user chose before was read
+ * @param remembered what the user chose before, once it was read
  * @param home       the home, while its forge is on
  * @param decided    whether the kernel decided, so that it does so once an opening
  */
@@ -25,13 +23,12 @@ import net.vanfleteren.jazygit.kernel.state.Part;
 public record ForgeHome(
         Set<String> awaiting,
         List<ForgeClaim> claims,
-        Option<Option<RemoteName>> remembered,
-        boolean read,
+        Option<ForgeChoice> remembered,
         Option<ForgeCandidate> home,
         boolean decided) {
 
     public static final ForgeHome NONE =
-            new ForgeHome(HashSet.empty(), List.empty(), Option.none(), false, Option.none(), false);
+            new ForgeHome(HashSet.empty(), List.empty(), Option.none(), Option.none(), false);
 
     // Another worktree of the same repository has the same remotes and git configuration, so the same home (ADR 182).
     public static final Part<ForgeHome> PART = Part.of("kernel.forgeHome", NONE).carrying(ForgeHome::carried);
@@ -61,17 +58,17 @@ public record ForgeHome(
     }
 
     /**
-     * These with what the user chose before read: {@code remembered}.
+     * These with what the user chose before read: {@code chosen}.
      */
-    public ForgeHome remembering(Option<Option<RemoteName>> chosen) {
-        return withRemembered(chosen).withRead(true);
+    public ForgeHome remembering(ForgeChoice chosen) {
+        return withRemembered(Option.of(chosen));
     }
 
     /**
      * Whether everything the kernel decides from is known, and it did not decide yet.
      */
     public boolean due() {
-        return !decided && read && awaiting.isEmpty() && !claims.isEmpty();
+        return !decided && remembered.isDefined() && awaiting.isEmpty() && !claims.isEmpty();
     }
 
     /**

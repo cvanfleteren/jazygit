@@ -64,7 +64,7 @@ public final class ForgeUpdate {
         if (!home.due()) {
             return Next.of(model);
         }
-        return switch (ForgeDecision.of(home.claims(), home.remembered())) {
+        return switch (ForgeDecision.of(home.claims(), home.remembered().get())) {
             case ForgeDecision.Home(ForgeCandidate chosen) -> switched(model, Option.of(chosen));
             case ForgeDecision.NoForge() -> Next.of(model.mapPart(ForgeHome.PART, h -> h.deciding(Option.none())));
             // As the forges may answer late, the user may be in a dialog by then: it is not taken away, and the

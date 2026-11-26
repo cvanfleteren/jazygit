@@ -34,11 +34,11 @@ class ForgeDecisionTest {
     }
 
     private static ForgeDecision decide(List<ForgeClaim> claims) {
-        return ForgeDecision.of(claims, Option.none());
+        return ForgeDecision.of(claims, new ForgeChoice.Unchosen());
     }
 
-    private static Option<Option<RemoteName>> remembered(String remote) {
-        return Option.of(Option.of(new RemoteName(remote)));
+    private static ForgeChoice remembered(String remote) {
+        return new ForgeChoice.Remote(new RemoteName(remote));
     }
 
     @Test
@@ -124,6 +124,6 @@ class ForgeDecisionTest {
     void aRememberedNoForgeStands() {
         assertEquals(
                 new ForgeDecision.NoForge(),
-                ForgeDecision.of(List.of(claim("github", "origin")), Option.of(Option.none())));
+                ForgeDecision.of(List.of(claim("github", "origin")), new ForgeChoice.NoForge()));
     }
 }
