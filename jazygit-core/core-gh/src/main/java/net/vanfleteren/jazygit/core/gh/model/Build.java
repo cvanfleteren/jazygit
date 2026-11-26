@@ -8,6 +8,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.Comparator;
 import net.vanfleteren.jazygit.core.repo.BranchName;
+import net.vanfleteren.jazygit.core.repo.PrNumber;
 import net.vanfleteren.jazygit.core.repo.Sha;
 
 /**
@@ -127,7 +128,7 @@ public record Build(
      * @param branch      the branch it ran on; none when GitHub does not say, as of a branch deleted since
      * @param pullRequest the number of the pull request it ran for, if it ran for one
      */
-    public record Origin(Option<String> workflowId, Option<BranchName> branch, Option<Integer> pullRequest) {
+    public record Origin(Option<String> workflowId, Option<BranchName> branch, Option<PrNumber> pullRequest) {
 
         public static final Origin NONE = new Origin(Option.none(), Option.none(), Option.none());
     }

@@ -187,18 +187,17 @@ public final class PrOverviewUpdate {
      */
     static UnseenPullRequests unseen(Option<UnseenPullRequests> before, RepositoryPullRequests read) {
         List<PullRequestSummary> open = read.open().pullRequests();
-        // The settings keep plain numbers, 0 for none.
-        List<Integer> numbers = open.map(pr -> pr.number().value());
-        // The open ones count too, should GitHub not have said which was opened last.
-        int highest =
-                numbers.appendAll(read.latest().map(PrNumber::value)).max().getOrElse(0);
+        List<PrNumber> numbers = open.map(PullRequestSummary::number);
+        // The open ones count too, should GitHub not have said which was opened last; 0 for none, as the settings keep
+        // it.
+        PrNumber highest = numbers.appendAll(read.latest()).max().getOrElse(new PrNumber(0));
         return before.map(kept -> new UnseenPullRequests(
-                        Math.max(kept.highest(), highest),
+                        List.of(kept.highest(), highest).max().get(),
                         kept.numbers()
                                 .retainAll(numbers)
-                                .addAll(open.filter(pr -> pr.number().value() > kept.highest()
+                                .addAll(open.filter(pr -> pr.number().compareTo(kept.highest()) > 0
                                                 && !read.viewer().exists(pr.author()::equalsIgnoreCase))
-                                        .map(pr -> pr.number().value()))))
+                                        .map(PullRequestSummary::number))))
                 .getOrElse(() -> UnseenPullRequests.upTo(highest));
     }
 
@@ -211,9 +210,7 @@ public final class PrOverviewUpdate {
         return repositoryName.isDefined() && overview.isUnseen(repositoryName, pullRequest)
                 ? kept(
                         new Step(
-                                overview.withUnseen(overview.unseen()
-                                        .map(unseen ->
-                                                unseen.seen(pullRequest.number().value()))),
+                                overview.withUnseen(overview.unseen().map(unseen -> unseen.seen(pullRequest.number()))),
                                 step.cmds()),
                         false,
                         repositoryName.get())

@@ -2,6 +2,7 @@ package net.vanfleteren.jazygit.features.github.prs.unseen;
 
 import io.vavr.collection.SortedSet;
 import io.vavr.collection.TreeSet;
+import net.vanfleteren.jazygit.core.repo.PrNumber;
 
 /**
  * The pull requests of a repository that were opened and not seen yet, by their number (ADR 29). Numbers only go
@@ -10,19 +11,19 @@ import io.vavr.collection.TreeSet;
  * @param highest the highest number read of the repository's open pull requests
  * @param numbers the numbers of the ones that were opened since they were first read, and not seen yet
  */
-public record UnseenPullRequests(int highest, SortedSet<Integer> numbers) {
+public record UnseenPullRequests(PrNumber highest, SortedSet<PrNumber> numbers) {
 
     /**
      * None unseen, with {@code highest} the highest number read.
      */
-    public static UnseenPullRequests upTo(int highest) {
+    public static UnseenPullRequests upTo(PrNumber highest) {
         return new UnseenPullRequests(highest, TreeSet.empty());
     }
 
     /**
      * These, with {@code number} seen.
      */
-    public UnseenPullRequests seen(int number) {
+    public UnseenPullRequests seen(PrNumber number) {
         return new UnseenPullRequests(highest, numbers.remove(number));
     }
 }

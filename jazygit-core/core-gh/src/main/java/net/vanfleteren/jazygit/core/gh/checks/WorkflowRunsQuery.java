@@ -22,6 +22,7 @@ import net.vanfleteren.jazygit.core.gh.model.Build;
 import net.vanfleteren.jazygit.core.gh.model.WorkflowRunsPage;
 import net.vanfleteren.jazygit.core.gh.process.GhCommand;
 import net.vanfleteren.jazygit.core.repo.BranchName;
+import net.vanfleteren.jazygit.core.repo.PrNumber;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.lib.json.Decoder;
 
@@ -148,7 +149,10 @@ final class WorkflowRunsQuery {
                     createdAt,
                     suite.jobs(),
                     file,
-                    new Build.Origin(Option.of(workflowId), suite.branch(), suite.pullRequest()));
+                    new Build.Origin(
+                            Option.of(workflowId),
+                            suite.branch(),
+                            suite.pullRequest().map(PrNumber::new)));
         }
     }
 }

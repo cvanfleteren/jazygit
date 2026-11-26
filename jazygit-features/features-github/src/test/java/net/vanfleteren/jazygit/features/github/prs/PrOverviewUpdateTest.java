@@ -108,7 +108,9 @@ class PrOverviewUpdateTest {
     }
 
     private static UnseenPullRequests unseen(int highest, Integer... numbers) {
-        return new UnseenPullRequests(highest, TreeSet.of(numbers));
+        return new UnseenPullRequests(
+                new PrNumber(highest),
+                TreeSet.ofAll(io.vavr.collection.List.of(numbers).map(PrNumber::new)));
     }
 
     /**

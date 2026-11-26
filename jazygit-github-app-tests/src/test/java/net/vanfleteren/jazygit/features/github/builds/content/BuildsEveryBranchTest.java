@@ -20,6 +20,7 @@ import net.vanfleteren.jazygit.core.git.model.Fixtures;
 import net.vanfleteren.jazygit.core.repo.Branch;
 import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.BranchRef;
+import net.vanfleteren.jazygit.core.repo.PrNumber;
 import net.vanfleteren.jazygit.core.repo.RemoteBranch;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.core.repo.Upstream;
@@ -76,7 +77,7 @@ class BuildsEveryBranchTest {
                         Option.of(AT.plusSeconds(600 * runId)),
                         Option.of(AT.plusSeconds(600 * runId + took)))),
                 Option.none(),
-                new Build.Origin(Option.of(id), Option.none(), pullRequest));
+                new Build.Origin(Option.of(id), Option.none(), pullRequest.map(PrNumber::new)));
     }
 
     // The branch's own build of Build, on its commit "mine".

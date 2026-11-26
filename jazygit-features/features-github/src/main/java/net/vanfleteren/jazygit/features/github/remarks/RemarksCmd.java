@@ -119,9 +119,7 @@ public sealed interface RemarksCmd extends Cmd {
         public Msg run(Env env) {
             return new RemarksMsg.CollapsedLoaded(
                     number,
-                    env.service(GitHubStores.COLLAPSED)
-                            .load(repository, number.value())
-                            .mapKeys(Collapsed.Key::new));
+                    env.service(GitHubStores.COLLAPSED).load(repository, number).mapKeys(Collapsed.Key::new));
         }
 
         // Nothing kept is as nothing flipped.
@@ -142,7 +140,7 @@ public sealed interface RemarksCmd extends Cmd {
         @Override
         public Msg run(Env env) {
             env.service(GitHubStores.COLLAPSED)
-                    .save(repository, number.value(), flipped.mapKeys(Collapsed.Key::value), at)
+                    .save(repository, number, flipped.mapKeys(Collapsed.Key::value), at)
                     .onFailure(failed -> LoggerFactory.getLogger(SaveCollapsed.class)
                             .debug("The review threads collapsed or opened could not be kept", failed));
             return new RemarksMsg.CollapsedKept();

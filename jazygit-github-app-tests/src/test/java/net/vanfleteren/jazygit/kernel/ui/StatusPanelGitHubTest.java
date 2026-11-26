@@ -6,6 +6,7 @@ import dev.tamboui.toolkit.app.ToolkitTestRunner;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.core.git.model.RepoStatus;
+import net.vanfleteren.jazygit.core.repo.PrNumber;
 import net.vanfleteren.jazygit.features.github.prs.PrOverview;
 import net.vanfleteren.jazygit.features.github.prs.unseen.UnseenPullRequests;
 import net.vanfleteren.jazygit.kernel.state.Model;
@@ -31,8 +32,9 @@ class StatusPanelGitHubTest {
                 .withPart(
                         PrOverview.PART,
                         PrOverview.INITIAL.withUnseen(Option.of(new UnseenPullRequests(
-                                unseen,
-                                io.vavr.collection.TreeSet.ofAll(io.vavr.collection.List.rangeClosed(1, unseen))))));
+                                new PrNumber(unseen),
+                                io.vavr.collection.TreeSet.ofAll(io.vavr.collection.List.rangeClosed(1, unseen)
+                                        .map(PrNumber::new))))));
         return StatusPanel.names(model, Screens.standard());
     }
 

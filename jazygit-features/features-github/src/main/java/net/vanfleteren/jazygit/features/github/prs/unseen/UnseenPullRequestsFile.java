@@ -7,6 +7,7 @@ import io.vavr.collection.TreeSet;
 import io.vavr.control.Option;
 import io.vavr.control.Try;
 import java.nio.file.Path;
+import net.vanfleteren.jazygit.core.repo.PrNumber;
 import net.vanfleteren.jazygit.core.repo.RepoSlug;
 import net.vanfleteren.jazygit.kernel.settings.RepositoryTable;
 
@@ -48,7 +49,10 @@ public final class UnseenPullRequestsFile implements UnseenPullRequestsStore {
             @Override
             public Map<String, Object> encode(UnseenPullRequests unseen) {
                 return LinkedHashMap.of(
-                        HIGHEST, unseen.highest(), NUMBERS, unseen.numbers().toList());
+                        HIGHEST,
+                        unseen.highest().value(),
+                        NUMBERS,
+                        unseen.numbers().toList().map(PrNumber::value));
             }
         });
     }
@@ -57,12 +61,12 @@ public final class UnseenPullRequestsFile implements UnseenPullRequestsStore {
         return read.get(HIGHEST)
                 .filter(Number.class::isInstance)
                 .map(highest -> new UnseenPullRequests(
-                        ((Number) highest).intValue(),
+                        new PrNumber(((Number) highest).intValue()),
                         TreeSet.ofAll(read.get(NUMBERS)
                                 .filter(List.class::isInstance)
                                 .map(found -> ((List<?>) found)
                                         .filter(Number.class::isInstance)
-                                        .map(number -> ((Number) number).intValue()))
+                                        .map(number -> new PrNumber(((Number) number).intValue())))
                                 .getOrElse(List.empty()))));
     }
 

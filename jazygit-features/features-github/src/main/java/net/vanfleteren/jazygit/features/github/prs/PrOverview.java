@@ -120,8 +120,7 @@ public record PrOverview(
      */
     public boolean isUnseen(Option<RepoSlug> repositoryName, PullRequestSummary pullRequest) {
         return ofThisRepository(repositoryName, pullRequest).getOrElse(false)
-                && unseen.exists(
-                        read -> read.numbers().contains(pullRequest.number().value()));
+                && unseen.exists(read -> read.numbers().contains(pullRequest.number()));
     }
 
     /**

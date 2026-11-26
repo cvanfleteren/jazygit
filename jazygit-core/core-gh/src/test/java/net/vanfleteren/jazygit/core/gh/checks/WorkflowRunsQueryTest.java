@@ -11,6 +11,7 @@ import net.vanfleteren.jazygit.core.gh.model.RepoWorkflow;
 import net.vanfleteren.jazygit.core.gh.model.WorkflowRunsPage;
 import net.vanfleteren.jazygit.core.gh.process.GhProcess;
 import net.vanfleteren.jazygit.core.repo.BranchName;
+import net.vanfleteren.jazygit.core.repo.PrNumber;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -49,7 +50,7 @@ class WorkflowRunsQueryTest {
         assertEquals("Title", build.title());
         assertEquals(Option.of(".github/workflows/build.yml"), build.file());
         assertEquals(
-                new Build.Origin(Option.of("W_1"), Option.of(new BranchName("feature")), Option.of(405)),
+                new Build.Origin(Option.of("W_1"), Option.of(new BranchName("feature")), Option.of(new PrNumber(405))),
                 build.origin());
         assertEquals(List.of("SUCCESS", ""), build.jobs().map(Build.Job::conclusion));
         assertEquals(Build.Outcome.RUNNING, build.outcome());

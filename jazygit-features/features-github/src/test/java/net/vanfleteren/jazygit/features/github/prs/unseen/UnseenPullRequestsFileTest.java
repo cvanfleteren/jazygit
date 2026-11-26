@@ -7,13 +7,15 @@ import io.vavr.control.Option;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import net.vanfleteren.jazygit.core.repo.PrNumber;
 import net.vanfleteren.jazygit.core.repo.RepoSlug;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 class UnseenPullRequestsFileTest {
 
-    private static final UnseenPullRequests UNSEEN = new UnseenPullRequests(42, TreeSet.of(40, 42));
+    private static final UnseenPullRequests UNSEEN =
+            new UnseenPullRequests(new PrNumber(42), TreeSet.of(new PrNumber(40), new PrNumber(42)));
 
     @TempDir
     Path dir;
@@ -44,10 +46,10 @@ class UnseenPullRequestsFileTest {
     @Test
     void whatIsKeptIsReadBackPerRepositoryEvenWithADotInItsName() {
         assertTrue(unseen().save(new RepoSlug("owner/repo.js"), UNSEEN).isSuccess());
-        unseen().save(new RepoSlug("owner/other"), UnseenPullRequests.upTo(7));
+        unseen().save(new RepoSlug("owner/other"), UnseenPullRequests.upTo(new PrNumber(7)));
 
         assertEquals(Option.of(UNSEEN), unseen().load(new RepoSlug("owner/repo.js")));
-        assertEquals(Option.of(UnseenPullRequests.upTo(7)), unseen().load(new RepoSlug("owner/other")));
+        assertEquals(Option.of(UnseenPullRequests.upTo(new PrNumber(7))), unseen().load(new RepoSlug("owner/other")));
         assertEquals(Option.none(), unseen().load(new RepoSlug("owner/repo")));
     }
 

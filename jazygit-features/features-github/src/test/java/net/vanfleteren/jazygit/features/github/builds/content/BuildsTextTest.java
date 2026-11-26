@@ -15,6 +15,7 @@ import java.time.ZoneOffset;
 import net.vanfleteren.jazygit.core.gh.model.Build;
 import net.vanfleteren.jazygit.core.gh.model.BuildsPage;
 import net.vanfleteren.jazygit.core.repo.BranchName;
+import net.vanfleteren.jazygit.core.repo.PrNumber;
 import net.vanfleteren.jazygit.core.repo.RemoteBranch;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.features.github.builds.BuildsMsg;
@@ -408,8 +409,8 @@ class BuildsTextTest {
 
     @Test
     void theColumnOfWhatABuildRanForIsAsWideAsWhatItShows() {
-        List<String> lines =
-                drawnOnEveryBranch(PUBLISH, new Build.Origin(Option.none(), Option.none(), Option.of(501)));
+        List<String> lines = drawnOnEveryBranch(
+                PUBLISH, new Build.Origin(Option.none(), Option.none(), Option.of(new PrNumber(501))));
         int header = lines.indexWhere(line -> line.contains("commit   when"));
 
         assertEquals("    for  commit   when           time  queued  vs median  title", lines.get(header));
