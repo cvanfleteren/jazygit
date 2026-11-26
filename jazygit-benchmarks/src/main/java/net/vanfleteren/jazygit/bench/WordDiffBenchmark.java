@@ -7,7 +7,8 @@ import net.vanfleteren.jazygit.core.git.model.UnifiedDiff.DiffLine;
 import net.vanfleteren.jazygit.core.git.model.UnifiedDiff.FileDiff;
 import net.vanfleteren.jazygit.core.git.model.UnifiedDiff.Hunk;
 import net.vanfleteren.jazygit.core.git.model.WordDiff;
-import net.vanfleteren.jazygit.core.git.model.WordDiff.Segment;
+import net.vanfleteren.jazygit.core.git.model.WordDiff.Budget;
+import net.vanfleteren.jazygit.core.git.model.WordDiff.LineWords;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Fork;
@@ -60,17 +61,17 @@ public class WordDiffBenchmark {
      * Comparing the words of the changed lines of the parsed diff.
      */
     @Benchmark
-    public List<List<List<Segment>>> segments() {
-        return WordDiff.segments(hunks);
+    public List<List<LineWords>> segments() {
+        return WordDiff.hunks(hunks, Budget.FULL);
     }
 
     /**
      * Both, as the rich view does before it styles the lines.
      */
     @Benchmark
-    public List<List<List<Segment>>> parseAndSegments() {
-        return WordDiff.segments(
-                UnifiedDiff.parse(diff).files().flatMap(FileDiff::hunks).map(Hunk::lines));
+    public List<List<LineWords>> parseAndSegments() {
+        return WordDiff.hunks(
+                UnifiedDiff.parse(diff).files().flatMap(FileDiff::hunks).map(Hunk::lines), Budget.FULL);
     }
 
     /**

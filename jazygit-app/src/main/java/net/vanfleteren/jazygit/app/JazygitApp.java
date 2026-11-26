@@ -29,12 +29,10 @@ import net.vanfleteren.jazygit.core.askpass.AskpassServer;
 import net.vanfleteren.jazygit.core.git.branches.BatchSsh;
 import net.vanfleteren.jazygit.core.process.SshAsking;
 import net.vanfleteren.jazygit.features.branches.panes.branches.BranchesPanel;
-import net.vanfleteren.jazygit.features.changes.diff.CommitFilesMsg;
 import net.vanfleteren.jazygit.features.changes.files.step.FileStepEnded;
 import net.vanfleteren.jazygit.features.changes.panes.commits.CommitsPanel;
+import net.vanfleteren.jazygit.features.changes.panes.files.FilesPanel;
 import net.vanfleteren.jazygit.features.changes.panes.stash.StashPanel;
-import net.vanfleteren.jazygit.features.chrome.help.HelpMsg;
-import net.vanfleteren.jazygit.features.chrome.help.HelpPopup;
 import net.vanfleteren.jazygit.features.chrome.layout.LayoutMsg;
 import net.vanfleteren.jazygit.kernel.content.ContentPanel;
 import net.vanfleteren.jazygit.kernel.content.ContentView;
@@ -44,16 +42,12 @@ import net.vanfleteren.jazygit.kernel.state.Focus;
 import net.vanfleteren.jazygit.kernel.state.PaneId;
 import net.vanfleteren.jazygit.kernel.state.diff.HunkFilters;
 import net.vanfleteren.jazygit.kernel.state.diff.ScrolledContent;
-import net.vanfleteren.jazygit.kernel.state.load.SelectionMsg;
-import net.vanfleteren.jazygit.kernel.state.popup.PopupMsg;
 import net.vanfleteren.jazygit.kernel.state.preferences.*;
 import net.vanfleteren.jazygit.kernel.state.view.*;
 import net.vanfleteren.jazygit.kernel.ui.*;
 import net.vanfleteren.jazygit.kernel.ui.content.ContentSources;
-import net.vanfleteren.jazygit.kernel.ui.files.FilesPanel;
 import net.vanfleteren.jazygit.kernel.ui.i18n.Messages;
 import net.vanfleteren.jazygit.kernel.ui.keys.Keymap;
-import net.vanfleteren.jazygit.kernel.ui.keys.Scopes;
 import net.vanfleteren.jazygit.kernel.ui.screen.Screens;
 import net.vanfleteren.jazygit.kernel.ui.theme.Theme;
 import net.vanfleteren.jazygit.kernel.ui.widgets.*;
@@ -93,12 +87,14 @@ public class JazygitApp extends ToolkitApp {
     private final FocusKeeper focus;
     private final LeftColumn leftColumn;
     private final CommandLogPanel commandLogPanel;
-    // Whether the command log takes the focus once the popup is closed: it had the focus when the popup opened, or the
-    // help asked for it (ADR 129). A popup gives the focus back to the pane the model knows, which the log is not.
-    // Only touched on the render thread.
-    private boolean logAfterPopup;
-    // The list the files of a commit are of, which takes the focus once the help that Escape was chosen from closed.
-    private Option<PaneId> listAfterPopup = Option.none();
+    // What takes the focus once the popup is closed: the command log when it had the focus as the popup opened (ADR
+    // 129), or what a message chosen from the help asked for (ADR 207). A popup gives the focus back to the pane the
+    // model knows first. Only touched on the render thread.
+    private Option<Focus> afterPopup = Option.none();
+    // What the messages handled asked the app to do with the view state it keeps, not done yet (ADR 207): done once
+    // the message is handled, not while the program applies it, as a step of the files may hand it another one. Only
+    // touched on the render thread.
+    private List<ViewIntent> asked = List.empty();
     // A step of J or K whose file is still to be shown, from what the content showed before it: one whose changes the
     // diff filters hide all of is stepped past once it shows (ADR 144).
     private Option<Stepping> stepping = Option.none();
@@ -166,6 +162,7 @@ public class JazygitApp extends ToolkitApp {
                 dispatch,
                 styleEngine,
                 focus::openContent,
+                (openDiff, highlights) -> new FilesPanel(dispatch, openDiff, highlights, Features.FILLS),
                 highlights -> new BranchesPanel(dispatch, clock, highlights, Features.FILLS),
                 highlights -> new CommitsPanel(dispatch, highlights, Features.FILLS),
                 highlights -> new StashPanel(dispatch, highlights),
@@ -183,6 +180,7 @@ public class JazygitApp extends ToolkitApp {
                 clock,
                 this::requestRedraw,
                 this::quit,
+                intent -> asked = asked.append(intent),
                 this::started);
     }
 
@@ -196,46 +194,48 @@ public class JazygitApp extends ToolkitApp {
     }
 
     /**
-     * Hands {@code msg} to the program of the repository shown. A key that moves the highlight of the files pane from
-     * the content panel moves it here, as the highlight is the pane's, not the model's (ADR 117); run from the help,
-     * the help closes first.
+     * Hands {@code msg} to the program of the repository shown, and does what it asks of the view state the app keeps
+     * (ADR 207).
      */
     private void send(Msg msg) {
-        switch (msg) {
-            case FileStepMsg(FileStepMsg.Step step) -> stepFile(step);
-            case HelpMsg.Chosen(FileStepMsg(FileStepMsg.Step step)) -> {
-                session.dispatch(new PopupMsg.Dismissed(HelpPopup.class));
-                stepFile(step);
-            }
-            // The focus is the app's, not the model's: it moves it into the command log itself (ADR 129).
-            case CommandLogFocused() -> focus.moveToCommandLog();
-            // Escape in the files of a commit is back to the list they were listed from, where they follow the
-            // highlight; the list says which files the pane lists then (ADR 141). The model lets go of the lock that
-            // kept them to that list (ADR 149).
-            case CommitFilesMsg.Closed closed -> {
-                model().repoView().files().backTo().forEach(focus::moveTo);
-                session.dispatch(closed);
-            }
-            // Escape in the working tree the locked list follows lets go there too, back to that list (ADR 149);
-            // Escape in the list itself keeps the focus where it is.
-            case SelectionMsg.FilesUnlocked unlocked -> {
-                if (focus.focus().contains(Scopes.FILES.pane())) {
-                    model().repoView().files().backTo().forEach(focus::moveTo);
+        session.dispatch(msg);
+        followAsked();
+    }
+
+    /**
+     * Does what the messages handled since asked of the view state the app keeps, in the order they asked it.
+     */
+    private void followAsked() {
+        List<ViewIntent> now = asked;
+        asked = List.empty();
+        now.forEach(this::follow);
+    }
+
+    /**
+     * Does what {@code intent} asks of the view state the app keeps. The focus is the app's, not the model's (ADR 129);
+     * so is the highlight of the files pane, which a key in the content panel moves (ADR 117).
+     */
+    private void follow(ViewIntent intent) {
+        switch (intent) {
+            case ViewIntent.StepFile(FileStepMsg.Step step) -> stepFile(step);
+            case ViewIntent.ToCommandLog() -> moveFocus(CommandLogPanel.FOCUS);
+            case ViewIntent.ToPane(PaneId pane, Option<PaneId> from) -> {
+                if (from.forAll(origin -> focus.focus().contains(origin))) {
+                    moveFocus(pane);
                 }
-                session.dispatch(unlocked);
             }
-            // The help gives the focus back to the files as it closes, so the list takes it in the frame after.
-            case HelpMsg.Chosen(CommitFilesMsg.Closed closed) -> {
-                listAfterPopup = model().repoView().files().backTo();
-                session.dispatch(new PopupMsg.Dismissed(HelpPopup.class));
-                session.dispatch(closed);
-            }
-            // The help gives the focus back as it closes, so the log takes it in the frame after.
-            case HelpMsg.Chosen(CommandLogFocused()) -> {
-                logAfterPopup = true;
-                session.dispatch(new PopupMsg.Dismissed(HelpPopup.class));
-            }
-            default -> session.dispatch(msg);
+        }
+    }
+
+    /**
+     * Moves the focus to {@code target}; while a popup has it, as the help a key was chosen from, once that popup is
+     * gone, as it gives the focus back to the pane the model knows as it closes.
+     */
+    private void moveFocus(Focus target) {
+        if (focus.inPopup()) {
+            afterPopup = Option.of(target);
+        } else {
+            focus.moveTo(target);
         }
     }
 
@@ -246,7 +246,7 @@ public class JazygitApp extends ToolkitApp {
      */
     private void stepFile(FileStepMsg.Step step) {
         Model model = model();
-        if (!focus.inContentOf(model, FilesPanel.PANE)) {
+        if (!focus.inContentOf(model, PaneId.FILES)) {
             return;
         }
         List<ScrolledContent> before =
@@ -466,17 +466,15 @@ public class JazygitApp extends ToolkitApp {
         stepPastFiltered(model, focused);
         // A popup opening while the log has the focus gives it back to the log once it closes.
         if (model.popup().isDefined() && focused.contains(CommandLogPanel.FOCUS)) {
-            logAfterPopup = true;
+            afterPopup = Option.of(CommandLogPanel.FOCUS);
         }
         shown.moveTo().forEach(focus::moveTo);
-        if (listAfterPopup.isDefined() && model.popup().isEmpty()) {
-            listAfterPopup.forEach(focus::moveTo);
-            listAfterPopup = Option.none();
+        if (afterPopup.isDefined() && model.popup().isEmpty()) {
+            afterPopup.forEach(focus::moveTo);
+            afterPopup = Option.none();
         }
-        if (logAfterPopup && model.popup().isEmpty()) {
-            logAfterPopup = false;
-            focus.moveToCommandLog();
-        }
+        // What a message the program handled by itself asked, as one a command reported.
+        followAsked();
         focus.redrawIfMoves(focused);
         if (model != clocked) {
             clocked = model;
@@ -573,11 +571,12 @@ public class JazygitApp extends ToolkitApp {
         // With the focus, it grows to show more of what it logged (ADR 129).
         // The frame a popup closes in gives the log the focus once it is drawn: it is drawn to take it, as TamboUI
         // only keeps the focus on what a frame drew to take it.
+        boolean logAfter = afterPopup.contains(CommandLogPanel.FOCUS);
         boolean focused = focus.contains(CommandLogPanel.FOCUS)
-                || (logAfterPopup && model.popup().isEmpty());
+                || (logAfter && model.popup().isEmpty());
         // A popup opened from the log keeps it open behind it, where it was scrolled to, until it gives it the focus
         // back.
-        boolean open = focused || logAfterPopup;
+        boolean open = focused || logAfter;
         int rows = open ? commandLogPanel.focusedHeight(model, room) : CommandLogPanel.height(model, room);
         int shown = commandLogRows(model, room.map(CommandLogPanel.Room::rows).getOrElse(0), rows);
         return commandLogPanel.render(model, rows, shown, room, open, focused);

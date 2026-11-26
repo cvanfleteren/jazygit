@@ -34,10 +34,21 @@ import net.vanfleteren.jazygit.kernel.state.load.SelectionMsg;
 import net.vanfleteren.jazygit.kernel.state.preferences.SaveSettings;
 import net.vanfleteren.jazygit.kernel.state.view.DivergenceView;
 import net.vanfleteren.jazygit.kernel.state.view.Preview;
+import net.vanfleteren.jazygit.kernel.state.view.ViewIntent;
 import net.vanfleteren.jazygit.kernel.ui.widgets.PickDialog;
 import org.junit.jupiter.api.Test;
 
 class DiffOptionsUpdateTest {
+
+    @Test
+    void showingTheOptionsAnewKeepsWhatTheStepAsksOfTheAppAndWhetherItStops() {
+        Next asked = Next.of(loaded()).asking(new ViewIntent.ToCommandLog()).quitting();
+
+        Next shown = DiffOptionsUpdate.shown(asked);
+
+        assertEquals(List.of(new ViewIntent.ToCommandLog()), shown.intents());
+        assertTrue(shown.quit());
+    }
 
     private static final DiffOptions IGNORING = DiffOptions.DEFAULT.withIgnoreWhitespace(true);
     private static final Sha SHA = new Sha("aaaa");

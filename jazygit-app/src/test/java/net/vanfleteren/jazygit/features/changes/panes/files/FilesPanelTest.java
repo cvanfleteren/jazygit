@@ -1,4 +1,4 @@
-package net.vanfleteren.jazygit.kernel.ui.files;
+package net.vanfleteren.jazygit.features.changes.panes.files;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -42,6 +42,7 @@ import net.vanfleteren.jazygit.kernel.state.view.FileFilterMsg;
 import net.vanfleteren.jazygit.kernel.state.view.FilesLock;
 import net.vanfleteren.jazygit.kernel.ui.RenderedText;
 import net.vanfleteren.jazygit.kernel.ui.SettledPilot;
+import net.vanfleteren.jazygit.kernel.ui.files.ListedFiles;
 import net.vanfleteren.jazygit.kernel.ui.keys.Scopes;
 import net.vanfleteren.jazygit.kernel.ui.text.Placeholders;
 import net.vanfleteren.jazygit.kernel.ui.widgets.BorderBar;
@@ -639,8 +640,8 @@ class FilesPanelTest {
             assertTrue(screen.contains("No files match"), screen);
             assertTrue(screen.contains("0/0"), screen);
             assertTrue(panel.selectionChange(model).isEmpty());
-            assertTrue(FilesPanel.noneMatch(model, FILTERED));
-            assertFalse(FilesPanel.noneMatch(TestModels.loaded(fixed(FILTERED)), FILTERED));
+            assertTrue(ListedFiles.noneMatch(model, FILTERED));
+            assertFalse(ListedFiles.noneMatch(TestModels.loaded(fixed(FILTERED)), FILTERED));
             SettledPilot.of(testRunner).quit();
         }
     }
@@ -765,11 +766,11 @@ class FilesPanelTest {
                 Fixtures.fileEntry("src/main/A.java", ChangeType.MODIFIED),
                 FileEntry.renamed("lib/B.java", "src/old/B.java", true, false));
 
-        assertEquals(files, FileTreeList.matching(files, Option.none()));
-        assertEquals(files, FileTreeList.matching(files, Option.of("src/")));
-        assertEquals(files.take(1), FileTreeList.matching(files, Option.of("main/a")));
-        assertEquals(List.empty(), FileTreeList.matching(files, Option.of("Main")));
-        assertEquals(files.drop(1), FileTreeList.matching(files, Option.of("old")));
+        assertEquals(files, ListedFiles.matching(files, Option.none()));
+        assertEquals(files, ListedFiles.matching(files, Option.of("src/")));
+        assertEquals(files.take(1), ListedFiles.matching(files, Option.of("main/a")));
+        assertEquals(List.empty(), ListedFiles.matching(files, Option.of("Main")));
+        assertEquals(files.drop(1), ListedFiles.matching(files, Option.of("old")));
     }
 
     /**

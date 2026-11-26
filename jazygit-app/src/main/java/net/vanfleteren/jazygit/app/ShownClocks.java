@@ -6,11 +6,11 @@ import java.time.Instant;
 import net.vanfleteren.jazygit.app.keys.Features;
 import net.vanfleteren.jazygit.features.branches.panes.branches.BranchBadges;
 import net.vanfleteren.jazygit.features.branches.panes.branches.BranchesPanel;
+import net.vanfleteren.jazygit.features.changes.panes.files.FilesPanel;
 import net.vanfleteren.jazygit.kernel.content.ContentView;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.ui.FetchLine;
 import net.vanfleteren.jazygit.kernel.ui.KernelSlots;
-import net.vanfleteren.jazygit.kernel.ui.files.FilesPanel;
 import net.vanfleteren.jazygit.kernel.ui.screen.Screens;
 import net.vanfleteren.jazygit.kernel.ui.text.ShownTime;
 

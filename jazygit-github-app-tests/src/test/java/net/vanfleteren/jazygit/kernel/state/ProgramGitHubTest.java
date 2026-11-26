@@ -336,7 +336,7 @@ class ProgramGitHubTest {
 
         @Override
         public Update.Next apply(Model model) {
-            return new Update.Next(model, cmds);
+            return Update.Next.of(model).and(cmds);
         }
     }
 

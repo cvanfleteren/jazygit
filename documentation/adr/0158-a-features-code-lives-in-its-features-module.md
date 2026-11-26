@@ -93,6 +93,9 @@ through hooks of the kernel, so that deleting GitHub's modules leaves jazygit wo
 Amended by ADR 172: the extension point a pane declares is a `PaneKey` the features fill through `Feature.filling`;
 the commits pane is the first, and names the search no more.
 
+Amended by ADR 208: the files pane moves to `changes.panes.files` too, given to `LeftColumn` as a `FilesLeftPane`; the
+kernel builds no pane.
+
 ## Folded in: ADR 166 (2026-11-22)
 
 A feature declares its timers and its reactions, so that the kernel and the app need not name a forge to read from

@@ -75,7 +75,8 @@ public final class RereadUpdate {
                 .map(load -> LoadBranches.current(model, load))
                 .filter(cmd -> !model.jobs().runs(cmd))
                 .appendAll(worktreeChanges(model));
-        return new Next(model.mapJobs(jobs -> jobs.retainingRetries(retries.toSet())), List.narrow(loads));
+        return Next.of(model.mapJobs(jobs -> jobs.retainingRetries(retries.toSet())))
+                .and(List.narrow(loads));
     }
 
     /**
@@ -127,7 +128,7 @@ public final class RereadUpdate {
      * pane shows the worktrees and that is not being read already.
      */
     public static Next readWorktreeChanges(Model model) {
-        return new Next(model, List.narrow(worktreeChanges(model).toList()));
+        return Next.of(model).and(List.narrow(worktreeChanges(model).toList()));
     }
 
     /**

@@ -24,6 +24,7 @@ import net.vanfleteren.jazygit.kernel.settings.SettingsStore;
 import net.vanfleteren.jazygit.kernel.settings.ThemeName;
 import net.vanfleteren.jazygit.kernel.state.*;
 import net.vanfleteren.jazygit.kernel.state.preferences.*;
+import net.vanfleteren.jazygit.kernel.state.view.ViewIntent;
 
 /**
  * What runs for the repository shown: the {@link Program} and the threads it runs git on, from the start of the app
@@ -42,6 +43,7 @@ final class RepositorySession {
     private final Clock clock;
     private final Runnable requestRedraw;
     private final Runnable quit;
+    private final Consumer<ViewIntent> asked;
     private final Consumer<Model> started;
     // What runs while the app is started.
     private Option<Runtime> runtime = Option.none();
@@ -55,6 +57,8 @@ final class RepositorySession {
      * @param runner        the runner of the app, once it is started
      * @param requestRedraw asks for a frame, on the render thread
      * @param quit          stops the app, as the model asks
+     * @param asked         does what a message asks the app to do with the view state it keeps, on the render thread
+     *                      (ADR 207)
      * @param started       gets the first model of each program started, on the render thread
      */
     RepositorySession(
@@ -65,6 +69,7 @@ final class RepositorySession {
             Clock clock,
             Runnable requestRedraw,
             Runnable quit,
+            Consumer<ViewIntent> asked,
             Consumer<Model> started) {
         this.env = env.withApp(this::switchTo, terminal);
         this.ssh = ssh;
@@ -72,6 +77,7 @@ final class RepositorySession {
         this.clock = clock;
         this.requestRedraw = requestRedraw;
         this.quit = quit;
+        this.asked = asked;
         this.started = started;
     }
 
@@ -199,6 +205,7 @@ final class RepositorySession {
                 BugLog::log,
                 requestRedraw,
                 quit,
+                asked,
                 clock);
         runtime = Option.of(new Runtime(io, background, program, shown));
         started.accept(program.model());

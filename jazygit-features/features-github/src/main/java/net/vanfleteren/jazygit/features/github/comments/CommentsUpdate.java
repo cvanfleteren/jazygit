@@ -42,15 +42,14 @@ public final class CommentsUpdate {
                         .getOrElse(() -> Next.of(model));
             case CommentsMsg.Loaded(PrNumber number, var comments) -> {
                 List<String> urls = pictures(model, number, comments);
-                yield new Next(
-                        mapComments(
+                yield Next.of(mapComments(
                                 model,
                                 number,
                                 popup -> popup.read(Either.right(comments))
                                         .withPictures(urls.foldLeft(
                                                 popup.pictures(),
-                                                (pictures, url) -> pictures.put(url, Option.none())))),
-                        urls.map(url -> new CommentsCmd.LoadPicture(number, url)));
+                                                (pictures, url) -> pictures.put(url, Option.none())))))
+                        .and(urls.map(url -> new CommentsCmd.LoadPicture(number, url)));
             }
             case CommentsMsg.LoadFailed(PrNumber number, var failure) ->
                 Next.of(mapComments(model, number, popup -> popup.read(Either.left(failure))));

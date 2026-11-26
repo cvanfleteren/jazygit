@@ -93,6 +93,7 @@ public final class TestModels {
                 bug -> {},
                 modelChanged,
                 () -> {},
+                intent -> {},
                 STILL);
     }
 
@@ -285,12 +286,7 @@ public final class TestModels {
      * {@code next} as {@link Program} applies it: the commands it asks for run.
      */
     public static Update.Next started(Update.Next next) {
-        return new Update.Next(
-                next.model()
-                        .mapJobs(jobs ->
-                                jobs.withStarted(next.cmds(), next.model().now())),
-                next.cmds(),
-                next.quit());
+        return next.map(model -> model.mapJobs(jobs -> jobs.withStarted(next.cmds(), model.now())));
     }
 
     /**

@@ -4,12 +4,12 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import io.vavr.collection.List;
 import java.util.function.Predicate;
+import net.vanfleteren.jazygit.features.changes.panes.files.FilesPanel;
 import net.vanfleteren.jazygit.kernel.state.AreaId;
 import net.vanfleteren.jazygit.kernel.state.Focus;
 import net.vanfleteren.jazygit.kernel.state.PaneId;
 import net.vanfleteren.jazygit.kernel.ui.CommandLogPanel;
 import net.vanfleteren.jazygit.kernel.ui.content.ContentSources;
-import net.vanfleteren.jazygit.kernel.ui.files.FilesPanel;
 import org.junit.jupiter.api.Test;
 
 class FocusKeeperTest {
