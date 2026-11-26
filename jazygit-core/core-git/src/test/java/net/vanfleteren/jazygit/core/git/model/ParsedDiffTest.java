@@ -142,6 +142,35 @@ class ParsedDiffTest {
     }
 
     @Test
+    void theHunksOfAllFilesShareOneBudgetSpentInOrder() {
+        // Each pair differs in its last token only, so fills one cell: the budget covers the first pair only, and
+        // neither the next hunk of that file nor the hunk of the next file gets it again.
+        ParsedDiff diff = ParsedDiff.of("""
+                diff --git a/a.txt b/a.txt
+                --- a/a.txt
+                +++ b/a.txt
+                @@ -1 +1 @@
+                -a = 1
+                +a = 2
+                @@ -9 +9 @@
+                -b = 1
+                +b = 2
+                diff --git a/c.txt b/c.txt
+                --- a/c.txt
+                +++ b/c.txt
+                @@ -1 +1 @@
+                -c = 1
+                +c = 2
+                """, new WordDiff.Budget(1));
+
+        assertEquals(
+                List.of(List.of(true, true), List.of(false, false), List.of(false, false)),
+                diff.files()
+                        .flatMap(ParsedFile::hunks)
+                        .map(hunk -> hunk.lines().map(line -> !line.compared().isEmpty())));
+    }
+
+    @Test
     void theCodeOfEachFileIsLexedInItsLanguage() {
         ParsedDiff diff = ParsedDiff.of("""
                 diff --git a/A.java b/A.java
