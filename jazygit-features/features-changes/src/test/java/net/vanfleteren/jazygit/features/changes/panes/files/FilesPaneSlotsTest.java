@@ -2,9 +2,16 @@ package net.vanfleteren.jazygit.features.changes.panes.files;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import dev.tamboui.buffer.Buffer;
+import dev.tamboui.layout.Rect;
+import dev.tamboui.style.Modifier;
+import dev.tamboui.terminal.Frame;
 import dev.tamboui.toolkit.app.ToolkitTestRunner;
+import dev.tamboui.toolkit.element.RenderContext;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
 import net.vanfleteren.jazygit.core.git.model.ChangeType;
 import net.vanfleteren.jazygit.core.git.model.FileEntry;
 import net.vanfleteren.jazygit.kernel.state.Model;
@@ -22,6 +29,7 @@ import org.junit.jupiter.api.Test;
  */
 class FilesPaneSlotsTest {
 
+    private static final Rect AREA = new Rect(0, 0, 60, 10);
     private static final FileEntry A = new FileEntry("a.txt", ChangeType.MODIFIED, true, false);
     private static final FileEntry B = new FileEntry("b.txt", ChangeType.MODIFIED, true, false);
 
@@ -47,6 +55,22 @@ class FilesPaneSlotsTest {
     }
 
     @Test
+    void oneMarkThatDimsDimsTheWholeRowTheMarksOfOtherFeaturesToo() throws Exception {
+        FileMark dimming = file -> Option.when(
+                file.path().equals("a.txt"), () -> new FileMark.Mark(List.of(LoadableList.Seg.of(" ★")), true));
+        Fills fills = Fills.NONE
+                .with(FilesPane.MARK, model -> Option.of(dimming))
+                .with(FilesPane.MARK, model -> Option.of(ON_A_TOO));
+
+        Buffer buffer = buffer(fills);
+
+        assertTrue(dims(buffer, "a.txt"), "the name");
+        assertTrue(dims(buffer, "★"), "the mark that dims");
+        assertTrue(dims(buffer, "☆"), "the mark of the other feature");
+        assertFalse(dims(buffer, "b.txt"), "a file no mark dims");
+    }
+
+    @Test
     void theTitleSaysWhatEachFeatureGivesForItAfterWhatThePaneIs() throws Exception {
         Fills fills = Fills.NONE
                 .with(FilesPane.TITLE, model -> Option.of(" · one"))
@@ -61,6 +85,40 @@ class FilesPaneSlotsTest {
 
         assertTrue(screen.contains("Files"), screen);
         assertFalse(screen.contains("★"), screen);
+    }
+
+    /**
+     * Whether every cell of the first place {@code text} is drawn at is dimmed.
+     */
+    private static boolean dims(Buffer buffer, String text) {
+        Rect area = buffer.area();
+        for (int y = area.y(); y < area.bottom(); y++) {
+            int row = y;
+            String line = List.range(area.x(), area.right())
+                    .map(x -> buffer.get(x, row).symbol())
+                    .mkString();
+            int at = line.indexOf(text);
+            if (at >= 0) {
+                return List.range(at, at + text.length())
+                        .forAll(x -> buffer.get(x, row).style().addModifiers().contains(Modifier.DIM));
+            }
+        }
+        throw new AssertionError(text + " is not drawn");
+    }
+
+    private static Buffer buffer(Fills fills) throws Exception {
+        FilesPanel panel = new FilesPanel(msg -> {}, () -> {}, Theme.Highlights.DEFAULT, fills);
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(MODEL, FilesPanel.PANE))) {
+            CompletableFuture<Buffer> drawn = new CompletableFuture<>();
+            testRunner.runner().runOnRenderThread(() -> {
+                Buffer buffer = Buffer.empty(AREA);
+                panel.render(MODEL, FilesPanel.PANE).render(Frame.forTesting(buffer), AREA, RenderContext.empty());
+                drawn.complete(buffer);
+            });
+            Buffer buffer = drawn.get(5, TimeUnit.SECONDS);
+            SettledPilot.of(testRunner).quit();
+            return buffer;
+        }
     }
 
     private static String render(Fills fills) throws Exception {
