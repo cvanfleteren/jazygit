@@ -11,6 +11,7 @@ import static net.vanfleteren.jazygit.lib.json.Decoder.map3;
 import static net.vanfleteren.jazygit.lib.json.Decoder.map5;
 import static net.vanfleteren.jazygit.lib.json.Decoder.map7;
 import static net.vanfleteren.jazygit.lib.json.Decoder.nullable;
+import static net.vanfleteren.jazygit.lib.json.Decoder.nullableAt;
 import static net.vanfleteren.jazygit.lib.json.Decoder.string;
 import static net.vanfleteren.jazygit.lib.json.Decoder.succeed;
 
@@ -31,8 +32,8 @@ import net.vanfleteren.jazygit.lib.json.Decoder;
 final class CommentsQuery {
 
     // Who wrote it; empty when GitHub does not say, as for a deleted account.
-    static final Decoder<String> AUTHOR = field("author", nullable(field("login", nullable(string()))))
-            .map(author -> author.flatMap(login -> login).getOrElse(""));
+    static final Decoder<String> AUTHOR =
+            field("author", nullableAt("login", string())).map(login -> login.getOrElse(""));
 
     // The description, none when it has no text.
     static final Decoder<Option<PullRequestComment>> DESCRIPTION = map3(

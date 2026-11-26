@@ -11,6 +11,7 @@ import static net.vanfleteren.jazygit.lib.json.Decoder.map3;
 import static net.vanfleteren.jazygit.lib.json.Decoder.map4;
 import static net.vanfleteren.jazygit.lib.json.Decoder.map5;
 import static net.vanfleteren.jazygit.lib.json.Decoder.nullable;
+import static net.vanfleteren.jazygit.lib.json.Decoder.nullableAt;
 import static net.vanfleteren.jazygit.lib.json.Decoder.string;
 import static net.vanfleteren.jazygit.lib.json.Decoder.succeed;
 
@@ -18,7 +19,6 @@ import io.vavr.collection.HashMap;
 import io.vavr.collection.HashSet;
 import io.vavr.collection.List;
 import io.vavr.collection.Set;
-import io.vavr.control.Either;
 import io.vavr.control.Option;
 import java.time.Instant;
 import net.vanfleteren.jazygit.core.gh.model.CheckRun;
@@ -49,8 +49,7 @@ public final class CheckFragment {
      * started, none when that cannot be read.
      */
     static final Decoder<WorkflowRun> WORKFLOW_RUN = map5(
-            field("workflow", nullable(field("name", nullable(string()))))
-                    .map(workflow -> workflow.flatMap(name -> name).getOrElse("")),
+            field("workflow", nullableAt("name", string())).map(name -> name.getOrElse("")),
             orNone("databaseId", longValue()),
             orNone("createdAt", instant()),
             orNone("runAttempt", integer()),
@@ -147,7 +146,7 @@ public final class CheckFragment {
      * as that is a query and its decoder that went apart (ADR 42). Nothing else is read this leniently.
      */
     private static <T> Decoder<Option<T>> orNone(String name, Decoder<T> decoder) {
-        return field(name, json -> Either.right(decoder.decode(json).toOption()));
+        return field(name, Decoder.orNone(decoder.map(Option::some)));
     }
 
     /**
