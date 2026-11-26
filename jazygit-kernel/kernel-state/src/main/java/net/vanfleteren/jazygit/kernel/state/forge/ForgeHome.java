@@ -65,10 +65,11 @@ public record ForgeHome(
     }
 
     /**
-     * Whether everything the kernel decides from is known, and it did not decide yet.
+     * What the user chose before, once everything the kernel decides from is known and it did not decide yet; none
+     * before.
      */
-    public boolean due() {
-        return !decided && remembered.isDefined() && awaiting.isEmpty() && !claims.isEmpty();
+    public Option<ForgeChoice> due() {
+        return remembered.filter(any -> !decided && awaiting.isEmpty() && !claims.isEmpty());
     }
 
     /**
