@@ -138,7 +138,7 @@ public final class LoadUpdate {
                 .filter(area -> area._2().content() instanceof ScrolledContent.Diff)
                 .map(area -> ReadVersion.of(area._1(), area._2().read()))
                 .filter(read -> shown.contains(read.path()) && !model.jobs().runs(read));
-        return new Next(model, List.<Cmd>narrow(reads).appendAll(versions));
+        return Next.of(model).and(List.<Cmd>narrow(reads).appendAll(versions));
     }
 
     /**
@@ -201,12 +201,11 @@ public final class LoadUpdate {
                 .filter(stamp -> stamp._2().isEmpty()
                         || !model.jobs().readAt().get(stamp._1()).equals(stamp._2()));
         List<Load> loads = changed.map(Tuple2::_1);
-        return new Next(
-                model.mapJobs(jobs -> jobs.withReadAt(changed.foldLeft(
+        return Next.of(model.mapJobs(jobs -> jobs.withReadAt(changed.foldLeft(
                         jobs.readAt(),
                         (readAt, stamp) ->
-                                stamp._2().fold(() -> readAt.remove(stamp._1()), now -> readAt.put(stamp._1(), now))))),
-                List.narrow(loads));
+                                stamp._2().fold(() -> readAt.remove(stamp._1()), now -> readAt.put(stamp._1(), now))))))
+                .and(List.narrow(loads));
     }
 
     private static Next statusLoaded(Model before, Model next) {
@@ -234,8 +233,8 @@ public final class LoadUpdate {
     private static Next reloadDiff(Model model, List<Cmd> cmds, boolean headMoved) {
         return shownDiff(model)
                 .filter(load -> !model.jobs().runs(load) && !model.jobs().runs(new CheckFileDiff(load)))
-                .map(load -> new Next(model, cmds.append(headMoved ? load : new CheckFileDiff(load))))
-                .getOrElse(() -> new Next(model, cmds));
+                .map(load -> Next.of(model).and(cmds.append(headMoved ? load : new CheckFileDiff(load))))
+                .getOrElse(() -> Next.of(model).and(cmds));
     }
 
     /**
@@ -276,7 +275,7 @@ public final class LoadUpdate {
                         reloadMovedLog(
                                 closeGoneBranchCommits(next),
                                 branch -> !tipOf(before, branch).equals(tipOf(next, branch))))
-                .then(reloaded -> new Next(reloaded, AheadUpdate.basesRead(before, next)));
+                .then(reloaded -> Next.of(reloaded).and(AheadUpdate.basesRead(before, next)));
     }
 
     /**

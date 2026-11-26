@@ -72,10 +72,10 @@ public final class SettingsPanelUpdate {
             return Next.of(model);
         }
         List<Cmd> reads = added.flatMap(section -> section.on(model)).append(new SettingsPanelCmd.ReadFile());
-        return new Next(
-                model.openPopup(new SettingsPanelPopup(model.preferences().settings())
-                        .with(REPOSITORY_THEME, model.preferences().repositoryTheme())),
-                reads);
+        return Next.of(model.openPopup(
+                        new SettingsPanelPopup(model.preferences().settings())
+                                .with(REPOSITORY_THEME, model.preferences().repositoryTheme())))
+                .and(reads);
     }
 
     /**

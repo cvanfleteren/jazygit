@@ -208,14 +208,6 @@ public final class Update {
      */
     public record Next(Model model, List<Cmd> cmds, boolean quit, List<ViewIntent> intents) {
 
-        public Next(Model model, List<Cmd> cmds) {
-            this(model, cmds, false);
-        }
-
-        public Next(Model model, List<Cmd> cmds, boolean quit) {
-            this(model, cmds, quit, List.empty());
-        }
-
         /**
          * This, with {@code f} applied to its model: the commands, whether the app stops and what it is asked stay.
          */
@@ -227,7 +219,14 @@ public final class Update {
          * This, and {@code more} commands to run after its own.
          */
         public Next and(Cmd... more) {
-            return new Next(model, cmds.appendAll(List.of(more)), quit, intents);
+            return and(List.of(more));
+        }
+
+        /**
+         * This, and {@code more} commands to run after its own.
+         */
+        public Next and(Iterable<? extends Cmd> more) {
+            return new Next(model, cmds.appendAll(more), quit, intents);
         }
 
         /**
@@ -261,8 +260,13 @@ public final class Update {
             return new Next(model, cmds, quit, intents.appendAll(more));
         }
 
+        /**
+         * A new step to {@code model}, running {@code cmds}. To change a step there is already, {@link #map},
+         * {@link #then}, {@link #and} or {@link #asking} it: they keep what it asks and whether the app stops, which
+         * the record's constructor makes a caller name.
+         */
         public static Next of(Model model, Cmd... cmds) {
-            return new Next(model, List.of(cmds));
+            return new Next(model, List.of(cmds), false, List.empty());
         }
     }
 

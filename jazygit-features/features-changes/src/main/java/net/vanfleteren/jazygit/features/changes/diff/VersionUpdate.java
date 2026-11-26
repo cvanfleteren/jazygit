@@ -201,7 +201,7 @@ public final class VersionUpdate {
                     Option.none());
             Model shown = model.mapRepoView(view -> view.withVersion(area, version))
                     .withScrolled(model.scrolled().put(area, to));
-            return new Next(shown, reads && reused.isEmpty() ? List.<Cmd>of(how) : List.empty());
+            return Next.of(shown).and(reads && reused.isEmpty() ? List.<Cmd>of(how) : List.empty());
         });
     }
 

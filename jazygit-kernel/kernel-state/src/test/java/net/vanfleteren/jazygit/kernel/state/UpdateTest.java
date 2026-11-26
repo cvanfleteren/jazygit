@@ -348,7 +348,7 @@ class UpdateTest {
 
         Step step = Update.step(
                 model,
-                asked -> new Next(asked, List.of(refresh, refresh, LoadBranches.LISTED)),
+                asked -> Next.of(asked).and(List.of(refresh, refresh, LoadBranches.LISTED)),
                 Instant.parse("2026-10-22T10:00:00Z"));
 
         assertEquals(java.util.List.of(List.of(refresh, LoadBranches.LISTED)), told);
@@ -498,7 +498,7 @@ class UpdateTest {
     void aCommandAskedForTwiceInOneMessageIsAskedForOnce() {
         assertEquals(
                 List.of(new LoadStatus(), LoadBranches.LISTED),
-                Update.once(new Next(loaded(), List.of(new LoadStatus(), LoadBranches.LISTED, new LoadStatus())))
+                Update.once(Next.of(loaded()).and(List.of(new LoadStatus(), LoadBranches.LISTED, new LoadStatus())))
                         .cmds());
     }
 

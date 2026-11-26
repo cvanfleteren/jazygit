@@ -82,10 +82,9 @@ public final class CommitFilesUpdate {
      */
     private static Next open(Model model, CommitFilesView view) {
         return Events.happened(
-                new Next(
-                        model.mapRepoView(
-                                repoView -> repoView.mapFiles(files -> files.withCommitFiles(Option.of(view)))),
-                        List.<Cmd>of(LoadCommitFiles.of(view)).appendAll(treeLoad(view))),
+                Next.of(model.mapRepoView(
+                                repoView -> repoView.mapFiles(files -> files.withCommitFiles(Option.of(view)))))
+                        .and(List.<Cmd>of(LoadCommitFiles.of(view)).appendAll(treeLoad(view))),
                 new KernelEvent.ChangesOpened(view.of()));
     }
 
@@ -107,10 +106,9 @@ public final class CommitFilesUpdate {
                             .withFilter(view.filter())
                             .withAllFiles(view.allFiles())
                             .withTree(Option.when(view.allFiles(), Loadable::loading));
-                    return new Next(
-                            model.mapRepoView(
-                                    repoView -> repoView.mapFiles(files -> files.withCommitFiles(Option.of(again)))),
-                            List.<Cmd>of(LoadCommitFiles.of(again)).appendAll(treeLoad(again)));
+                    return Next.of(model.mapRepoView(
+                                    repoView -> repoView.mapFiles(files -> files.withCommitFiles(Option.of(again)))))
+                            .and(List.<Cmd>of(LoadCommitFiles.of(again)).appendAll(treeLoad(again)));
                 })
                 .getOrElse(() -> Next.of(model));
     }
@@ -128,10 +126,9 @@ public final class CommitFilesUpdate {
                     boolean reads = all && view.tree().forAll(Loadable::isFailed);
                     CommitFilesView toggled =
                             view.listingAll(all).withTree(reads ? Option.of(Loadable.loading()) : view.tree());
-                    return new Next(
-                            model.mapRepoView(
-                                    repoView -> repoView.mapFiles(files -> files.withCommitFiles(Option.of(toggled)))),
-                            reads ? List.<Cmd>of(new LoadCommitTree(view.of())) : List.empty());
+                    return Next.of(model.mapRepoView(
+                                    repoView -> repoView.mapFiles(files -> files.withCommitFiles(Option.of(toggled)))))
+                            .and(reads ? List.<Cmd>of(new LoadCommitTree(view.of())) : List.empty());
                 })
                 .getOrElse(() -> Next.of(model));
     }

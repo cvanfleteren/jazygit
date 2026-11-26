@@ -28,10 +28,9 @@ public final class LocationAsked {
         List<ReadWorktreeTemplate> reads =
                 next.cmds().filter(ReadWorktreeTemplate.class::isInstance).map(ReadWorktreeTemplate.class::cast);
         List<Cmd> others = next.cmds().filter(cmd -> !(cmd instanceof ReadWorktreeTemplate));
-        return reads.foldLeft(new Next(next.model(), others, next.quit()), (asking, read) -> {
-            Next answered = Update.update(
-                    asking.model(), new AddWorktreeMsg.LocationTemplateRead(read.source(), read.switching(), template));
-            return new Next(answered.model(), asking.cmds().appendAll(answered.cmds()), asking.quit());
-        });
+        return reads.foldLeft(
+                new Next(next.model(), others, next.quit(), next.intents()),
+                (asking, read) -> asking.then(model -> Update.update(
+                        model, new AddWorktreeMsg.LocationTemplateRead(read.source(), read.switching(), template))));
     }
 }

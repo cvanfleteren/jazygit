@@ -39,7 +39,8 @@ public final class BuildsReads {
                     List<Cmd> cmds = files.<Cmd>map(ReadWorkflows::new)
                             .appendAll(Option.when(repo, LoadRepoWorkflows::new))
                             .appendAll(runs.map(id -> new LoadWorkflowRuns(id, Option.none())));
-                    return new Next(model.withPart(BuildsView.PART, Option.of(asked)), cmds, false);
+                    return Next.of(model.withPart(BuildsView.PART, Option.of(asked)))
+                            .and(cmds);
                 })
                 .getOrElse(() -> Next.of(model));
     }

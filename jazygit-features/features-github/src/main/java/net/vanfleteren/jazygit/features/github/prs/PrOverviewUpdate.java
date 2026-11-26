@@ -122,7 +122,7 @@ public final class PrOverviewUpdate {
                 ran.now(),
                 ran.jobs(),
                 ran.part(GitHubState.PART).repository());
-        return new Next(ran.withPart(PrOverview.PART, step.overview()), step.cmds());
+        return Next.of(ran.withPart(PrOverview.PART, step.overview())).and(step.cmds());
     }
 
     /**
@@ -166,7 +166,7 @@ public final class PrOverviewUpdate {
      * {@code next}, also running {@code loads}, but the ones still running.
      */
     private static Next loaded(Next next, List<Cmd> loads) {
-        return next.then(model -> new Next(model, notRunning(loads, model.jobs())));
+        return next.then(model -> Next.of(model).and(notRunning(loads, model.jobs())));
     }
 
     /**

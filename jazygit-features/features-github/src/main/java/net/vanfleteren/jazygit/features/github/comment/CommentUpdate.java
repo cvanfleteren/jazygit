@@ -49,9 +49,9 @@ public final class CommentUpdate {
                         .popup(CommentPopup.class)
                         .filter(popup -> popup.number().equals(cmd.number()))
                         .map(popup -> done.then(changed -> PullRequestUpdate.read(changed, cmd.number())
-                                .apply((given, load) -> new Next(
-                                        given.openPopup(sentFrom(popup.from(), load.read(), model.now())),
-                                        List.<Cmd>of(load)
+                                .apply((given, load) -> Next.of(
+                                                given.openPopup(sentFrom(popup.from(), load.read(), model.now())))
+                                        .and(List.<Cmd>of(load)
                                                 .appendAll(Option.when(
                                                         popup.from() instanceof CommentsPopup,
                                                         () -> new LoadComments(cmd.number())))))))

@@ -42,7 +42,7 @@ class GitHubReactionsTest {
         Model model = withTheFeature()
                 .mapPart(GitHubState.PART, gitHub -> gitHub.withReadGivenOut().withReadGivenOut());
 
-        GitHubState started = Update.step(model, asked -> new Next(asked, List.of(PULL_REQUESTS)), now)
+        GitHubState started = Update.step(model, asked -> Next.of(asked).and(List.of(PULL_REQUESTS)), now)
                 .model()
                 .part(GitHubState.PART);
 
@@ -52,7 +52,7 @@ class GitHubReactionsTest {
         // Another command gets no id of a read of GitHub.
         GitHubState after = Update.step(
                         model.withPart(GitHubState.PART, started),
-                        asked -> new Next(asked, List.of(new LoadMyPullRequests())),
+                        asked -> Next.of(asked).and(List.of(new LoadMyPullRequests())),
                         now)
                 .model()
                 .part(GitHubState.PART);
