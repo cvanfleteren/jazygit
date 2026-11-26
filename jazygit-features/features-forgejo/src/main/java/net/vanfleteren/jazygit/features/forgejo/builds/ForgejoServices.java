@@ -5,7 +5,7 @@ import java.nio.file.Path;
 import net.vanfleteren.jazygit.core.forgejo.FjKeys;
 import net.vanfleteren.jazygit.core.forgejo.Forgejo;
 import net.vanfleteren.jazygit.core.forgejo.HttpForgejo;
-import net.vanfleteren.jazygit.features.forgejo.pulls.Browser;
+import net.vanfleteren.jazygit.features.forgejo.browse.Browser;
 import net.vanfleteren.jazygit.kernel.state.Env;
 import net.vanfleteren.jazygit.kernel.ui.Feature;
 

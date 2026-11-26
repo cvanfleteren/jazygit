@@ -7,7 +7,7 @@ import io.vavr.collection.List;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.core.git.model.RepoStatus;
 import net.vanfleteren.jazygit.features.github.prs.PrOverview;
-import net.vanfleteren.jazygit.features.github.state.UnseenPullRequests;
+import net.vanfleteren.jazygit.features.github.prs.unseen.UnseenPullRequests;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.TestModels;
 import net.vanfleteren.jazygit.kernel.state.Update;

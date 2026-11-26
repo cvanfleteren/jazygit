@@ -13,7 +13,7 @@ import net.vanfleteren.jazygit.core.gh.model.PullRequestDetails.Check;
 import net.vanfleteren.jazygit.core.gh.timing.CheckProgress;
 import net.vanfleteren.jazygit.core.gh.timing.CheckSpan;
 import net.vanfleteren.jazygit.core.gh.timing.Eta;
-import net.vanfleteren.jazygit.features.github.state.CheckTimes;
+import net.vanfleteren.jazygit.features.github.checks.timings.CheckTimes;
 import net.vanfleteren.jazygit.kernel.ui.checks.ChecksFrame;
 import net.vanfleteren.jazygit.kernel.ui.checks.ProgressBar;
 import net.vanfleteren.jazygit.kernel.ui.i18n.Messages;

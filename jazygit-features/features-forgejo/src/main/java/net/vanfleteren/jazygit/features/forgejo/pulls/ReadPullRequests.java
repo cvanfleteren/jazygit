@@ -5,6 +5,7 @@ import io.vavr.collection.HashMap;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.core.forgejo.Forgejo;
 import net.vanfleteren.jazygit.core.repo.RemoteName;
+import net.vanfleteren.jazygit.features.forgejo.ForgejoFailure;
 import net.vanfleteren.jazygit.features.forgejo.builds.ForgejoServices;
 import net.vanfleteren.jazygit.kernel.state.Cmd;
 import net.vanfleteren.jazygit.kernel.state.Env;

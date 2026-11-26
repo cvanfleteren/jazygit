@@ -5,7 +5,7 @@ import java.time.Duration;
 import net.vanfleteren.jazygit.core.process.ExecutedCommand;
 import net.vanfleteren.jazygit.core.repo.BranchRef;
 import net.vanfleteren.jazygit.core.repo.RemoteBranch;
-import net.vanfleteren.jazygit.features.github.state.PendingChecks;
+import net.vanfleteren.jazygit.features.github.checks.timings.PendingChecks;
 import net.vanfleteren.jazygit.kernel.settings.EditorProgram;
 import net.vanfleteren.jazygit.kernel.state.Failure;
 import net.vanfleteren.jazygit.kernel.state.Model;

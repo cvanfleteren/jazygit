@@ -46,17 +46,17 @@ import net.vanfleteren.jazygit.kernel.state.forge.ForgeHome;
 /**
  * Pull requests on Forgejo as the tests have them (ADR 176).
  */
-final class PullRequestFixtures {
+public final class PullRequestFixtures {
 
-    static final Instant TIME = Instant.parse("2026-11-21T10:00:00Z");
-    static final RemoteName ORIGIN = new RemoteName("origin");
-    static final String HOST = "code.example.net";
-    static final String URL = "https://" + HOST + "/cvf/nix.git";
-    static final ForgejoRepository NIX = new ForgejoRepository("https://" + HOST, "cvf", "nix");
-    static final Sha HEAD = new Sha("2".repeat(40));
-    static final RemoteBranch FEATURE = new RemoteBranch(ORIGIN, new BranchName("feature"));
+    public static final Instant TIME = Instant.parse("2026-11-21T10:00:00Z");
+    public static final RemoteName ORIGIN = new RemoteName("origin");
+    public static final String HOST = "code.example.net";
+    public static final String URL = "https://" + HOST + "/cvf/nix.git";
+    public static final ForgejoRepository NIX = new ForgejoRepository("https://" + HOST, "cvf", "nix");
+    public static final Sha HEAD = new Sha("2".repeat(40));
+    public static final RemoteBranch FEATURE = new RemoteBranch(ORIGIN, new BranchName("feature"));
 
-    static final ForgejoPullRequest LISTED = new ForgejoPullRequest(
+    public static final ForgejoPullRequest LISTED = new ForgejoPullRequest(
             12,
             "Show the pull request",
             "feature",
@@ -68,12 +68,12 @@ final class PullRequestFixtures {
     /**
      * A repository that allows squashing and rebasing, and deletes the head branch once merged (ADR 180).
      */
-    static final ForgejoMergeSettings SETTINGS =
+    public static final ForgejoMergeSettings SETTINGS =
             new ForgejoMergeSettings(LinkedHashSet.of(ForgejoMergeStyle.SQUASH, ForgejoMergeStyle.REBASE), true);
 
     private PullRequestFixtures() {}
 
-    static Branch following(String name, Option<String> upstream) {
+    public static Branch following(String name, Option<String> upstream) {
         return new Branch(
                 new BranchName(name),
                 false,
@@ -92,7 +92,7 @@ final class PullRequestFixtures {
      * A model with local branch {@code feature} following {@code origin/feature}, and {@code alone} following none, on
      * Forgejo with {@code origin} the home (ADR 177).
      */
-    static Model model() {
+    public static Model model() {
         return TestModels.localBranchesRead(
                         TestModels.loaded(),
                         List.of(following("feature", Option.of("feature")), following("alone", Option.none())))
@@ -105,14 +105,14 @@ final class PullRequestFixtures {
     /**
      * {@link #model()} with the open pull requests read: {@link #LISTED} merges {@code origin/feature}.
      */
-    static Model listed() {
+    public static Model listed() {
         return PullRequestUpdate.update(
                         model(),
                         new PullRequestMsg.Listed(ORIGIN, Option.of(HashMap.of(FEATURE, LISTED)), Option.none()))
                 .model();
     }
 
-    static ForgejoPullRequestDetails details(String title) {
+    public static ForgejoPullRequestDetails details(String title) {
         return new ForgejoPullRequestDetails(
                 12,
                 title,
@@ -128,7 +128,7 @@ final class PullRequestFixtures {
     /**
      * Forgejo as a test has it: one host, {@link #HOST}, with these open pull requests, details, reviews and states.
      */
-    record FakeForgejo(
+    public record FakeForgejo(
             Either<ForgejoError, List<ForgejoPullRequest>> open,
             Either<ForgejoError, ForgejoPullRequestDetails> details,
             Either<ForgejoError, List<ForgejoReview>> reviews,
@@ -137,7 +137,7 @@ final class PullRequestFixtures {
             Merging merging)
             implements Forgejo {
 
-        static FakeForgejo of(ForgejoPullRequestDetails details) {
+        public static FakeForgejo of(ForgejoPullRequestDetails details) {
             return new FakeForgejo(
                     Either.right(List.of(LISTED)),
                     Either.right(details),
@@ -157,7 +157,7 @@ final class PullRequestFixtures {
         /**
          * This Forgejo with no pull requests to read, nor anything to create or merge, failing as {@code error}.
          */
-        static FakeForgejo failing(
+        public static FakeForgejo failing(
                 Either<ForgejoError, ForgejoPullRequestDetails> details,
                 Either<ForgejoError, List<ForgejoReview>> reviews,
                 ForgejoError error) {
@@ -175,28 +175,28 @@ final class PullRequestFixtures {
                             Option.of(error)));
         }
 
-        FakeForgejo withOpen(Either<ForgejoError, List<ForgejoPullRequest>> listed) {
+        public FakeForgejo withOpen(Either<ForgejoError, List<ForgejoPullRequest>> listed) {
             return new FakeForgejo(listed, details, reviews, status, create, merging);
         }
 
         /**
          * This Forgejo with {@code checks} as the builds of every commit.
          */
-        FakeForgejo withStatus(Either<ForgejoError, CommitStatus> checks) {
+        public FakeForgejo withStatus(Either<ForgejoError, CommitStatus> checks) {
             return new FakeForgejo(open, details, reviews, checks, create, merging);
         }
 
         /**
          * This Forgejo answering the creation of a pull request as {@code created} does.
          */
-        FakeForgejo creating(Function<ForgejoNewPullRequest, Either<ForgejoError, ForgejoPullRequest>> created) {
+        public FakeForgejo creating(Function<ForgejoNewPullRequest, Either<ForgejoError, ForgejoPullRequest>> created) {
             return new FakeForgejo(open, details, reviews, status, created, merging);
         }
 
         /**
          * This Forgejo answering a merge of pull request 12 as {@code merged} does (ADR 180).
          */
-        FakeForgejo merging(Function<ForgejoMerge, Either<ForgejoError, ForgejoMerged>> merged) {
+        public FakeForgejo merging(Function<ForgejoMerge, Either<ForgejoError, ForgejoMerged>> merged) {
             return new FakeForgejo(
                     open,
                     details,
@@ -210,7 +210,7 @@ final class PullRequestFixtures {
          * This Forgejo with what the base branch requires, the merge scheduled, and how cancelling it is answered, as
          * these say (ADR 181).
          */
-        FakeForgejo scheduling(
+        public FakeForgejo scheduling(
                 Either<ForgejoError, ForgejoBranchRules> rules,
                 Either<ForgejoError, Option<ForgejoScheduledMerge>> scheduled,
                 Option<ForgejoError> cancel) {
@@ -279,7 +279,7 @@ final class PullRequestFixtures {
          * An environment with this Forgejo, remotes of {@code urls}, and {@code ahead} commits of every branch that
          * its base does not have.
          */
-        Env ahead(Map<RemoteName, String> urls, int ahead) {
+        public Env ahead(Map<RemoteName, String> urls, int ahead) {
             Env env = env(urls);
             return new Env(env.git().withHistory(new StubHistory() {
                         @Override
@@ -334,7 +334,7 @@ final class PullRequestFixtures {
         /**
          * An environment with this Forgejo and remotes of {@code urls}.
          */
-        Env env(Map<RemoteName, String> urls) {
+        public Env env(Map<RemoteName, String> urls) {
             return new Env(StubGit.of().withRemotes(new StubRemotes() {
                         @Override
                         public Either<GitError, Map<RemoteName, String>> urls() {
@@ -344,7 +344,7 @@ final class PullRequestFixtures {
                     .with(ForgejoServices.FORGEJO, this);
         }
 
-        Env env() {
+        public Env env() {
             return env(HashMap.of(ORIGIN, URL));
         }
 

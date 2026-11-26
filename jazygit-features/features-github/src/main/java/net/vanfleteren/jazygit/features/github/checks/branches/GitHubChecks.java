@@ -1,0 +1,28 @@
+package net.vanfleteren.jazygit.features.github.checks.branches;
+
+import io.vavr.collection.Map;
+import io.vavr.collection.Set;
+import net.vanfleteren.jazygit.core.gh.model.BranchChecks;
+import net.vanfleteren.jazygit.core.gh.model.PullRequest.Checks;
+import net.vanfleteren.jazygit.core.repo.BranchName;
+import net.vanfleteren.jazygit.core.repo.RemoteName;
+import net.vanfleteren.jazygit.features.github.state.FromGitHub;
+
+/**
+ * How the CI checks are doing on the branches of the GitHub repository, and which git remotes are that
+ * repository: only their branches show these checks.
+ *
+ * @param remotes  the remotes that point at the GitHub repository
+ * @param byBranch the checks on the tip of each branch on GitHub
+ */
+public record GitHubChecks(Set<RemoteName> remotes, Map<BranchName, Checks> byBranch) {
+
+    /**
+     * The checks of {@code checks}, on the remotes of {@code urls}, the URL of each remote by its name, that
+     * point at its repository.
+     */
+    public static GitHubChecks of(BranchChecks checks, Map<RemoteName, String> urls) {
+        return new GitHubChecks(
+                urls.filterValues(checks::isAt).keySet(), checks.checks().mapKeys(FromGitHub::branch));
+    }
+}
