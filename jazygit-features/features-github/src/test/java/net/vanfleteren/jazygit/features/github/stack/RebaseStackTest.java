@@ -41,9 +41,9 @@ import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.core.repo.StackLayer;
 import net.vanfleteren.jazygit.core.repo.Tracking;
 import net.vanfleteren.jazygit.core.repo.Upstream;
-import net.vanfleteren.jazygit.features.branches.branch.BranchError;
-import net.vanfleteren.jazygit.features.branches.branch.BranchError.StackRefusal;
 import net.vanfleteren.jazygit.features.changes.commit.create.CommitPopup;
+import net.vanfleteren.jazygit.features.github.GitHubError;
+import net.vanfleteren.jazygit.features.github.GitHubError.StackRefusal;
 import net.vanfleteren.jazygit.features.github.GitHubServices;
 import net.vanfleteren.jazygit.features.github.state.GitHubState;
 import net.vanfleteren.jazygit.kernel.state.AppError;
@@ -124,7 +124,7 @@ class RebaseStackTest {
     }
 
     private static Option<StackRefusal> refusal(Model model, List<Entry> entries) {
-        return plan(model, entries).swap().toOption().map(error -> ((BranchError.StackNotRebased) error).why());
+        return plan(model, entries).swap().toOption().map(error -> ((GitHubError.StackNotRebased) error).why());
     }
 
     @Test
@@ -349,6 +349,15 @@ class RebaseStackTest {
         assertEquals(
                 Option.of("Stack #12 is not rebased: the worktree has changes; commit or stash them first"),
                 ErrorTexts.errorText(dirty.fail(plan(dirty, ENTRIES).getLeft())));
+    }
+
+    @Test
+    void theNumberOfAStackIsNotGrouped() {
+        var refused = new GitHubError.StackNotRebased(1234, "feature", StackRefusal.CHANGES);
+
+        assertEquals(
+                "Stack #1234 is not rebased: the worktree has changes; commit or stash them first",
+                ErrorText.of(refused));
     }
 
     @Test

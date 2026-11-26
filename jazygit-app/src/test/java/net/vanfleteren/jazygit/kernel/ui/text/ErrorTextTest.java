@@ -103,15 +103,6 @@ class ErrorTextTest {
     }
 
     @Test
-    void theNumberOfAStackIsNotGrouped() {
-        var refused = new BranchError.StackNotRebased(1234, "feature", BranchError.StackRefusal.CHANGES);
-
-        assertEquals(
-                "Stack #1234 is not rebased: the worktree has changes; commit or stash them first",
-                ErrorText.of(refused));
-    }
-
-    @Test
     void verbatimTextIsAnArgumentNotAPattern() {
         assertEquals(
                 "Moving commits to it's {0} failed: x",

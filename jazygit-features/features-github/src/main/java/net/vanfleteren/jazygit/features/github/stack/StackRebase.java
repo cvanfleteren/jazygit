@@ -15,8 +15,8 @@ import net.vanfleteren.jazygit.core.repo.RemoteName;
 import net.vanfleteren.jazygit.core.repo.RemoteRef;
 import net.vanfleteren.jazygit.core.repo.Revision;
 import net.vanfleteren.jazygit.core.repo.StackLayer;
-import net.vanfleteren.jazygit.features.branches.branch.BranchError;
-import net.vanfleteren.jazygit.features.branches.branch.BranchError.StackRefusal;
+import net.vanfleteren.jazygit.features.github.GitHubError;
+import net.vanfleteren.jazygit.features.github.GitHubError.StackRefusal;
 import net.vanfleteren.jazygit.features.github.state.FromGitHub;
 import net.vanfleteren.jazygit.kernel.state.AppError;
 import net.vanfleteren.jazygit.kernel.state.Model;
@@ -160,6 +160,6 @@ public record StackRebase(
     }
 
     private static <T> Either<AppError, T> refused(PullRequestStack stack, StackPush.Refused why) {
-        return Either.left(new BranchError.StackNotRebased(stack.number(), why.branch(), why.why()));
+        return Either.left(new GitHubError.StackNotRebased(stack.number(), why.branch(), why.why()));
     }
 }

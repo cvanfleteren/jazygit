@@ -7,7 +7,6 @@ import net.vanfleteren.jazygit.core.gh.model.PullRequestSummary;
 import net.vanfleteren.jazygit.core.git.model.ChangeType;
 import net.vanfleteren.jazygit.core.repo.Branch;
 import net.vanfleteren.jazygit.core.repo.BranchName;
-import net.vanfleteren.jazygit.features.branches.branch.BranchError;
 import net.vanfleteren.jazygit.features.branches.branch.checkout.CheckoutUpdate;
 import net.vanfleteren.jazygit.features.branches.branch.checkout.SwitchWorktreePopup;
 import net.vanfleteren.jazygit.features.branches.worktree.add.AddWorktreeUpdate;
@@ -134,7 +133,7 @@ public final class CheckoutPullRequestUpdate {
                         unknown -> Option.of(new Readiness.Blocked(unknown)),
                         ofThis -> Option.when(
                                 !ofThis,
-                                () -> new Readiness.Blocked(new BranchError.OtherRepository(name(pullRequest)))));
+                                () -> new Readiness.Blocked(new GitHubError.OtherRepository(name(pullRequest)))));
     }
 
     /**

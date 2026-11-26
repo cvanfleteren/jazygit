@@ -32,8 +32,8 @@ import net.vanfleteren.jazygit.core.repo.RemoteRef;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.core.repo.Tracking;
 import net.vanfleteren.jazygit.core.repo.Upstream;
-import net.vanfleteren.jazygit.features.branches.branch.BranchError;
 import net.vanfleteren.jazygit.features.branches.branch.checkout.CheckoutCmd;
+import net.vanfleteren.jazygit.features.github.GitHubError;
 import net.vanfleteren.jazygit.features.github.stack.StackCheckout.Kind;
 import net.vanfleteren.jazygit.features.github.stack.StackCheckout.Landing;
 import net.vanfleteren.jazygit.features.github.stack.StackCheckout.Status;
@@ -476,7 +476,7 @@ class CheckOutStackTest {
 
         assertTrue(other.popup(StackPopups.Menu.class).isEmpty());
         assertInstanceOf(
-                BranchError.OtherRepository.class, other.outcome().error().get());
+                GitHubError.OtherRepository.class, other.outcome().error().get());
         assertTrue(unstacked.popup().isEmpty());
     }
 
