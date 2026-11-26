@@ -8,6 +8,7 @@ import net.vanfleteren.jazygit.core.gh.model.*;
 import net.vanfleteren.jazygit.core.gh.process.GhError;
 import net.vanfleteren.jazygit.core.gh.process.GhFailure;
 import net.vanfleteren.jazygit.core.process.ExecutedCommand;
+import net.vanfleteren.jazygit.core.repo.ForgeBranch;
 import net.vanfleteren.jazygit.core.repo.Sha;
 
 /**
@@ -76,7 +77,7 @@ public interface StubChecks extends Checks {
      * A repository that protects no branch.
      */
     @Override
-    default Either<GhError, List<GhBranch>> protectedBranches() {
+    default Either<GhError, List<ForgeBranch>> protectedBranches() {
         return Either.right(List.empty());
     }
 

@@ -7,6 +7,7 @@ import net.vanfleteren.jazygit.core.gh.model.*;
 import net.vanfleteren.jazygit.core.gh.process.GhError;
 import net.vanfleteren.jazygit.core.gh.process.GhFailure;
 import net.vanfleteren.jazygit.core.process.ExecutedCommand;
+import net.vanfleteren.jazygit.core.repo.ForgeBranch;
 import net.vanfleteren.jazygit.core.repo.PrNumber;
 
 /**
@@ -59,7 +60,7 @@ public interface StubAccount extends Account {
     }
 
     @Override
-    default Either<GhFailure, List<ExecutedCommand>> browse(GhBranch branch) {
+    default Either<GhFailure, List<ExecutedCommand>> browse(ForgeBranch branch) {
         return Either.right(List.of(ExecutedCommand.of("gh", "browse", "--branch", branch.name())));
     }
 }

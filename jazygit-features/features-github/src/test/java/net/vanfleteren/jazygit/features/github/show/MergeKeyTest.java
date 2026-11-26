@@ -5,7 +5,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.time.Instant;
-import net.vanfleteren.jazygit.core.gh.model.GhBranch;
 import net.vanfleteren.jazygit.core.gh.model.MergeMethod;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest.Review;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestDetails;
@@ -14,6 +13,7 @@ import net.vanfleteren.jazygit.core.gh.model.PullRequestDetails.MergeState;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestDetails.Merging;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestStack;
 import net.vanfleteren.jazygit.core.gh.model.StackId;
+import net.vanfleteren.jazygit.core.repo.ForgeBranch;
 import net.vanfleteren.jazygit.core.repo.PrNumber;
 import org.junit.jupiter.api.Test;
 
@@ -29,7 +29,7 @@ class MergeKeyTest {
             "Ready",
             "cvf",
             new PullRequestDetails.Status(PullRequestDetails.State.OPEN, false, PullRequestDetails.Mergeable.MERGEABLE),
-            new PullRequestDetails.Branches(new GhBranch("feature"), new GhBranch("main")),
+            new PullRequestDetails.Branches(new ForgeBranch("feature"), new ForgeBranch("main")),
             new PullRequestDetails.Activity(Instant.EPOCH, Instant.EPOCH),
             new PullRequestDetails.Size(1, 1, 1, 1),
             new PullRequestDetails.Conversation(

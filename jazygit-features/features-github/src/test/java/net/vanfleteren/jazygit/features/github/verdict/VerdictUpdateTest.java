@@ -13,7 +13,6 @@ import io.vavr.control.Either;
 import io.vavr.control.Option;
 import java.time.Instant;
 import net.vanfleteren.jazygit.core.gh.StubGitHub;
-import net.vanfleteren.jazygit.core.gh.model.GhBranch;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest.Review;
@@ -26,6 +25,7 @@ import net.vanfleteren.jazygit.core.gh.model.ReviewRemarks;
 import net.vanfleteren.jazygit.core.gh.model.Verdict;
 import net.vanfleteren.jazygit.core.process.ExecutedCommand;
 import net.vanfleteren.jazygit.core.repo.BranchName;
+import net.vanfleteren.jazygit.core.repo.ForgeBranch;
 import net.vanfleteren.jazygit.core.repo.PrNumber;
 import net.vanfleteren.jazygit.core.repo.PullRequestCommits;
 import net.vanfleteren.jazygit.core.repo.Sha;
@@ -57,7 +57,7 @@ class VerdictUpdateTest {
 
     private static final BranchName FEATURE = new BranchName("feature");
     private static final PullRequest FEATURE_PR =
-            new PullRequest(new PrNumber(42), new GhBranch("feature"), false, Checks.PASSING, Review.APPROVED);
+            new PullRequest(new PrNumber(42), new ForgeBranch("feature"), false, Checks.PASSING, Review.APPROVED);
     private static final Reviewing BY_A_REVIEWER = new Reviewing("PR_42", false, false);
     private static final ExecutedCommand GH = ExecutedCommand.of("gh", "api", "graphql");
 

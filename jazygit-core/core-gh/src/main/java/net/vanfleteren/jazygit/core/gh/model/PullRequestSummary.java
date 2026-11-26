@@ -4,6 +4,7 @@ import io.vavr.control.Option;
 import java.time.Instant;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest.Review;
+import net.vanfleteren.jazygit.core.repo.ForgeBranch;
 import net.vanfleteren.jazygit.core.repo.PrNumber;
 import net.vanfleteren.jazygit.core.repo.Sha;
 
@@ -32,7 +33,7 @@ public record PullRequestSummary(
         PrNumber number,
         String title,
         String author,
-        GhBranch headBranch,
+        ForgeBranch headBranch,
         boolean draft,
         boolean fromFork,
         Checks checks,
@@ -42,7 +43,7 @@ public record PullRequestSummary(
         Option<PullRequestStack> stack,
         Option<Sha> baseCommit,
         Option<Sha> headCommit,
-        Option<GhBranch> baseBranch,
+        Option<ForgeBranch> baseBranch,
         Option<String> headRepository) {
 
     /**
@@ -53,7 +54,7 @@ public record PullRequestSummary(
             PrNumber number,
             String title,
             String author,
-            GhBranch headBranch,
+            ForgeBranch headBranch,
             boolean draft,
             boolean fromFork,
             Checks checks,
@@ -63,7 +64,7 @@ public record PullRequestSummary(
             Option<PullRequestStack> stack,
             Option<Sha> baseCommit,
             Option<Sha> headCommit,
-            Option<GhBranch> baseBranch) {
+            Option<ForgeBranch> baseBranch) {
         this(
                 repository,
                 number,
@@ -91,7 +92,7 @@ public record PullRequestSummary(
             PrNumber number,
             String title,
             String author,
-            GhBranch headBranch,
+            ForgeBranch headBranch,
             boolean draft,
             boolean fromFork,
             Checks checks,
@@ -127,7 +128,7 @@ public record PullRequestSummary(
             PrNumber number,
             String title,
             String author,
-            GhBranch headBranch,
+            ForgeBranch headBranch,
             boolean draft,
             boolean fromFork,
             Checks checks,
@@ -160,7 +161,7 @@ public record PullRequestSummary(
             PrNumber number,
             String title,
             String author,
-            GhBranch headBranch,
+            ForgeBranch headBranch,
             boolean draft,
             boolean fromFork,
             Checks checks,

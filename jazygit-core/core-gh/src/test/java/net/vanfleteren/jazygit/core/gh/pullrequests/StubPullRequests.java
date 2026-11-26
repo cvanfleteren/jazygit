@@ -14,6 +14,7 @@ import net.vanfleteren.jazygit.core.gh.model.PullRequestDetails.Status;
 import net.vanfleteren.jazygit.core.gh.process.GhError;
 import net.vanfleteren.jazygit.core.gh.process.GhFailure;
 import net.vanfleteren.jazygit.core.process.ExecutedCommand;
+import net.vanfleteren.jazygit.core.repo.ForgeBranch;
 import net.vanfleteren.jazygit.core.repo.PrNumber;
 import net.vanfleteren.jazygit.core.repo.Sha;
 
@@ -41,7 +42,7 @@ public interface StubPullRequests extends PullRequests {
      */
     @Override
     default Either<GhError, PullRequestPreview> preview(String url) {
-        return Either.right(new PullRequestPreview(new GhBranch("main"), "", "", false));
+        return Either.right(new PullRequestPreview(new ForgeBranch("main"), "", "", false));
     }
 
     /**
@@ -54,7 +55,7 @@ public interface StubPullRequests extends PullRequests {
                 "A pull request",
                 "someone",
                 new Status(PullRequestDetails.State.OPEN, false, PullRequestDetails.Mergeable.UNKNOWN),
-                new Branches(new GhBranch("feature"), new GhBranch("main")),
+                new Branches(new ForgeBranch("feature"), new ForgeBranch("main")),
                 new Activity(Instant.EPOCH, Instant.EPOCH),
                 new Size(0, 0, 0, 1),
                 new Conversation(
@@ -71,7 +72,7 @@ public interface StubPullRequests extends PullRequests {
     }
 
     @Override
-    default Either<GhFailure, Created> create(GhBranch head, GhBranch base, NewPullRequest pullRequest) {
+    default Either<GhFailure, Created> create(ForgeBranch head, ForgeBranch base, NewPullRequest pullRequest) {
         return Either.right(new Created(
                 Option.none(),
                 List.of(CliPullRequests.createCommand(head, base, pullRequest).executed())));

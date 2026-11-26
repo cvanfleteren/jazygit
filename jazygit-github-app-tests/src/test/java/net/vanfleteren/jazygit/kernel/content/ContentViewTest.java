@@ -5,7 +5,6 @@ import static org.junit.jupiter.api.Assertions.*;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.time.Instant;
-import net.vanfleteren.jazygit.core.gh.model.GhBranch;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestPreview;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestSummary;
@@ -13,6 +12,7 @@ import net.vanfleteren.jazygit.core.git.model.*;
 import net.vanfleteren.jazygit.core.git.model.SampleData;
 import net.vanfleteren.jazygit.core.repo.*;
 import net.vanfleteren.jazygit.core.repo.BranchName;
+import net.vanfleteren.jazygit.core.repo.ForgeBranch;
 import net.vanfleteren.jazygit.core.repo.PrNumber;
 import net.vanfleteren.jazygit.core.repo.RemoteBranch;
 import net.vanfleteren.jazygit.features.branches.branch.commits.BranchCommitsMsg;
@@ -50,7 +50,7 @@ class ContentViewTest {
             new PrNumber(42),
             "Fix the login",
             "alice",
-            new GhBranch("fix/login"),
+            new ForgeBranch("fix/login"),
             false,
             false,
             PullRequest.Checks.NONE,
@@ -59,7 +59,7 @@ class ContentViewTest {
             "https://github.com/owner/repo/pull/42");
 
     private static final PullRequestPreview READ =
-            new PullRequestPreview(new GhBranch("main"), "Why", "+fixed\n", false);
+            new PullRequestPreview(new ForgeBranch("main"), "Why", "+fixed\n", false);
 
     private static Shown dim(String title, String text) {
         return new Shown.Message(title, text, Tone.DIM);

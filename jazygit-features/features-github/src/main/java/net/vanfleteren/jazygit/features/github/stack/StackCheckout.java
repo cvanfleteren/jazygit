@@ -2,7 +2,6 @@ package net.vanfleteren.jazygit.features.github.stack;
 
 import io.vavr.collection.List;
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.core.gh.model.GhBranch;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestDetails.State;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestStack;
 import net.vanfleteren.jazygit.core.gh.model.StackId;
@@ -10,6 +9,7 @@ import net.vanfleteren.jazygit.core.repo.AllBranches;
 import net.vanfleteren.jazygit.core.repo.Branch;
 import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.CaughtUpBranch;
+import net.vanfleteren.jazygit.core.repo.ForgeBranch;
 import net.vanfleteren.jazygit.core.repo.PrNumber;
 import net.vanfleteren.jazygit.core.repo.RemoteBranch;
 import net.vanfleteren.jazygit.core.repo.RemoteName;
@@ -90,7 +90,7 @@ public record StackCheckout(StackId stack, List<Line> lines, List<PrNumber> skip
                 on);
     }
 
-    private static Line line(PullRequestStack.Entry entry, GhBranch head, RemoteName remote, AllBranches read) {
+    private static Line line(PullRequestStack.Entry entry, ForgeBranch head, RemoteName remote, AllBranches read) {
         BranchName name = FromGitHub.branch(head);
         RemoteBranch upstream = new RemoteBranch(remote, name);
         Option<BranchName> parent = entry.baseBranch().map(FromGitHub::branch);

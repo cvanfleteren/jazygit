@@ -12,13 +12,13 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import net.vanfleteren.jazygit.core.gh.CliGitHub;
 import net.vanfleteren.jazygit.core.gh.model.GhAccount;
-import net.vanfleteren.jazygit.core.gh.model.GhBranch;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestLink;
 import net.vanfleteren.jazygit.core.gh.model.ReviewThread;
 import net.vanfleteren.jazygit.core.gh.process.GhError;
 import net.vanfleteren.jazygit.core.gh.process.GhFailure;
 import net.vanfleteren.jazygit.core.gh.process.GhToken;
 import net.vanfleteren.jazygit.core.process.ExecutedCommand;
+import net.vanfleteren.jazygit.core.repo.ForgeBranch;
 import net.vanfleteren.jazygit.core.repo.PrNumber;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.DisabledOnOs;
@@ -123,7 +123,7 @@ class AccountBrowserTest {
 
         assertTrue(github.openPullRequest(new PrNumber(7)).isRight());
         assertEquals("firefox -P work\n", Files.readString(dir.resolve("browser")));
-        assertTrue(github.browse(new GhBranch("feature")).isRight());
+        assertTrue(github.browse(new ForgeBranch("feature")).isRight());
         assertEquals("firefox -P work\n", Files.readString(dir.resolve("browser")));
     }
 

@@ -13,12 +13,12 @@ import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.core.gh.model.BranchCheckRuns;
-import net.vanfleteren.jazygit.core.gh.model.GhBranch;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestDetails.Check;
 import net.vanfleteren.jazygit.core.gh.process.GhError;
 import net.vanfleteren.jazygit.core.gh.process.GhProcess;
 import net.vanfleteren.jazygit.core.gh.timing.CheckSample;
+import net.vanfleteren.jazygit.core.repo.ForgeBranch;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -47,9 +47,9 @@ class BranchCheckRunsQueryTest {
         assertEquals("cvanfleteren/jazygit", runs.repository());
         assertEquals(
                 HashMap.of(
-                        new GhBranch("main"),
+                        new ForgeBranch("main"),
                         List.of(VERIFY, WAITING),
-                        new GhBranch("feat/x"),
+                        new ForgeBranch("feat/x"),
                         List.of(new Check("ci/status", Checks.PASSING))),
                 runs.byBranch());
     }
@@ -60,7 +60,7 @@ class BranchCheckRunsQueryTest {
                         "b0": { "name": "main", "target": { "__typename": "Commit", "statusCheckRollup": null, %s } }""".formatted(WAITING_SUITES))
                 .get()
                 .byBranch()
-                .get(new GhBranch("main"))
+                .get(new ForgeBranch("main"))
                 .get()
                 .head();
 

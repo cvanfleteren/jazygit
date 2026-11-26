@@ -7,6 +7,7 @@ import net.vanfleteren.jazygit.core.gh.model.*;
 import net.vanfleteren.jazygit.core.gh.process.GhError;
 import net.vanfleteren.jazygit.core.gh.process.GhFailure;
 import net.vanfleteren.jazygit.core.process.ExecutedCommand;
+import net.vanfleteren.jazygit.core.repo.ForgeBranch;
 import net.vanfleteren.jazygit.core.repo.Sha;
 
 /**
@@ -59,7 +60,7 @@ public interface Checks {
     /**
      * The names of the protected branches of the repository (ADR 72).
      */
-    Either<GhError, List<GhBranch>> protectedBranches();
+    Either<GhError, List<ForgeBranch>> protectedBranches();
 
     /**
      * Runs the failed jobs of the workflow run {@code runId} of the repository again, and the jobs that need them

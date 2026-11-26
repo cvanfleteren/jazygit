@@ -12,7 +12,6 @@ import io.vavr.control.Option;
 import java.nio.file.Path;
 import java.time.Instant;
 import net.vanfleteren.jazygit.core.gh.StubGitHub;
-import net.vanfleteren.jazygit.core.gh.model.GhBranch;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest.Review;
@@ -33,6 +32,7 @@ import net.vanfleteren.jazygit.core.repo.Branch;
 import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.BranchRef;
 import net.vanfleteren.jazygit.core.repo.CommitMessage;
+import net.vanfleteren.jazygit.core.repo.ForgeBranch;
 import net.vanfleteren.jazygit.core.repo.PrNumber;
 import net.vanfleteren.jazygit.core.repo.RemoteBranch;
 import net.vanfleteren.jazygit.core.repo.RemoteName;
@@ -81,13 +81,13 @@ class RebaseStackTest {
     }
 
     private static final List<Entry> ENTRIES = List.of(
-            new Entry(1, new PrNumber(98), State.OPEN, new GhBranch("feat/c"), new GhBranch("main")),
-            new Entry(2, new PrNumber(99), State.OPEN, new GhBranch("feat/d"), new GhBranch("feat/c")));
+            new Entry(1, new PrNumber(98), State.OPEN, new ForgeBranch("feat/c"), new ForgeBranch("main")),
+            new Entry(2, new PrNumber(99), State.OPEN, new ForgeBranch("feat/d"), new ForgeBranch("feat/c")));
 
     private static PullRequest pr(int number, String head, List<Entry> entries, int position) {
         return new PullRequest(
                 new PrNumber(number),
-                new GhBranch(head),
+                new ForgeBranch(head),
                 Option.none(),
                 false,
                 Checks.NONE,
@@ -164,8 +164,8 @@ class RebaseStackTest {
                         2,
                         new PrNumber(99),
                         State.OPEN,
-                        new GhBranch("feat/d"),
-                        new GhBranch("feat/c"),
+                        new ForgeBranch("feat/d"),
+                        new ForgeBranch("feat/c"),
                         Option.none(),
                         true));
 
@@ -264,7 +264,7 @@ class RebaseStackTest {
     @Test
     void anOpenPullRequestWithoutALocalBranchCannotBeMoved() {
         List<Entry> three = ENTRIES.append(
-                new Entry(3, new PrNumber(100), State.OPEN, new GhBranch("feat/e"), new GhBranch("feat/d")));
+                new Entry(3, new PrNumber(100), State.OPEN, new ForgeBranch("feat/e"), new ForgeBranch("feat/d")));
 
         assertEquals(Option.of(StackRefusal.NOT_CHECKED_OUT), refusal(model(LOCAL, three), three));
     }
@@ -283,12 +283,12 @@ class RebaseStackTest {
                         1,
                         new PrNumber(97),
                         State.MERGED,
-                        new GhBranch("feat/b"),
-                        new GhBranch("main"),
+                        new ForgeBranch("feat/b"),
+                        new ForgeBranch("main"),
                         Option.of(new Sha("b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0")),
                         false),
-                new Entry(2, new PrNumber(98), State.OPEN, new GhBranch("feat/c"), new GhBranch("feat/b")),
-                new Entry(3, new PrNumber(99), State.OPEN, new GhBranch("feat/d"), new GhBranch("feat/c")));
+                new Entry(2, new PrNumber(98), State.OPEN, new ForgeBranch("feat/c"), new ForgeBranch("feat/b")),
+                new Entry(3, new PrNumber(99), State.OPEN, new ForgeBranch("feat/d"), new ForgeBranch("feat/c")));
 
         assertEquals(
                 new StackLayer(C, List.of(new Revision.Commit(new Sha("b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0")))),
@@ -305,12 +305,12 @@ class RebaseStackTest {
                         1,
                         new PrNumber(97),
                         State.MERGED,
-                        new GhBranch("feat/b"),
-                        new GhBranch("main"),
+                        new ForgeBranch("feat/b"),
+                        new ForgeBranch("main"),
                         Option.of(new Sha("b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0")),
                         false),
-                new Entry(2, new PrNumber(98), State.OPEN, new GhBranch("feat/c"), new GhBranch("feat/b")),
-                new Entry(3, new PrNumber(99), State.OPEN, new GhBranch("feat/d"), new GhBranch("feat/c")));
+                new Entry(2, new PrNumber(98), State.OPEN, new ForgeBranch("feat/c"), new ForgeBranch("feat/b")),
+                new Entry(3, new PrNumber(99), State.OPEN, new ForgeBranch("feat/d"), new ForgeBranch("feat/c")));
         Model known = TestModels.remoteBranchesRead(
                         model(LOCAL.append(branch(b, new Sha("b1b1"))), merged),
                         List.of(
@@ -405,9 +405,9 @@ class RebaseStackTest {
     @Test
     void aMergedBottomNobodyKnowsWhereItWasRefuses() {
         List<Entry> merged = List.of(
-                new Entry(1, new PrNumber(97), State.MERGED, new GhBranch("feat/b"), new GhBranch("main")),
-                new Entry(2, new PrNumber(98), State.OPEN, new GhBranch("feat/c"), new GhBranch("feat/b")),
-                new Entry(3, new PrNumber(99), State.OPEN, new GhBranch("feat/d"), new GhBranch("feat/c")));
+                new Entry(1, new PrNumber(97), State.MERGED, new ForgeBranch("feat/b"), new ForgeBranch("main")),
+                new Entry(2, new PrNumber(98), State.OPEN, new ForgeBranch("feat/c"), new ForgeBranch("feat/b")),
+                new Entry(3, new PrNumber(99), State.OPEN, new ForgeBranch("feat/d"), new ForgeBranch("feat/c")));
 
         assertEquals(Option.of(StackRefusal.MERGED_UNKNOWN), refusal(model(LOCAL, merged), merged));
     }
@@ -477,7 +477,7 @@ class RebaseStackTest {
                         1,
                         new PrNumber(98),
                         State.OPEN,
-                        Option.of(new GhBranch("feat/c")),
+                        Option.of(new ForgeBranch("feat/c")),
                         Option.none(),
                         Option.none(),
                         false,
@@ -494,8 +494,8 @@ class RebaseStackTest {
     @Test
     void aStackWithNothingOpenIsNotRebased() {
         List<Entry> closed = List.of(
-                new Entry(1, new PrNumber(98), State.MERGED, new GhBranch("feat/c"), new GhBranch("main")),
-                new Entry(2, new PrNumber(99), State.CLOSED, new GhBranch("feat/d"), new GhBranch("feat/c")));
+                new Entry(1, new PrNumber(98), State.MERGED, new ForgeBranch("feat/c"), new ForgeBranch("main")),
+                new Entry(2, new PrNumber(99), State.CLOSED, new ForgeBranch("feat/d"), new ForgeBranch("feat/c")));
 
         assertEquals(Option.of(StackRefusal.NOTHING_OPEN), refusal(model(LOCAL, closed), closed));
         assertEquals(
@@ -511,8 +511,8 @@ class RebaseStackTest {
                         2,
                         new PrNumber(99),
                         State.OPEN,
-                        new GhBranch("feat/d"),
-                        new GhBranch("feat/c"),
+                        new ForgeBranch("feat/d"),
+                        new ForgeBranch("feat/c"),
                         Option.none(),
                         true));
         Model menu = Update.update(
@@ -617,7 +617,7 @@ class RebaseStackTest {
     @Test
     void pushingAStackWithAPullRequestNotCheckedOutSaysSo() {
         List<Entry> three = ENTRIES.append(
-                new Entry(3, new PrNumber(100), State.OPEN, new GhBranch("feat/e"), new GhBranch("feat/d")));
+                new Entry(3, new PrNumber(100), State.OPEN, new ForgeBranch("feat/e"), new ForgeBranch("feat/d")));
         Model menu = Update.update(
                         model(LOCAL, three), new StackMsg.MenuRequested(Option.none(), Option.of(new StackId(12))))
                 .model();

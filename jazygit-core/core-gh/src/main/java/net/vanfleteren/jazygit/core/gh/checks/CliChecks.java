@@ -14,6 +14,7 @@ import net.vanfleteren.jazygit.core.gh.process.GhError;
 import net.vanfleteren.jazygit.core.gh.process.GhFailure;
 import net.vanfleteren.jazygit.core.gh.process.GhProcess;
 import net.vanfleteren.jazygit.core.process.ExecutedCommand;
+import net.vanfleteren.jazygit.core.repo.ForgeBranch;
 import net.vanfleteren.jazygit.core.repo.Sha;
 
 /**
@@ -69,7 +70,7 @@ public final class CliChecks implements Checks {
     }
 
     @Override
-    public Either<GhError, List<GhBranch>> protectedBranches() {
+    public Either<GhError, List<ForgeBranch>> protectedBranches() {
         return process.readJson(ProtectedBranchesQuery.COMMAND, ProtectedBranchesQuery.DECODER);
     }
 

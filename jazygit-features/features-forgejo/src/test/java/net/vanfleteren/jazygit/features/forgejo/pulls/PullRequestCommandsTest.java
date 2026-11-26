@@ -15,6 +15,7 @@ import net.vanfleteren.jazygit.core.forgejo.ForgejoBranchRules;
 import net.vanfleteren.jazygit.core.forgejo.ForgejoError;
 import net.vanfleteren.jazygit.core.forgejo.ForgejoPullRequest;
 import net.vanfleteren.jazygit.core.forgejo.ForgejoReview;
+import net.vanfleteren.jazygit.core.repo.ForgeBranch;
 import net.vanfleteren.jazygit.core.repo.PrNumber;
 import net.vanfleteren.jazygit.core.repo.RemoteName;
 import net.vanfleteren.jazygit.features.forgejo.ForgejoFailure;
@@ -34,7 +35,13 @@ class PullRequestCommandsTest {
     @Test
     void theOpenPullRequestsOfTheHomeAreKnownByTheBranchTheyMergeThoseOfOthersForksLeftOut() {
         ForgejoPullRequest fromFork = new ForgejoPullRequest(
-                new PrNumber(13), "From a fork", "feature", Option.of("someone/nix"), "main", false, "https://x/13");
+                new PrNumber(13),
+                "From a fork",
+                new ForgeBranch("feature"),
+                Option.of("someone/nix"),
+                new ForgeBranch("main"),
+                false,
+                "https://x/13");
         FakeForgejo forgejo = FakeForgejo.of(details("Show")).withOpen(Either.right(List.of(LISTED, fromFork)));
 
         assertEquals(
@@ -46,7 +53,13 @@ class PullRequestCommandsTest {
     void thoseOfTheProjectAForkWasMadeOfAreKnownByTheBranchOfTheForkTheyMerge() {
         // origin is Anna's fork, upstream the project: her pull request is the project's, its branch in her fork.
         ForgejoPullRequest fromAnna = new ForgejoPullRequest(
-                new PrNumber(14), "From Anna's fork", "feature", Option.of("Anna/Nix"), "main", false, "https://x/14");
+                new PrNumber(14),
+                "From Anna's fork",
+                new ForgeBranch("feature"),
+                Option.of("Anna/Nix"),
+                new ForgeBranch("main"),
+                false,
+                "https://x/14");
         FakeForgejo forgejo = FakeForgejo.of(details("Show")).withOpen(Either.right(List.of(fromAnna)));
 
         assertEquals(

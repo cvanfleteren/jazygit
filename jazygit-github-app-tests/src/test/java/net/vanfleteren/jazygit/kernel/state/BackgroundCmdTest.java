@@ -6,10 +6,10 @@ import io.vavr.collection.HashSet;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.time.Instant;
-import net.vanfleteren.jazygit.core.gh.model.GhBranch;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest.Review;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestSummary;
+import net.vanfleteren.jazygit.core.repo.ForgeBranch;
 import net.vanfleteren.jazygit.core.repo.PrNumber;
 import net.vanfleteren.jazygit.features.github.checks.timings.CheckTimesCmd;
 import net.vanfleteren.jazygit.features.github.checks.timings.LoadBranchCheckRuns;
@@ -31,7 +31,7 @@ class BackgroundCmdTest {
             new PrNumber(7),
             "Pull request 7",
             "alice",
-            new GhBranch("feature"),
+            new ForgeBranch("feature"),
             false,
             false,
             Checks.NONE,

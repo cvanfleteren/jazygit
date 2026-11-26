@@ -4,12 +4,12 @@ import io.vavr.Tuple;
 import io.vavr.Tuple2;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.core.gh.model.GhBranch;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestStack;
 import net.vanfleteren.jazygit.core.gh.model.StackId;
 import net.vanfleteren.jazygit.core.repo.Branch;
 import net.vanfleteren.jazygit.core.repo.BranchName;
+import net.vanfleteren.jazygit.core.repo.ForgeBranch;
 import net.vanfleteren.jazygit.core.repo.RemoteBranch;
 import net.vanfleteren.jazygit.core.repo.RemoteRef;
 import net.vanfleteren.jazygit.features.branches.panes.branches.BranchGroups;
@@ -79,7 +79,7 @@ public final class StackGroups {
                         Messages.get(
                                 "github.stacks.header",
                                 number.value(),
-                                stack.base().map(GhBranch::name).getOrElse("?")),
+                                stack.base().map(ForgeBranch::name).getOrElse("?")),
                         Theme.Classes.PULL_REQUEST)),
                 List.of(LoadableList.Seg.styled(
                                 " " + Messages.get("github.stacks.size", stack.size()), Theme.Classes.DIM))
@@ -118,7 +118,7 @@ public final class StackGroups {
     /**
      * The remote-tracking branch on GitHub of {@code head}, the branch a pull request merges from, if it was fetched.
      */
-    private static Option<RemoteBranch> fetched(Model model, GitHubState gitHub, GhBranch head) {
+    private static Option<RemoteBranch> fetched(Model model, GitHubState gitHub, ForgeBranch head) {
         return model.repo()
                 .remoteBranches()
                 .toOption()

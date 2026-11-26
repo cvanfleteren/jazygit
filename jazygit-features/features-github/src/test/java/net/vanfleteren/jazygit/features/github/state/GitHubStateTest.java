@@ -7,7 +7,6 @@ import io.vavr.collection.List;
 import io.vavr.collection.Map;
 import io.vavr.control.Option;
 import java.time.Instant;
-import net.vanfleteren.jazygit.core.gh.model.GhBranch;
 import net.vanfleteren.jazygit.core.gh.model.MergeStatus;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest.Checks;
@@ -20,6 +19,7 @@ import net.vanfleteren.jazygit.core.gh.model.PullRequestDetails.Size;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestDetails.State;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestDetails.Status;
 import net.vanfleteren.jazygit.core.repo.BranchName;
+import net.vanfleteren.jazygit.core.repo.ForgeBranch;
 import net.vanfleteren.jazygit.core.repo.PrNumber;
 import net.vanfleteren.jazygit.kernel.state.Env;
 import net.vanfleteren.jazygit.kernel.state.Failure;
@@ -30,7 +30,7 @@ class GitHubStateTest {
 
     private static final BranchName FEATURE = new BranchName("feature");
     private static final PullRequest FEATURE_PR =
-            new PullRequest(new PrNumber(42), new GhBranch("feature"), false, Checks.PASSING, Review.APPROVED);
+            new PullRequest(new PrNumber(42), new ForgeBranch("feature"), false, Checks.PASSING, Review.APPROVED);
     private static final GitHubState LISTED =
             GitHubState.NOT_READ.withPullRequests(Option.of(HashMap.of(FEATURE, FEATURE_PR)));
 
@@ -40,7 +40,7 @@ class GitHubStateTest {
                 "A pull request",
                 "someone",
                 new Status(state, true, PullRequestDetails.Mergeable.UNKNOWN),
-                new Branches(new GhBranch(headBranch), new GhBranch("main")),
+                new Branches(new ForgeBranch(headBranch), new ForgeBranch("main")),
                 new Activity(Instant.EPOCH, Instant.EPOCH),
                 new Size(0, 0, 0, 1),
                 new Conversation(
@@ -55,8 +55,8 @@ class GitHubStateTest {
                         FEATURE,
                         new PullRequest(
                                 new PrNumber(42),
-                                new GhBranch("feature"),
-                                Option.of(new GhBranch("main")),
+                                new ForgeBranch("feature"),
+                                Option.of(new ForgeBranch("main")),
                                 true,
                                 Checks.FAILING,
                                 Review.CHANGES_REQUESTED,
@@ -99,7 +99,7 @@ class GitHubStateTest {
     }
 
     private static final PullRequest PENDING_PR =
-            new PullRequest(new PrNumber(42), new GhBranch("feature"), false, Checks.PENDING, Review.APPROVED);
+            new PullRequest(new PrNumber(42), new ForgeBranch("feature"), false, Checks.PENDING, Review.APPROVED);
     private static final MergeStatus.Failed CONFLICTS = new MergeStatus.Failed("conflicts");
 
     private static GitHubState failed(GitHubState state) {

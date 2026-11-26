@@ -19,6 +19,7 @@ import net.vanfleteren.jazygit.core.gh.process.SshHost;
 import net.vanfleteren.jazygit.core.process.Exec;
 import net.vanfleteren.jazygit.core.process.ExecFailure;
 import net.vanfleteren.jazygit.core.process.ExecutedCommand;
+import net.vanfleteren.jazygit.core.repo.ForgeBranch;
 import net.vanfleteren.jazygit.core.repo.PrNumber;
 
 /**
@@ -70,7 +71,7 @@ public final class CliAccount implements Account {
                 .toEither(() -> new UnexpectedOutput(raw));
     }
 
-    static GhCommand browseCommand(GhBranch branch) {
+    static GhCommand browseCommand(ForgeBranch branch) {
         return gh("browse", "--branch", branch.name());
     }
 
@@ -132,7 +133,7 @@ public final class CliAccount implements Account {
     }
 
     @Override
-    public Either<GhFailure, List<ExecutedCommand>> browse(GhBranch branch) {
+    public Either<GhFailure, List<ExecutedCommand>> browse(ForgeBranch branch) {
         return web(browseCommand(branch), accountBrowser());
     }
 

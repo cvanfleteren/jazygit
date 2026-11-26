@@ -8,7 +8,6 @@ import io.vavr.collection.List;
 import io.vavr.collection.Map;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.core.gh.model.GhBranch;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest.Review;
@@ -18,6 +17,7 @@ import net.vanfleteren.jazygit.core.gh.model.StackId;
 import net.vanfleteren.jazygit.core.git.model.Fixtures;
 import net.vanfleteren.jazygit.core.repo.Branch;
 import net.vanfleteren.jazygit.core.repo.BranchName;
+import net.vanfleteren.jazygit.core.repo.ForgeBranch;
 import net.vanfleteren.jazygit.core.repo.PrNumber;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.features.github.stack.StackChoice.BaseChange;
@@ -57,8 +57,8 @@ class StackChoiceTest {
     private static PullRequest pr(int number, String head, String base) {
         return new PullRequest(
                 new PrNumber(number),
-                new GhBranch(head),
-                Option.of(new GhBranch(base)),
+                new ForgeBranch(head),
+                Option.of(new ForgeBranch(base)),
                 false,
                 Checks.NONE,
                 Review.NONE,
@@ -112,7 +112,7 @@ class StackChoiceTest {
                                 OPEN.get(name("feat/a")).get(),
                                 OPEN.get(name("feat/b")).get()),
                         List.of(new BaseChange(
-                                new PrNumber(97), Option.of(new GhBranch("develop")), new GhBranch("feat/a"))))),
+                                new PrNumber(97), Option.of(new ForgeBranch("develop")), new ForgeBranch("feat/a"))))),
                 choice().plan(2, 0));
     }
 
@@ -150,11 +150,11 @@ class StackChoiceTest {
                 1,
                 1,
                 List.of(new PullRequestStack.Entry(
-                        1, new PrNumber(98), State.OPEN, new GhBranch("feat/c"), new GhBranch("feat/b"))));
+                        1, new PrNumber(98), State.OPEN, new ForgeBranch("feat/c"), new ForgeBranch("feat/b"))));
         PullRequest stacked = new PullRequest(
                 new PrNumber(98),
-                new GhBranch("feat/c"),
-                Option.of(new GhBranch("feat/b")),
+                new ForgeBranch("feat/c"),
+                Option.of(new ForgeBranch("feat/b")),
                 false,
                 Checks.NONE,
                 Review.NONE,

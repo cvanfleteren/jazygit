@@ -5,12 +5,12 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.core.gh.model.GhBranch;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestDetails.State;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestStack;
 import net.vanfleteren.jazygit.core.gh.model.StackId;
 import net.vanfleteren.jazygit.core.gh.process.GhError;
 import net.vanfleteren.jazygit.core.gh.process.GhProcess;
+import net.vanfleteren.jazygit.core.repo.ForgeBranch;
 import net.vanfleteren.jazygit.core.repo.PrNumber;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import org.junit.jupiter.api.Test;
@@ -57,12 +57,16 @@ class StackFragmentTest {
         assertEquals(
                 Option.of(List.of(
                         new PullRequestStack.Entry(
-                                1, new PrNumber(94), State.OPEN, new GhBranch("feat/a"), new GhBranch("main")),
+                                1, new PrNumber(94), State.OPEN, new ForgeBranch("feat/a"), new ForgeBranch("main")),
                         new PullRequestStack.Entry(
-                                2, new PrNumber(95), State.OPEN, new GhBranch("feat/b"), new GhBranch("feat/a")))),
+                                2,
+                                new PrNumber(95),
+                                State.OPEN,
+                                new ForgeBranch("feat/b"),
+                                new ForgeBranch("feat/a")))),
                 read.map(PullRequestStack::entries));
-        assertEquals(Option.of(Option.of(new GhBranch("feat/a"))), read.map(PullRequestStack::branchBelow));
-        assertEquals(Option.of(Option.of(new GhBranch("main"))), read.map(PullRequestStack::base));
+        assertEquals(Option.of(Option.of(new ForgeBranch("feat/a"))), read.map(PullRequestStack::branchBelow));
+        assertEquals(Option.of(Option.of(new ForgeBranch("main"))), read.map(PullRequestStack::base));
     }
 
     @Test
@@ -82,16 +86,16 @@ class StackFragmentTest {
                                 1,
                                 new PrNumber(94),
                                 State.MERGED,
-                                new GhBranch("feat/a"),
-                                new GhBranch("main"),
+                                new ForgeBranch("feat/a"),
+                                new ForgeBranch("main"),
                                 Option.of(new Sha("a".repeat(40))),
                                 false),
                         new PullRequestStack.Entry(
                                 2,
                                 new PrNumber(95),
                                 State.OPEN,
-                                new GhBranch("feat/b"),
-                                new GhBranch("feat/a"),
+                                new ForgeBranch("feat/b"),
+                                new ForgeBranch("feat/a"),
                                 Option.of(new Sha("b".repeat(40))),
                                 true))),
                 read.map(PullRequestStack::entries));
@@ -110,8 +114,8 @@ class StackFragmentTest {
                         1,
                         new PrNumber(94),
                         State.OPEN,
-                        Option.of(new GhBranch("feat/a")),
-                        Option.of(new GhBranch("main")),
+                        Option.of(new ForgeBranch("feat/a")),
+                        Option.of(new ForgeBranch("main")),
                         Option.of(new Sha("a".repeat(40))),
                         false,
                         true))),

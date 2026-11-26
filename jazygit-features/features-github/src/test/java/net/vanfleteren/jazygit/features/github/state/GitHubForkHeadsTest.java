@@ -9,7 +9,6 @@ import io.vavr.collection.HashSet;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.time.Instant;
-import net.vanfleteren.jazygit.core.gh.model.GhBranch;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest.Review;
@@ -19,6 +18,7 @@ import net.vanfleteren.jazygit.core.gh.model.RepositoryPullRequests;
 import net.vanfleteren.jazygit.core.repo.Branch;
 import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.BranchRef;
+import net.vanfleteren.jazygit.core.repo.ForgeBranch;
 import net.vanfleteren.jazygit.core.repo.PrNumber;
 import net.vanfleteren.jazygit.core.repo.RemoteBranch;
 import net.vanfleteren.jazygit.core.repo.RemoteName;
@@ -40,8 +40,8 @@ class GitHubForkHeadsTest {
     // Anna's pull request from her fork's main (origin) into the project's main (upstream).
     private static final PullRequest FROM_FORK = new PullRequest(
             new PrNumber(7),
-            new GhBranch("main"),
-            Option.of(new GhBranch("main")),
+            new ForgeBranch("main"),
+            Option.of(new ForgeBranch("main")),
             false,
             Checks.PASSING,
             Review.NONE,
@@ -100,7 +100,7 @@ class GitHubForkHeadsTest {
                 new PrNumber(8),
                 "Same repository",
                 "cvf",
-                new GhBranch("feature"),
+                new ForgeBranch("feature"),
                 false,
                 false,
                 Checks.PASSING,

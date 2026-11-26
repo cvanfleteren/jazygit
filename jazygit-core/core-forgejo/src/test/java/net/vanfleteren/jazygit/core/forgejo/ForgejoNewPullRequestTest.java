@@ -3,6 +3,7 @@ package net.vanfleteren.jazygit.core.forgejo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import io.vavr.control.Option;
+import net.vanfleteren.jazygit.core.repo.ForgeBranch;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -13,7 +14,7 @@ class ForgejoNewPullRequestTest {
     private static final ForgejoRepository HOME = new ForgejoRepository("https://code.example.net", "cvf", "nix");
 
     private static ForgejoNewPullRequest titled(String title, boolean draft) {
-        return new ForgejoNewPullRequest("feature", "main", title, "", draft);
+        return new ForgejoNewPullRequest("feature", new ForgeBranch("main"), title, "", draft);
     }
 
     @Test

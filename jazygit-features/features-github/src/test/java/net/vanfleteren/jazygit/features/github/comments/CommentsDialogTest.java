@@ -20,13 +20,13 @@ import java.time.ZoneOffset;
 import java.util.ArrayList;
 import net.vanfleteren.jazygit.core.gh.StubGitHub;
 import net.vanfleteren.jazygit.core.gh.model.CommentRights;
-import net.vanfleteren.jazygit.core.gh.model.GhBranch;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest.Review;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestComment;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestComment.Kind;
 import net.vanfleteren.jazygit.core.repo.BranchName;
+import net.vanfleteren.jazygit.core.repo.ForgeBranch;
 import net.vanfleteren.jazygit.core.repo.PrNumber;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.features.github.comment.CommentMsg;
@@ -49,7 +49,8 @@ class CommentsDialogTest {
 
     private static final PullRequestPopup SHOWN = PullRequestPopup.loading(
                     new BranchName("feature"),
-                    new PullRequest(new PrNumber(42), new GhBranch("feature"), false, Checks.PASSING, Review.APPROVED),
+                    new PullRequest(
+                            new PrNumber(42), new ForgeBranch("feature"), false, Checks.PASSING, Review.APPROVED),
                     Instant.EPOCH,
                     0)
             .with(
@@ -398,8 +399,8 @@ class CommentsDialogTest {
                 new BranchName("feature"),
                 new PullRequest(
                         new PrNumber(42),
-                        new GhBranch("feature"),
-                        Option.of(new GhBranch("main")),
+                        new ForgeBranch("feature"),
+                        Option.of(new ForgeBranch("main")),
                         false,
                         Checks.PASSING,
                         Review.APPROVED,

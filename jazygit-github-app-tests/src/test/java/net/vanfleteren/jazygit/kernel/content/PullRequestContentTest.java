@@ -10,12 +10,12 @@ import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.time.Instant;
 import java.util.stream.Collectors;
-import net.vanfleteren.jazygit.core.gh.model.GhBranch;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestPreview;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestSummary;
 import net.vanfleteren.jazygit.core.git.model.*;
 import net.vanfleteren.jazygit.core.repo.*;
+import net.vanfleteren.jazygit.core.repo.ForgeBranch;
 import net.vanfleteren.jazygit.core.repo.PrNumber;
 import net.vanfleteren.jazygit.features.changes.panes.files.FilesPanel;
 import net.vanfleteren.jazygit.features.github.prs.content.PullRequestBody;
@@ -394,7 +394,7 @@ public class PullRequestContentTest {
                 new PrNumber(12),
                 "Fix the login",
                 "alice",
-                new GhBranch("fix/login"),
+                new ForgeBranch("fix/login"),
                 false,
                 true,
                 PullRequest.Checks.NONE,
@@ -404,7 +404,7 @@ public class PullRequestContentTest {
 
         List<String> lines = PullRequestBody.text(
                         pr,
-                        new PullRequestPreview(new GhBranch("main"), "Why:\r\n\r\nit broke", "+fixed\n", false),
+                        new PullRequestPreview(new ForgeBranch("main"), "Why:\r\n\r\nit broke", "+fixed\n", false),
                         Theme.SpanStyles.NONE)
                 .lines()
                 .stream()

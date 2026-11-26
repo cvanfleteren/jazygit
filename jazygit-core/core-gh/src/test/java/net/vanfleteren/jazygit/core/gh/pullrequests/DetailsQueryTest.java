@@ -13,7 +13,6 @@ import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
 import java.time.Instant;
-import net.vanfleteren.jazygit.core.gh.model.GhBranch;
 import net.vanfleteren.jazygit.core.gh.model.MergeMethod;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest.Review;
@@ -37,6 +36,7 @@ import net.vanfleteren.jazygit.core.gh.model.PullRequestStack;
 import net.vanfleteren.jazygit.core.gh.model.StackId;
 import net.vanfleteren.jazygit.core.gh.process.GhError;
 import net.vanfleteren.jazygit.core.gh.process.GhProcess;
+import net.vanfleteren.jazygit.core.repo.ForgeBranch;
 import net.vanfleteren.jazygit.core.repo.PrNumber;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import org.junit.jupiter.api.Test;
@@ -129,7 +129,7 @@ class DetailsQueryTest {
                         "Add\trename",
                         "cvf",
                         new Status(State.OPEN, true, Mergeable.MERGEABLE),
-                        new Branches(new GhBranch("support_rename"), new GhBranch("main")),
+                        new Branches(new ForgeBranch("support_rename"), new ForgeBranch("main")),
                         new Activity(Instant.parse("2026-10-10T08:00:00Z"), Instant.parse("2026-10-12T09:00:00Z")),
                         new Size(120, 34, 7, 3),
                         new Conversation(
@@ -182,7 +182,7 @@ class DetailsQueryTest {
                         "Fix",
                         "",
                         new Status(State.MERGED, false, Mergeable.UNKNOWN),
-                        new Branches(new GhBranch("fix"), new GhBranch("main")),
+                        new Branches(new ForgeBranch("fix"), new ForgeBranch("main")),
                         new Activity(Instant.parse("2026-01-01T00:00:00Z"), Instant.parse("2026-01-01T00:00:00Z")),
                         new Size(1, 0, 1, 1),
                         new Conversation(Review.NONE, List.empty(), 0, ReviewThreads.NONE, List.empty()),
@@ -269,9 +269,9 @@ class DetailsQueryTest {
                 2,
                 List.of(
                         new PullRequestStack.Entry(
-                                1, new PrNumber(94), State.MERGED, new GhBranch("b94"), new GhBranch("main")),
+                                1, new PrNumber(94), State.MERGED, new ForgeBranch("b94"), new ForgeBranch("main")),
                         new PullRequestStack.Entry(
-                                2, new PrNumber(95), State.OPEN, new GhBranch("b95"), new GhBranch("b94"))));
+                                2, new PrNumber(95), State.OPEN, new ForgeBranch("b95"), new ForgeBranch("b94"))));
 
         assertEquals(
                 Option.of(new Sha("abc1230000000000000000000000000000000000")),

@@ -1,6 +1,7 @@
 package net.vanfleteren.jazygit.core.gh.model;
 
 import io.vavr.control.Option;
+import net.vanfleteren.jazygit.core.repo.ForgeBranch;
 
 /**
  * What an edit changes of a pull request: each of its title, its description and its base, only when it is given.
@@ -9,7 +10,7 @@ import io.vavr.control.Option;
  * @param body  its new description, which may be empty
  * @param base  the branch it merges into from now on
  */
-public record PullRequestEdit(Option<String> title, Option<String> body, Option<GhBranch> base) {
+public record PullRequestEdit(Option<String> title, Option<String> body, Option<ForgeBranch> base) {
 
     /**
      * Whether it changes anything.

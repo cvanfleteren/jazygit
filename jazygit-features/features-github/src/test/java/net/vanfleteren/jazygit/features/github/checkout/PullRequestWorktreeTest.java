@@ -11,7 +11,6 @@ import java.nio.file.Path;
 import java.time.Instant;
 import net.vanfleteren.jazygit.core.gh.GitHub;
 import net.vanfleteren.jazygit.core.gh.StubGitHub;
-import net.vanfleteren.jazygit.core.gh.model.GhBranch;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestSummary;
 import net.vanfleteren.jazygit.core.gh.process.GhError;
@@ -25,6 +24,7 @@ import net.vanfleteren.jazygit.core.git.process.GitFailure;
 import net.vanfleteren.jazygit.core.process.ExecutedCommand;
 import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.BranchRef;
+import net.vanfleteren.jazygit.core.repo.ForgeBranch;
 import net.vanfleteren.jazygit.core.repo.PrNumber;
 import net.vanfleteren.jazygit.core.repo.Revision;
 import net.vanfleteren.jazygit.features.branches.worktree.add.AddWorktreeCmd;
@@ -64,7 +64,7 @@ class PullRequestWorktreeTest {
                 new PrNumber(9),
                 "Title",
                 "bob",
-                new GhBranch("patch-1"),
+                new ForgeBranch("patch-1"),
                 false,
                 false,
                 PullRequest.Checks.NONE,
@@ -82,7 +82,7 @@ class PullRequestWorktreeTest {
                 new PrNumber(9),
                 "Title",
                 "bob",
-                new GhBranch("patch-1"),
+                new ForgeBranch("patch-1"),
                 false,
                 true,
                 PullRequest.Checks.NONE,

@@ -11,7 +11,6 @@ import io.vavr.collection.List;
 import io.vavr.collection.Map;
 import io.vavr.control.Option;
 import java.util.ArrayList;
-import net.vanfleteren.jazygit.core.gh.model.GhBranch;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest.Review;
@@ -21,6 +20,7 @@ import net.vanfleteren.jazygit.core.git.model.Fixtures;
 import net.vanfleteren.jazygit.core.repo.Branch;
 import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.BranchRef;
+import net.vanfleteren.jazygit.core.repo.ForgeBranch;
 import net.vanfleteren.jazygit.core.repo.PrNumber;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.kernel.state.Model;
@@ -46,8 +46,8 @@ class StackPickDialogTest {
     private static PullRequest pr(int number, String head, String base) {
         return new PullRequest(
                 new PrNumber(number),
-                new GhBranch(head),
-                Option.of(new GhBranch(base)),
+                new ForgeBranch(head),
+                Option.of(new ForgeBranch(base)),
                 false,
                 Checks.NONE,
                 Review.NONE,

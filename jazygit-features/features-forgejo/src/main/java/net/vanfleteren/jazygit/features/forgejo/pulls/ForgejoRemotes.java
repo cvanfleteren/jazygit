@@ -48,7 +48,8 @@ public record ForgejoRemotes(ForgejoRepository home, Map<RemoteName, ForgejoRepo
         return pullRequest
                 .headRepository()
                 .flatMap(full -> remotes.find(remote -> named(remote._2()).equals(full.toLowerCase(Locale.ROOT))))
-                .map(remote -> new RemoteBranch(remote._1(), new BranchName(pullRequest.head())));
+                .map(remote -> new RemoteBranch(
+                        remote._1(), new BranchName(pullRequest.head().name())));
     }
 
     private static String named(ForgejoRepository repository) {

@@ -7,12 +7,12 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.time.Instant;
-import net.vanfleteren.jazygit.core.gh.model.GhBranch;
 import net.vanfleteren.jazygit.core.gh.model.MergeStatus;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest.Review;
 import net.vanfleteren.jazygit.core.repo.BranchName;
+import net.vanfleteren.jazygit.core.repo.ForgeBranch;
 import net.vanfleteren.jazygit.core.repo.PrNumber;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import org.junit.jupiter.api.Test;
@@ -24,7 +24,7 @@ class PullRequestMergeTest {
     private static PullRequest at(String head, boolean draft) {
         return new PullRequest(
                 new PrNumber(42),
-                new GhBranch("feature"),
+                new ForgeBranch("feature"),
                 draft,
                 Checks.PENDING,
                 Review.APPROVED,
@@ -89,7 +89,7 @@ class PullRequestMergeTest {
     @Test
     void aPullRequestThatIsNotMergedByItIsNotLookedAt() {
         PullRequest other =
-                new PullRequest(new PrNumber(7), new GhBranch("other"), false, Checks.PENDING, Review.APPROVED);
+                new PullRequest(new PrNumber(7), new ForgeBranch("other"), false, Checks.PENDING, Review.APPROVED);
         PullRequestMerge failed = failedWhile(List.of(FEATURE_PR, other));
 
         assertFalse(failed.outdatedBy(List.of(FEATURE_PR), FAILED_AT));

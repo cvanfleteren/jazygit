@@ -8,7 +8,6 @@ import dev.tamboui.tui.event.MouseButton;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.time.Instant;
-import net.vanfleteren.jazygit.core.gh.model.GhBranch;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestPreview;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestSummary;
@@ -17,6 +16,7 @@ import net.vanfleteren.jazygit.core.git.model.*;
 import net.vanfleteren.jazygit.core.git.model.SampleData;
 import net.vanfleteren.jazygit.core.repo.*;
 import net.vanfleteren.jazygit.core.repo.BranchName;
+import net.vanfleteren.jazygit.core.repo.ForgeBranch;
 import net.vanfleteren.jazygit.core.repo.PrNumber;
 import net.vanfleteren.jazygit.core.repo.RemoteBranch;
 import net.vanfleteren.jazygit.features.branches.branch.commits.BranchCommitsMsg;
@@ -252,7 +252,7 @@ class ContentPanelTest {
                 new PrNumber(42),
                 "Fix the login",
                 "alice",
-                new GhBranch("fix/login"),
+                new ForgeBranch("fix/login"),
                 false,
                 false,
                 PullRequest.Checks.NONE,
@@ -268,7 +268,7 @@ class ContentPanelTest {
                                 .withPreview(Option.of(new Preview<>(
                                         pr,
                                         new Loadable.Loaded<>(new PullRequestPreview(
-                                                new GhBranch("main"), "Why", "+fixed\n", false))))));
+                                                new ForgeBranch("main"), "Why", "+fixed\n", false))))));
         PaneId first = PrOverview.SCREEN.first();
         PaneId second = PrScopes.REVIEW_REQUESTED.pane();
 

@@ -3,6 +3,7 @@ package net.vanfleteren.jazygit.core.gh.model;
 import io.vavr.collection.List;
 import io.vavr.collection.Map;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestDetails.Check;
+import net.vanfleteren.jazygit.core.repo.ForgeBranch;
 
 /**
  * The checks on the tips of some branches of a GitHub repository, one by one and with their timing (ADR 32).
@@ -10,4 +11,4 @@ import net.vanfleteren.jazygit.core.gh.model.PullRequestDetails.Check;
  * @param repository the repository, as {@code owner/name}
  * @param byBranch   the checks, by the name of the branch; a branch that is gone is left out
  */
-public record BranchCheckRuns(String repository, Map<GhBranch, List<Check>> byBranch) {}
+public record BranchCheckRuns(String repository, Map<ForgeBranch, List<Check>> byBranch) {}

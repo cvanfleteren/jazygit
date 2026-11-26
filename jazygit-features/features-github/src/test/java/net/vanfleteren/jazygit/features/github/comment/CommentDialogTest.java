@@ -15,11 +15,11 @@ import io.vavr.control.Option;
 import java.time.Instant;
 import java.util.ArrayList;
 import net.vanfleteren.jazygit.core.gh.StubGitHub;
-import net.vanfleteren.jazygit.core.gh.model.GhBranch;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest.Review;
 import net.vanfleteren.jazygit.core.repo.BranchName;
+import net.vanfleteren.jazygit.core.repo.ForgeBranch;
 import net.vanfleteren.jazygit.core.repo.PrNumber;
 import net.vanfleteren.jazygit.features.github.GitHubError;
 import net.vanfleteren.jazygit.features.github.compose.ComposeMsg;
@@ -40,7 +40,8 @@ class CommentDialogTest {
 
     private static final PullRequestPopup SHOWN = PullRequestPopup.loading(
                     new BranchName("feature"),
-                    new PullRequest(new PrNumber(42), new GhBranch("feature"), false, Checks.PASSING, Review.APPROVED),
+                    new PullRequest(
+                            new PrNumber(42), new ForgeBranch("feature"), false, Checks.PASSING, Review.APPROVED),
                     Instant.EPOCH,
                     0)
             .with(

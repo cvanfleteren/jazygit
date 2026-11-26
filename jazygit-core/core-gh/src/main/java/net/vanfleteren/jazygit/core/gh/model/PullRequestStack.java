@@ -3,6 +3,7 @@ package net.vanfleteren.jazygit.core.gh.model;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestDetails.State;
+import net.vanfleteren.jazygit.core.repo.ForgeBranch;
 import net.vanfleteren.jazygit.core.repo.PrNumber;
 import net.vanfleteren.jazygit.core.repo.Sha;
 
@@ -30,7 +31,7 @@ public record PullRequestStack(StackId number, int position, int size, List<Entr
      * bottom one, when the ones below are merged or closed, or when that one cannot be read. A stack keeps its merged
      * pull requests, but GitHub moves the base of the one above onto what they merged into.
      */
-    public Option<GhBranch> branchBelow() {
+    public Option<ForgeBranch> branchBelow() {
         return entries.filter(entry -> entry.position() < position && entry.state() == State.OPEN)
                 .maxBy(Entry::position)
                 .flatMap(Entry::headBranch);
@@ -39,7 +40,7 @@ public record PullRequestStack(StackId number, int position, int size, List<Entr
     /**
      * The branch the bottom pull request of the stack merges into, its base; none when it cannot be read.
      */
-    public Option<GhBranch> base() {
+    public Option<ForgeBranch> base() {
         return entries.minBy(Entry::position).flatMap(Entry::baseBranch);
     }
 
@@ -74,8 +75,8 @@ public record PullRequestStack(StackId number, int position, int size, List<Entr
             int position,
             PrNumber number,
             State state,
-            Option<GhBranch> headBranch,
-            Option<GhBranch> baseBranch,
+            Option<ForgeBranch> headBranch,
+            Option<ForgeBranch> baseBranch,
             Option<Sha> headOid,
             boolean queued,
             boolean fork) {
@@ -87,8 +88,8 @@ public record PullRequestStack(StackId number, int position, int size, List<Entr
                 int position,
                 PrNumber number,
                 State state,
-                GhBranch headBranch,
-                GhBranch baseBranch,
+                ForgeBranch headBranch,
+                ForgeBranch baseBranch,
                 Option<Sha> headOid,
                 boolean queued) {
             this(position, number, state, Option.of(headBranch), Option.of(baseBranch), headOid, queued, false);
@@ -97,7 +98,7 @@ public record PullRequestStack(StackId number, int position, int size, List<Entr
         /**
          * One whose head commit and queue are not known.
          */
-        public Entry(int position, PrNumber number, State state, GhBranch headBranch, GhBranch baseBranch) {
+        public Entry(int position, PrNumber number, State state, ForgeBranch headBranch, ForgeBranch baseBranch) {
             this(position, number, state, headBranch, baseBranch, Option.none(), false);
         }
 

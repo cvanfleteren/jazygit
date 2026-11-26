@@ -18,9 +18,9 @@ import io.vavr.control.Option;
 import net.vanfleteren.jazygit.core.gh.graphql.CheckFragment;
 import net.vanfleteren.jazygit.core.gh.graphql.SuiteFragment;
 import net.vanfleteren.jazygit.core.gh.model.BranchCheckRuns;
-import net.vanfleteren.jazygit.core.gh.model.GhBranch;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestDetails.Check;
 import net.vanfleteren.jazygit.core.gh.process.GhCommand;
+import net.vanfleteren.jazygit.core.repo.ForgeBranch;
 import net.vanfleteren.jazygit.lib.json.Decoder;
 
 /**
@@ -49,8 +49,8 @@ final class BranchCheckRunsQuery {
                             (checks, waiting) -> checks.getOrElse(List.empty()).appendAll(waiting))),
             succeed(List.empty()));
     // A branch by its name with its checks; none when it is gone.
-    private static final Decoder<Option<Tuple2<GhBranch, List<Check>>>> BRANCH =
-            nullable(map2(field("name", string()).map(GhBranch::new), field("target", TIP), Tuple::of));
+    private static final Decoder<Option<Tuple2<ForgeBranch, List<Check>>>> BRANCH =
+            nullable(map2(field("name", string()).map(ForgeBranch::new), field("target", TIP), Tuple::of));
 
     private BranchCheckRunsQuery() {}
 
@@ -81,7 +81,7 @@ final class BranchCheckRunsQuery {
      * there and has any.
      */
     static Decoder<BranchCheckRuns> decoder(int count) {
-        Decoder<List<Option<Tuple2<GhBranch, List<Check>>>>> branches = List.range(0, count)
+        Decoder<List<Option<Tuple2<ForgeBranch, List<Check>>>>> branches = List.range(0, count)
                 .foldLeft(succeed(List.empty()), (read, i) -> map2(read, field("b" + i, BRANCH), List::append));
         return at(
                 "data.repository",

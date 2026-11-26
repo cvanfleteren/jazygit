@@ -24,6 +24,7 @@ import net.vanfleteren.jazygit.core.forgejo.ForgejoPullRequestDetails.Conversati
 import net.vanfleteren.jazygit.core.forgejo.ForgejoPullRequestDetails.Size;
 import net.vanfleteren.jazygit.core.forgejo.ForgejoPullRequestDetails.State;
 import net.vanfleteren.jazygit.core.forgejo.ForgejoPullRequestDetails.Status;
+import net.vanfleteren.jazygit.core.repo.ForgeBranch;
 import net.vanfleteren.jazygit.core.repo.PrNumber;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.lib.json.Decoder;
@@ -45,10 +46,10 @@ final class PullRequestJson {
     private static final Decoder<ForgejoPullRequest> SUMMARY = map7(
             field("number", integer().map(PrNumber::new)),
             text("title"),
-            at("head", text("ref")),
+            at("head", text("ref")).map(ForgeBranch::new),
             field("head", optionalField("repo", optionalField("full_name", string())))
                     .map(repo -> repo.flatMap(name -> name)),
-            at("base", text("ref")),
+            at("base", text("ref")).map(ForgeBranch::new),
             flag("draft"),
             text("html_url"),
             ForgejoPullRequest::new);
@@ -64,8 +65,8 @@ final class PullRequestJson {
             Status::new);
 
     private static final Decoder<Branches> BRANCHES = map3(
-            at("head", text("ref")),
-            at("base", text("ref")),
+            at("head", text("ref")).map(ForgeBranch::new),
+            at("base", text("ref")).map(ForgeBranch::new),
             at("head", text("sha")).map(Sha::new),
             Branches::new);
 

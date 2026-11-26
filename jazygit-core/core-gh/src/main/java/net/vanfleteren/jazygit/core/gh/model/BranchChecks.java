@@ -3,6 +3,7 @@ package net.vanfleteren.jazygit.core.gh.model;
 import io.vavr.collection.Map;
 import java.util.Locale;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest.Checks;
+import net.vanfleteren.jazygit.core.repo.ForgeBranch;
 
 /**
  * How the CI checks are doing on the tip of each branch of a GitHub repository.
@@ -10,7 +11,7 @@ import net.vanfleteren.jazygit.core.gh.model.PullRequest.Checks;
  * @param repository the repository, as {@code owner/name}
  * @param checks     by the branch
  */
-public record BranchChecks(String repository, Map<GhBranch, Checks> checks) {
+public record BranchChecks(String repository, Map<ForgeBranch, Checks> checks) {
 
     /**
      * Whether the git remote {@code url} points at this repository, over ssh or https, with or without

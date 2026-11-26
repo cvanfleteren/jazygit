@@ -34,7 +34,6 @@ import net.vanfleteren.jazygit.core.gh.graphql.CheckFragment;
 import net.vanfleteren.jazygit.core.gh.graphql.ReviewingFragment;
 import net.vanfleteren.jazygit.core.gh.graphql.StackFragment;
 import net.vanfleteren.jazygit.core.gh.graphql.SuiteFragment;
-import net.vanfleteren.jazygit.core.gh.model.GhBranch;
 import net.vanfleteren.jazygit.core.gh.model.MergeMethod;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestDetails;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestDetails.Activity;
@@ -53,6 +52,7 @@ import net.vanfleteren.jazygit.core.gh.model.PullRequestDetails.State;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestDetails.Status;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestStack;
 import net.vanfleteren.jazygit.core.gh.process.GhCommand;
+import net.vanfleteren.jazygit.core.repo.ForgeBranch;
 import net.vanfleteren.jazygit.core.repo.PrNumber;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.lib.json.Decoder;
@@ -110,8 +110,8 @@ final class DetailsQuery {
 
     // How far behind its base it is only counts while it is open, at a commit that is known.
     static final Decoder<Branches> BRANCHES = map5(
-            field("headRefName", string()).map(GhBranch::new),
-            field("baseRefName", string()).map(GhBranch::new),
+            field("headRefName", string()).map(ForgeBranch::new),
+            field("baseRefName", string()).map(ForgeBranch::new),
             field("headRefOid", nullable(string())).map(oid -> oid.flatMap(Sha::parse)),
             field("baseRefOid", nullable(string())).map(oid -> oid.flatMap(Sha::parse)),
             BEHIND,

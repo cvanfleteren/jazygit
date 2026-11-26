@@ -11,7 +11,6 @@ import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.core.gh.StubGitHub;
-import net.vanfleteren.jazygit.core.gh.model.GhBranch;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest.Review;
@@ -19,6 +18,7 @@ import net.vanfleteren.jazygit.core.gh.model.PullRequestDetails;
 import net.vanfleteren.jazygit.core.gh.timing.CheckTimings;
 import net.vanfleteren.jazygit.core.git.model.*;
 import net.vanfleteren.jazygit.core.repo.*;
+import net.vanfleteren.jazygit.core.repo.ForgeBranch;
 import net.vanfleteren.jazygit.core.repo.PrNumber;
 import net.vanfleteren.jazygit.features.github.create.GitHubCreatePullRequestCmd.*;
 import net.vanfleteren.jazygit.features.github.show.PullRequestCmd.*;
@@ -99,7 +99,7 @@ class PullRequestRefreshUpdateTest {
         Model drafted = Update.update(
                         Update.update(drafting.model(), cmd.run(env())).model(),
                         PullRequestFixtures.listed(List.of(new PullRequest(
-                                new PrNumber(42), new GhBranch("feature"), true, Checks.PASSING, Review.APPROVED))))
+                                new PrNumber(42), new ForgeBranch("feature"), true, Checks.PASSING, Review.APPROVED))))
                 .model();
         Model dropped = Update.update(
                         drafted, new PullRequestMsg.DetailsLoaded(new PrNumber(42), lastRead(drafted), before))
@@ -247,7 +247,7 @@ class PullRequestRefreshUpdateTest {
         Model listed = Update.update(
                         closed,
                         PullRequestFixtures.listed(List.of(new PullRequest(
-                                new PrNumber(42), new GhBranch("feature"), true, Checks.PASSING, Review.APPROVED))))
+                                new PrNumber(42), new ForgeBranch("feature"), true, Checks.PASSING, Review.APPROVED))))
                 .model();
 
         Model dropped = Update.update(
@@ -286,8 +286,8 @@ class PullRequestRefreshUpdateTest {
         assertEquals(
                 Option.of(new PullRequest(
                         new PrNumber(42),
-                        new GhBranch("feature"),
-                        Option.of(new GhBranch("main")),
+                        new ForgeBranch("feature"),
+                        Option.of(new ForgeBranch("main")),
                         true,
                         Checks.NONE,
                         Review.NONE,

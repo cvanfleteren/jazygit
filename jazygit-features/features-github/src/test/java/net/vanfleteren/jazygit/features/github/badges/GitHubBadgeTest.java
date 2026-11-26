@@ -9,7 +9,6 @@ import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.time.Instant;
 import java.util.function.Function;
-import net.vanfleteren.jazygit.core.gh.model.GhBranch;
 import net.vanfleteren.jazygit.core.gh.model.MergeStatus;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest.Checks;
@@ -19,6 +18,7 @@ import net.vanfleteren.jazygit.core.gh.model.PullRequestStack;
 import net.vanfleteren.jazygit.core.gh.model.StackId;
 import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.BranchRef;
+import net.vanfleteren.jazygit.core.repo.ForgeBranch;
 import net.vanfleteren.jazygit.core.repo.PrNumber;
 import net.vanfleteren.jazygit.core.repo.RemoteBranch;
 import net.vanfleteren.jazygit.core.repo.RemoteName;
@@ -48,27 +48,27 @@ class GitHubBadgeTest {
                         LoadableList.Seg.styled(" ✓", Theme.Classes.CHECKS_PASSED),
                         LoadableList.Seg.styled(" #42", Theme.Classes.PULL_REQUEST),
                         LoadableList.Seg.styled("  +", Theme.Classes.REVIEW_APPROVED)),
-                GitHubBadge.pullRequest(Option.of(
-                        new PullRequest(new PrNumber(42), new GhBranch("b"), false, Checks.PASSING, Review.APPROVED))));
+                GitHubBadge.pullRequest(Option.of(new PullRequest(
+                        new PrNumber(42), new ForgeBranch("b"), false, Checks.PASSING, Review.APPROVED))));
         assertEquals(
                 List.of(
                         LoadableList.Seg.styled(" ✗", Theme.Classes.CHECKS_FAILED),
                         LoadableList.Seg.styled(" #40", Theme.Classes.PULL_REQUEST),
                         LoadableList.Seg.styled("  ?", Theme.Classes.DIM)),
-                GitHubBadge.pullRequest(Option.of(
-                        new PullRequest(new PrNumber(40), new GhBranch("b"), false, Checks.FAILING, Review.REQUIRED))));
+                GitHubBadge.pullRequest(Option.of(new PullRequest(
+                        new PrNumber(40), new ForgeBranch("b"), false, Checks.FAILING, Review.REQUIRED))));
         assertEquals(
                 List.of(
                         LoadableList.Seg.styled(" ●", Theme.Classes.CHECKS_RUNNING),
                         LoadableList.Seg.styled(" #38", Theme.Classes.PULL_REQUEST),
                         LoadableList.Seg.styled("  −", Theme.Classes.REVIEW_CHANGES)),
                 GitHubBadge.pullRequest(Option.of(new PullRequest(
-                        new PrNumber(38), new GhBranch("b"), false, Checks.PENDING, Review.CHANGES_REQUESTED))));
+                        new PrNumber(38), new ForgeBranch("b"), false, Checks.PENDING, Review.CHANGES_REQUESTED))));
         // A draft without checks or reviews shows only its number, dimmed.
         assertEquals(
                 List.of(LoadableList.Seg.styled(" #37", Theme.Classes.DIM)),
                 GitHubBadge.pullRequest(Option.of(
-                        new PullRequest(new PrNumber(37), new GhBranch("b"), true, Checks.NONE, Review.NONE))));
+                        new PullRequest(new PrNumber(37), new ForgeBranch("b"), true, Checks.NONE, Review.NONE))));
     }
 
     @Test
@@ -80,7 +80,7 @@ class GitHubBadgeTest {
                         LoadableList.Seg.styled("  2/3", Theme.Classes.DIM)),
                 GitHubBadge.pullRequest(Option.of(new PullRequest(
                         new PrNumber(95),
-                        new GhBranch("b"),
+                        new ForgeBranch("b"),
                         false,
                         Checks.PASSING,
                         Review.NONE,
@@ -96,8 +96,8 @@ class GitHubBadgeTest {
 
     @Test
     void aMergeShowsHowItGoesInsteadOfTheChecksAndTheReview() {
-        Option<PullRequest> pr =
-                Option.of(new PullRequest(new PrNumber(42), new GhBranch("b"), false, Checks.FAILING, Review.APPROVED));
+        Option<PullRequest> pr = Option.of(
+                new PullRequest(new PrNumber(42), new ForgeBranch("b"), false, Checks.FAILING, Review.APPROVED));
 
         assertEquals(
                 List.of(
@@ -122,7 +122,7 @@ class GitHubBadgeTest {
 
     @Test
     void aBranchShowsItsPullRequestElseTheChecksOnItsTip() {
-        PullRequest pr = new PullRequest(new PrNumber(42), new GhBranch("b"), false, Checks.NONE, Review.NONE);
+        PullRequest pr = new PullRequest(new PrNumber(42), new ForgeBranch("b"), false, Checks.NONE, Review.NONE);
 
         assertEquals(
                 List.of(LoadableList.Seg.styled(" #42", Theme.Classes.PULL_REQUEST)),
@@ -137,7 +137,7 @@ class GitHubBadgeTest {
     @Test
     void runningChecksSayWhenTheyAreExpectedToBeDone() {
         PullRequest running =
-                new PullRequest(new PrNumber(38), new GhBranch("b"), false, Checks.PENDING, Review.APPROVED);
+                new PullRequest(new PrNumber(38), new ForgeBranch("b"), false, Checks.PENDING, Review.APPROVED);
 
         assertEquals(
                 List.of(
@@ -169,7 +169,7 @@ class GitHubBadgeTest {
     @Test
     void checksThatAllWaitToStartSayHowLongTheyHave() {
         PullRequest running =
-                new PullRequest(new PrNumber(38), new GhBranch("b"), false, Checks.PENDING, Review.APPROVED);
+                new PullRequest(new PrNumber(38), new ForgeBranch("b"), false, Checks.PENDING, Review.APPROVED);
         Option<Waiting> waiting = Option.of(new Waiting(Option.of(NOW.minusSeconds(200))));
 
         assertEquals(

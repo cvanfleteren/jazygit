@@ -7,6 +7,7 @@ import net.vanfleteren.jazygit.core.forgejo.ForgejoNewPullRequest;
 import net.vanfleteren.jazygit.core.forgejo.ForgejoRepository;
 import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.BranchRef;
+import net.vanfleteren.jazygit.core.repo.ForgeBranch;
 import net.vanfleteren.jazygit.core.repo.PrNumber;
 import net.vanfleteren.jazygit.core.repo.RemoteBranch;
 import net.vanfleteren.jazygit.core.repo.RemoteName;
@@ -124,7 +125,8 @@ public sealed interface ForgejoCreatePullRequestCmd extends Cmd {
                     ForgejoNewPullRequest.head(home, repository, target.branch().value());
             // A head with the owner before it is in a fork, which a 404 then says must be one of the home's.
             Option<String> fork = Option.when(!head.equals(target.branch().value()), () -> named(repository));
-            return forgejo.createPullRequest(home, new ForgejoNewPullRequest(head, base.value(), title, body, draft))
+            return forgejo.createPullRequest(
+                            home, new ForgejoNewPullRequest(head, new ForgeBranch(base.value()), title, body, draft))
                     .fold(
                             error -> refused(error, home, fork),
                             created -> new ForgejoCreatePullRequestMsg.Created(this, created));

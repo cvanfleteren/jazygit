@@ -1,6 +1,7 @@
 package net.vanfleteren.jazygit.core.forgejo;
 
 import io.vavr.control.Option;
+import net.vanfleteren.jazygit.core.repo.ForgeBranch;
 import net.vanfleteren.jazygit.core.repo.PrNumber;
 
 /**
@@ -17,8 +18,8 @@ import net.vanfleteren.jazygit.core.repo.PrNumber;
 public record ForgejoPullRequest(
         PrNumber number,
         String title,
-        String head,
+        ForgeBranch head,
         Option<String> headRepository,
-        String base,
+        ForgeBranch base,
         boolean draft,
         String url) {}

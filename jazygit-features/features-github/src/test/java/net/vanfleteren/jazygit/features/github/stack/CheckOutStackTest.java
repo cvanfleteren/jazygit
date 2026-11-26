@@ -10,7 +10,6 @@ import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.nio.file.Path;
 import java.time.Instant;
-import net.vanfleteren.jazygit.core.gh.model.GhBranch;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest.Review;
@@ -26,6 +25,7 @@ import net.vanfleteren.jazygit.core.repo.Branch;
 import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.BranchRef;
 import net.vanfleteren.jazygit.core.repo.CaughtUpBranch;
+import net.vanfleteren.jazygit.core.repo.ForgeBranch;
 import net.vanfleteren.jazygit.core.repo.PrNumber;
 import net.vanfleteren.jazygit.core.repo.RemoteBranch;
 import net.vanfleteren.jazygit.core.repo.RemoteName;
@@ -60,29 +60,29 @@ class CheckOutStackTest {
 
     // Stack #12 on main: #95 merged, then feat/a (#96), feat/b (#97) and feat/c (#98), all open.
     private static final List<Entry> ENTRIES = List.of(
-            new Entry(1, new PrNumber(95), State.MERGED, new GhBranch("feat/old"), new GhBranch("main")),
+            new Entry(1, new PrNumber(95), State.MERGED, new ForgeBranch("feat/old"), new ForgeBranch("main")),
             new Entry(
                     2,
                     new PrNumber(96),
                     State.OPEN,
-                    new GhBranch("feat/a"),
-                    new GhBranch("main"),
+                    new ForgeBranch("feat/a"),
+                    new ForgeBranch("main"),
                     Option.of(new Sha("1".repeat(40))),
                     false),
             new Entry(
                     3,
                     new PrNumber(97),
                     State.OPEN,
-                    new GhBranch("feat/b"),
-                    new GhBranch("feat/a"),
+                    new ForgeBranch("feat/b"),
+                    new ForgeBranch("feat/a"),
                     Option.of(new Sha("b".repeat(40))),
                     false),
             new Entry(
                     4,
                     new PrNumber(98),
                     State.OPEN,
-                    new GhBranch("feat/c"),
-                    new GhBranch("feat/b"),
+                    new ForgeBranch("feat/c"),
+                    new ForgeBranch("feat/b"),
                     Option.of(new Sha("c".repeat(40))),
                     false));
 
@@ -146,7 +146,7 @@ class CheckOutStackTest {
                                 branch.name(),
                                 new PullRequest(
                                         new PrNumber(96 + List.of(A, B, C).indexOf(branch.name())),
-                                        new GhBranch(branch.name().value()),
+                                        new ForgeBranch(branch.name().value()),
                                         Option.none(),
                                         false,
                                         Checks.NONE,
@@ -275,8 +275,8 @@ class CheckOutStackTest {
                         4,
                         new PrNumber(98),
                         State.OPEN,
-                        Option.of(new GhBranch("feat/c")),
-                        Option.of(new GhBranch("feat/b")),
+                        Option.of(new ForgeBranch("feat/c")),
+                        Option.of(new ForgeBranch("feat/b")),
                         Option.of(new Sha("c".repeat(40))),
                         false,
                         true));
@@ -325,7 +325,7 @@ class CheckOutStackTest {
         assertEquals(Status.UPDATE, StackCheckout.status(model(all.update(1, following(A, A_TIP, 0, 0))), STACK));
         // A branch whose commit on GitHub is not known may be behind.
         List<Entry> unknown = ENTRIES.update(
-                1, new Entry(2, new PrNumber(96), State.OPEN, new GhBranch("feat/a"), new GhBranch("main")));
+                1, new Entry(2, new PrNumber(96), State.OPEN, new ForgeBranch("feat/a"), new ForgeBranch("main")));
         assertEquals(Status.UPDATE, StackCheckout.status(model(all), stack(unknown, 2)));
         assertEquals(
                 Status.NOTHING,
@@ -333,7 +333,11 @@ class CheckOutStackTest {
                         ONE_LOCAL,
                         stack(
                                 List.of(new Entry(
-                                        1, new PrNumber(95), State.MERGED, new GhBranch("x"), new GhBranch("main"))),
+                                        1,
+                                        new PrNumber(95),
+                                        State.MERGED,
+                                        new ForgeBranch("x"),
+                                        new ForgeBranch("main"))),
                                 1)));
     }
 
@@ -434,7 +438,7 @@ class CheckOutStackTest {
                 new PrNumber(97),
                 "Refresh flow",
                 "sam",
-                new GhBranch("feat/b"),
+                new ForgeBranch("feat/b"),
                 false,
                 false,
                 Checks.NONE,

@@ -17,6 +17,7 @@ import net.vanfleteren.jazygit.core.forgejo.ForgejoError;
 import net.vanfleteren.jazygit.core.forgejo.ForgejoNewPullRequest;
 import net.vanfleteren.jazygit.core.forgejo.ForgejoPullRequest;
 import net.vanfleteren.jazygit.core.repo.BranchName;
+import net.vanfleteren.jazygit.core.repo.ForgeBranch;
 import net.vanfleteren.jazygit.core.repo.PrNumber;
 import net.vanfleteren.jazygit.core.repo.RemoteBranch;
 import net.vanfleteren.jazygit.core.repo.RemoteName;
@@ -39,9 +40,9 @@ class ForgejoCreatePullRequestCommandsTest {
     private static final ForgejoPullRequest CREATED = new ForgejoPullRequest(
             new PrNumber(13),
             "Create it",
-            "feature",
+            new ForgeBranch("feature"),
             Option.of("cvf/nix"),
-            "main",
+            new ForgeBranch("main"),
             false,
             "https://code.example.net/cvf/nix/13");
 
@@ -98,7 +99,8 @@ class ForgejoCreatePullRequestCommandsTest {
 
         assertEquals(new ForgejoCreatePullRequestMsg.Created(cmd, CREATED), created);
         ForgejoNewPullRequest pullRequest = List.ofAll(sent).single();
-        assertEquals(new ForgejoNewPullRequest("feature", "main", "Create it", "Why", true), pullRequest);
+        assertEquals(
+                new ForgejoNewPullRequest("feature", new ForgeBranch("main"), "Create it", "Why", true), pullRequest);
         assertEquals("WIP: Create it", pullRequest.sentTitle());
     }
 

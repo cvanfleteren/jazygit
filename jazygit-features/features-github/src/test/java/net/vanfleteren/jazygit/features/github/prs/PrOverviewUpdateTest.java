@@ -12,7 +12,6 @@ import io.vavr.collection.TreeSet;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
 import java.time.Instant;
-import net.vanfleteren.jazygit.core.gh.model.GhBranch;
 import net.vanfleteren.jazygit.core.gh.model.MyPullRequests;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest.Review;
@@ -20,6 +19,7 @@ import net.vanfleteren.jazygit.core.gh.model.PullRequestList;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestPreview;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestSummary;
 import net.vanfleteren.jazygit.core.gh.model.RepositoryPullRequests;
+import net.vanfleteren.jazygit.core.repo.ForgeBranch;
 import net.vanfleteren.jazygit.core.repo.PrNumber;
 import net.vanfleteren.jazygit.core.repo.RemoteName;
 import net.vanfleteren.jazygit.features.github.prs.content.PullRequestSource;
@@ -51,7 +51,7 @@ class PrOverviewUpdateTest {
                 new PrNumber(number),
                 "Pull request " + number,
                 "alice",
-                new GhBranch("branch-" + number),
+                new ForgeBranch("branch-" + number),
                 false,
                 false,
                 Checks.NONE,
@@ -493,7 +493,7 @@ class PrOverviewUpdateTest {
 
     @Test
     void theReadPreviewIsShownAndTheOneBeforeStaysWhileTheNextIsRead() {
-        PullRequestPreview preview = new PullRequestPreview(new GhBranch("main"), "Body", "+a\n", false);
+        PullRequestPreview preview = new PullRequestPreview(new ForgeBranch("main"), "Body", "+a\n", false);
         Model read = Update.update(
                         Update.update(loaded(), new PrOverviewMsg.Highlighted(NEW))
                                 .model(),

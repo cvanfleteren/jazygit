@@ -31,6 +31,7 @@ import net.vanfleteren.jazygit.core.git.process.GitError;
 import net.vanfleteren.jazygit.core.repo.Branch;
 import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.BranchRef;
+import net.vanfleteren.jazygit.core.repo.ForgeBranch;
 import net.vanfleteren.jazygit.core.repo.PrNumber;
 import net.vanfleteren.jazygit.core.repo.RemoteBranch;
 import net.vanfleteren.jazygit.core.repo.RemoteName;
@@ -61,9 +62,9 @@ public final class PullRequestFixtures {
     public static final ForgejoPullRequest LISTED = new ForgejoPullRequest(
             new PrNumber(12),
             "Show the pull request",
-            "feature",
+            new ForgeBranch("feature"),
             Option.of("cvf/nix"),
-            "main",
+            new ForgeBranch("main"),
             false,
             "https://" + HOST + "/cvf/nix/pulls/12");
 
@@ -121,7 +122,7 @@ public final class PullRequestFixtures {
                 title,
                 "cvf",
                 new ForgejoPullRequestDetails.Status(ForgejoPullRequestDetails.State.OPEN, false, true),
-                new ForgejoPullRequestDetails.Branches("feature", "main", HEAD),
+                new ForgejoPullRequestDetails.Branches(new ForgeBranch("feature"), new ForgeBranch("main"), HEAD),
                 new ForgejoPullRequestDetails.Activity(TIME.minusSeconds(86_400 * 2), TIME.minusSeconds(3_600)),
                 new ForgejoPullRequestDetails.Size(120, 7, 5),
                 new ForgejoPullRequestDetails.Conversation(4, List.of("feature"), List.of("anna")),

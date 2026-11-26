@@ -7,6 +7,7 @@ import net.vanfleteren.jazygit.core.gh.model.*;
 import net.vanfleteren.jazygit.core.gh.process.GhError;
 import net.vanfleteren.jazygit.core.gh.process.GhFailure;
 import net.vanfleteren.jazygit.core.process.ExecutedCommand;
+import net.vanfleteren.jazygit.core.repo.ForgeBranch;
 import net.vanfleteren.jazygit.core.repo.PrNumber;
 
 /**
@@ -75,5 +76,5 @@ public interface Account {
     /**
      * Opens {@code branch}, as it is named on the remote, in the browser.
      */
-    Either<GhFailure, List<ExecutedCommand>> browse(GhBranch branch);
+    Either<GhFailure, List<ExecutedCommand>> browse(ForgeBranch branch);
 }

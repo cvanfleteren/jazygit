@@ -14,7 +14,6 @@ import io.vavr.control.Option;
 import java.time.Instant;
 import net.vanfleteren.jazygit.core.gh.GitHub;
 import net.vanfleteren.jazygit.core.gh.StubGitHub;
-import net.vanfleteren.jazygit.core.gh.model.GhBranch;
 import net.vanfleteren.jazygit.core.gh.model.MergeMethod;
 import net.vanfleteren.jazygit.core.gh.model.MergeStatus;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest;
@@ -32,6 +31,7 @@ import net.vanfleteren.jazygit.core.git.model.*;
 import net.vanfleteren.jazygit.core.process.ExecutedCommand;
 import net.vanfleteren.jazygit.core.repo.*;
 import net.vanfleteren.jazygit.core.repo.BranchName;
+import net.vanfleteren.jazygit.core.repo.ForgeBranch;
 import net.vanfleteren.jazygit.core.repo.PrNumber;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.features.changes.fetch.FetchCmd;
@@ -368,7 +368,7 @@ class PullRequestActionsUpdateTest {
                                 failed,
                                 PullRequestFixtures.listed(List.of(new PullRequest(
                                         new PrNumber(42),
-                                        new GhBranch("feature"),
+                                        new ForgeBranch("feature"),
                                         false,
                                         Checks.FAILING,
                                         Review.APPROVED))))
@@ -408,7 +408,7 @@ class PullRequestActionsUpdateTest {
     @Test
     void aFailedMergeNoLongerShowsOnceThePullRequestChanged() {
         PullRequest pending =
-                new PullRequest(new PrNumber(42), new GhBranch("feature"), false, Checks.PENDING, Review.APPROVED);
+                new PullRequest(new PrNumber(42), new ForgeBranch("feature"), false, Checks.PENDING, Review.APPROVED);
         Model failed = askedFor(
                 Update.update(model(), PullRequestFixtures.listed(List.of(pending)))
                         .model(),
@@ -520,14 +520,14 @@ class PullRequestActionsUpdateTest {
     private static Model stackOfTwo() {
         PullRequest bottom = new PullRequest(
                 new PrNumber(41),
-                new GhBranch("base-work"),
+                new ForgeBranch("base-work"),
                 false,
                 Checks.PASSING,
                 Review.APPROVED,
                 Option.of(stack(7, 1, 41, 42)));
         PullRequest top = new PullRequest(
                 new PrNumber(42),
-                new GhBranch("feature"),
+                new ForgeBranch("feature"),
                 false,
                 Checks.PASSING,
                 Review.APPROVED,
@@ -566,28 +566,28 @@ class PullRequestActionsUpdateTest {
     void mergingAStackedPullRequestMergesTheOnesBelowItToo() {
         PullRequest bottom = new PullRequest(
                 new PrNumber(41),
-                new GhBranch("base-work"),
+                new ForgeBranch("base-work"),
                 false,
                 Checks.PASSING,
                 Review.APPROVED,
                 Option.of(stack(7, 1, 41, 42, 43)));
         PullRequest middle = new PullRequest(
                 new PrNumber(42),
-                new GhBranch("feature"),
+                new ForgeBranch("feature"),
                 false,
                 Checks.PASSING,
                 Review.APPROVED,
                 Option.of(stack(7, 2, 41, 42, 43)));
         PullRequest top = new PullRequest(
                 new PrNumber(43),
-                new GhBranch("on-top"),
+                new ForgeBranch("on-top"),
                 false,
                 Checks.PASSING,
                 Review.APPROVED,
                 Option.of(stack(7, 3, 41, 42, 43)));
         PullRequest other = new PullRequest(
                 new PrNumber(40),
-                new GhBranch("elsewhere"),
+                new ForgeBranch("elsewhere"),
                 false,
                 Checks.PASSING,
                 Review.APPROVED,

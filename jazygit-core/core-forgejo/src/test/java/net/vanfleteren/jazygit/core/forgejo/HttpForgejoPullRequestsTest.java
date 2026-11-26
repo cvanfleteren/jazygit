@@ -21,6 +21,7 @@ import net.vanfleteren.jazygit.core.forgejo.ForgejoPullRequestDetails.Size;
 import net.vanfleteren.jazygit.core.forgejo.ForgejoPullRequestDetails.State;
 import net.vanfleteren.jazygit.core.forgejo.ForgejoPullRequestDetails.Status;
 import net.vanfleteren.jazygit.core.forgejo.ForgejoReview.Verdict;
+import net.vanfleteren.jazygit.core.repo.ForgeBranch;
 import net.vanfleteren.jazygit.core.repo.PrNumber;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import org.junit.jupiter.api.AfterEach;
@@ -152,9 +153,9 @@ class HttpForgejoPullRequestsTest {
                 new ForgejoPullRequest(
                         new PrNumber(51),
                         "Pull request 51",
-                        "branch-51",
+                        new ForgeBranch("branch-51"),
                         Option.of("cvf/nix"),
-                        "main",
+                        new ForgeBranch("main"),
                         false,
                         "https://code.example.net/cvf/nix/pulls/51"),
                 open.get(50));
@@ -190,7 +191,7 @@ class HttpForgejoPullRequestsTest {
                         "Show the pull request",
                         "cvf",
                         new Status(State.OPEN, true, true),
-                        new Branches("feature", "main", new Sha(SHA)),
+                        new Branches(new ForgeBranch("feature"), new ForgeBranch("main"), new Sha(SHA)),
                         new Activity(Instant.parse("2026-11-20T08:00:00Z"), Instant.parse("2026-11-21T10:30:00Z")),
                         new Size(120, 7, 5),
                         new Conversation(4, List.of("feature", "ui"), List.of("anna")),

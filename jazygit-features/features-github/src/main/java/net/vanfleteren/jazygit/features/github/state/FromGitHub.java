@@ -1,7 +1,7 @@
 package net.vanfleteren.jazygit.features.github.state;
 
-import net.vanfleteren.jazygit.core.gh.model.GhBranch;
 import net.vanfleteren.jazygit.core.repo.BranchName;
+import net.vanfleteren.jazygit.core.repo.ForgeBranch;
 
 /**
  * What GitHub's branches are called in git: the one place a branch gh read is named for git, the way back of
@@ -15,7 +15,7 @@ public final class FromGitHub {
     /**
      * {@code branch}, as git names it on the remote.
      */
-    public static BranchName branch(GhBranch branch) {
+    public static BranchName branch(ForgeBranch branch) {
         return new BranchName(branch.name());
     }
 }

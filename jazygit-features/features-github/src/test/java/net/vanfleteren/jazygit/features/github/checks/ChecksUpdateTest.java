@@ -12,7 +12,6 @@ import io.vavr.control.Option;
 import java.time.Instant;
 import net.vanfleteren.jazygit.core.gh.StubGitHub;
 import net.vanfleteren.jazygit.core.gh.model.CheckRun;
-import net.vanfleteren.jazygit.core.gh.model.GhBranch;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest.Review;
@@ -23,6 +22,7 @@ import net.vanfleteren.jazygit.core.git.model.Fixtures;
 import net.vanfleteren.jazygit.core.repo.Branch;
 import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.BranchRef;
+import net.vanfleteren.jazygit.core.repo.ForgeBranch;
 import net.vanfleteren.jazygit.core.repo.PrNumber;
 import net.vanfleteren.jazygit.core.repo.RemoteBranch;
 import net.vanfleteren.jazygit.core.repo.RemoteName;
@@ -94,7 +94,7 @@ class ChecksUpdateTest {
 
     // The pull request from feature, shown in its dialog once its details are read.
     private static final PullRequest FEATURE_PR =
-            new PullRequest(new PrNumber(42), new GhBranch("feature"), false, Checks.PENDING, Review.APPROVED);
+            new PullRequest(new PrNumber(42), new ForgeBranch("feature"), false, Checks.PENDING, Review.APPROVED);
     private static final PullRequestDetails DETAILS =
             StubGitHub.of().pullRequests().details(new PrNumber(42)).get();
     private static final PullRequestPopup DIALOG = PullRequestPopup.loading(

@@ -17,7 +17,6 @@ import net.vanfleteren.jazygit.core.gh.StubGitHub;
 import net.vanfleteren.jazygit.core.gh.checks.StubChecks;
 import net.vanfleteren.jazygit.core.gh.model.BranchChecks;
 import net.vanfleteren.jazygit.core.gh.model.CheckRun;
-import net.vanfleteren.jazygit.core.gh.model.GhBranch;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest.Review;
@@ -34,6 +33,7 @@ import net.vanfleteren.jazygit.core.git.process.GitError;
 import net.vanfleteren.jazygit.core.repo.Branch;
 import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.BranchRef;
+import net.vanfleteren.jazygit.core.repo.ForgeBranch;
 import net.vanfleteren.jazygit.core.repo.PrNumber;
 import net.vanfleteren.jazygit.core.repo.RemoteBranch;
 import net.vanfleteren.jazygit.core.repo.RemoteName;
@@ -65,7 +65,7 @@ class BranchChecksUpdateTest {
             HashSet.of(new RemoteName("origin")),
             HashMap.of(new BranchName("feature"), Checks.FAILING, new BranchName("main"), Checks.PASSING));
     private static final PullRequest FEATURE_PR =
-            new PullRequest(new PrNumber(42), new GhBranch("feature"), false, Checks.PASSING, Review.APPROVED);
+            new PullRequest(new PrNumber(42), new ForgeBranch("feature"), false, Checks.PASSING, Review.APPROVED);
 
     private static RemoteBranch remote(String remote, String branch) {
         return new RemoteBranch(remote, new BranchName(branch));
@@ -124,7 +124,7 @@ class BranchChecksUpdateTest {
                             @Override
                             public Either<GhError, BranchChecks> ofBranches() {
                                 return Either.right(new BranchChecks(
-                                        "owner/repo", HashMap.of(new GhBranch("main"), Checks.PASSING)));
+                                        "owner/repo", HashMap.of(new ForgeBranch("main"), Checks.PASSING)));
                             }
                         })));
 

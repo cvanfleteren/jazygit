@@ -13,7 +13,6 @@ import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.time.Instant;
 import net.vanfleteren.jazygit.core.gh.StubGitHub;
-import net.vanfleteren.jazygit.core.gh.model.GhBranch;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest.Review;
@@ -22,6 +21,7 @@ import net.vanfleteren.jazygit.core.gh.model.PullRequestSummary;
 import net.vanfleteren.jazygit.core.git.model.*;
 import net.vanfleteren.jazygit.core.repo.*;
 import net.vanfleteren.jazygit.core.repo.BranchName;
+import net.vanfleteren.jazygit.core.repo.ForgeBranch;
 import net.vanfleteren.jazygit.core.repo.PrNumber;
 import net.vanfleteren.jazygit.core.repo.RemoteBranch;
 import net.vanfleteren.jazygit.core.repo.Sha;
@@ -69,8 +69,8 @@ class PullRequestFilesUpdateTest {
                 .withUrl("https://github.com/owner/repo")
                 .withStatus(read.status().withState(state))
                 .withBranches(new PullRequestDetails.Branches(
-                        new GhBranch("feature"),
-                        new GhBranch("main"),
+                        new ForgeBranch("feature"),
+                        new ForgeBranch("main"),
                         Sha.parse(known ? HEAD_OID : ""),
                         Option.none(),
                         Sha.parse(BASE_OID)));
@@ -126,8 +126,8 @@ class PullRequestFilesUpdateTest {
                 .withUrl("https://github.com/owner/repo")
                 .withStatus(read.status().withState(state))
                 .withBranches(new PullRequestDetails.Branches(
-                        new GhBranch("feature"),
-                        new GhBranch("main"),
+                        new ForgeBranch("feature"),
+                        new ForgeBranch("main"),
                         Sha.parse(HEAD_OID),
                         Option.none(),
                         Sha.parse(BASE_OID)));
@@ -190,7 +190,7 @@ class PullRequestFilesUpdateTest {
     void shiftFOnABranchWhosePullRequestIsListedWithItsCommitsShowsItsFilesAtOnce() {
         PullRequest listed = new PullRequest(
                 new PrNumber(42),
-                new GhBranch("feature"),
+                new ForgeBranch("feature"),
                 false,
                 Checks.PASSING,
                 Review.APPROVED,
@@ -255,7 +255,7 @@ class PullRequestFilesUpdateTest {
     @Test
     void shiftFOnTheMainBranchWithAPullRequestShowsTheFilesOfThatAsOnAnyBranch() {
         PullRequest fromMain =
-                new PullRequest(new PrNumber(7), new GhBranch("main"), false, Checks.PASSING, Review.APPROVED);
+                new PullRequest(new PrNumber(7), new ForgeBranch("main"), false, Checks.PASSING, Review.APPROVED);
         Model shown = Update.update(model(), PullRequestFixtures.listed(List.of(fromMain)))
                 .model();
 
@@ -308,7 +308,11 @@ class PullRequestFilesUpdateTest {
                         PullRequestFixtures.listed(List.of(
                                 FEATURE_PR,
                                 new PullRequest(
-                                        new PrNumber(43), new GhBranch("ahead"), false, Checks.PASSING, Review.NONE))))
+                                        new PrNumber(43),
+                                        new ForgeBranch("ahead"),
+                                        false,
+                                        Checks.PASSING,
+                                        Review.NONE))))
                 .model();
         Model requested =
                 Update.update(both, new PullRequestMsg.FilesRequested(FEATURE)).model();
@@ -394,7 +398,7 @@ class PullRequestFilesUpdateTest {
                 new PrNumber(9),
                 "From a fork",
                 "bob",
-                new GhBranch("patch-1"),
+                new ForgeBranch("patch-1"),
                 false,
                 true,
                 Checks.NONE,
@@ -432,7 +436,7 @@ class PullRequestFilesUpdateTest {
                 new PrNumber(9),
                 "From a fork's main",
                 "bob",
-                new GhBranch("main"),
+                new ForgeBranch("main"),
                 false,
                 true,
                 Checks.NONE,
@@ -475,7 +479,7 @@ class PullRequestFilesUpdateTest {
                 new PrNumber(9),
                 "From my fork",
                 "me",
-                new GhBranch("feature"),
+                new ForgeBranch("feature"),
                 false,
                 true,
                 Checks.NONE,
@@ -513,7 +517,7 @@ class PullRequestFilesUpdateTest {
                 new PrNumber(9),
                 "From main",
                 "bob",
-                new GhBranch("main"),
+                new ForgeBranch("main"),
                 false,
                 false,
                 Checks.NONE,

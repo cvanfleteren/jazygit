@@ -9,12 +9,12 @@ import io.vavr.control.Option;
 import java.time.Instant;
 import net.vanfleteren.jazygit.core.gh.model.Build;
 import net.vanfleteren.jazygit.core.gh.model.CheckRun;
-import net.vanfleteren.jazygit.core.gh.model.GhBranch;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest.Review;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestDetails.Check;
 import net.vanfleteren.jazygit.core.repo.BranchName;
+import net.vanfleteren.jazygit.core.repo.ForgeBranch;
 import net.vanfleteren.jazygit.core.repo.PrNumber;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.kernel.state.build.FailedBuild;
@@ -62,7 +62,7 @@ class FailedBuildsTest {
     @Test
     void thePullRequestOfTheBranchIsHandedOverAsTheChangeRequestTheForgeCallsIt() {
         PullRequest pullRequest =
-                new PullRequest(new PrNumber(12), new GhBranch("feat"), false, Checks.FAILING, Review.NONE);
+                new PullRequest(new PrNumber(12), new ForgeBranch("feat"), false, Checks.FAILING, Review.NONE);
         Build build = new Build("CI", "push", 401, 1, new Sha(COMMIT), "Fix", T, List.of(job("verify", "FAILURE")));
 
         assertEquals(

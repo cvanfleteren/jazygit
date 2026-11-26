@@ -59,7 +59,7 @@ public record LoadPullRequest(RemoteName home, PrNumber number, long read) imple
                 forgejo.mergeSettings(repository)
                         .peekLeft(error -> logged("merge settings", error.why()))
                         .toOption(),
-                forgejo.branchRules(repository, pr.branches().base())
+                forgejo.branchRules(repository, pr.branches().base().name())
                         .peekLeft(error -> logged("rules of the base branch", error.why()))
                         .toOption(),
                 reviews.map(ForgejoReview::approvals).getOrElse(0),

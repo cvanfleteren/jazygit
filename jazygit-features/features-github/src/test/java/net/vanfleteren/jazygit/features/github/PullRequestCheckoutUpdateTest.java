@@ -8,11 +8,11 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.time.Instant;
-import net.vanfleteren.jazygit.core.gh.model.GhBranch;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestSummary;
 import net.vanfleteren.jazygit.core.git.model.*;
 import net.vanfleteren.jazygit.core.repo.*;
 import net.vanfleteren.jazygit.core.repo.BranchName;
+import net.vanfleteren.jazygit.core.repo.ForgeBranch;
 import net.vanfleteren.jazygit.features.branches.branch.checkout.CheckoutMsg;
 import net.vanfleteren.jazygit.features.branches.branch.checkout.CheckoutWherePopup;
 import net.vanfleteren.jazygit.features.branches.branch.checkout.SwitchWorktreePopup;
@@ -82,7 +82,7 @@ class PullRequestCheckoutUpdateTest {
                 fork.number(),
                 fork.title(),
                 fork.author(),
-                new GhBranch("patch-1"),
+                new ForgeBranch("patch-1"),
                 false,
                 false,
                 fork.checks(),
@@ -282,7 +282,7 @@ class PullRequestCheckoutUpdateTest {
                 fork.number(),
                 fork.title(),
                 fork.author(),
-                new GhBranch(headBranch),
+                new ForgeBranch(headBranch),
                 false,
                 false,
                 fork.checks(),

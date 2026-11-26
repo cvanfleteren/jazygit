@@ -3,7 +3,7 @@ package net.vanfleteren.jazygit.features.github.stack;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.util.function.Consumer;
-import net.vanfleteren.jazygit.core.gh.model.GhBranch;
+import net.vanfleteren.jazygit.core.repo.ForgeBranch;
 import net.vanfleteren.jazygit.kernel.state.Msg;
 import net.vanfleteren.jazygit.kernel.state.popup.PopupMsg;
 import net.vanfleteren.jazygit.kernel.ui.PopupSlot;
@@ -296,7 +296,7 @@ public final class StackDialogs {
                 .map(change -> Messages.get(
                         "github.dialog.makeStack.change",
                         String.valueOf(change.number().value()),
-                        change.from().map(GhBranch::name).getOrElse("?"),
+                        change.from().map(ForgeBranch::name).getOrElse("?"),
                         change.to().name()));
         List<String> diverged = confirm.diverged()
                 .map(branch -> Messages.get(

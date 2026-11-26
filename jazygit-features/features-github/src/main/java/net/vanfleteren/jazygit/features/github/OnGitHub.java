@@ -1,6 +1,6 @@
 package net.vanfleteren.jazygit.features.github;
 
-import net.vanfleteren.jazygit.core.gh.model.GhBranch;
+import net.vanfleteren.jazygit.core.repo.ForgeBranch;
 import net.vanfleteren.jazygit.core.repo.RemoteBranch;
 
 /**
@@ -15,7 +15,7 @@ public final class OnGitHub {
     /**
      * {@code remote}, as GitHub names it in the repository.
      */
-    public static GhBranch branch(RemoteBranch remote) {
-        return new GhBranch(remote.branch().value());
+    public static ForgeBranch branch(RemoteBranch remote) {
+        return new ForgeBranch(remote.branch().value());
     }
 }

@@ -2,6 +2,7 @@ package net.vanfleteren.jazygit.core.gh.model;
 
 import io.vavr.collection.List;
 import io.vavr.control.Option;
+import net.vanfleteren.jazygit.core.repo.ForgeBranch;
 import net.vanfleteren.jazygit.core.repo.PrNumber;
 import net.vanfleteren.jazygit.core.repo.Sha;
 
@@ -19,8 +20,8 @@ import net.vanfleteren.jazygit.core.repo.Sha;
  */
 public record PullRequest(
         PrNumber number,
-        GhBranch headBranch,
-        Option<GhBranch> baseBranch,
+        ForgeBranch headBranch,
+        Option<ForgeBranch> baseBranch,
         boolean draft,
         Checks checks,
         Review review,
@@ -32,7 +33,7 @@ public record PullRequest(
      */
     public PullRequest(
             PrNumber number,
-            GhBranch headBranch,
+            ForgeBranch headBranch,
             boolean draft,
             Checks checks,
             Review review,
@@ -46,7 +47,7 @@ public record PullRequest(
      */
     public PullRequest(
             PrNumber number,
-            GhBranch headBranch,
+            ForgeBranch headBranch,
             boolean draft,
             Checks checks,
             Review review,
@@ -57,7 +58,7 @@ public record PullRequest(
     /**
      * One that is not stacked.
      */
-    public PullRequest(PrNumber number, GhBranch headBranch, boolean draft, Checks checks, Review review) {
+    public PullRequest(PrNumber number, ForgeBranch headBranch, boolean draft, Checks checks, Review review) {
         this(number, headBranch, draft, checks, review, Option.none());
     }
 

@@ -22,11 +22,11 @@ import io.vavr.Tuple6;
 import io.vavr.collection.HashMap;
 import io.vavr.control.Option;
 import java.time.Instant;
-import net.vanfleteren.jazygit.core.gh.model.GhBranch;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest.Review;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestList;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestSummary;
+import net.vanfleteren.jazygit.core.repo.ForgeBranch;
 import net.vanfleteren.jazygit.core.repo.PrNumber;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.lib.json.Decoder;
@@ -55,12 +55,12 @@ public final class SummaryFragment {
             .map(commits -> commits.headOption().getOrElse(Checks.NONE));
 
     // Its repository, number, title, author, empty for a deleted account, head branch and url.
-    static final Decoder<Tuple6<String, PrNumber, String, String, GhBranch, String>> NAMED = map6(
+    static final Decoder<Tuple6<String, PrNumber, String, String, ForgeBranch, String>> NAMED = map6(
             at("repository.nameWithOwner", string()),
             field("number", integer().map(PrNumber::new)),
             field("title", string()),
             field("author", nullable(field("login", string()))).map(login -> login.getOrElse("")),
-            field("headRefName", string()).map(GhBranch::new),
+            field("headRefName", string()).map(ForgeBranch::new),
             field("url", string()),
             Tuple::of);
 
@@ -87,7 +87,7 @@ public final class SummaryFragment {
             STATE,
             StackFragment.DECODER,
             COMMITS,
-            field("baseRefName", string()).map(GhBranch::named),
+            field("baseRefName", string()).map(ForgeBranch::named),
             HEAD_REPOSITORY,
             (named, state, stack, commits, base, head) -> new PullRequestSummary(
                     named._1(),

@@ -8,7 +8,6 @@ import io.vavr.collection.List;
 import io.vavr.collection.Map;
 import io.vavr.control.Option;
 import java.time.Instant;
-import net.vanfleteren.jazygit.core.gh.model.GhBranch;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest.Review;
@@ -19,6 +18,7 @@ import net.vanfleteren.jazygit.core.git.model.Fixtures;
 import net.vanfleteren.jazygit.core.repo.Branch;
 import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.BranchRef;
+import net.vanfleteren.jazygit.core.repo.ForgeBranch;
 import net.vanfleteren.jazygit.core.repo.PrNumber;
 import net.vanfleteren.jazygit.core.repo.RemoteBranch;
 import net.vanfleteren.jazygit.core.repo.RemoteName;
@@ -66,8 +66,8 @@ class GitHubBasesTest {
     private static PullRequest pr(int number, String head, String base) {
         return new PullRequest(
                 new PrNumber(number),
-                new GhBranch(head),
-                Option.of(new GhBranch(base)),
+                new ForgeBranch(head),
+                Option.of(new ForgeBranch(base)),
                 false,
                 Checks.NONE,
                 Review.NONE,
@@ -87,13 +87,13 @@ class GitHubBasesTest {
                 2,
                 List.of(
                         new PullRequestStack.Entry(
-                                1, new PrNumber(1), belowState, new GhBranch(below), new GhBranch("main")),
+                                1, new PrNumber(1), belowState, new ForgeBranch(below), new ForgeBranch("main")),
                         new PullRequestStack.Entry(
-                                2, new PrNumber(number), State.OPEN, new GhBranch(head), new GhBranch(base))));
+                                2, new PrNumber(number), State.OPEN, new ForgeBranch(head), new ForgeBranch(base))));
         return new PullRequest(
                 new PrNumber(number),
-                new GhBranch(head),
-                Option.of(new GhBranch(base)),
+                new ForgeBranch(head),
+                Option.of(new ForgeBranch(base)),
                 false,
                 Checks.NONE,
                 Review.NONE,

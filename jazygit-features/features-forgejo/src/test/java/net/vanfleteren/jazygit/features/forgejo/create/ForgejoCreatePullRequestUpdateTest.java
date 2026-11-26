@@ -14,6 +14,7 @@ import net.vanfleteren.jazygit.core.forgejo.ForgejoPullRequest;
 import net.vanfleteren.jazygit.core.repo.Branch;
 import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.BranchRef;
+import net.vanfleteren.jazygit.core.repo.ForgeBranch;
 import net.vanfleteren.jazygit.core.repo.PrNumber;
 import net.vanfleteren.jazygit.core.repo.RemoteBranch;
 import net.vanfleteren.jazygit.core.repo.RemoteName;
@@ -49,9 +50,9 @@ class ForgejoCreatePullRequestUpdateTest {
     private static final ForgejoPullRequest CREATED = new ForgejoPullRequest(
             new PrNumber(13),
             "Create it",
-            "feature",
+            new ForgeBranch("feature"),
             Option.of("cvf/nix"),
-            "main",
+            new ForgeBranch("main"),
             false,
             "https://code.example.net/cvf/nix/13");
 

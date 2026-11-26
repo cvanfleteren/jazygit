@@ -6,13 +6,13 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import io.vavr.collection.List;
 import io.vavr.control.Either;
 import java.time.Instant;
-import net.vanfleteren.jazygit.core.gh.model.GhBranch;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest.Review;
 import net.vanfleteren.jazygit.core.git.model.SampleData;
 import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.BranchRef;
+import net.vanfleteren.jazygit.core.repo.ForgeBranch;
 import net.vanfleteren.jazygit.core.repo.PrNumber;
 import net.vanfleteren.jazygit.core.repo.RemoteBranch;
 import net.vanfleteren.jazygit.features.github.checks.ChecksPopup;
@@ -36,7 +36,7 @@ class SpinnersGitHubTest {
 
     private static final PullRequestPopup PULL_REQUEST = PullRequestPopup.loading(
             new BranchName("feature"),
-            new PullRequest(new PrNumber(42), new GhBranch("feature"), true, Checks.PASSING, Review.APPROVED),
+            new PullRequest(new PrNumber(42), new ForgeBranch("feature"), true, Checks.PASSING, Review.APPROVED),
             Instant.EPOCH,
             0);
 
