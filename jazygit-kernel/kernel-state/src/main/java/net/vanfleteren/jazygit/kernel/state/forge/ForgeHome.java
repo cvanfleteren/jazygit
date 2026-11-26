@@ -21,13 +21,14 @@ import net.vanfleteren.jazygit.kernel.state.Part;
  * @param home       the home, while its forge is on
  * @param decided    whether the kernel decided, so that it does so once an opening
  */
+@With
 public record ForgeHome(
-        @With Set<String> awaiting,
-        @With List<ForgeClaim> claims,
-        @With Option<Option<RemoteName>> remembered,
-        @With boolean read,
-        @With Option<ForgeCandidate> home,
-        @With boolean decided) {
+        Set<String> awaiting,
+        List<ForgeClaim> claims,
+        Option<Option<RemoteName>> remembered,
+        boolean read,
+        Option<ForgeCandidate> home,
+        boolean decided) {
 
     public static final ForgeHome NONE =
             new ForgeHome(HashSet.empty(), List.empty(), Option.none(), false, Option.none(), false);
