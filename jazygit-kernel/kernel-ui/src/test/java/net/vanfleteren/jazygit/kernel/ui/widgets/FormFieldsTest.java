@@ -2,6 +2,7 @@ package net.vanfleteren.jazygit.kernel.ui.widgets;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+import dev.tamboui.toolkit.element.Element;
 import dev.tamboui.toolkit.event.EventResult;
 import dev.tamboui.tui.event.KeyCode;
 import dev.tamboui.tui.event.KeyEvent;
@@ -34,6 +35,44 @@ class FormFieldsTest {
         body.render("Line one\nLine two", keys, text -> {});
 
         assertEquals("Line one\nLine two", body.text());
+    }
+
+    // Where the cursor is shows in where a character typed goes.
+
+    @Test
+    void aTitleTheModelChangesPutsTheCursorAtItsEnd() {
+        TitleField title = new TitleField("title", "label", "placeholder");
+        title.render("abc", keys, text -> {});
+
+        Element field = title.render("abcdef", keys, text -> {});
+        field.handleKeyEvent(KeyEvent.ofChar('X'), true);
+
+        assertEquals("abcdefX", title.text());
+    }
+
+    @Test
+    void aTitleTheModelAlreadyHasKeepsItsCursor() {
+        TitleField title = new TitleField("title", "label", "placeholder");
+        Element field = title.render("abcdef", keys, text -> {});
+        field.handleKeyEvent(KeyEvent.ofKey(KeyCode.LEFT), true);
+        field.handleKeyEvent(KeyEvent.ofKey(KeyCode.LEFT), true);
+
+        title.render("abcdef", keys, text -> {}).handleKeyEvent(KeyEvent.ofChar('X'), true);
+
+        assertEquals("abcdXef", title.text());
+    }
+
+    @Test
+    void aBodyTheModelAlreadyHasKeepsItsCursor() {
+        BodyField body = new BodyField("body", "label", "placeholder");
+        Element field = body.render("abcdef", keys, text -> {});
+        field.handleKeyEvent(KeyEvent.ofKey(KeyCode.END), true);
+        field.handleKeyEvent(KeyEvent.ofKey(KeyCode.LEFT), true);
+        field.handleKeyEvent(KeyEvent.ofKey(KeyCode.LEFT), true);
+
+        body.render("abcdef", keys, text -> {}).handleKeyEvent(KeyEvent.ofChar('X'), true);
+
+        assertEquals("abcdXef", body.text());
     }
 
     @Test
