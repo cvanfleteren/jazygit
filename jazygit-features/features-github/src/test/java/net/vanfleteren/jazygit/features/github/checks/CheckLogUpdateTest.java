@@ -285,6 +285,21 @@ class CheckLogUpdateTest {
     }
 
     @Test
+    void theChecksUnderTheMenuKeepHowFarTheyWereShownToBeWhenWhatChecksTakeChanges() {
+        Check e2e = check("e2e", 2, "E2E", Checks.PENDING, "");
+        Model model = shown(List.of(e2e, LINT), NVIM, CODE);
+        CheckLogCmd cmd = new CheckLogCmd("owner/repo", "lint", LINT.run().get());
+        Model asking = update(model, new ChecksMsg.LogRead(cmd, FILE.toString(), 3, List.empty()));
+        ChecksPopup kept = checks(model).checkTimesChanging(asking);
+
+        Model back = update(asking.checkTimesChanged(asking), new EditMsg.Cancelled());
+
+        // The checks are running, so being told changes them: the menu has to pass it on.
+        assertNotEquals(checks(model), kept);
+        assertEquals(Option.of(kept), back.popup(ChecksPopup.class));
+    }
+
+    @Test
     void whyThereIsNoLogStaysWithTheCheckItIsAboutAndGoesOnceItHasOne() {
         Check e2e = check("e2e", 2, "E2E", Checks.PENDING, "");
         Check e2eDone = check("e2e", 2, "E2E", Checks.PASSING, "SUCCESS");
