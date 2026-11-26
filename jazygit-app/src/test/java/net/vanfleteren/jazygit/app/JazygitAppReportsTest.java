@@ -44,6 +44,7 @@ import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.view.Preview;
 import net.vanfleteren.jazygit.kernel.ui.CommandLogPanel;
 import net.vanfleteren.jazygit.kernel.ui.SettledPilot;
+import net.vanfleteren.jazygit.kernel.ui.files.FilesPanel;
 import net.vanfleteren.jazygit.kernel.ui.keys.Scopes;
 import net.vanfleteren.jazygit.kernel.ui.text.TimeText;
 import org.junit.jupiter.api.Test;
@@ -191,6 +192,33 @@ class JazygitAppReportsTest {
             pilot.pause();
 
             assertEquals(CommandLogPanel.ID, onRenderThread(testRunner, () -> focusedId(testRunner)));
+        } finally {
+            app.onStop();
+        }
+    }
+
+    @Test
+    void escapeInTheFilesOfACommitGivesTheFocusBackToTheCommitsAsTheUpdateAsks() throws Exception {
+        TestApp app = new TestApp();
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(app::frame, SIZE, tickless())) {
+            app.start(testRunner);
+            SettledPilot.focus(testRunner, CommitsPanel.ID, app.drawnAt::size);
+            awaitModel(testRunner, app, model -> shownCommit(model).contains(commits.get(0)));
+            Pilot pilot = SettledPilot.of(testRunner, app.drawnAt::size);
+            pilot.press(KeyCode.ENTER);
+            awaitModel(
+                    testRunner,
+                    app,
+                    model -> model.repoView().files().commitFiles().isDefined());
+            pilot.pause();
+            assertEquals(FilesPanel.ID, onRenderThread(testRunner, () -> focusedId(testRunner)));
+
+            pilot.press(KeyCode.ESCAPE);
+            pilot.pause();
+
+            // Back to the list the files were opened from (ADR 141, 207); they stay listed.
+            assertEquals(CommitsPanel.ID, onRenderThread(testRunner, () -> focusedId(testRunner)));
+            assertEquals(Option.none(), app.model().repoView().files().locked());
         } finally {
             app.onStop();
         }

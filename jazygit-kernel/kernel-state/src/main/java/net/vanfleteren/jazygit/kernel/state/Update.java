@@ -13,6 +13,7 @@ import net.vanfleteren.jazygit.kernel.settings.ThemeName;
 import net.vanfleteren.jazygit.kernel.state.Cmd.*;
 import net.vanfleteren.jazygit.kernel.state.preferences.RepositoryTheme;
 import net.vanfleteren.jazygit.kernel.state.preferences.SettingsError;
+import net.vanfleteren.jazygit.kernel.state.view.ViewIntent;
 
 /**
  * The pure state transitions of the app: given a model and a message, the next model and the IO
@@ -99,7 +100,7 @@ public final class Update {
      * {@code next}, with each command in it once.
      */
     public static Next once(Next next) {
-        return new Next(next.model(), next.cmds().distinct(), next.quit());
+        return new Next(next.model(), next.cmds().distinct(), next.quit(), next.intents());
     }
 
     private static Next handled(Model model, Msg msg) {
@@ -192,7 +193,8 @@ public final class Update {
         return new Step(
                 started.reactions().started(started, cmds),
                 cmds.zipWithIndex().map(cmd -> new Launch(first + cmd._2(), cmd._1())),
-                next.quit());
+                next.quit(),
+                next.intents());
     }
 
     /**
@@ -201,41 +203,62 @@ public final class Update {
      * the message is handled (ADR 39).
      *
      * @param quit whether the app stops once this is applied
+     * @param intents what the app is asked to do with the view state it keeps, in this order, once this is applied
+     *                (ADR 207)
      */
-    public record Next(Model model, List<Cmd> cmds, boolean quit) {
+    public record Next(Model model, List<Cmd> cmds, boolean quit, List<ViewIntent> intents) {
 
         public Next(Model model, List<Cmd> cmds) {
             this(model, cmds, false);
         }
 
+        public Next(Model model, List<Cmd> cmds, boolean quit) {
+            this(model, cmds, quit, List.empty());
+        }
+
         /**
-         * This, with {@code f} applied to its model: the commands and whether the app stops stay.
+         * This, with {@code f} applied to its model: the commands, whether the app stops and what it is asked stay.
          */
         public Next map(UnaryOperator<Model> f) {
-            return new Next(f.apply(model), cmds, quit);
+            return new Next(f.apply(model), cmds, quit, intents);
         }
 
         /**
          * This, and {@code more} commands to run after its own.
          */
         public Next and(Cmd... more) {
-            return new Next(model, cmds.appendAll(List.of(more)), quit);
+            return new Next(model, cmds.appendAll(List.of(more)), quit, intents);
         }
 
         /**
-         * This, followed by what {@code f} makes of its model: the commands of both run, in that order, and the app
-         * stops if either says so.
+         * This, followed by what {@code f} makes of its model: the commands of both run, in that order, the app
+         * stops if either says so, and is asked what both ask, in that order.
          */
         public Next then(Function<Model, Next> f) {
             Next next = f.apply(model);
-            return new Next(next.model(), cmds.appendAll(next.cmds()), quit || next.quit());
+            return new Next(
+                    next.model(), cmds.appendAll(next.cmds()), quit || next.quit(), intents.appendAll(next.intents()));
         }
 
         /**
          * This, and the app stops.
          */
         public Next quitting() {
-            return new Next(model, cmds, true);
+            return new Next(model, cmds, true, intents);
+        }
+
+        /**
+         * This, and the app is asked {@code more} after what this asks already (ADR 207).
+         */
+        public Next asking(ViewIntent... more) {
+            return asking(List.of(more));
+        }
+
+        /**
+         * This, and the app is asked {@code more}, if any, after what this asks already (ADR 207).
+         */
+        public Next asking(Iterable<? extends ViewIntent> more) {
+            return new Next(model, cmds, quit, intents.appendAll(more));
         }
 
         public static Next of(Model model, Cmd... cmds) {
@@ -252,6 +275,7 @@ public final class Update {
      * The next model, and the commands to run for it, each with its id: what {@link Program} applies.
      *
      * @param quit whether the app stops once this is applied
+     * @param intents what the app is asked to do with the view state it keeps, in this order, once this is applied
      */
-    public record Step(Model model, List<Launch> launches, boolean quit) {}
+    public record Step(Model model, List<Launch> launches, boolean quit, List<ViewIntent> intents) {}
 }

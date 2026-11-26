@@ -34,12 +34,42 @@ import net.vanfleteren.jazygit.kernel.state.popup.Popup;
 import net.vanfleteren.jazygit.kernel.state.popup.PopupMsg;
 import net.vanfleteren.jazygit.kernel.state.preferences.RepositoryTheme;
 import net.vanfleteren.jazygit.kernel.state.view.BranchesTab;
+import net.vanfleteren.jazygit.kernel.state.view.CommandLogFocused;
+import net.vanfleteren.jazygit.kernel.state.view.FileStepMsg;
+import net.vanfleteren.jazygit.kernel.state.view.ViewIntent;
 import org.junit.jupiter.api.Test;
 
 /**
  * The core state transitions: startup, periodic refresh and load failures.
  */
 class UpdateTest {
+
+    @Test
+    void whatAMessageAsksOfTheViewTheAppKeepsGoesOnThroughEachStepInOrder() {
+        Model model = loaded();
+        ViewIntent log = new ViewIntent.ToCommandLog();
+        ViewIntent step = new ViewIntent.StepFile(FileStepMsg.Step.NEXT);
+
+        Next both = Next.of(model).asking(log).then(next -> Next.of(next).asking(step));
+        Step stepped = Update.step(model, new CommandLogFocused(), Instant.EPOCH);
+
+        assertEquals(List.of(log, step), both.intents());
+        assertEquals(List.of(log, step), both.map(same -> same).and().quitting().intents());
+        assertEquals(List.of(log), stepped.intents());
+    }
+
+    @Test
+    void theFocusAndTheHighlightOfTheFilesAreAskedOfTheAppAsTheModelKnowsNeither() {
+        Model model = loaded();
+
+        Next log = Update.update(model, new CommandLogFocused());
+        Next stepped = Update.update(model, new FileStepMsg(FileStepMsg.Step.PREVIOUS));
+
+        assertEquals(model, log.model());
+        assertEquals(List.of(new ViewIntent.ToCommandLog()), log.intents());
+        assertEquals(model, stepped.model());
+        assertEquals(List.of(new ViewIntent.StepFile(FileStepMsg.Step.PREVIOUS)), stepped.intents());
+    }
 
     @Test
     void branchesThatCannotBeReadFailBothListsAsTheyAreReadTogether() {

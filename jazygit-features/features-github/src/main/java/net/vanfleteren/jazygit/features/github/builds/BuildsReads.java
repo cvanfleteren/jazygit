@@ -48,7 +48,6 @@ public final class BuildsReads {
      * {@code next}, then reading what its model's builds show and is not read yet.
      */
     public static Next after(Next next) {
-        Next more = next(next.model());
-        return new Next(more.model(), next.cmds().appendAll(more.cmds()), next.quit());
+        return next.then(BuildsReads::next);
     }
 }

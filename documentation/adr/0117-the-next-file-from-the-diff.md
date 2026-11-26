@@ -95,3 +95,6 @@ stays in the content panel, which shows the diff of the file moved to.
 - A walk through a large tree in the mode of all files opens every directory it passes through.
 - Moving through the files of a whole commit entered from the commits pane, section by section, is left to a later
   decision.
+
+Amended by ADR 207: the update of `FileStepMsg` asks the app to move the highlight, with `ViewIntent.StepFile`; the
+app no longer matches the message before it dispatches it.

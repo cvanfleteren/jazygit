@@ -93,6 +93,7 @@ public final class TestModels {
                 bug -> {},
                 modelChanged,
                 () -> {},
+                intent -> {},
                 STILL);
     }
 

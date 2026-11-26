@@ -19,6 +19,7 @@ import net.vanfleteren.jazygit.kernel.state.load.LoadCommitFiles;
 import net.vanfleteren.jazygit.kernel.state.load.LoadCommitTree;
 import net.vanfleteren.jazygit.kernel.state.view.CommitFilesView;
 import net.vanfleteren.jazygit.kernel.state.view.FilesLock;
+import net.vanfleteren.jazygit.kernel.state.view.ViewIntent;
 import net.vanfleteren.jazygit.kernel.ui.keys.Scopes;
 
 /**
@@ -34,10 +35,11 @@ public final class CommitFilesUpdate {
     public static Next update(Model model, CommitFilesMsg msg) {
         return switch (msg) {
             case CommitFilesMsg.Opened(var of, var pane) -> opened(locked(model, pane), of, pane);
-            // Escape moves the focus back to the list the files are of, which the app does: they stay (ADR 141), and
-            // follow the list with the focus again (ADR 149).
+            // Escape moves the focus back to the list the files are of, which the app is asked to do: they stay (ADR
+            // 141), and follow the list with the focus again (ADR 149, 207).
             case CommitFilesMsg.Closed() ->
-                Next.of(model.mapRepoView(repoView -> repoView.mapFiles(files -> files.withLocked(Option.none()))));
+                Next.of(model.mapRepoView(repoView -> repoView.mapFiles(files -> files.withLocked(Option.none()))))
+                        .asking(model.repoView().files().backTo().map(ViewIntent.ToPane::to));
             // Only the files of a change that a part states remarks for are listed by them (ADR 57, 171).
             case CommitFilesMsg.ListedCycled() ->
                 Next.of(model.mapRepoView(repoView ->

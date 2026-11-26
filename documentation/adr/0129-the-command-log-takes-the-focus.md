@@ -56,3 +56,6 @@ focus back to. A popup has the focus aside from that: it is not reported to the 
 - `FocusKeeper` treats the log as it treats a popup.
 - A click on the log no longer leaves the focus where it was.
 - `@` is taken.
+
+Amended by ADR 207: the update of `CommandLogFocused` asks the app to move the focus into the log, with
+`ViewIntent.ToCommandLog`; the app no longer matches the message, nor the help it is chosen from.
