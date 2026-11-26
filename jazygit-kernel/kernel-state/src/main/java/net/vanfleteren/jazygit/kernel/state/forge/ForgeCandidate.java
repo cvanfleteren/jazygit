@@ -1,6 +1,7 @@
 package net.vanfleteren.jazygit.kernel.state.forge;
 
 import net.vanfleteren.jazygit.core.repo.RemoteName;
+import net.vanfleteren.jazygit.kernel.state.FeatureId;
 
 /**
  * A remote the home of a repository can be (ADR 177): one a forge claimed.
@@ -10,4 +11,4 @@ import net.vanfleteren.jazygit.core.repo.RemoteName;
  * @param remote  the remote
  * @param url     where it is
  */
-public record ForgeCandidate(String feature, String forge, RemoteName remote, String url) {}
+public record ForgeCandidate(FeatureId feature, String forge, RemoteName remote, String url) {}

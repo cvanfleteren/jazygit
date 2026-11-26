@@ -7,6 +7,7 @@ import io.vavr.collection.Map;
 import io.vavr.collection.Set;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.core.repo.RemoteName;
+import net.vanfleteren.jazygit.kernel.state.FeatureId;
 
 /**
  * What a forge found of the remotes of a repository as it opened (ADR 177): those on it, those it could not tell, and
@@ -19,7 +20,7 @@ import net.vanfleteren.jazygit.core.repo.RemoteName;
  * @param preferred the remote the forge's own setting names the home, as gh's {@code set-default}, if any
  */
 public record ForgeClaim(
-        String feature,
+        FeatureId feature,
         String forge,
         Map<RemoteName, String> claimed,
         Set<RemoteName> unsure,
@@ -28,7 +29,7 @@ public record ForgeClaim(
     /**
      * A forge that claims no remote, and can tell of each.
      */
-    public static ForgeClaim none(String feature, String forge) {
+    public static ForgeClaim none(FeatureId feature, String forge) {
         return new ForgeClaim(feature, forge, LinkedHashMap.empty(), HashSet.empty(), Option.none());
     }
 

@@ -19,6 +19,7 @@ import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.core.repo.Tracking;
 import net.vanfleteren.jazygit.core.repo.Upstream;
 import net.vanfleteren.jazygit.features.forgejo.ForgejoFeature;
+import net.vanfleteren.jazygit.kernel.state.FeatureId;
 import net.vanfleteren.jazygit.kernel.state.KernelEvent;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.TestModels;
@@ -193,7 +194,9 @@ public class BuildsUpdateTest {
         assertEquals(
                 BuildsUpdate.tips(model()),
                 reading(ForgejoReactions.to(model(), new KernelEvent.Switched(ForgejoFeature.ID, true))));
-        assertEquals(List.empty(), reading(ForgejoReactions.to(model(), new KernelEvent.Switched("github", true))));
+        assertEquals(
+                List.empty(),
+                reading(ForgejoReactions.to(model(), new KernelEvent.Switched(new FeatureId("github"), true))));
         assertEquals(
                 BuildsUpdate.tips(model()), reading(ForgejoReactions.to(model(), new KernelEvent.OperationDone(true))));
         assertEquals(List.empty(), reading(ForgejoReactions.to(model(), new KernelEvent.OperationDone(false))));

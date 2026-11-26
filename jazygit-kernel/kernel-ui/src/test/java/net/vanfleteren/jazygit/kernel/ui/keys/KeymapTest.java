@@ -8,6 +8,7 @@ import dev.tamboui.tui.event.KeyEvent;
 import dev.tamboui.tui.event.KeyModifiers;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
+import net.vanfleteren.jazygit.kernel.state.FeatureId;
 import net.vanfleteren.jazygit.kernel.state.FeatureMsg;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.Msg;
@@ -68,30 +69,33 @@ class KeymapTest {
         Keymap keymap = Keymap.empty()
                 .add(SCOPE, ON_SELECTED)
                 .owned(
-                        "f",
+                        new FeatureId("f"),
                         keys -> keys.add(SCOPE, Binding.always("a", "probe.a", () -> ALWAYS))
                                 .global(Keymap.Global.Dispatching.ofChar('g', "probe.g", () -> ALWAYS)));
 
         assertEquals(
                 Option.of(new Probe("selected one")), keymap.handle(SCOPE, KeyEvent.ofChar('x'), Option.of("one")));
         assertEquals(
-                Option.of(new FeatureMsg.Owned("f", ALWAYS)),
+                Option.of(new FeatureMsg.Owned(new FeatureId("f"), ALWAYS)),
                 keymap.handle(SCOPE, KeyEvent.ofChar('a'), Option.of("one")));
-        assertEquals(Option.of(new FeatureMsg.Owned("f", ALWAYS)), keymap.handleGlobal(KeyEvent.ofChar('g')));
         assertEquals(
-                List.of(Option.none(), Option.of("f")), keymap.bindings("probe").map(Binding::feature));
+                Option.of(new FeatureMsg.Owned(new FeatureId("f"), ALWAYS)), keymap.handleGlobal(KeyEvent.ofChar('g')));
+        assertEquals(
+                List.of(Option.none(), Option.of(new FeatureId("f"))),
+                keymap.bindings("probe").map(Binding::feature));
     }
 
     @Test
     void featuresThatAreOnOrOffBindOneKeyAlikeAndItSendsWhatTheFirstOfThemThatIsOnSends() {
         Probe other = new Probe("other");
         Keymap keymap = Keymap.empty()
-                .owned("f", keys -> keys.add(SCOPE, Binding.always("a", "f.a", () -> ALWAYS)))
-                .owned("g", keys -> keys.add(SCOPE, Binding.always("a", "g.a", () -> other)));
+                .owned(new FeatureId("f"), keys -> keys.add(SCOPE, Binding.always("a", "f.a", () -> ALWAYS)))
+                .owned(new FeatureId("g"), keys -> keys.add(SCOPE, Binding.always("a", "g.a", () -> other)));
 
         assertEquals(
-                Option.of(new FeatureMsg.FirstOn(
-                        List.of(new FeatureMsg.Owned("f", ALWAYS), new FeatureMsg.Owned("g", other)))),
+                Option.of(new FeatureMsg.FirstOn(List.of(
+                        new FeatureMsg.Owned(new FeatureId("f"), ALWAYS),
+                        new FeatureMsg.Owned(new FeatureId("g"), other)))),
                 keymap.handle(SCOPE, KeyEvent.ofChar('a'), Option.of("one")));
         assertEquals(List.of("f.a", "g.a"), keymap.bindings("probe").map(Binding::descriptionKey));
     }
@@ -100,24 +104,27 @@ class KeymapTest {
     void aKeyOfAFeatureIsRefusedWhenTheKernelOrTheSameFeatureBindsIt() {
         Binding<String> a = Binding.always("a", "probe.a", () -> ALWAYS);
         Keymap kernel = Keymap.empty().add(SCOPE, a);
-        Keymap feature = Keymap.empty().owned("f", keys -> keys.add(SCOPE, a));
+        Keymap feature = Keymap.empty().owned(new FeatureId("f"), keys -> keys.add(SCOPE, a));
 
-        assertThrows(IllegalArgumentException.class, () -> kernel.owned("f", keys -> keys.add(SCOPE, a)));
+        assertThrows(
+                IllegalArgumentException.class, () -> kernel.owned(new FeatureId("f"), keys -> keys.add(SCOPE, a)));
         assertThrows(IllegalArgumentException.class, () -> feature.add(SCOPE, a));
-        assertThrows(IllegalArgumentException.class, () -> feature.owned("f", keys -> keys.add(SCOPE, a)));
+        assertThrows(
+                IllegalArgumentException.class, () -> feature.owned(new FeatureId("f"), keys -> keys.add(SCOPE, a)));
         assertThrows(
                 IllegalArgumentException.class,
-                () -> Keymap.empty().owned("f", keys -> keys.add(SCOPE, Binding.always("?", "f.q", () -> ALWAYS))));
+                () -> Keymap.empty()
+                        .owned(new FeatureId("f"), keys -> keys.add(SCOPE, Binding.always("?", "f.q", () -> ALWAYS))));
     }
 
     @Test
     void aKeyBoundAlikeThatSendsNothingForOneFeatureSendsWhatTheOtherSends() {
         Keymap keymap = Keymap.empty()
-                .owned("f", keys -> keys.add(SCOPE, Binding.onSelected("a", "f.a", selected -> ALWAYS)))
-                .owned("g", keys -> keys.add(SCOPE, Binding.always("a", "g.a", () -> ALWAYS)));
+                .owned(new FeatureId("f"), keys -> keys.add(SCOPE, Binding.onSelected("a", "f.a", selected -> ALWAYS)))
+                .owned(new FeatureId("g"), keys -> keys.add(SCOPE, Binding.always("a", "g.a", () -> ALWAYS)));
 
         assertEquals(
-                Option.of(new FeatureMsg.Owned("g", ALWAYS)),
+                Option.of(new FeatureMsg.Owned(new FeatureId("g"), ALWAYS)),
                 keymap.handle(SCOPE, KeyEvent.ofChar('a'), Option.none()));
     }
 
@@ -181,12 +188,13 @@ class KeymapTest {
         Probe guest = new Probe("guest");
         Keymap keymap = Keymap.empty()
                 .host(SCOPE, GUEST)
-                .owned("f", keys -> keys.add(SCOPE, Binding.always("a", "f.a", () -> ALWAYS)))
-                .owned("g", keys -> keys.add(GUEST, Binding.always("a", "g.a", () -> guest)));
+                .owned(new FeatureId("f"), keys -> keys.add(SCOPE, Binding.always("a", "f.a", () -> ALWAYS)))
+                .owned(new FeatureId("g"), keys -> keys.add(GUEST, Binding.always("a", "g.a", () -> guest)));
 
         assertEquals(
-                Option.of(new FeatureMsg.FirstOn(
-                        List.of(new FeatureMsg.Owned("f", ALWAYS), new FeatureMsg.Owned("g", guest)))),
+                Option.of(new FeatureMsg.FirstOn(List.of(
+                        new FeatureMsg.Owned(new FeatureId("f"), ALWAYS),
+                        new FeatureMsg.Owned(new FeatureId("g"), guest)))),
                 keymap.handle(SCOPE, KeyEvent.ofChar('a'), Option.of("one"), new Keymap.Hosted<>(GUEST, Option.of(7))));
     }
 
@@ -194,12 +202,17 @@ class KeymapTest {
     void aGlobalKeyFeaturesBindAlikeSendsWhatTheFirstOfThemThatIsOnSends() {
         Probe other = new Probe("other");
         Keymap keymap = Keymap.empty()
-                .owned("f", keys -> keys.global(Keymap.Global.Dispatching.ofChar('z', "f.z", () -> ALWAYS)))
-                .owned("g", keys -> keys.global(Keymap.Global.Dispatching.ofChar('z', "g.z", () -> other)));
+                .owned(
+                        new FeatureId("f"),
+                        keys -> keys.global(Keymap.Global.Dispatching.ofChar('z', "f.z", () -> ALWAYS)))
+                .owned(
+                        new FeatureId("g"),
+                        keys -> keys.global(Keymap.Global.Dispatching.ofChar('z', "g.z", () -> other)));
 
         assertEquals(
-                Option.of(new FeatureMsg.FirstOn(
-                        List.of(new FeatureMsg.Owned("f", ALWAYS), new FeatureMsg.Owned("g", other)))),
+                Option.of(new FeatureMsg.FirstOn(List.of(
+                        new FeatureMsg.Owned(new FeatureId("f"), ALWAYS),
+                        new FeatureMsg.Owned(new FeatureId("g"), other)))),
                 keymap.handleGlobal(KeyEvent.ofChar('z')));
     }
 
@@ -217,11 +230,11 @@ class KeymapTest {
     void aGlobalKeyOfAFeatureIsRefusedWhenTheKernelOrTheSameFeatureBindsIt() {
         Keymap.Global z = Keymap.Global.Dispatching.ofChar('z', "probe.z", () -> ALWAYS);
         Keymap kernel = Keymap.empty().global(z);
-        Keymap feature = Keymap.empty().owned("f", keys -> keys.global(z));
+        Keymap feature = Keymap.empty().owned(new FeatureId("f"), keys -> keys.global(z));
 
-        assertThrows(IllegalArgumentException.class, () -> kernel.owned("f", keys -> keys.global(z)));
+        assertThrows(IllegalArgumentException.class, () -> kernel.owned(new FeatureId("f"), keys -> keys.global(z)));
         assertThrows(IllegalArgumentException.class, () -> feature.global(z));
-        assertThrows(IllegalArgumentException.class, () -> feature.owned("f", keys -> keys.global(z)));
+        assertThrows(IllegalArgumentException.class, () -> feature.owned(new FeatureId("f"), keys -> keys.global(z)));
     }
 
     @Test

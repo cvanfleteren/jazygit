@@ -4,6 +4,7 @@ import io.vavr.collection.List;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.kernel.settings.SettingKey;
 import net.vanfleteren.jazygit.kernel.settings.Settings;
+import net.vanfleteren.jazygit.kernel.state.FeatureId;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.PaneId;
 
@@ -24,7 +25,7 @@ public record Screen(
         List<PaneId> panes,
         SettingKey<Integer> width,
         SettingKey<List<Integer>> heights,
-        Option<String> feature) {
+        Option<FeatureId> feature) {
 
     /**
      * The files, branches, commits and stashes of the repository, which the app shows first.

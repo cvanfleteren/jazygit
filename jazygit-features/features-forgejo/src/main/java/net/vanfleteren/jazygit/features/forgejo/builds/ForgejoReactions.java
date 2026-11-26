@@ -1,6 +1,7 @@
 package net.vanfleteren.jazygit.features.forgejo.builds;
 
 import net.vanfleteren.jazygit.features.forgejo.ForgejoFeature;
+import net.vanfleteren.jazygit.kernel.state.FeatureId;
 import net.vanfleteren.jazygit.kernel.state.KernelEvent;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.Update.Next;
@@ -18,7 +19,7 @@ public final class ForgejoReactions {
      */
     public static Next to(Model model, KernelEvent event) {
         return switch (event) {
-            case KernelEvent.Switched(String feature, boolean on)
+            case KernelEvent.Switched(FeatureId feature, boolean on)
             // Afresh, as the repository may be another one, with other remotes under the same names.
             when feature.equals(ForgejoFeature.ID) && on ->
                 BuildsUpdate.read(model.withPart(ForgejoBuilds.PART, ForgejoBuilds.NONE));

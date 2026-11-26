@@ -29,6 +29,7 @@ import net.vanfleteren.jazygit.features.forgejo.show.LoadPullRequest;
 import net.vanfleteren.jazygit.features.forgejo.show.ShownPullRequest;
 import net.vanfleteren.jazygit.kernel.state.AppError;
 import net.vanfleteren.jazygit.kernel.state.Failure;
+import net.vanfleteren.jazygit.kernel.state.FeatureId;
 import net.vanfleteren.jazygit.kernel.state.KernelEvent;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.Update;
@@ -189,7 +190,8 @@ class PullRequestUpdateTest {
         RemoteName upstream = new RemoteName("upstream");
         Model moved = listed().withPart(
                         ForgeHome.PART,
-                        ForgeHome.NONE.deciding(Option.of(new ForgeCandidate("forgejo", "Forgejo", upstream, URL))));
+                        ForgeHome.NONE.deciding(
+                                Option.of(new ForgeCandidate(new FeatureId("forgejo"), "Forgejo", upstream, URL))));
 
         Next next = requested(moved, "feature");
         assertEquals(Option.none(), next.model().popup(ForgejoPullRequestPopup.class));
@@ -217,7 +219,8 @@ class PullRequestUpdateTest {
         RemoteName upstream = new RemoteName("upstream");
         Model moved = model().withPart(
                         ForgeHome.PART,
-                        ForgeHome.NONE.deciding(Option.of(new ForgeCandidate("forgejo", "Forgejo", upstream, URL))));
+                        ForgeHome.NONE.deciding(
+                                Option.of(new ForgeCandidate(new FeatureId("forgejo"), "Forgejo", upstream, URL))));
 
         Model late = PullRequestUpdate.update(
                         moved, new PullRequestMsg.Listed(ORIGIN, Option.of(HashMap.of(FEATURE, LISTED)), Option.none()))

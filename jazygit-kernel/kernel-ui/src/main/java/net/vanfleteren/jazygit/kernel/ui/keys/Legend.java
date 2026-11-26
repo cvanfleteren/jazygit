@@ -1,6 +1,7 @@
 package net.vanfleteren.jazygit.kernel.ui.keys;
 
 import io.vavr.control.Option;
+import net.vanfleteren.jazygit.kernel.state.FeatureId;
 
 /**
  * What a symbol of a panel means, as the help of the panel lists it under its keys (ADR 168): the panel says what its
@@ -12,7 +13,7 @@ import io.vavr.control.Option;
  * @param feature        the id of the feature that adds it, when it is on or off for a repository: the help leaves it
  *                       out while it is off (ADR 171)
  */
-public record Legend(String scopeId, String symbols, String descriptionKey, Option<String> feature) {
+public record Legend(String scopeId, String symbols, String descriptionKey, Option<FeatureId> feature) {
 
     /**
      * What a symbol means, as the panel or a feature that is always on says it.
@@ -24,7 +25,7 @@ public record Legend(String scopeId, String symbols, String descriptionKey, Opti
     /**
      * This legend, of the feature {@code feature}.
      */
-    public Legend of(String feature) {
+    public Legend of(FeatureId feature) {
         return new Legend(scopeId, symbols, descriptionKey, Option.of(feature));
     }
 }

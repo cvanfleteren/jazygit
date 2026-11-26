@@ -16,6 +16,7 @@ import net.vanfleteren.jazygit.features.forgejo.create.ForgejoCreatePullRequestA
 import net.vanfleteren.jazygit.features.forgejo.pulls.PullRequestReactions;
 import net.vanfleteren.jazygit.features.forgejo.show.ForgejoPullRequestDialog;
 import net.vanfleteren.jazygit.features.forgejo.show.ShowPullRequestAction;
+import net.vanfleteren.jazygit.kernel.state.FeatureId;
 import net.vanfleteren.jazygit.kernel.ui.Feature;
 import net.vanfleteren.jazygit.kernel.ui.KernelSlots;
 
@@ -29,7 +30,7 @@ public final class ForgejoFeature {
     /**
      * The id of the feature, by which it is on or off for a repository (ADR 171).
      */
-    public static final String ID = "forgejo";
+    public static final FeatureId ID = new FeatureId("forgejo");
 
     /**
      * How often the commits not read yet, those whose builds run and those read before a fetch are read.

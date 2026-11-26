@@ -21,7 +21,7 @@ class FeaturesWithoutGitHubTest {
 
     @Test
     void gitHubCanBeLeftOut() {
-        assertTrue(Features.ids().contains(GitHubFeature.ID));
+        assertTrue(Features.ids().contains(GitHubFeature.ID.value()));
     }
 
     @Test
@@ -31,12 +31,12 @@ class FeaturesWithoutGitHubTest {
 
     @Test
     void thePropertyLeavesGitHubOut() {
-        assertFalse(Features.running(Option.of(GitHubFeature.ID)).exists(FeaturesWithoutGitHubTest::isGitHub));
+        assertFalse(Features.running(Option.of(GitHubFeature.ID.value())).exists(FeaturesWithoutGitHubTest::isGitHub));
     }
 
     @Test
     void leftOutGitHubBringsNoScreen() {
-        List<Feature> running = Features.running(Option.of(GitHubFeature.ID));
+        List<Feature> running = Features.running(Option.of(GitHubFeature.ID.value()));
 
         assertTrue(GitHubFeature.FEATURE.screens().nonEmpty());
         assertFalse(running.flatMap(Feature::screens)

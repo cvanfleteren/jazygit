@@ -33,6 +33,7 @@ import net.vanfleteren.jazygit.features.github.show.ShowPullRequestAction;
 import net.vanfleteren.jazygit.features.github.stack.StackAction;
 import net.vanfleteren.jazygit.features.github.stack.StackMsg;
 import net.vanfleteren.jazygit.features.github.verdict.VerdictAction;
+import net.vanfleteren.jazygit.kernel.state.FeatureId;
 import net.vanfleteren.jazygit.kernel.state.preferences.ScreenMsg;
 import net.vanfleteren.jazygit.kernel.ui.Feature;
 import net.vanfleteren.jazygit.kernel.ui.FeatureAction;
@@ -52,7 +53,7 @@ public final class GitHubFeature {
     /**
      * The id of the feature, by which it is on or off for a repository (ADR 171).
      */
-    public static final String ID = "github";
+    public static final FeatureId ID = new FeatureId("github");
 
     /**
      * How often the pull requests screen reads what GitHub has again.

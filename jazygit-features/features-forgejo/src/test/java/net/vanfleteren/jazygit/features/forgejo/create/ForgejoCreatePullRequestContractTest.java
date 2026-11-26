@@ -16,6 +16,7 @@ import net.vanfleteren.jazygit.features.branches.branch.pullrequest.CreatePullRe
 import net.vanfleteren.jazygit.features.branches.branch.pullrequest.CreatePullRequestContract;
 import net.vanfleteren.jazygit.features.branches.branch.pullrequest.FormOpening;
 import net.vanfleteren.jazygit.features.forgejo.pulls.PullRequestFixtures;
+import net.vanfleteren.jazygit.kernel.state.FeatureId;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.Msg;
 import net.vanfleteren.jazygit.kernel.state.TestModels;
@@ -43,8 +44,8 @@ class ForgejoCreatePullRequestContractTest extends CreatePullRequestContract {
                 .model()
                 .withPart(
                         ForgeHome.PART,
-                        ForgeHome.NONE.deciding(
-                                Option.of(new ForgeCandidate("forgejo", "Forgejo", ORIGIN, PullRequestFixtures.URL))));
+                        ForgeHome.NONE.deciding(Option.of(new ForgeCandidate(
+                                new FeatureId("forgejo"), "Forgejo", ORIGIN, PullRequestFixtures.URL))));
     }
 
     /**

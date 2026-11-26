@@ -25,6 +25,7 @@ import net.vanfleteren.jazygit.features.forgejo.pulls.ForgejoPullRequests;
 import net.vanfleteren.jazygit.features.forgejo.pulls.PullRequestFixtures;
 import net.vanfleteren.jazygit.features.forgejo.pulls.ReadPullRequests;
 import net.vanfleteren.jazygit.kernel.state.AppError;
+import net.vanfleteren.jazygit.kernel.state.FeatureId;
 import net.vanfleteren.jazygit.kernel.state.Loadable;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.TestModels;
@@ -81,8 +82,8 @@ class ForgejoCreatePullRequestUpdateTest {
                 .model()
                 .withPart(
                         ForgeHome.PART,
-                        ForgeHome.NONE.deciding(
-                                Option.of(new ForgeCandidate("forgejo", "Forgejo", ORIGIN, PullRequestFixtures.URL))));
+                        ForgeHome.NONE.deciding(Option.of(new ForgeCandidate(
+                                new FeatureId("forgejo"), "Forgejo", ORIGIN, PullRequestFixtures.URL))));
     }
 
     private static Model model() {

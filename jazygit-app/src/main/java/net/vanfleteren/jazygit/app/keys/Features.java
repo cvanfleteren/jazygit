@@ -105,7 +105,8 @@ public final class Features {
     }
 
     static Set<String> ids(List<Feature> features) {
-        return features.flatMap(feature -> feature.applying().map(Feature.Applying::id))
+        return features.flatMap(feature ->
+                        feature.applying().map(applying -> applying.id().value()))
                 .toLinkedSet();
     }
 
@@ -136,6 +137,7 @@ public final class Features {
      * {@code features}, but those whose id is one of {@code ids}.
      */
     static List<Feature> without(List<Feature> features, Set<String> ids) {
-        return features.reject(feature -> feature.applying().exists(applying -> ids.contains(applying.id())));
+        return features.reject(feature ->
+                feature.applying().exists(applying -> ids.contains(applying.id().value())));
     }
 }

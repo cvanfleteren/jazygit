@@ -38,6 +38,7 @@ import net.vanfleteren.jazygit.core.repo.Tracking;
 import net.vanfleteren.jazygit.core.repo.Upstream;
 import net.vanfleteren.jazygit.features.forgejo.builds.ForgejoServices;
 import net.vanfleteren.jazygit.kernel.state.Env;
+import net.vanfleteren.jazygit.kernel.state.FeatureId;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.TestModels;
 import net.vanfleteren.jazygit.kernel.state.forge.ForgeCandidate;
@@ -99,7 +100,8 @@ public final class PullRequestFixtures {
                 .model()
                 .withPart(
                         ForgeHome.PART,
-                        ForgeHome.NONE.deciding(Option.of(new ForgeCandidate("forgejo", "Forgejo", ORIGIN, URL))));
+                        ForgeHome.NONE.deciding(
+                                Option.of(new ForgeCandidate(new FeatureId("forgejo"), "Forgejo", ORIGIN, URL))));
     }
 
     /**

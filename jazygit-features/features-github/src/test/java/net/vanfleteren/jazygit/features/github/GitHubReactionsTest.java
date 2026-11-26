@@ -12,6 +12,7 @@ import net.vanfleteren.jazygit.features.github.prs.PrOverview;
 import net.vanfleteren.jazygit.features.github.state.GitHubState;
 import net.vanfleteren.jazygit.kernel.state.Cmd;
 import net.vanfleteren.jazygit.kernel.state.Events;
+import net.vanfleteren.jazygit.kernel.state.FeatureId;
 import net.vanfleteren.jazygit.kernel.state.KernelEvent;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.Update;
@@ -91,7 +92,7 @@ class GitHubReactionsTest {
         // Not before: until it is found to apply, GitHub is off (ADR 171).
         assertEquals(List.of(), readsAfter(withTheFeature(), new KernelEvent.RepositoryOpened()));
         assertEquals(List.of(), readsAfter(withTheFeature(), new KernelEvent.Switched(GitHubFeature.ID, false)));
-        assertEquals(List.of(), readsAfter(withTheFeature(), new KernelEvent.Switched("other", true)));
+        assertEquals(List.of(), readsAfter(withTheFeature(), new KernelEvent.Switched(new FeatureId("other"), true)));
     }
 
     @Test

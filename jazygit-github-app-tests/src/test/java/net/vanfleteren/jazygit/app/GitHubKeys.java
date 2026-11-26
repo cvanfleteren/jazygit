@@ -12,6 +12,7 @@ import net.vanfleteren.jazygit.core.repo.RemoteName;
 import net.vanfleteren.jazygit.features.github.GitHubFeature;
 import net.vanfleteren.jazygit.features.github.GitHubServices;
 import net.vanfleteren.jazygit.kernel.state.Env;
+import net.vanfleteren.jazygit.kernel.state.FeatureId;
 import net.vanfleteren.jazygit.kernel.state.FeatureMsg;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.Msg;
@@ -35,7 +36,7 @@ public final class GitHubKeys {
      * What {@code msg} does, without the feature that owns it, if one does.
      */
     public static Msg unwrapped(Msg msg) {
-        return msg instanceof FeatureMsg.Owned(String feature, Msg owned) ? owned : msg;
+        return msg instanceof FeatureMsg.Owned(FeatureId feature, Msg owned) ? owned : msg;
     }
 
     /**

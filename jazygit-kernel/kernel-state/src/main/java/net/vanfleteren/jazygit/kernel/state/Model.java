@@ -109,7 +109,7 @@ public record Model(
     /**
      * Whether the feature {@code feature} is on for the repository (ADR 171): one that decides nothing is.
      */
-    public boolean on(String feature) {
+    public boolean on(FeatureId feature) {
         return part(FeatureSwitches.PART).on(feature);
     }
 

@@ -63,11 +63,12 @@ class CarriedTest {
     @Test
     void aWorktreeOfARepositoryNeverFetchedFromFetchesAtOnceThoughItCarriesItsParts() {
         // The forges switched on and off as the repository opened carry, but no fetch was done yet.
-        Model unfetched = FeatureUpdate.off(last().mapJobs(jobs -> jobs.withLastFetch(Freshness.NEVER)), "forge");
+        Model unfetched =
+                FeatureUpdate.off(last().mapJobs(jobs -> jobs.withLastFetch(Freshness.NEVER)), new FeatureId("forge"));
 
         Carried carried = Carried.between(MAIN, LINKED, unfetched);
 
-        assertFalse(carried.into(Model.initial("repo")).on("forge"));
+        assertFalse(carried.into(Model.initial("repo")).on(new FeatureId("forge")));
         assertFalse(carried.fetched());
         assertFalse(Carried.NONE.fetched());
     }

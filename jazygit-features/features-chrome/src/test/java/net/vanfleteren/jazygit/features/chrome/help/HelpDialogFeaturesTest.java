@@ -9,6 +9,7 @@ import dev.tamboui.toolkit.app.ToolkitTestRunner;
 import dev.tamboui.toolkit.element.Element;
 import io.vavr.collection.List;
 import net.vanfleteren.jazygit.kernel.state.CursorFeedback;
+import net.vanfleteren.jazygit.kernel.state.FeatureId;
 import net.vanfleteren.jazygit.kernel.state.FeatureUpdate;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.Msg;
@@ -33,11 +34,11 @@ class HelpDialogFeaturesTest {
             cursor,
             Keymap.withHelp(HelpMsg.Requested::new)
                     .owned(
-                            "f",
+                            new FeatureId("f"),
                             keys -> keys.add(Scopes.BRANCHES, Binding.always("Z", "key.space", Probe::new))
                                     .global(Keymap.Global.Dispatching.ofChar('Y', "key.space", Probe::new)))
                     .owned(
-                            "g",
+                            new FeatureId("g"),
                             keys -> keys.add(Scopes.BRANCHES, Binding.always("Z", "panel.files.title", Probe::new))
                                     .global(Keymap.Global.Dispatching.ofChar('Y', "panel.files.title", Probe::new))));
 
@@ -49,7 +50,7 @@ class HelpDialogFeaturesTest {
         assertEquals(1, occurrences(both, " Y "), both);
         assertTrue(both.contains("Y space"), both);
 
-        String onlyG = screen(FeatureUpdate.off(TestModels.loaded(), "f"));
+        String onlyG = screen(FeatureUpdate.off(TestModels.loaded(), new FeatureId("f")));
         assertEquals(1, occurrences(onlyG, " Z "), onlyG);
         assertTrue(onlyG.contains("Z Files"), onlyG);
         assertEquals(1, occurrences(onlyG, " Y "), onlyG);
