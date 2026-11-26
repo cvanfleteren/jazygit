@@ -12,6 +12,7 @@ import static net.vanfleteren.jazygit.lib.json.Decoder.map4;
 import static net.vanfleteren.jazygit.lib.json.Decoder.map5;
 import static net.vanfleteren.jazygit.lib.json.Decoder.nullable;
 import static net.vanfleteren.jazygit.lib.json.Decoder.nullableAt;
+import static net.vanfleteren.jazygit.lib.json.Decoder.orNone;
 import static net.vanfleteren.jazygit.lib.json.Decoder.string;
 import static net.vanfleteren.jazygit.lib.json.Decoder.succeed;
 
@@ -50,10 +51,10 @@ public final class CheckFragment {
      */
     static final Decoder<WorkflowRun> WORKFLOW_RUN = map5(
             field("workflow", nullableAt("name", string())).map(name -> name.getOrElse("")),
-            orNone("databaseId", longValue()),
-            orNone("createdAt", instant()),
-            orNone("runAttempt", integer()),
-            orNone("event", nullable(string())),
+            lenientField("databaseId", longValue()),
+            lenientField("createdAt", instant()),
+            lenientField("runAttempt", integer()),
+            lenientField("event", nullable(string())),
             (workflow, id, createdAt, attempt, event) -> new WorkflowRun(
                     workflow,
                     id.flatMap(runId -> createdAt.flatMap(created -> attempt.flatMap(runAttempt ->
@@ -74,10 +75,10 @@ public final class CheckFragment {
 
     // How a check run of a workflow ran, none for another app's or when it cannot be read.
     static final Decoder<Option<CheckRun>> RUN = map5(
-            orNone("databaseId", longValue()),
+            lenientField("databaseId", longValue()),
             field("conclusion", nullable(string())),
-            orNone("startedAt", nullable(instant())),
-            orNone("completedAt", nullable(instant())),
+            lenientField("startedAt", nullable(instant())),
+            lenientField("completedAt", nullable(instant())),
             at("checkSuite.workflowRun", nullable(WORKFLOW_RUN)),
             (id, conclusion, startedAt, completedAt, workflowRun) -> workflowRun.flatMap(run -> run.started()
                     .flatMap(started ->
@@ -143,10 +144,10 @@ public final class CheckFragment {
     /**
      * The field {@code name}, decoded, none when its value cannot be: for when a check ran, which is shown when it can
      * be read and left out when it cannot, as the check itself still counts (ADR 32). The field missing still fails,
-     * as that is a query and its decoder that went apart (ADR 42). Nothing else is read this leniently.
+     * as that is a query and its decoder that went apart (ADR 42).
      */
-    private static <T> Decoder<Option<T>> orNone(String name, Decoder<T> decoder) {
-        return field(name, Decoder.orNone(decoder.map(Option::some)));
+    private static <T> Decoder<Option<T>> lenientField(String name, Decoder<T> decoder) {
+        return field(name, orNone(decoder.map(Option::some)));
     }
 
     /**
