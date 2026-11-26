@@ -11,6 +11,7 @@ import net.vanfleteren.jazygit.core.git.model.FileVersion;
 import net.vanfleteren.jazygit.core.git.model.Folding;
 import net.vanfleteren.jazygit.core.git.model.ParsedDiff;
 import net.vanfleteren.jazygit.core.git.model.ParsedDiff.ParsedFile;
+import net.vanfleteren.jazygit.core.repo.RepoPath;
 import net.vanfleteren.jazygit.kernel.state.Loadable;
 
 /**
@@ -20,7 +21,7 @@ import net.vanfleteren.jazygit.kernel.state.Loadable;
  * @param files   what is expanded in each file, by its path
  */
 @With
-public record Expansion(ScrolledContent content, Map<String, Expanded> files) {
+public record Expansion(ScrolledContent content, Map<RepoPath, Expanded> files) {
 
     /**
      * Nothing expanded yet in the diff of {@code content}.
@@ -51,7 +52,7 @@ public record Expansion(ScrolledContent content, Map<String, Expanded> files) {
     }
 
     private FoldedFile folded(ParsedFile file, DiffContext context) {
-        String path = file.file().path();
+        RepoPath path = file.file().path();
         return files.get(path)
                 .map(expanded -> switch (expanded.whole()) {
                     case Loadable.Loading<DiffText>() -> new FoldedFile(file, new Fold(Option.none(), Read.READING));
@@ -68,7 +69,7 @@ public record Expansion(ScrolledContent content, Map<String, Expanded> files) {
      * changes are all before the cut, the file is folded up to there; else it cannot be.
      */
     private FoldedFile folded(ParsedFile file, DiffText whole, Expanded expanded, DiffContext context) {
-        String path = file.file().path();
+        RepoPath path = file.file().path();
         return whole.parsed()
                 .files()
                 .find(read -> read.file().path().equals(path))
@@ -97,15 +98,15 @@ public record Expansion(ScrolledContent content, Map<String, Expanded> files) {
      */
     public record Folded(
             ParsedDiff diff,
-            Map<String, Fold> files,
-            Map<String, Filtering.Hiding> hiding,
+            Map<RepoPath, Fold> files,
+            Map<RepoPath, Filtering.Hiding> hiding,
             int filtered,
             boolean filtersOff) {
 
         /**
          * {@code diff}, with what is known of {@code files}, nothing of it hidden by filters.
          */
-        public Folded(ParsedDiff diff, Map<String, Fold> files) {
+        public Folded(ParsedDiff diff, Map<RepoPath, Fold> files) {
             this(diff, files, HashMap.empty(), 0, false);
         }
 
@@ -126,14 +127,14 @@ public record Expansion(ScrolledContent content, Map<String, Expanded> files) {
         /**
          * What filters hide of the file with the path {@code path} (ADR 144).
          */
-        public Filtering.Hiding hiding(String path) {
+        public Filtering.Hiding hiding(RepoPath path) {
             return hiding.get(path).getOrElse(Filtering.Hiding.NONE);
         }
 
         /**
          * What is known of the file with the path {@code path}.
          */
-        public Fold fold(String path) {
+        public Fold fold(RepoPath path) {
             return files.get(path).getOrElse(Fold.UNKNOWN);
         }
     }

@@ -12,6 +12,7 @@ import net.vanfleteren.jazygit.core.git.model.CommitFile;
 import net.vanfleteren.jazygit.core.git.model.DiffText;
 import net.vanfleteren.jazygit.core.git.model.Diffs;
 import net.vanfleteren.jazygit.core.git.model.Folding;
+import net.vanfleteren.jazygit.core.repo.RepoPath;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.kernel.state.AreaId;
 import net.vanfleteren.jazygit.kernel.state.Loadable;
@@ -47,8 +48,8 @@ class ExpandUpdateTest {
             + List.rangeClosed(1, 30).map(ExpandUpdateTest::line).mkString());
 
     private static final ScrolledContent CONTENT = new ScrolledContent.StashChanges(STASH, CHANGES);
-    private static final Anchor.Gap ABOVE = new Anchor.Gap("a.txt", 1, Option.of(7));
-    private static final Anchor.Gap BELOW = new Anchor.Gap("a.txt", 14, Option.none());
+    private static final Anchor.Gap ABOVE = new Anchor.Gap(new RepoPath("a.txt"), 1, Option.of(7));
+    private static final Anchor.Gap BELOW = new Anchor.Gap(new RepoPath("a.txt"), 14, Option.none());
 
     @Test
     void theFirstExpansionInAFileReadsItWholeAsItsDiffWasRead() {
@@ -84,7 +85,7 @@ class ExpandUpdateTest {
                 new Expansion.Fold(Option.of(30), Expansion.Read.WHOLE),
                 expansion
                         .folded(CHANGES.parsed(), next.model().preferences().context())
-                        .fold("a.txt"));
+                        .fold(new RepoPath("a.txt")));
     }
 
     @Test
@@ -119,7 +120,7 @@ class ExpandUpdateTest {
         DiffCursorAt onFile = new DiffCursorAt(
                 AREA,
                 new Scrolled(CONTENT, 0, 0, Option.none(), Option.none()),
-                new Anchor.File("a.txt"),
+                new Anchor.File(new RepoPath("a.txt")),
                 Option.none(),
                 Option.none(),
                 Option.none());
@@ -132,7 +133,7 @@ class ExpandUpdateTest {
 
     @Test
     void theKeysShowTenLinesBelowTheHunkAboveTenAboveTheHunkBelowOrAll() {
-        Anchor.Gap between = new Anchor.Gap("a.txt", 20, Option.of(100));
+        Anchor.Gap between = new Anchor.Gap(new RepoPath("a.txt"), 20, Option.of(100));
 
         assertEquals(new Folding.Lines(20, 29), ExpandUpdate.lines(between, ExpandMsg.Toward.DOWN));
         assertEquals(new Folding.Lines(90, 99), ExpandUpdate.lines(between, ExpandMsg.Toward.UP));
@@ -157,7 +158,7 @@ class ExpandUpdateTest {
         DiffCursorAt at = new DiffCursorAt(
                 new AreaId("diff-unstaged"),
                 new Scrolled(shown, 0, 0, Option.none(), Option.none()),
-                new Anchor.Gap("a.txt", 2, Option.none()),
+                new Anchor.Gap(new RepoPath("a.txt"), 2, Option.none()),
                 Option.none(),
                 Option.none(),
                 Option.none());
@@ -168,7 +169,7 @@ class ExpandUpdateTest {
                 new AreaId("diff-unstaged"),
                 shown,
                 new Source.WorkingTree(DIRTY.files().head(), false),
-                "a.txt",
+                new RepoPath("a.txt"),
                 model.preferences().diffOptions());
         assertEquals(List.of(read), asked.cmds());
         Model whole = TestModels.done(
@@ -203,8 +204,8 @@ class ExpandUpdateTest {
         return new ReadWholeFile(
                 AREA,
                 CONTENT,
-                new Source.OfStash(STASH, new CommitFile("a.txt", ChangeType.MODIFIED, Option.none())),
-                "a.txt",
+                new Source.OfStash(STASH, new CommitFile(new RepoPath("a.txt"), ChangeType.MODIFIED, Option.none())),
+                new RepoPath("a.txt"),
                 model.preferences().diffOptions());
     }
 
@@ -221,7 +222,7 @@ class ExpandUpdateTest {
         return model.repoView()
                 .expansions()
                 .get(AREA)
-                .flatMap(expansion -> expansion.files().get("a.txt"));
+                .flatMap(expansion -> expansion.files().get(new RepoPath("a.txt")));
     }
 
     private static String line(int number) {

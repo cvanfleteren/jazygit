@@ -9,6 +9,7 @@ import java.time.Instant;
 import net.vanfleteren.jazygit.core.git.model.ChangeType;
 import net.vanfleteren.jazygit.core.git.model.CommitFile;
 import net.vanfleteren.jazygit.core.repo.BranchName;
+import net.vanfleteren.jazygit.core.repo.RepoPath;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.kernel.state.Cmd;
 import net.vanfleteren.jazygit.kernel.state.Loadable.Loaded;
@@ -35,7 +36,7 @@ class FilesFollowedTest {
     private static final Changes FIRST = new Changes.OfCommit(new Sha("aaaa"));
     private static final Changes SECOND = new Changes.OfCommit(new Sha("bbbb"));
     private static final Changes THIRD = new Changes.OfCommit(new Sha("cccc"));
-    private static final CommitFile A = new CommitFile("a.txt", ChangeType.MODIFIED);
+    private static final CommitFile A = new CommitFile(new RepoPath("a.txt"), ChangeType.MODIFIED);
 
     @Test
     void theFilesOfTheHighlightedCommitAreListedWithoutTakingTheFocusAndRead() {
@@ -179,7 +180,7 @@ class FilesFollowedTest {
     @Test
     void manyFilesThatFollowTheHighlightAreCountedUntilAskedForWhole() {
         List<CommitFile> many = List.range(0, CommitFilesView.FOLLOWED_LIMIT + 1)
-                .map(i -> new CommitFile("f" + i, ChangeType.MODIFIED));
+                .map(i -> new CommitFile(new RepoPath("f" + i), ChangeType.MODIFIED));
         Model read = Update.update(followed(loaded(), FIRST).model(), new LoadMsg.CommitFilesLoaded(FIRST, many))
                 .model();
         CommitFilesView held = read.repoView().files().commitFiles().get();

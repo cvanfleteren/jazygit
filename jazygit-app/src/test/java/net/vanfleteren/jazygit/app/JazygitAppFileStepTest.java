@@ -30,6 +30,7 @@ import net.vanfleteren.jazygit.core.git.model.SampleData;
 import net.vanfleteren.jazygit.core.git.process.GitError;
 import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.Head;
+import net.vanfleteren.jazygit.core.repo.RepoPath;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.features.changes.diff.DiffFilterSettings;
 import net.vanfleteren.jazygit.features.changes.files.step.FileStepNotice;
@@ -354,16 +355,17 @@ class JazygitAppFileStepTest {
                     public Either<GitError, RepoStatus> read() {
                         return Either.right(new RepoStatus(
                                 Head.onBranch(new BranchName("main"), new Sha("aaaa")),
-                                List.of(new FileEntry("a.txt", ChangeType.MODIFIED, false, true))));
+                                List.of(new FileEntry(new RepoPath("a.txt"), ChangeType.MODIFIED, false, true))));
                     }
 
                     @Override
-                    public Either<GitError, List<String>> allFiles() {
-                        return Either.right(List.of("a.txt", "b.bin", "c.txt"));
+                    public Either<GitError, List<RepoPath>> allFiles() {
+                        return Either.right(List.of("a.txt", "b.bin", "c.txt").map(RepoPath::new));
                     }
 
                     @Override
-                    public Either<GitError, FileContent> content(String path) {
+                    public Either<GitError, FileContent> content(RepoPath file) {
+                        String path = file.value();
                         return Either.right(
                                 path.equals("b.bin")
                                         ? new FileContent.Binary(12)
@@ -398,13 +400,14 @@ class JazygitAppFileStepTest {
             @Override
             public Either<GitError, List<CommitFile>> commitFiles(Sha sha) {
                 return Either.right(List.of(
-                        new CommitFile("x.txt", ChangeType.MODIFIED), new CommitFile("y.txt", ChangeType.MODIFIED)));
+                        new CommitFile(new RepoPath("x.txt"), ChangeType.MODIFIED),
+                        new CommitFile(new RepoPath("y.txt"), ChangeType.MODIFIED)));
             }
 
             @Override
             public Either<GitError, DiffText> commitFileChanges(Sha sha, List<CommitFile> files, DiffOptions options) {
-                return Either.right(DiffText.of(files.map(file ->
-                                "diff --git a/" + file.path() + " b/" + file.path() + "\n@@ -1 +1 @@\n-old\n+new\n")
+                return Either.right(DiffText.of(files.map(file -> "diff --git a/"
+                                + file.path().value() + " b/" + file.path().value() + "\n@@ -1 +1 @@\n-old\n+new\n")
                         .mkString()));
             }
         });
@@ -430,14 +433,17 @@ class JazygitAppFileStepTest {
             @Override
             public Either<GitError, List<CommitFile>> commitFiles(Sha sha) {
                 return Either.right(List.of("A.java", "B.java", "C.java", "D.java")
-                        .map(path -> new CommitFile(path, ChangeType.MODIFIED)));
+                        .map(path -> new CommitFile(new RepoPath(path), ChangeType.MODIFIED)));
             }
 
             @Override
             public Either<GitError, DiffText> commitFileChanges(Sha sha, List<CommitFile> files, DiffOptions options) {
-                return Either.right(DiffText.of(files.map(file -> "diff --git a/" + file.path() + " b/" + file.path()
-                                + "\n--- a/" + file.path() + "\n+++ b/" + file.path() + "\n@@ -1 +1 @@\n"
-                                + (file.path().equals("B.java") || file.path().equals("C.java")
+                return Either.right(DiffText.of(files.map(file -> "diff --git a/"
+                                + file.path().value() + " b/" + file.path().value()
+                                + "\n--- a/" + file.path().value() + "\n+++ b/"
+                                + file.path().value() + "\n@@ -1 +1 @@\n"
+                                + (file.path().equals(new RepoPath("B.java"))
+                                                || file.path().equals(new RepoPath("C.java"))
                                         ? "-import a.B;\n+import a.C;\n"
                                         : "-int a;\n+int b;\n"))
                         .mkString()));
@@ -451,7 +457,7 @@ class JazygitAppFileStepTest {
                 .unchanged()
                 .flatMap(node -> node instanceof UnchangedNode.File(var content)
                                 && content.value() instanceof Loadable.Loaded<FileContent>
-                        ? Option.of(content.key())
+                        ? Option.of(content.key().value())
                         : Option.none());
     }
 
@@ -463,7 +469,7 @@ class JazygitAppFileStepTest {
                 .filter(diff -> diff.value() instanceof Loadable.Loaded<DiffText>)
                 .map(Preview::key)
                 .filter(files -> files.size() == 1)
-                .map(files -> files.head().path());
+                .map(files -> files.head().path().value());
     }
 
     private static void assertFocused(ToolkitTestRunner testRunner, AreaId area) throws Exception {
@@ -504,6 +510,10 @@ class JazygitAppFileStepTest {
     }
 
     private static Option<List<String>> shownFiles(Model model) {
-        return model.repoView().preview().fileDiff().map(Preview::key).map(files -> files.map(FileEntry::path));
+        return model.repoView()
+                .preview()
+                .fileDiff()
+                .map(Preview::key)
+                .map(files -> files.map(file -> file.path().value()));
     }
 }

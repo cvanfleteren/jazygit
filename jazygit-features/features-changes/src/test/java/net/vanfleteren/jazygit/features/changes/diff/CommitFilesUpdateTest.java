@@ -12,6 +12,7 @@ import net.vanfleteren.jazygit.core.git.model.DiffOptions;
 import net.vanfleteren.jazygit.core.git.model.DiffText;
 import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.BranchRef;
+import net.vanfleteren.jazygit.core.repo.RepoPath;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.core.repo.Stash;
 import net.vanfleteren.jazygit.kernel.settings.DiffStyle;
@@ -41,8 +42,8 @@ class CommitFilesUpdateTest {
 
     private static final Sha SHA = new Sha("aaaa");
     private static final Changes COMMIT = new Changes.OfCommit(SHA);
-    private static final CommitFile A = new CommitFile("a.txt", ChangeType.MODIFIED);
-    private static final CommitFile B = new CommitFile("dir/b.txt", ChangeType.ADDED);
+    private static final CommitFile A = new CommitFile(new RepoPath("a.txt"), ChangeType.MODIFIED);
+    private static final CommitFile B = new CommitFile(new RepoPath("dir/b.txt"), ChangeType.ADDED);
 
     @Test
     void openingListsTheFilesInTheFilesPaneAndReadsThem() {

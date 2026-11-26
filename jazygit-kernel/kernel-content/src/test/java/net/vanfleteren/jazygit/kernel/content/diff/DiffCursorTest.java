@@ -9,6 +9,7 @@ import dev.tamboui.text.Span;
 import io.vavr.collection.List;
 import io.vavr.collection.Vector;
 import io.vavr.control.Option;
+import net.vanfleteren.jazygit.core.repo.RepoPath;
 import net.vanfleteren.jazygit.kernel.content.TextWindow;
 import net.vanfleteren.jazygit.kernel.state.diff.Anchor;
 import net.vanfleteren.jazygit.kernel.state.diff.DiffSide;
@@ -26,22 +27,22 @@ import org.junit.jupiter.api.Test;
 class DiffCursorTest {
 
     private static final Anchor LEAD = new Anchor.Lead();
-    private static final Anchor FILE = new Anchor.File("a.txt");
-    private static final Anchor ONE = new Anchor.OnLine("a.txt", DiffSide.NEW, 1);
-    private static final Anchor THREAD =
-            new Anchor.Thread(new RemarkThread.Id("T"), Option.of(new Anchor.OnLine("a.txt", DiffSide.NEW, 1)));
-    private static final Anchor TWO = new Anchor.OnLine("a.txt", DiffSide.NEW, 2);
-    private static final Anchor THREE = new Anchor.OnLine("a.txt", DiffSide.NEW, 3);
+    private static final Anchor FILE = new Anchor.File(new RepoPath("a.txt"));
+    private static final Anchor ONE = new Anchor.OnLine(new RepoPath("a.txt"), DiffSide.NEW, 1);
+    private static final Anchor THREAD = new Anchor.Thread(
+            new RemarkThread.Id("T"), Option.of(new Anchor.OnLine(new RepoPath("a.txt"), DiffSide.NEW, 1)));
+    private static final Anchor TWO = new Anchor.OnLine(new RepoPath("a.txt"), DiffSide.NEW, 2);
+    private static final Anchor THREE = new Anchor.OnLine(new RepoPath("a.txt"), DiffSide.NEW, 3);
 
     // 20 lines shown 5 at a time: a lead of 3 lines, a bar, line 1, a thread of 10 lines, line 2, and line 3 with the
     // 3 lines after it that are no stop.
     private static final Vector<Drawn.Stop> STOPS = Vector.of(
             stop(LEAD, 3, 0), stop(FILE, 1, 3), line(ONE, 4), stop(THREAD, 10, 5), line(TWO, 15), line(THREE, 16));
 
-    private static final Anchor FIRST =
-            new Anchor.Thread(new RemarkThread.Id("T1"), Option.of(new Anchor.OnLine("a.txt", DiffSide.NEW, 1)));
-    private static final Anchor LAST =
-            new Anchor.Thread(new RemarkThread.Id("T2"), Option.of(new Anchor.OnLine("a.txt", DiffSide.NEW, 2)));
+    private static final Anchor FIRST = new Anchor.Thread(
+            new RemarkThread.Id("T1"), Option.of(new Anchor.OnLine(new RepoPath("a.txt"), DiffSide.NEW, 1)));
+    private static final Anchor LAST = new Anchor.Thread(
+            new RemarkThread.Id("T2"), Option.of(new Anchor.OnLine(new RepoPath("a.txt"), DiffSide.NEW, 2)));
 
     // A bar, line 1 and its thread, line 2 and its thread, and line 3: 6 lines, all on one screen.
     private static final Vector<Drawn.Stop> TWO_THREADS = Vector.of(
@@ -314,7 +315,13 @@ class DiffCursorTest {
         assertAt(
                 THREE,
                 15,
-                cursor(STOPS, 20, 5, 15, Option.of(new Anchor.OnLine("a.txt", DiffSide.NEW, 4)), Option.none())
+                cursor(
+                                STOPS,
+                                20,
+                                5,
+                                15,
+                                Option.of(new Anchor.OnLine(new RepoPath("a.txt"), DiffSide.NEW, 4)),
+                                Option.none())
                         .get());
         assertAt(THREAD, 5, on(THREAD, 5));
     }
@@ -372,13 +379,13 @@ class DiffCursorTest {
 
     // The split view (ADR 139) of a hunk of a context line, a removed line beside an added one, another added line
     // beside a blank half, and a context line: a bar, then a stop for each half of a row that holds a line.
-    private static final Anchor LEFT_ONE = new Anchor.OnLine("a.txt", DiffSide.OLD, 1);
-    private static final Anchor RIGHT_ONE = new Anchor.OnLine("a.txt", DiffSide.NEW, 1);
-    private static final Anchor REMOVED = new Anchor.OnLine("a.txt", DiffSide.OLD, 2);
-    private static final Anchor ADDED = new Anchor.OnLine("a.txt", DiffSide.NEW, 2);
-    private static final Anchor ALSO_ADDED = new Anchor.OnLine("a.txt", DiffSide.NEW, 3);
-    private static final Anchor LEFT_LAST = new Anchor.OnLine("a.txt", DiffSide.OLD, 3);
-    private static final Anchor RIGHT_LAST = new Anchor.OnLine("a.txt", DiffSide.NEW, 4);
+    private static final Anchor LEFT_ONE = new Anchor.OnLine(new RepoPath("a.txt"), DiffSide.OLD, 1);
+    private static final Anchor RIGHT_ONE = new Anchor.OnLine(new RepoPath("a.txt"), DiffSide.NEW, 1);
+    private static final Anchor REMOVED = new Anchor.OnLine(new RepoPath("a.txt"), DiffSide.OLD, 2);
+    private static final Anchor ADDED = new Anchor.OnLine(new RepoPath("a.txt"), DiffSide.NEW, 2);
+    private static final Anchor ALSO_ADDED = new Anchor.OnLine(new RepoPath("a.txt"), DiffSide.NEW, 3);
+    private static final Anchor LEFT_LAST = new Anchor.OnLine(new RepoPath("a.txt"), DiffSide.OLD, 3);
+    private static final Anchor RIGHT_LAST = new Anchor.OnLine(new RepoPath("a.txt"), DiffSide.NEW, 4);
     private static final Vector<Drawn.Stop> SPLIT = Vector.of(
             stop(FILE, 1, 0),
             half(LEFT_ONE, DiffSide.OLD, 1, 0),
@@ -473,9 +480,9 @@ class DiffCursorTest {
     }
 
     // The split view of two files: the bar of the second, as wide as the area, between a row of each.
-    private static final Anchor OTHER_FILE = new Anchor.File("b.txt");
-    private static final Anchor OTHER_LEFT = new Anchor.OnLine("b.txt", DiffSide.OLD, 1);
-    private static final Anchor OTHER_RIGHT = new Anchor.OnLine("b.txt", DiffSide.NEW, 1);
+    private static final Anchor OTHER_FILE = new Anchor.File(new RepoPath("b.txt"));
+    private static final Anchor OTHER_LEFT = new Anchor.OnLine(new RepoPath("b.txt"), DiffSide.OLD, 1);
+    private static final Anchor OTHER_RIGHT = new Anchor.OnLine(new RepoPath("b.txt"), DiffSide.NEW, 1);
     private static final Vector<Drawn.Stop> TWO_FILES = Vector.of(
             stop(FILE, 1, 0),
             half(LEFT_ONE, DiffSide.OLD, 1, 0),

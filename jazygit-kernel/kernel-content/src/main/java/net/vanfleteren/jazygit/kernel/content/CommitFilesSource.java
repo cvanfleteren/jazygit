@@ -101,7 +101,7 @@ record CommitFilesSource() implements ContentSource {
                 Messages.get(
                         "content.panel.commitFile.titleFor",
                         name,
-                        content.shown().key());
+                        content.shown().key().value());
             case UnchangedNode.Directory _ -> Messages.get("panel.commitFiles.titleFor", name);
         };
     }
@@ -171,7 +171,7 @@ record CommitFilesSource() implements ContentSource {
      * for the root.
      */
     private static String nodePath(List<CommitFile> files) {
-        String first = files.head().path();
+        String first = files.head().path().value();
         return files.size() == 1 ? first : "/" + first.substring(0, first.lastIndexOf('/') + 1);
     }
 }

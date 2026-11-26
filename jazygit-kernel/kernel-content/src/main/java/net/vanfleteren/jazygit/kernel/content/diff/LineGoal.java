@@ -4,6 +4,7 @@ import io.vavr.collection.Iterator;
 import io.vavr.collection.List;
 import io.vavr.collection.Vector;
 import io.vavr.control.Option;
+import net.vanfleteren.jazygit.core.repo.RepoPath;
 import net.vanfleteren.jazygit.kernel.state.diff.Anchor;
 import net.vanfleteren.jazygit.kernel.state.diff.DiffSide;
 import net.vanfleteren.jazygit.kernel.ui.content.Drawn;
@@ -48,7 +49,7 @@ public sealed interface LineGoal {
      * The line of a diff or a version shown as source: the stop of the line, else the lines around it shown when a
      * marker of the new file leaves it out, else the closest line.
      */
-    private static LineGoal onStops(Vector<Drawn.Stop> stops, String path, DiffSide side, int number) {
+    private static LineGoal onStops(Vector<Drawn.Stop> stops, RepoPath path, DiffSide side, int number) {
         Vector<NumberedRow> lines = stops.zipWithIndex(
                         (stop, index) -> number(stop.mark(), path, side).map(its -> new NumberedRow(its, index)))
                 .flatMap(line -> line);
@@ -95,7 +96,7 @@ public sealed interface LineGoal {
      * The line of a version rendered: the first row of the block or node drawn from it, else from the last line
      * before it that is drawn, as one in a closed node, else from the first.
      */
-    private static LineGoal inRow(Vector<Drawn.Place> places, String path, DiffSide side, int number) {
+    private static LineGoal inRow(Vector<Drawn.Place> places, RepoPath path, DiffSide side, int number) {
         Vector<NumberedRow> lines =
                 places.flatMap(place -> line(place.anchor(), path, side).map(its -> new NumberedRow(its, place.row())));
         return lines.find(line -> line.number() == number)
@@ -112,15 +113,15 @@ public sealed interface LineGoal {
      * The number of the line of a stop {@code mark} in the file with the path {@code path} on {@code side}: by its
      * anchor, or for a context line by its other anchor (ADR 139).
      */
-    private static Option<Integer> number(Drawn.Mark mark, String path, DiffSide side) {
+    private static Option<Integer> number(Drawn.Mark mark, RepoPath path, DiffSide side) {
         return line(mark.anchor(), path, side).orElse(() -> mark.also().flatMap(also -> line(also, path, side)));
     }
 
     /**
      * The number of the line {@code anchor} is, if it is one of the file with the path {@code path} on {@code side}.
      */
-    private static Option<Integer> line(Anchor anchor, String path, DiffSide side) {
-        return anchor instanceof Anchor.OnLine(String its, DiffSide on, int number) && its.equals(path) && on == side
+    private static Option<Integer> line(Anchor anchor, RepoPath path, DiffSide side) {
+        return anchor instanceof Anchor.OnLine(RepoPath its, DiffSide on, int number) && its.equals(path) && on == side
                 ? Option.some(number)
                 : Option.none();
     }
@@ -128,7 +129,8 @@ public sealed interface LineGoal {
     /**
      * Whether the file with the path {@code path} has a line on {@code side} among {@code stops} or {@code places}.
      */
-    private static boolean hasLines(Vector<Drawn.Stop> stops, Vector<Drawn.Place> places, String path, DiffSide side) {
+    private static boolean hasLines(
+            Vector<Drawn.Stop> stops, Vector<Drawn.Place> places, RepoPath path, DiffSide side) {
         return places.isEmpty()
                 ? stops.exists(stop -> number(stop.mark(), path, side).isDefined())
                 : places.exists(place -> line(place.anchor(), path, side).isDefined());
@@ -138,7 +140,7 @@ public sealed interface LineGoal {
      * The path of the file the cursor is in on the stop at {@code at}: that of the stop, or of the closest stop
      * before it with one; on the lead of a commit, that of its first file.
      */
-    private static Option<String> pathAt(Vector<Drawn.Stop> stops, int at) {
+    private static Option<RepoPath> pathAt(Vector<Drawn.Stop> stops, int at) {
         int from = Math.clamp(at, 0, Math.max(0, stops.size() - 1));
         return Iterator.rangeBy(from, -1, -1)
                 .concat(Iterator.range(from + 1, stops.size()))
@@ -150,14 +152,14 @@ public sealed interface LineGoal {
     /**
      * The path of the file {@code anchor} is in, if it is in one.
      */
-    private static Option<String> path(Anchor anchor) {
+    private static Option<RepoPath> path(Anchor anchor) {
         return switch (anchor) {
             case Anchor.Lead _ -> Option.none();
-            case Anchor.File(String path) -> Option.some(path);
-            case Anchor.OnLine(String path, var _, var _) -> Option.some(path);
-            case Anchor.Gap(String path, var _, var _) -> Option.some(path);
-            case Anchor.Filtered(String path, var _, var _) -> Option.some(path);
-            case Anchor.Node(String path, var _, var _) -> Option.some(path);
+            case Anchor.File(RepoPath path) -> Option.some(path);
+            case Anchor.OnLine(RepoPath path, var _, var _) -> Option.some(path);
+            case Anchor.Gap(RepoPath path, var _, var _) -> Option.some(path);
+            case Anchor.Filtered(RepoPath path, var _, var _) -> Option.some(path);
+            case Anchor.Node(RepoPath path, var _, var _) -> Option.some(path);
             case Anchor.Thread(var _, Option<Anchor.OnLine> line) -> line.map(Anchor.OnLine::path);
             case Anchor.Remark(var _, Anchor.Thread thread) -> path(thread);
         };

@@ -6,6 +6,7 @@ import java.util.function.Predicate;
 import net.vanfleteren.jazygit.core.git.model.ChangeType;
 import net.vanfleteren.jazygit.core.git.model.DiscardPlan;
 import net.vanfleteren.jazygit.core.git.model.FileEntry;
+import net.vanfleteren.jazygit.core.repo.RepoPath;
 import net.vanfleteren.jazygit.features.changes.discard.DiscardCmd.Discard;
 import net.vanfleteren.jazygit.features.changes.discard.DiscardMsg.Chosen;
 import net.vanfleteren.jazygit.features.changes.discard.DiscardMsg.Requested;
@@ -59,7 +60,7 @@ public final class DiscardUpdate {
     static DiscardPlan plan(List<FileEntry> files, Scope scope) {
         Predicate<FileEntry> affected = scope == Scope.ALL ? f -> true : FileEntry::unstaged;
         List<FileEntry> picked = files.filter(affected);
-        List<String> untracked = FileEntry.paths(picked, f -> f.type() == ChangeType.UNTRACKED);
+        List<RepoPath> untracked = FileEntry.paths(picked, f -> f.type() == ChangeType.UNTRACKED);
         List<FileEntry> tracked = picked.filter(f -> f.type() != ChangeType.UNTRACKED);
         Predicate<FileEntry> removed =
                 f -> f.type() == ChangeType.RENAMED || f.type() == ChangeType.ADDED && f.staged();

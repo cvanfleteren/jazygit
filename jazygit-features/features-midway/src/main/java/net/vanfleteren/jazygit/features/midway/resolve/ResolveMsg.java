@@ -8,6 +8,7 @@ import net.vanfleteren.jazygit.core.git.model.ConflictTools;
 import net.vanfleteren.jazygit.core.git.model.FileEntry;
 import net.vanfleteren.jazygit.core.git.model.MarkedFile;
 import net.vanfleteren.jazygit.core.process.ExecutedCommand;
+import net.vanfleteren.jazygit.core.repo.RepoPath;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.Msg;
 import net.vanfleteren.jazygit.kernel.state.Update;
@@ -43,7 +44,7 @@ public sealed interface ResolveMsg extends Msg {
      * What the file at {@code path} can be handed to was read, where its first conflict starts, and how it stands
      * against the conflict git wrote of it, for its resolve dialog (ADR 201).
      */
-    record ToolsRead(String path, ConflictTools tools, Option<Integer> firstConflict, ConflictFile written)
+    record ToolsRead(RepoPath path, ConflictTools tools, Option<Integer> firstConflict, ConflictFile written)
             implements ResolveMsg {}
 
     /**
@@ -61,13 +62,13 @@ public sealed interface ResolveMsg extends Msg {
      * conflict or not, and with the markers left in it, if any (ADR 201).
      */
     record HandedBack(
-            ResolveCmd cmd, List<ExecutedCommand> commands, String path, boolean unmerged, Option<MarkedFile> marked)
+            ResolveCmd cmd, List<ExecutedCommand> commands, RepoPath path, boolean unmerged, Option<MarkedFile> marked)
             implements ResolveMsg {}
 
     /**
      * The user asked to bring back the conflict of the file at {@code path}.
      */
-    record RestoreRequested(String path) implements ResolveMsg {}
+    record RestoreRequested(RepoPath path) implements ResolveMsg {}
 
     /**
      * The user chose to keep {@code version}'s side of the file staging asked about, as it has conflict markers left

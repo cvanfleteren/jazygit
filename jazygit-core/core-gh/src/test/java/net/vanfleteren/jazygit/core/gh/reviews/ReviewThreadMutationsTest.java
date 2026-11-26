@@ -10,6 +10,7 @@ import net.vanfleteren.jazygit.core.gh.model.ReviewThread;
 import net.vanfleteren.jazygit.core.gh.model.ReviewThread.Side;
 import net.vanfleteren.jazygit.core.gh.process.GhCommand;
 import net.vanfleteren.jazygit.core.repo.PrNumber;
+import net.vanfleteren.jazygit.core.repo.RepoPath;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import org.junit.jupiter.api.Test;
 
@@ -48,7 +49,7 @@ class ReviewThreadMutationsTest {
                         new PrNumber(7),
                         new Sha("abc1230000000000000000000000000000000000"),
                         new NewReviewThread(
-                                "src/Foo.java",
+                                new RepoPath("src/Foo.java"),
                                 Option.of(new NewReviewThread.Lines(Side.RIGHT, 12, Side.RIGHT, 12)),
                                 "@me"))));
     }
@@ -59,7 +60,9 @@ class ReviewThreadMutationsTest {
                 new PrNumber(7),
                 new Sha("abc1230000000000000000000000000000000000"),
                 new NewReviewThread(
-                        "src/Foo.java", Option.of(new NewReviewThread.Lines(Side.LEFT, 10, Side.RIGHT, 12)), "Hm")));
+                        new RepoPath("src/Foo.java"),
+                        Option.of(new NewReviewThread.Lines(Side.LEFT, 10, Side.RIGHT, 12)),
+                        "Hm")));
 
         assertEquals(
                 List.of("-F", "line=12", "-f", "side=RIGHT", "-F", "start_line=10", "-f", "start_side=LEFT"),
@@ -71,7 +74,7 @@ class ReviewThreadMutationsTest {
         List<String> args = args(ReviewThreadMutations.start(
                 new PrNumber(7),
                 new Sha("abc1230000000000000000000000000000000000"),
-                new NewReviewThread("src/Foo.java", Option.none(), "Split")));
+                new NewReviewThread(new RepoPath("src/Foo.java"), Option.none(), "Split")));
 
         assertEquals(List.of("-f", "subject_type=file"), args.drop(11));
     }

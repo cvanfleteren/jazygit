@@ -16,6 +16,7 @@ import io.vavr.control.Option;
 import java.util.stream.Collectors;
 import net.vanfleteren.jazygit.core.git.model.FileVersion;
 import net.vanfleteren.jazygit.core.git.model.ParsedDiff;
+import net.vanfleteren.jazygit.core.repo.RepoPath;
 import net.vanfleteren.jazygit.kernel.state.diff.Expansion;
 import net.vanfleteren.jazygit.kernel.state.diff.Rendered;
 import net.vanfleteren.jazygit.kernel.state.diff.Tree;
@@ -334,7 +335,7 @@ class RenderedXmlTest {
         return RichDiff.drawn(
                 new Expansion.Folded(
                         new ParsedDiff(List.empty(), List.of(version.of(whole))),
-                        HashMap.of("a.xml", Expansion.Fold.of(version, false, 1, true, HashMap.empty()))),
+                        HashMap.of(new RepoPath("a.xml"), Expansion.Fold.of(version, false, 1, true, HashMap.empty()))),
                 Option.none(),
                 Option.none(),
                 RichDiff.Drawing.of(styles).withWidth(60));

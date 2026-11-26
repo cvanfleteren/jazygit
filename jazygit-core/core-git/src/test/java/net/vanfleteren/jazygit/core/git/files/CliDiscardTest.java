@@ -8,6 +8,7 @@ import java.nio.file.Path;
 import net.vanfleteren.jazygit.core.git.model.DiscardPlan;
 import net.vanfleteren.jazygit.core.git.process.GitError;
 import net.vanfleteren.jazygit.core.process.ExecutedCommand;
+import net.vanfleteren.jazygit.core.repo.RepoPath;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -38,7 +39,7 @@ class CliDiscardTest {
         git("add", "a.txt");
         write("a.txt", "staged and more\n");
 
-        CliIndex.checkoutFromHead(repo, List.of("a.txt"));
+        CliIndex.checkoutFromHead(repo, List.of(new RepoPath("a.txt")));
 
         assertEquals("one\n", read("a.txt"));
         assertEquals("", git("status", "--porcelain"));
@@ -50,7 +51,7 @@ class CliDiscardTest {
         git("add", "a.txt");
         write("a.txt", "staged and more\n");
 
-        CliIndex.checkoutFromIndex(repo, List.of("a.txt"));
+        CliIndex.checkoutFromIndex(repo, List.of(new RepoPath("a.txt")));
 
         assertEquals("staged\n", read("a.txt"));
         assertEquals("M  a.txt\n", git("status", "--porcelain"));
@@ -61,7 +62,7 @@ class CliDiscardTest {
         write("new.txt", "n\n");
         git("add", "new.txt");
 
-        CliIndex.removeAdded(repo, List.of("new.txt"));
+        CliIndex.removeAdded(repo, List.of(new RepoPath("new.txt")));
 
         assertFalse(Files.exists(repo.resolve("new.txt")));
         assertEquals("", git("status", "--porcelain"));
@@ -75,7 +76,9 @@ class CliDiscardTest {
 
         assertEquals(
                 List.of("git clean --force -d --quiet -- dir z.txt"),
-                CliIndex.deleteUntracked(repo, List.of("dir", "z.txt")).get().map(ExecutedCommand::line));
+                CliIndex.deleteUntracked(repo, List.of(new RepoPath("dir"), new RepoPath("z.txt")))
+                        .get()
+                        .map(ExecutedCommand::line));
 
         assertFalse(Files.exists(repo.resolve("dir")));
         assertFalse(Files.exists(repo.resolve("z.txt")));
@@ -87,7 +90,7 @@ class CliDiscardTest {
         write("nested/x.txt", "x\n");
         git("-C", "nested", "init", "-q");
 
-        CliIndex.deleteUntracked(repo, List.of("nested"));
+        CliIndex.deleteUntracked(repo, List.of(new RepoPath("nested")));
 
         assertTrue(Files.exists(repo.resolve("nested/.git")));
     }
@@ -98,15 +101,19 @@ class CliDiscardTest {
         try {
             assertInstanceOf(
                     GitError.RefusedPath.class,
-                    CliIndex.deleteUntracked(repo, List.of("../" + outside.getFileName()))
+                    CliIndex.deleteUntracked(repo, List.of(new RepoPath("../" + outside.getFileName())))
                             .getLeft()
                             .error());
             assertInstanceOf(
                     GitError.RefusedPath.class,
-                    CliIndex.deleteUntracked(repo, List.of(".")).getLeft().error());
+                    CliIndex.deleteUntracked(repo, List.of(new RepoPath(".")))
+                            .getLeft()
+                            .error());
             assertInstanceOf(
                     GitError.RefusedPath.class,
-                    CliIndex.deleteUntracked(repo, List.of(".git")).getLeft().error());
+                    CliIndex.deleteUntracked(repo, List.of(new RepoPath(".git")))
+                            .getLeft()
+                            .error());
             assertTrue(Files.exists(outside));
             assertTrue(Files.exists(repo.resolve(".git")));
         } finally {
@@ -122,8 +129,11 @@ class CliDiscardTest {
         write("new.txt", "n\n");
         git("add", "new.txt");
         write("loose.txt", "l\n");
-        DiscardPlan plan =
-                new DiscardPlan(List.of("loose.txt"), List.of("a.txt"), List.of("b.txt"), List.of("new.txt"));
+        DiscardPlan plan = new DiscardPlan(
+                List.of(new RepoPath("loose.txt")),
+                List.of(new RepoPath("a.txt")),
+                List.of(new RepoPath("b.txt")),
+                List.of(new RepoPath("new.txt")));
 
         CliIndex.removeAdded(repo, plan.added());
         CliIndex.checkoutFromHead(repo, plan.fromHead());
@@ -141,7 +151,7 @@ class CliDiscardTest {
         write("*.txt", "changed\n");
         write("a.txt", "changed\n");
 
-        CliIndex.checkoutFromHead(repo, List.of("*.txt"));
+        CliIndex.checkoutFromHead(repo, List.of(new RepoPath("*.txt")));
 
         assertEquals("one\n", read("*.txt"));
         assertEquals("changed\n", read("a.txt"));

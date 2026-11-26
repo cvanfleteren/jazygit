@@ -64,6 +64,7 @@ import net.vanfleteren.jazygit.core.repo.CommitMessage;
 import net.vanfleteren.jazygit.core.repo.Head;
 import net.vanfleteren.jazygit.core.repo.RemoteBranch;
 import net.vanfleteren.jazygit.core.repo.RemoteName;
+import net.vanfleteren.jazygit.core.repo.RepoPath;
 import net.vanfleteren.jazygit.core.repo.Revision;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.core.repo.Stash;
@@ -213,13 +214,13 @@ class ProgramTest {
         public Index index() {
             return new StubIndex() {
                 @Override
-                public Either<GitFailure, List<ExecutedCommand>> stage(List<String> paths) {
-                    return onIndex("stage", paths, "git stage");
+                public Either<GitFailure, List<ExecutedCommand>> stage(List<RepoPath> paths) {
+                    return onIndex("stage", paths.map(RepoPath::value), "git stage");
                 }
 
                 @Override
-                public Either<GitFailure, List<ExecutedCommand>> unstageNew(List<String> paths) {
-                    return onIndex("unstageNew", paths, "git unstageNew");
+                public Either<GitFailure, List<ExecutedCommand>> unstageNew(List<RepoPath> paths) {
+                    return onIndex("unstageNew", paths.map(RepoPath::value), "git unstageNew");
                 }
 
                 @Override
@@ -229,8 +230,8 @@ class ProgramTest {
                 }
 
                 @Override
-                public Either<GitFailure, List<ExecutedCommand>> unstage(List<String> paths) {
-                    return onIndex("unstage", paths, "git unstage");
+                public Either<GitFailure, List<ExecutedCommand>> unstage(List<RepoPath> paths) {
+                    return onIndex("unstage", paths.map(RepoPath::value), "git unstage");
                 }
             };
         }
@@ -526,7 +527,7 @@ class ProgramTest {
         settle();
         program.dispatch(new StageMsg.Requested(List.of(
                 Fixtures.fileEntry("b.txt", ChangeType.ADDED),
-                new FileEntry("c.txt", ChangeType.MODIFIED, true, false))));
+                new FileEntry(new RepoPath("c.txt"), ChangeType.MODIFIED, true, false))));
         settle();
 
         assertEquals(java.util.List.of("stage[a.txt]", "unstageNew[b.txt]", "unstage[c.txt]"), repo.indexCalls);

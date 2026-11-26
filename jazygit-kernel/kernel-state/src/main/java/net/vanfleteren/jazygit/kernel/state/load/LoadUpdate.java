@@ -110,7 +110,7 @@ public final class LoadUpdate {
      */
     private static Next rereadWhole(Model model) {
         DiffOptions options = model.preferences().diffOptions();
-        Set<String> shown = model.repoView()
+        Set<RepoPath> shown = model.repoView()
                 .preview()
                 .fileDiff()
                 .flatMap(preview -> preview.value().toOption())

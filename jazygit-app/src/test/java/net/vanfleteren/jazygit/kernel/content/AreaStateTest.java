@@ -12,6 +12,7 @@ import dev.tamboui.tui.event.PasteEvent;
 import io.vavr.collection.Vector;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.core.git.model.DiffText;
+import net.vanfleteren.jazygit.core.repo.RepoPath;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.features.changes.panes.commits.CommitsPanel;
 import net.vanfleteren.jazygit.kernel.content.diff.DiffCursor;
@@ -162,7 +163,7 @@ class AreaStateTest {
         assertEquals(new LineNumberMsg.Closed(), pressed.sent().get(0));
         ViewMsg.ContentScrolled moved = (ViewMsg.ContentScrolled) pressed.sent().get(1);
         assertEquals(
-                Option.of(new Anchor.OnLine("a.txt", DiffSide.NEW, 3)),
+                Option.of(new Anchor.OnLine(new RepoPath("a.txt"), DiffSide.NEW, 3)),
                 moved.to().cursor());
     }
 

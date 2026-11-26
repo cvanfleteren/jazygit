@@ -8,6 +8,7 @@ import io.vavr.control.Option;
 import net.vanfleteren.jazygit.core.git.model.ChangeType;
 import net.vanfleteren.jazygit.core.git.model.CommitFile;
 import net.vanfleteren.jazygit.core.repo.BranchName;
+import net.vanfleteren.jazygit.core.repo.RepoPath;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.kernel.state.Loadable;
 import net.vanfleteren.jazygit.kernel.state.Model;
@@ -28,13 +29,13 @@ import org.junit.jupiter.api.Test;
 class FilesPanelCommitAllFilesTest {
 
     private static final Changes TIP = new Changes.OfTip(new BranchName("main"), new Sha("abcdef1234567"));
-    private static final CommitFile CHANGED = new CommitFile("src/main/A.java", ChangeType.MODIFIED);
+    private static final CommitFile CHANGED = new CommitFile(new RepoPath("src/main/A.java"), ChangeType.MODIFIED);
     // Rows: /, docs/guide, src/main, M A.java, B.java, README.md: directories come first.
     private static final List<CommitFile> ALL = List.of(
-            new CommitFile("README.md", ChangeType.UNCHANGED),
-            new CommitFile("docs/guide/intro.md", ChangeType.UNCHANGED),
+            new CommitFile(new RepoPath("README.md"), ChangeType.UNCHANGED),
+            new CommitFile(new RepoPath("docs/guide/intro.md"), ChangeType.UNCHANGED),
             CHANGED,
-            new CommitFile("src/main/B.java", ChangeType.UNCHANGED));
+            new CommitFile(new RepoPath("src/main/B.java"), ChangeType.UNCHANGED));
 
     private final FilesPanel panel = new FilesPanel(msg -> {}, () -> {});
 
@@ -83,11 +84,13 @@ class FilesPanelCommitAllFilesTest {
             RenderedText.ofLarge(testRunner, () -> panel.render(model, FilesPanel.PANE));
 
             panel.commitAllTree().selected(5);
-            assertEquals(Option.of(new SelectionMsg.UnchangedFileSelected("README.md")), panel.selectionChange(model));
+            assertEquals(
+                    Option.of(new SelectionMsg.UnchangedFileSelected(new RepoPath("README.md"))),
+                    panel.selectionChange(model));
 
             panel.commitAllTree().selected(1);
             assertEquals(
-                    Option.of(new SelectionMsg.UnchangedDirectorySelected("docs/guide", 1)),
+                    Option.of(new SelectionMsg.UnchangedDirectorySelected(new RepoPath("docs/guide"), 1)),
                     panel.selectionChange(model));
 
             panel.commitAllTree().selected(2);

@@ -14,6 +14,7 @@ import net.vanfleteren.jazygit.core.git.model.RepoStatus;
 import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.Head;
 import net.vanfleteren.jazygit.core.repo.InProgress;
+import net.vanfleteren.jazygit.core.repo.RepoPath;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.core.repo.Stash;
 import org.junit.jupiter.api.Test;
@@ -82,14 +83,14 @@ class RepoTest {
     }
 
     private static final FileEntry CONFLICTED =
-            FileEntry.conflicted("a.txt", new Conflict(Conflict.Side.UPDATED, Conflict.Side.UPDATED));
-    private static final FileEntry CHANGED = new FileEntry("b.txt", ChangeType.MODIFIED, true, false);
+            FileEntry.conflicted(new RepoPath("a.txt"), new Conflict(Conflict.Side.UPDATED, Conflict.Side.UPDATED));
+    private static final FileEntry CHANGED = new FileEntry(new RepoPath("b.txt"), ChangeType.MODIFIED, true, false);
 
     private static Repo stopped(Option<InProgress> inProgress, List<String> resolved) {
         return Repo.LOADING.withStatus(
                 new Loadable.Loaded<>(new RepoStatus(new Head.Detached(new Sha("1111")), List.of(CONFLICTED, CHANGED))
                         .withInProgress(inProgress)
-                        .withResolved(resolved)));
+                        .withResolved(resolved.map(RepoPath::new))));
     }
 
     private static final Option<InProgress> REBASING =
@@ -101,7 +102,7 @@ class RepoTest {
         Repo repo = stopped(REBASING, List.of("b.txt", "c.txt"));
 
         assertEquals(
-                new Loadable.Loaded<>(List.of(CONFLICTED, CHANGED, FileEntry.unchanged("c.txt"))),
+                new Loadable.Loaded<>(List.of(CONFLICTED, CHANGED, FileEntry.unchanged(new RepoPath("c.txt")))),
                 repo.workingFiles(false));
     }
 

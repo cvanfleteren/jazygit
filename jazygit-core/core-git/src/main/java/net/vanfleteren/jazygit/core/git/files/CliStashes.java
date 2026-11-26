@@ -22,6 +22,7 @@ import net.vanfleteren.jazygit.core.git.process.GitProcess;
 import net.vanfleteren.jazygit.core.process.ExecutedCommand;
 import net.vanfleteren.jazygit.core.process.Limited;
 import net.vanfleteren.jazygit.core.repo.BranchName;
+import net.vanfleteren.jazygit.core.repo.RepoPath;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.core.repo.Stash;
 
@@ -146,7 +147,8 @@ public final class CliStashes implements Stashes {
         List<String> flags = List.of("--patch", "--no-color", "--no-ext-diff", "-M")
                 .appendAll(CliDiffs.PREFIXES)
                 .appendAll(CliDiffs.flags(options));
-        List<String> paths = files.flatMap(CommitFile::paths).prepend("--");
+        List<String> paths =
+                files.flatMap(CommitFile::paths).map(RepoPath::value).prepend("--");
         String untracked = stash.value() + "^3";
         return GitProcess.read(
                         worktree,

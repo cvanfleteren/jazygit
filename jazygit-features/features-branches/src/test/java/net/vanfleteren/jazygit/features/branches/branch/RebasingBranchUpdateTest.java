@@ -35,7 +35,7 @@ class RebasingBranchUpdateTest {
     private static final Sha MAIN_TIP = new Sha("aaaa");
     private static final InProgress.Rebasing REBASING = new InProgress.Rebasing(Option.of(FEATURE), MAIN_TIP, 1, 2);
     private static final FileEntry CONFLICTED =
-            FileEntry.conflicted("f.txt", new Conflict(Conflict.Side.UPDATED, Conflict.Side.UPDATED));
+            FileEntry.conflicted(new RepoPath("f.txt"), new Conflict(Conflict.Side.UPDATED, Conflict.Side.UPDATED));
 
     private static Branch feature(Option<Path> worktree) {
         return new Branch(

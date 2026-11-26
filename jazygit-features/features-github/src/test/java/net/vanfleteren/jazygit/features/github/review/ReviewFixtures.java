@@ -21,6 +21,7 @@ import net.vanfleteren.jazygit.core.git.model.DiffText;
 import net.vanfleteren.jazygit.core.git.model.Folding;
 import net.vanfleteren.jazygit.core.repo.PrNumber;
 import net.vanfleteren.jazygit.core.repo.PullRequestCommits;
+import net.vanfleteren.jazygit.core.repo.RepoPath;
 import net.vanfleteren.jazygit.core.repo.RepoSlug;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.features.changes.diff.CommitFilesMsg;
@@ -48,7 +49,7 @@ final class ReviewFixtures {
     static final String BASE = "b".repeat(40);
     static final PullRequestCommits COMMITS =
             new PullRequestCommits(new PrNumber(7), new RepoSlug("owner/repo"), "", new Sha(BASE), new Sha(HEAD));
-    static final CommitFile A = new CommitFile("a.txt", ChangeType.MODIFIED);
+    static final CommitFile A = new CommitFile(new RepoPath("a.txt"), ChangeType.MODIFIED);
     static final AreaId AREA = new AreaId("commit-file-changes");
     // Line 2 of a.txt changed, in a first hunk; line 10 in a second.
     static final DiffText DIFF = DiffText.of("""
@@ -71,7 +72,7 @@ final class ReviewFixtures {
 
     static ReviewThread thread(String id, boolean resolved, ReviewThread.Rights rights) {
         return new ReviewThread(
-                "a.txt",
+                new RepoPath("a.txt"),
                 Side.RIGHT,
                 Option.of(2),
                 Option.none(),
@@ -104,7 +105,7 @@ final class ReviewFixtures {
     }
 
     static Anchor.OnLine line(Side side, int number) {
-        return new Anchor.OnLine("a.txt", FromGitHub.side(side), number);
+        return new Anchor.OnLine(new RepoPath("a.txt"), FromGitHub.side(side), number);
     }
 
     static Model files(PullRequestDetails.State state, String head) {
@@ -190,12 +191,13 @@ final class ReviewFixtures {
                 AREA,
                 CONTENT,
                 new WholeFile.Source.OfFiles(new Changes.OfPullRequest(COMMITS), A),
-                "a.txt",
+                new RepoPath("a.txt"),
                 model.preferences().diffOptions());
         Expansion expansion = new Expansion(
                 CONTENT,
                 io.vavr.collection.HashMap.of(
-                        "a.txt", new Expansion.Expanded(read.file(), new Loadable.Loaded<>(whole), List.of(lines))));
+                        new RepoPath("a.txt"),
+                        new Expansion.Expanded(read.file(), new Loadable.Loaded<>(whole), List.of(lines))));
         return model.mapRepoView(view -> view.withExpansion(AREA, expansion));
     }
 

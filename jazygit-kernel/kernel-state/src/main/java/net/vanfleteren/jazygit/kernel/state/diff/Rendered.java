@@ -5,6 +5,7 @@ import io.vavr.collection.List;
 import io.vavr.collection.Set;
 import io.vavr.control.Option;
 import java.util.Locale;
+import net.vanfleteren.jazygit.core.repo.RepoPath;
 
 /**
  * A kind of text file a version of can be shown rendered (ADR 103, 122, 123, 151), told by the extension of its path: the one table
@@ -57,8 +58,8 @@ public enum Rendered {
     /**
      * How the file at {@code path} is rendered, if it can be.
      */
-    public static Option<Rendered> of(String path) {
-        String name = path.substring(path.lastIndexOf('/') + 1);
+    public static Option<Rendered> of(RepoPath path) {
+        String name = path.value().substring(path.value().lastIndexOf('/') + 1);
         int dot = name.lastIndexOf('.');
         return Option.when(dot > 0, () -> name.substring(dot + 1).toLowerCase(Locale.ROOT))
                 .flatMap(extension -> List.of(values()).find(kind -> kind.extensions.contains(extension)));

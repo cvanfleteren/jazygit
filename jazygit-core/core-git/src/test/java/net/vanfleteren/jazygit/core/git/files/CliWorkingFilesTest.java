@@ -15,6 +15,7 @@ import net.vanfleteren.jazygit.core.git.model.FileContent;
 import net.vanfleteren.jazygit.core.git.model.ParsedDiff;
 import net.vanfleteren.jazygit.core.git.process.GitError;
 import net.vanfleteren.jazygit.core.process.Limit;
+import net.vanfleteren.jazygit.core.repo.RepoPath;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.zeroturnaround.exec.ProcessExecutor;
@@ -38,7 +39,11 @@ class CliWorkingFilesTest {
         Files.delete(repo.resolve("b.txt"));
 
         assertEquals(
-                List.of(".gitignore", "0-new.txt", "a.txt", "b.txt"),
+                List.of(
+                        new RepoPath(".gitignore"),
+                        new RepoPath("0-new.txt"),
+                        new RepoPath("a.txt"),
+                        new RepoPath("b.txt")),
                 status().allFiles().get());
     }
 
@@ -56,7 +61,9 @@ class CliWorkingFilesTest {
                 .directory(repo.toFile())
                 .execute();
 
-        assertEquals(List.of("a.txt", "b.txt"), status().allFiles().get());
+        assertEquals(
+                List.of(new RepoPath("a.txt"), new RepoPath("b.txt")),
+                status().allFiles().get());
     }
 
     @Test
@@ -65,7 +72,7 @@ class CliWorkingFilesTest {
         git("update-index", "--skip-worktree", "a.txt", "b.txt");
         Files.delete(repo.resolve("b.txt"));
 
-        assertEquals(List.of("a.txt"), status().allFiles().get());
+        assertEquals(List.of(new RepoPath("a.txt")), status().allFiles().get());
     }
 
     @Test
@@ -73,11 +80,11 @@ class CliWorkingFilesTest {
         init();
         Files.writeString(repo.resolve("a.txt"), "one\ntwo\n");
 
-        DiffText diff = text(status().content("a.txt").get());
+        DiffText diff = text(status().content(new RepoPath("a.txt")).get());
 
         assertFalse(diff.truncated());
         ParsedDiff.ParsedFile file = diff.parsed().files().single();
-        assertEquals("a.txt", file.file().path());
+        assertEquals(new RepoPath("a.txt"), file.file().path());
         assertEquals(
                 List.of("one", "two"),
                 file.hunks()
@@ -122,7 +129,9 @@ class CliWorkingFilesTest {
         init();
         Files.write(repo.resolve("image.bin"), new byte[] {'P', 'N', 'G', 0, 1, 2});
 
-        assertEquals(new FileContent.Binary(6), status().content("image.bin").get());
+        assertEquals(
+                new FileContent.Binary(6),
+                status().content(new RepoPath("image.bin")).get());
     }
 
     @Test
@@ -130,14 +139,18 @@ class CliWorkingFilesTest {
         init();
         Files.createSymbolicLink(repo.resolve("link"), Path.of("a.txt"));
 
-        assertEquals(new FileContent.Link("a.txt"), status().content("link").get());
+        assertEquals(
+                new FileContent.Link("a.txt"),
+                status().content(new RepoPath("link")).get());
     }
 
     @Test
     void aFileThatIsGoneCannotBeRead() throws Exception {
         init();
 
-        assertInstanceOf(GitError.Unreadable.class, status().content("gone.txt").getLeft());
+        assertInstanceOf(
+                GitError.Unreadable.class,
+                status().content(new RepoPath("gone.txt")).getLeft());
     }
 
     private static DiffText text(FileContent content) {

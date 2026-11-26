@@ -16,6 +16,7 @@ import net.vanfleteren.jazygit.core.git.model.ConflictTools;
 import net.vanfleteren.jazygit.core.git.model.FileEntry;
 import net.vanfleteren.jazygit.core.git.model.MarkedFile;
 import net.vanfleteren.jazygit.core.repo.BranchName;
+import net.vanfleteren.jazygit.core.repo.RepoPath;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.features.changes.stage.MarkersLeftPopup;
 import net.vanfleteren.jazygit.kernel.settings.EditorProgram;
@@ -38,13 +39,14 @@ class ResolveDialogsTest {
     private static final FileEditor GIT = new FileEditor.GitEditor();
 
     private static final FileEntry BOTH =
-            FileEntry.conflicted("a b", new Conflict(Conflict.Side.UPDATED, Conflict.Side.UPDATED));
+            FileEntry.conflicted(new RepoPath("a b"), new Conflict(Conflict.Side.UPDATED, Conflict.Side.UPDATED));
 
     private static final Sides REBASE = new Sides(new SideName.Branch(new BranchName("main")), new SideName.Rebased());
 
     @Test
     void theSidesOfARebaseAreNamedByWhatTheyAre() throws Exception {
-        FileEntry file = FileEntry.conflicted("a.txt", new Conflict(Conflict.Side.UPDATED, Conflict.Side.UPDATED));
+        FileEntry file =
+                FileEntry.conflicted(new RepoPath("a.txt"), new Conflict(Conflict.Side.UPDATED, Conflict.Side.UPDATED));
 
         String screen = render(ResolveDialogs.RESOLVE, popup(file, GIT));
 
@@ -56,7 +58,8 @@ class ResolveDialogsTest {
 
     @Test
     void theSideThatDeletedTheFileDeletesIt() throws Exception {
-        FileEntry file = FileEntry.conflicted("gone.txt", new Conflict(Conflict.Side.DELETED, Conflict.Side.UPDATED));
+        FileEntry file = FileEntry.conflicted(
+                new RepoPath("gone.txt"), new Conflict(Conflict.Side.DELETED, Conflict.Side.UPDATED));
         Sides merge =
                 new Sides(new SideName.Branch(new BranchName("feature")), new SideName.Commit(new Sha("abcdef1234")));
 
@@ -70,7 +73,8 @@ class ResolveDialogsTest {
 
     @Test
     void theCommandsQuoteAPathAsAShellNeedsIt() throws Exception {
-        FileEntry file = FileEntry.conflicted("a b", new Conflict(Conflict.Side.UPDATED, Conflict.Side.UPDATED));
+        FileEntry file =
+                FileEntry.conflicted(new RepoPath("a b"), new Conflict(Conflict.Side.UPDATED, Conflict.Side.UPDATED));
 
         String screen = render(ResolveDialogs.RESOLVE, popup(file, GIT));
 
@@ -80,7 +84,8 @@ class ResolveDialogsTest {
 
     @Test
     void deletingTheFileSaysTheCommandThatDeletesIt() throws Exception {
-        FileEntry file = FileEntry.conflicted("gone.txt", new Conflict(Conflict.Side.DELETED, Conflict.Side.UPDATED));
+        FileEntry file = FileEntry.conflicted(
+                new RepoPath("gone.txt"), new Conflict(Conflict.Side.DELETED, Conflict.Side.UPDATED));
 
         String screen = render(ResolveDialogs.RESOLVE, popup(file, GIT));
 
@@ -89,7 +94,8 @@ class ResolveDialogsTest {
 
     @Test
     void editingSaysTheCommandOfTheOneEditorSet() throws Exception {
-        FileEntry file = FileEntry.conflicted("a b", new Conflict(Conflict.Side.UPDATED, Conflict.Side.UPDATED));
+        FileEntry file =
+                FileEntry.conflicted(new RepoPath("a b"), new Conflict(Conflict.Side.UPDATED, Conflict.Side.UPDATED));
 
         String screen = render(
                 ResolveDialogs.RESOLVE,
@@ -104,7 +110,8 @@ class ResolveDialogsTest {
 
     @Test
     void editingWithSeveralEditorsSetSaysOneIsChosen() throws Exception {
-        FileEntry file = FileEntry.conflicted("a.txt", new Conflict(Conflict.Side.UPDATED, Conflict.Side.UPDATED));
+        FileEntry file =
+                FileEntry.conflicted(new RepoPath("a.txt"), new Conflict(Conflict.Side.UPDATED, Conflict.Side.UPDATED));
 
         String screen = render(
                 ResolveDialogs.RESOLVE,
@@ -166,7 +173,7 @@ class ResolveDialogsTest {
 
     @Test
     void solvingOverEditsAsksFirst() throws Exception {
-        String screen = render(ResolveDialogs.SOLVE_OVER_EDITS, new SolveOverEditsPopup("a b"));
+        String screen = render(ResolveDialogs.SOLVE_OVER_EDITS, new SolveOverEditsPopup(new RepoPath("a b")));
 
         assertTrue(screen.contains("Solving with mergiraf starts again from the conflict"), screen);
         assertTrue(screen.contains("your edits to a b are lost"), screen);
@@ -182,7 +189,8 @@ class ResolveDialogsTest {
 
     @Test
     void neitherIsOfferedOnAFileOneSideDeleted() throws Exception {
-        FileEntry file = FileEntry.conflicted("gone.txt", new Conflict(Conflict.Side.DELETED, Conflict.Side.UPDATED));
+        FileEntry file = FileEntry.conflicted(
+                new RepoPath("gone.txt"), new Conflict(Conflict.Side.DELETED, Conflict.Side.UPDATED));
 
         String screen = render(
                 ResolveDialogs.RESOLVE,
@@ -268,11 +276,13 @@ class ResolveDialogsTest {
 
     @Test
     void stagingAFileWithMarkersLeftSaysWhereTheyAre() throws Exception {
-        FileEntry file = FileEntry.conflicted("a.txt", new Conflict(Conflict.Side.UPDATED, Conflict.Side.UPDATED));
+        FileEntry file =
+                FileEntry.conflicted(new RepoPath("a.txt"), new Conflict(Conflict.Side.UPDATED, Conflict.Side.UPDATED));
 
         String screen = render(
                 ResolveDialogs.MARKERS_LEFT,
-                new MarkersLeftPopup(List.of(file), Option.none(), List.of(new MarkedFile("a.txt", List.of(7, 15)))));
+                new MarkersLeftPopup(
+                        List.of(file), Option.none(), List.of(new MarkedFile(new RepoPath("a.txt"), List.of(7, 15)))));
 
         assertTrue(screen.contains("a.txt still has conflict markers"), screen);
         assertTrue(screen.contains("line 7, 15"), screen);

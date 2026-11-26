@@ -7,6 +7,7 @@ import io.vavr.collection.List;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.core.git.model.DiffText;
 import net.vanfleteren.jazygit.core.git.model.FileContent;
+import net.vanfleteren.jazygit.core.repo.RepoPath;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.features.changes.diff.VersionMsg;
 import net.vanfleteren.jazygit.features.changes.panes.files.FilesPanel;
@@ -45,7 +46,7 @@ class UnchangedContentTest {
     }
 
     private static Model showing(String path, FileContent read) {
-        return showing(new UnchangedNode.File(new Preview<>(path, new Loadable.Loaded<>(read))));
+        return showing(new UnchangedNode.File(new Preview<>(new RepoPath(path), new Loadable.Loaded<>(read))));
     }
 
     private String screen(Model model) throws Exception {
@@ -76,17 +77,18 @@ class UnchangedContentTest {
 
     @Test
     void aDirectorySaysHowManyFilesItHolds() throws Exception {
-        assertTrue(
-                screen(showing(new UnchangedNode.Directory("docs/guide", 214))).contains("docs/guide · 214 files"));
-        assertTrue(screen(showing(new UnchangedNode.Directory("", 3))).contains("/ · 3 files"));
+        assertTrue(screen(showing(new UnchangedNode.Directory(new RepoPath("docs/guide"), 214)))
+                .contains("docs/guide · 214 files"));
+        assertTrue(screen(showing(new UnchangedNode.Directory(new RepoPath(""), 3)))
+                .contains("/ · 3 files"));
     }
 
     @Test
     void ctrlODoesNothingAndCtrlTRendersItWithoutReadingItAgain() {
         Model shown = showing("README.md", new FileContent.Text(DiffText.of(README)));
-        ScrolledContent.Unchanged file = new ScrolledContent.Unchanged("README.md", DiffText.of(README));
+        ScrolledContent.Unchanged file = new ScrolledContent.Unchanged(new RepoPath("README.md"), DiffText.of(README));
         AreaId area = UnchangedSource.AREA.id();
-        Anchor line = new Anchor.OnLine("README.md", DiffSide.NEW, 1);
+        Anchor line = new Anchor.OnLine(new RepoPath("README.md"), DiffSide.NEW, 1);
         DiffCursorAt at = new DiffCursorAt(
                 area,
                 new Scrolled(file, 0, 0, Option.of(line), Option.none()),
@@ -122,7 +124,9 @@ class UnchangedContentTest {
 
     @Test
     void fromTheFilesPaneADirectoryOrWhatIsNoTextShowsNoVersion() {
-        List.of(showing(new UnchangedNode.Directory("docs", 3)), showing("logo.png", new FileContent.Binary(12_800)))
+        List.of(
+                        showing(new UnchangedNode.Directory(new RepoPath("docs"), 3)),
+                        showing("logo.png", new FileContent.Binary(12_800)))
                 .forEach(shown -> {
                     Update.Next cycled = Update.update(shown, new VersionMsg.FilesCycled());
                     Update.Next rendered = Update.update(shown, new VersionMsg.FilesRenderToggled());

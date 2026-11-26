@@ -2,6 +2,7 @@ package net.vanfleteren.jazygit.kernel.state.diff;
 
 import io.vavr.collection.List;
 import io.vavr.control.Option;
+import net.vanfleteren.jazygit.core.repo.RepoPath;
 
 /**
  * A thread of remarks on a change, about a line of a file of its diff, or about a whole file, as a forge states it for
@@ -26,8 +27,8 @@ import io.vavr.control.Option;
  */
 public record RemarkThread(
         Id id,
-        String path,
-        Option<String> origin,
+        RepoPath path,
+        Option<RepoPath> origin,
         Subject subject,
         Option<Integer> line,
         DiffSide side,
@@ -45,7 +46,7 @@ public record RemarkThread(
      * one, which is also its path in git (ADR 55). Wherever a thread is matched to a file, it is matched by this, also
      * where the threads of each file are found by their path ({@link RemarksByPath#on}).
      */
-    public boolean isOn(String path, Option<String> origin) {
+    public boolean isOn(RepoPath path, Option<RepoPath> origin) {
         return path.equals(this.path) || origin.contains(this.path) || this.origin.contains(path);
     }
 

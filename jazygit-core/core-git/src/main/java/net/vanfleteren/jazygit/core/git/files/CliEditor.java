@@ -23,6 +23,7 @@ import net.vanfleteren.jazygit.core.process.Exec;
 import net.vanfleteren.jazygit.core.process.ExecFailure;
 import net.vanfleteren.jazygit.core.process.ExecutedCommand;
 import net.vanfleteren.jazygit.core.repo.CommitMessage;
+import net.vanfleteren.jazygit.core.repo.RepoPath;
 
 /**
  * Opens files in the editor git uses for commit messages, on the terminal.
@@ -59,7 +60,7 @@ public final class CliEditor implements Editor {
      * the tool as it does outside the app.
      */
     @Override
-    public Either<GitFailure, List<ExecutedCommand>> mergeTool(String path, ConflictTools tools) {
+    public Either<GitFailure, List<ExecutedCommand>> mergeTool(RepoPath path, ConflictTools tools) {
         List<String> commandLine = tools.mergeTool(path);
         return Exec.interactive(worktree, commandLine)
                 .mapLeft(failure -> failed(commandLine, mergeToolError(CommandLine.format(commandLine), failure)))

@@ -7,6 +7,7 @@ import io.vavr.control.Option;
 import net.vanfleteren.jazygit.core.git.model.DiffOptions;
 import net.vanfleteren.jazygit.core.git.model.DiffText;
 import net.vanfleteren.jazygit.core.git.model.FileVersion;
+import net.vanfleteren.jazygit.core.repo.RepoPath;
 import net.vanfleteren.jazygit.kernel.settings.DiffLook;
 import net.vanfleteren.jazygit.kernel.settings.DiffStyle;
 import net.vanfleteren.jazygit.kernel.state.Loadable;
@@ -38,9 +39,13 @@ class ShownChangesTest {
         ScrolledContent content = new ScrolledContent.Diff(DIFF);
         return new Version(
                 content,
-                "a.txt",
+                new RepoPath("a.txt"),
                 Option.of(FileVersion.NEW),
-                new WholeFile(content, new WholeFile.Source.OnDisk("a.txt"), "a.txt", DiffOptions.DEFAULT),
+                new WholeFile(
+                        content,
+                        new WholeFile.Source.OnDisk(new RepoPath("a.txt")),
+                        new RepoPath("a.txt"),
+                        DiffOptions.DEFAULT),
                 new Loadable.Loaded<>(DIFF));
     }
 

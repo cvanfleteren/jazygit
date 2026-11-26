@@ -32,7 +32,7 @@ public final class ResolveDialogs {
                     "resolve",
                     ResolvePopup.class,
                     popup -> Messages.get(
-                            "midway.dialog.resolve.title", popup.file().path()),
+                            "midway.dialog.resolve.title", popup.file().path().value()),
                     List.of(
                             new Choice<ResolvePopup>(
                                             'o',
@@ -90,8 +90,10 @@ public final class ResolveDialogs {
     public static final ConfirmDialog.Spec<SolveOverEditsPopup> SOLVE_OVER_EDITS = ConfirmDialog.Spec.confirming(
             "solve-over-edits",
             SolveOverEditsPopup.class,
-            popup -> Messages.get("midway.dialog.solveOverEdits.title", popup.path()),
-            popup -> Messages.get("midway.dialog.solveOverEdits.message", popup.path()));
+            popup -> Messages.get(
+                    "midway.dialog.solveOverEdits.title", popup.path().value()),
+            popup -> Messages.get(
+                    "midway.dialog.solveOverEdits.message", popup.path().value()));
 
     /**
      * What to do with files asked to be staged that still have conflict markers: resolve the one file, edit it, or
@@ -103,7 +105,7 @@ public final class ResolveDialogs {
             popup -> popup.marked().size() == 1
                     ? Messages.get(
                             "midway.dialog.markersLeft.title",
-                            popup.marked().head().path())
+                            popup.marked().head().path().value())
                     : Messages.get(
                             "midway.dialog.markersLeft.titleMany",
                             popup.marked().size()),
@@ -112,7 +114,7 @@ public final class ResolveDialogs {
                                     'e',
                                     popup -> Messages.get(
                                             "midway.dialog.markersLeft.edit",
-                                            popup.marked().head().path()),
+                                            popup.marked().head().path().value()),
                                     ResolveMsg.MarkedEditChosen::new)
                             .withDetails(popup -> Messages.get(
                                     "midway.dialog.markersLeft.edit.details",
@@ -144,7 +146,7 @@ public final class ResolveDialogs {
                 .map(arguments -> CommandLine.format(arguments
                         .prepend("git")
                         .append("--")
-                        .append(popup.file().path())))
+                        .append(popup.file().path().value())))
                 .mkString(" && ");
     }
 
@@ -177,13 +179,16 @@ public final class ResolveDialogs {
      * git's editor, as {@code e} opens it (ADR 145).
      */
     private static String editCommand(ResolvePopup popup) {
-        String path = CommandLine.format(List.of(popup.file().path()));
+        String path = CommandLine.format(List.of(popup.file().path().value()));
         return switch (popup.editor()) {
             // As e opens it, at its first conflict; the worktree is where the command runs.
             case FileEditor.One(EditorProgram editor) ->
                 CommandLine.format(editor.fileCommandLine(
-                                ".", popup.file().path(), popup.firstConflict().getOrElse(1))
-                        .getOrElse(() -> List.of(editor.name(), popup.file().path())));
+                                ".",
+                                popup.file().path().value(),
+                                popup.firstConflict().getOrElse(1))
+                        .getOrElse(
+                                () -> List.of(editor.name(), popup.file().path().value())));
             case FileEditor.Several _ -> Messages.get("midway.dialog.resolve.edit.command.chosen", path);
             case FileEditor.GitEditor _ -> Messages.get("midway.dialog.resolve.edit.command", path);
         };

@@ -6,6 +6,7 @@ import io.vavr.collection.HashMap;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.time.Instant;
+import net.vanfleteren.jazygit.core.repo.RepoPath;
 import net.vanfleteren.jazygit.kernel.state.diff.RemarkThread.Subject;
 import org.junit.jupiter.api.Test;
 
@@ -21,7 +22,7 @@ class CollapsedTest {
     private static RemarkThread thread(boolean resolved, Remark... comments) {
         return new RemarkThread(
                 new RemarkThread.Id("T"),
-                "a.txt",
+                new RepoPath("a.txt"),
                 Option.none(),
                 Subject.LINE,
                 Option.of(1),

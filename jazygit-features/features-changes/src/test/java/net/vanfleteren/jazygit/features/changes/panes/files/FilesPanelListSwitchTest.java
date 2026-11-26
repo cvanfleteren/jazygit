@@ -9,6 +9,7 @@ import net.vanfleteren.jazygit.core.git.model.ChangeType;
 import net.vanfleteren.jazygit.core.git.model.CommitFile;
 import net.vanfleteren.jazygit.core.git.model.FileEntry;
 import net.vanfleteren.jazygit.core.repo.BranchName;
+import net.vanfleteren.jazygit.core.repo.RepoPath;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.kernel.state.Loadable;
 import net.vanfleteren.jazygit.kernel.state.Model;
@@ -30,14 +31,14 @@ class FilesPanelListSwitchTest {
 
     private static final Changes TIP = new Changes.OfTip(new BranchName("main"), new Sha("abcdef1234567"));
     private static final Changes OTHER = new Changes.OfCommit(new Sha("1234567abcdef"));
-    private static final CommitFile CHANGED = new CommitFile("src/main/A.java", ChangeType.MODIFIED);
+    private static final CommitFile CHANGED = new CommitFile(new RepoPath("src/main/A.java"), ChangeType.MODIFIED);
     // Changed rows: /, src/main, M A.java.
     // All rows: /, docs/guide, src/main, M A.java, B.java, README.md: directories come first.
     private static final List<CommitFile> ALL = List.of(
-            new CommitFile("README.md", ChangeType.UNCHANGED),
-            new CommitFile("docs/guide/intro.md", ChangeType.UNCHANGED),
+            new CommitFile(new RepoPath("README.md"), ChangeType.UNCHANGED),
+            new CommitFile(new RepoPath("docs/guide/intro.md"), ChangeType.UNCHANGED),
             CHANGED,
-            new CommitFile("src/main/B.java", ChangeType.UNCHANGED));
+            new CommitFile(new RepoPath("src/main/B.java"), ChangeType.UNCHANGED));
 
     private final FilesPanel panel = new FilesPanel(msg -> {}, () -> {});
 
@@ -53,8 +54,8 @@ class FilesPanelListSwitchTest {
     private static Model working(FilesShown shown) {
         return TestModels.loaded()
                 .mapRepo(repo -> repo.withStatus(repo.status()
-                                .map(status -> status.withFiles(
-                                        List.of(new FileEntry("src/main/A.java", ChangeType.MODIFIED, false, true)))))
+                                .map(status -> status.withFiles(List.of(new FileEntry(
+                                        new RepoPath("src/main/A.java"), ChangeType.MODIFIED, false, true)))))
                         .withAllFiles(new Loadable.Loaded<>(ALL.map(CommitFile::path))))
                 .mapRepoView(view -> view.mapFiles(files -> files.withShown(shown)));
     }
@@ -153,8 +154,8 @@ class FilesPanelListSwitchTest {
     void aDirectoryMergedIntoANodeGoesToThatNodeAndOneWithoutChangesToTheDirectoryHoldingIt() throws Exception {
         // All rows: /, docs/guide, src, main, M A.java, B.java, test, README.md; src/test starts collapsed.
         // Changed rows: /, src/main, M A.java: src is merged with its only child directory there.
-        Loadable<List<CommitFile>> tree =
-                new Loadable.Loaded<>(ALL.append(new CommitFile("src/test/C.java", ChangeType.UNCHANGED)));
+        Loadable<List<CommitFile>> tree = new Loadable.Loaded<>(
+                ALL.append(new CommitFile(new RepoPath("src/test/C.java"), ChangeType.UNCHANGED)));
         Model all = commit(TIP, true, tree);
         Model changed = commit(TIP, false, tree);
         try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(() -> panel.render(all, FilesPanel.PANE))) {

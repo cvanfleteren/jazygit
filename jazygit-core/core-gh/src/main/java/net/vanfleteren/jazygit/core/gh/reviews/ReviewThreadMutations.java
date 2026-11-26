@@ -79,7 +79,7 @@ final class ReviewThreadMutations {
                                 "-f",
                                 "commit_id=" + commit.value(),
                                 "-f",
-                                "path=" + thread.path())
+                                "path=" + thread.path().value())
                         .appendAll(place));
     }
 

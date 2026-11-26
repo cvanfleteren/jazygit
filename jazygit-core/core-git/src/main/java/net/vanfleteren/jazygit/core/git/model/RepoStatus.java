@@ -8,6 +8,7 @@ import net.vanfleteren.jazygit.core.repo.Head;
 import net.vanfleteren.jazygit.core.repo.InProgress;
 import net.vanfleteren.jazygit.core.repo.Midway;
 import net.vanfleteren.jazygit.core.repo.Plan;
+import net.vanfleteren.jazygit.core.repo.RepoPath;
 import net.vanfleteren.jazygit.core.repo.Sha;
 
 /**
@@ -22,12 +23,12 @@ import net.vanfleteren.jazygit.core.repo.Sha;
  */
 @With
 public record RepoStatus(
-        Head head, List<FileEntry> files, Option<InProgress> inProgress, List<String> resolved, Option<Plan> plan) {
+        Head head, List<FileEntry> files, Option<InProgress> inProgress, List<RepoPath> resolved, Option<Plan> plan) {
 
     /**
      * The status of a repository in the middle of {@code inProgress}, if anything, whose steps are not known.
      */
-    public RepoStatus(Head head, List<FileEntry> files, Option<InProgress> inProgress, List<String> resolved) {
+    public RepoStatus(Head head, List<FileEntry> files, Option<InProgress> inProgress, List<RepoPath> resolved) {
         this(head, files, inProgress, resolved, Option.none());
     }
 

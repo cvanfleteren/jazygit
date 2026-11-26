@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import io.vavr.collection.List;
 import net.vanfleteren.jazygit.core.git.model.FileTree.Dir;
 import net.vanfleteren.jazygit.core.git.model.FileTree.File;
+import net.vanfleteren.jazygit.core.repo.RepoPath;
 import org.junit.jupiter.api.Test;
 
 class FileTreeTest {
@@ -30,7 +31,7 @@ class FileTreeTest {
         FileEntry a = modified("net/A.java");
         FileEntry b = modified("net/sub/B.java");
         FileEntry c = modified("c.txt");
-        Dir<FileEntry> root = new Dir<>("root", "", FileTree.of(List.of(a, b, c)));
+        Dir<FileEntry> root = new Dir<>("root", new RepoPath(""), FileTree.of(List.of(a, b, c)));
 
         assertEquals(List.of(c), root.directEntries());
         assertEquals(List.of(a), root.children().get(0).directEntries());
@@ -55,7 +56,8 @@ class FileTreeTest {
         FileEntry app = modified("src/main/java/App.java");
 
         assertEquals(
-                List.of(new Dir<>("src/main/java", "src/main/java", List.of(new File<>("App.java", app)))),
+                List.of(new Dir<>(
+                        "src/main/java", new RepoPath("src/main/java"), List.of(new File<>("App.java", app)))),
                 FileTree.of(List.of(app)));
     }
 
@@ -67,9 +69,9 @@ class FileTreeTest {
         assertEquals(
                 List.of(new Dir<>(
                         "net/vanfleteren",
-                        "net/vanfleteren",
+                        new RepoPath("net/vanfleteren"),
                         List.of(
-                                new Dir<>("b", "net/vanfleteren/b", List.of(new File<>("B.java", b))),
+                                new Dir<>("b", new RepoPath("net/vanfleteren/b"), List.of(new File<>("B.java", b))),
                                 new File<>("A.java", a)))),
                 FileTree.of(List.of(a, b)));
     }
@@ -82,10 +84,16 @@ class FileTreeTest {
         assertEquals(
                 List.of(new Dir<>(
                         "src",
-                        "src",
+                        new RepoPath("src"),
                         List.of(
-                                new Dir<>("main/java", "src/main/java", List.of(new File<>("App.java", main))),
-                                new Dir<>("test/java", "src/test/java", List.of(new File<>("AppTest.java", test)))))),
+                                new Dir<>(
+                                        "main/java",
+                                        new RepoPath("src/main/java"),
+                                        List.of(new File<>("App.java", main))),
+                                new Dir<>(
+                                        "test/java",
+                                        new RepoPath("src/test/java"),
+                                        List.of(new File<>("AppTest.java", test)))))),
                 FileTree.of(List.of(test, main)));
     }
 
@@ -95,7 +103,9 @@ class FileTreeTest {
         FileEntry app = modified("z/App.java");
 
         assertEquals(
-                List.of(new Dir<>("z", "z", List.of(new File<>("App.java", app))), new File<>("a.xml", pom)),
+                List.of(
+                        new Dir<>("z", new RepoPath("z"), List.of(new File<>("App.java", app))),
+                        new File<>("a.xml", pom)),
                 FileTree.of(List.of(pom, app)));
     }
 }

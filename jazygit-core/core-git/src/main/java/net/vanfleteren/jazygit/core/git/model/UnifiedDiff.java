@@ -6,6 +6,7 @@ import io.vavr.control.Option;
 import java.nio.charset.StandardCharsets;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import net.vanfleteren.jazygit.core.repo.RepoPath;
 
 /**
  * A unified diff as git prints it, parsed into its files, their hunks and their lines.
@@ -74,7 +75,8 @@ public record UnifiedDiff(List<String> preamble, List<FileDiff> files) {
                 : start.substring(UNMERGED_START.length());
         return new FileDiff(
                 ChangeType.CONFLICTED,
-                side(header, "+++ b/").orElse(side(header, "--- a/")).getOrElse(named),
+                new RepoPath(
+                        side(header, "+++ b/").orElse(side(header, "--- a/")).getOrElse(named)),
                 Option.none(),
                 Option.none(),
                 header.exists(line -> line.startsWith("Binary files ")),
@@ -103,8 +105,8 @@ public record UnifiedDiff(List<String> preamble, List<FileDiff> files) {
                                 : ChangeType.MODIFIED;
         return new FileDiff(
                 type,
-                path,
-                renamedFrom,
+                new RepoPath(path),
+                renamedFrom.map(RepoPath::new),
                 oldMode.flatMap(from -> newMode.map(to -> new ModeChange(from, to))),
                 header.exists(line -> line.startsWith("Binary files ")),
                 fileHunks(header, lines.drop(header.size())));
@@ -301,8 +303,8 @@ public record UnifiedDiff(List<String> preamble, List<FileDiff> files) {
      */
     public record FileDiff(
             ChangeType type,
-            String path,
-            Option<String> origin,
+            RepoPath path,
+            Option<RepoPath> origin,
             Option<ModeChange> mode,
             boolean binary,
             List<Hunk> hunks) {}

@@ -8,6 +8,7 @@ import net.vanfleteren.jazygit.core.git.model.DiffFilter;
 import net.vanfleteren.jazygit.core.git.model.DiffFiltering;
 import net.vanfleteren.jazygit.core.git.model.UnifiedDiff;
 import net.vanfleteren.jazygit.core.git.model.UnifiedDiff.Hunk;
+import net.vanfleteren.jazygit.core.repo.RepoPath;
 import org.junit.jupiter.api.Test;
 
 class DiffFiltersTest {
@@ -70,11 +71,11 @@ class DiffFiltersTest {
         assertHidden(filters, "web/package-lock.json", "+  \"a\": 1,");
         assertHidden(filters, "__snapshots__/a.snap", "+exports[`x`] = 1;");
         assertHidden(filters, "dist/app.min.js", "+var a=1;");
-        assertEquals(List.empty(), DiffFiltering.applying(filters.active(), "src/app.js"));
+        assertEquals(List.empty(), DiffFiltering.applying(filters.active(), new RepoPath("src/app.js")));
     }
 
     private static void assertHidden(DiffFilters filters, String path, String... lines) {
-        List<DiffFilter> applying = DiffFiltering.applying(filters.active(), path);
+        List<DiffFilter> applying = DiffFiltering.applying(filters.active(), new RepoPath(path));
         assertTrue(DiffFiltering.hiding(hunk(lines), applying).isDefined(), path + " " + List.of(lines));
     }
 

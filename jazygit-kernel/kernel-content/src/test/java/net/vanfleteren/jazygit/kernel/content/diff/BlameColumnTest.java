@@ -18,6 +18,7 @@ import java.util.stream.Collectors;
 import net.vanfleteren.jazygit.core.git.model.Blame;
 import net.vanfleteren.jazygit.core.git.model.FileVersion;
 import net.vanfleteren.jazygit.core.git.model.ParsedDiff;
+import net.vanfleteren.jazygit.core.repo.RepoPath;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.kernel.state.Loadable;
 import net.vanfleteren.jazygit.kernel.state.diff.Blamed;
@@ -140,7 +141,7 @@ class BlameColumnTest {
     private static Blame blame(Blame.Commit... commits) {
         return new Blame(Vector.of(commits)
                 .zipWithIndex()
-                .map(at -> new Blame.Line(at._1(), at._2() + 1, "f.txt", Option.none())));
+                .map(at -> new Blame.Line(at._1(), at._2() + 1, new RepoPath("f.txt"), Option.none())));
     }
 
     private static Blame.Commit commit(char digit, String author, LocalDate date) {

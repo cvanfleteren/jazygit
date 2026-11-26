@@ -10,6 +10,7 @@ import net.vanfleteren.jazygit.core.git.model.FileContent;
 import net.vanfleteren.jazygit.core.git.model.FileEntry;
 import net.vanfleteren.jazygit.core.git.process.GitError;
 import net.vanfleteren.jazygit.core.repo.PullRequestCommits;
+import net.vanfleteren.jazygit.core.repo.RepoPath;
 import net.vanfleteren.jazygit.core.repo.Sha;
 
 /**
@@ -34,18 +35,18 @@ public interface Diffs {
     /**
      * The paths of all files of the commit {@code sha}, whether it changed them or not, sorted (ADR 128).
      */
-    Either<GitError, List<String>> treeFiles(Sha sha);
+    Either<GitError, List<RepoPath>> treeFiles(Sha sha);
 
     /**
      * What the file at {@code path} holds in the commit {@code sha}, as a file without changes shows it (ADR 128).
      */
-    Either<GitError, FileContent> treeContent(Sha sha, String path);
+    Either<GitError, FileContent> treeContent(Sha sha, RepoPath path);
 
     /**
      * The text of the file at {@code path} in the commit {@code sha}, whole, as a small file of settings is read, like
      * a workflow of GitHub Actions (ADR 131).
      */
-    Either<GitError, String> treeText(Sha sha, String path);
+    Either<GitError, String> treeText(Sha sha, RepoPath path);
 
     /**
      * What the commit {@code sha} changed in {@code files}, like {@code git show -- <paths>}: only the diff, a merge

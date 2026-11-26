@@ -5,6 +5,7 @@ import net.vanfleteren.jazygit.core.git.process.GitError;
 import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.BranchRef;
 import net.vanfleteren.jazygit.core.repo.RemoteBranch;
+import net.vanfleteren.jazygit.core.repo.RepoPath;
 import net.vanfleteren.jazygit.kernel.settings.SettingsProblem;
 import net.vanfleteren.jazygit.kernel.state.AppError;
 import net.vanfleteren.jazygit.kernel.state.Failure;
@@ -94,7 +95,7 @@ public final class ErrorText {
             case GitError.StoppedOnConflicts(var inProgress, int conflicts) ->
                 Messages.get("git.stoppedOnConflicts", conflicts);
             case GitError.TempFileFailed(Throwable cause) -> Messages.get("git.tempFileFailed", reason(cause));
-            case GitError.RefusedPath(String path) -> Messages.get("git.refusedPath", path);
+            case GitError.RefusedPath(RepoPath path) -> Messages.get("git.refusedPath", path.value());
             case GitError.EditorNotStarted(String editor, var cause) ->
                 Messages.get("git.editorNotStarted", editor, reason(cause));
             case GitError.EditorFailed(String editor, int exitCode) ->

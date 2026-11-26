@@ -10,6 +10,7 @@ import net.vanfleteren.jazygit.core.git.model.ConflictTools;
 import net.vanfleteren.jazygit.core.git.process.GitFailure;
 import net.vanfleteren.jazygit.core.process.ExecutedCommand;
 import net.vanfleteren.jazygit.core.repo.CommitMessage;
+import net.vanfleteren.jazygit.core.repo.RepoPath;
 
 /**
  * {@link Editor} for tests: no editor runs, and what is edited is saved as it is. Fakes override what they need.
@@ -38,7 +39,7 @@ public interface StubEditor extends Editor {
     }
 
     @Override
-    default Either<GitFailure, List<ExecutedCommand>> mergeTool(String path, ConflictTools tools) {
+    default Either<GitFailure, List<ExecutedCommand>> mergeTool(RepoPath path, ConflictTools tools) {
         return ran();
     }
 }

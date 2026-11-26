@@ -12,6 +12,7 @@ import io.vavr.control.Option;
 import java.util.stream.Collectors;
 import net.vanfleteren.jazygit.core.git.model.FileVersion;
 import net.vanfleteren.jazygit.core.git.model.ParsedDiff;
+import net.vanfleteren.jazygit.core.repo.RepoPath;
 import net.vanfleteren.jazygit.kernel.state.diff.Anchor;
 import net.vanfleteren.jazygit.kernel.state.diff.DiffSide;
 import net.vanfleteren.jazygit.kernel.state.diff.Expansion;
@@ -291,12 +292,27 @@ class RenderedYamlTest {
                 drawnText(drawn).tail());
         assertEquals(
                 List.of(
-                        new Anchor.File("a.yml"),
-                        new Anchor.Node("a.yml", "/run", new Anchor.OnLine("a.yml", DiffSide.NEW, 1)),
-                        new Anchor.Node("a.yml", "/run/0", new Anchor.OnLine("a.yml", DiffSide.NEW, 2)),
-                        new Anchor.Node("a.yml", "/run/1", new Anchor.OnLine("a.yml", DiffSide.NEW, 3)),
-                        new Anchor.Node("a.yml", "/run/2", new Anchor.OnLine("a.yml", DiffSide.NEW, 4)),
-                        new Anchor.Node("a.yml", "/next", new Anchor.OnLine("a.yml", DiffSide.NEW, 5))),
+                        new Anchor.File(new RepoPath("a.yml")),
+                        new Anchor.Node(
+                                new RepoPath("a.yml"),
+                                "/run",
+                                new Anchor.OnLine(new RepoPath("a.yml"), DiffSide.NEW, 1)),
+                        new Anchor.Node(
+                                new RepoPath("a.yml"),
+                                "/run/0",
+                                new Anchor.OnLine(new RepoPath("a.yml"), DiffSide.NEW, 2)),
+                        new Anchor.Node(
+                                new RepoPath("a.yml"),
+                                "/run/1",
+                                new Anchor.OnLine(new RepoPath("a.yml"), DiffSide.NEW, 3)),
+                        new Anchor.Node(
+                                new RepoPath("a.yml"),
+                                "/run/2",
+                                new Anchor.OnLine(new RepoPath("a.yml"), DiffSide.NEW, 4)),
+                        new Anchor.Node(
+                                new RepoPath("a.yml"),
+                                "/next",
+                                new Anchor.OnLine(new RepoPath("a.yml"), DiffSide.NEW, 5))),
                 drawn.stops().map(stop -> stop.mark().anchor()));
     }
 
@@ -324,7 +340,7 @@ class RenderedYamlTest {
         return RichDiff.drawn(
                 new Expansion.Folded(
                         new ParsedDiff(List.empty(), List.of(version.of(whole))),
-                        HashMap.of("a.yml", Expansion.Fold.of(version, false, 1, true, HashMap.empty()))),
+                        HashMap.of(new RepoPath("a.yml"), Expansion.Fold.of(version, false, 1, true, HashMap.empty()))),
                 Option.none(),
                 Option.none(),
                 RichDiff.Drawing.of(Theme.SpanStyles.NONE).withWidth(40));

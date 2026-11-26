@@ -19,6 +19,7 @@ import net.vanfleteren.jazygit.core.git.model.RepoStatus;
 import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.Head;
 import net.vanfleteren.jazygit.core.repo.InProgress;
+import net.vanfleteren.jazygit.core.repo.RepoPath;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.features.changes.edit.EditFeature;
 import net.vanfleteren.jazygit.features.changes.edit.EditUpdate;
@@ -48,7 +49,7 @@ class ResolveUpdateTest {
     private static final Sha ONTO = new Sha("1111111111");
     private static final Sha MERGED = new Sha("2222222222");
     private static final Conflict BOTH = new Conflict(Conflict.Side.UPDATED, Conflict.Side.UPDATED);
-    private static final FileEntry CONFLICTED = FileEntry.conflicted("a.txt", BOTH);
+    private static final FileEntry CONFLICTED = FileEntry.conflicted(new RepoPath("a.txt"), BOTH);
     private static final FileEntry MODIFIED = Fixtures.fileEntry("b.txt", ChangeType.MODIFIED);
     private static final InProgress REBASING =
             new InProgress.Rebasing(Option.of(new BranchName("feature")), ONTO, 2, 3);
@@ -58,7 +59,8 @@ class ResolveUpdateTest {
         Model answering = loaded().withReactions(new Reactions(EditFeature.FEATURE.reactions()));
         Model branches = localBranchesRead(answering, List.of(Fixtures.branch(new BranchName("main"), false, ONTO)))
                 .model();
-        RepoStatus status = new RepoStatus(head, List.of(CONFLICTED, MODIFIED), Option.of(inProgress), resolved);
+        RepoStatus status =
+                new RepoStatus(head, List.of(CONFLICTED, MODIFIED), Option.of(inProgress), resolved.map(RepoPath::new));
         return Update.update(branches, new LoadMsg.StatusLoaded(status)).model();
     }
 
@@ -82,7 +84,7 @@ class ResolveUpdateTest {
     private static Model asked(ConflictFile written) {
         Model opened =
                 Update.update(rebasing(), new ResolveMsg.Requested(CONFLICTED)).model();
-        return Update.update(opened, new ResolveMsg.ToolsRead("a.txt", ALL, Option.of(4), written))
+        return Update.update(opened, new ResolveMsg.ToolsRead(new RepoPath("a.txt"), ALL, Option.of(4), written))
                 .model();
     }
 
@@ -90,7 +92,7 @@ class ResolveUpdateTest {
     void openingTheDialogReadsWhatTheFileCanBeHandedToAndItsFirstConflict() {
         Next next = Update.update(rebasing(), new ResolveMsg.Requested(CONFLICTED));
 
-        assertEquals(List.of(new ReadToolsCmd("a.txt")), next.cmds());
+        assertEquals(List.of(new ReadToolsCmd(new RepoPath("a.txt"))), next.cmds());
     }
 
     @Test
@@ -106,7 +108,8 @@ class ResolveUpdateTest {
                 Update.update(rebasing(), new ResolveMsg.Requested(CONFLICTED)).model();
 
         Model read = Update.update(
-                        opened, new ResolveMsg.ToolsRead("other.txt", ALL, Option.of(4), ConflictFile.AS_WRITTEN))
+                        opened,
+                        new ResolveMsg.ToolsRead(new RepoPath("other.txt"), ALL, Option.of(4), ConflictFile.AS_WRITTEN))
                 .model();
 
         assertEquals(opened.popup(ResolvePopup.class), read.popup(ResolvePopup.class));
@@ -117,7 +120,7 @@ class ResolveUpdateTest {
         Next next = Update.update(asked(), new ResolveMsg.MergeToolChosen());
 
         assertEquals(Option.none(), next.model().popup(ResolvePopup.class));
-        assertEquals(List.of(new ResolveCmd.MergeTool("a.txt", ALL)), next.cmds());
+        assertEquals(List.of(new ResolveCmd.MergeTool(new RepoPath("a.txt"), ALL)), next.cmds());
     }
 
     @Test
@@ -125,14 +128,14 @@ class ResolveUpdateTest {
         Next next = Update.update(asked(), new ResolveMsg.MergirafChosen());
 
         assertEquals(Option.none(), next.model().popup(ResolvePopup.class));
-        assertEquals(List.of(new ResolveCmd.Solve("a.txt", true)), next.cmds());
+        assertEquals(List.of(new ResolveCmd.Solve(new RepoPath("a.txt"), true)), next.cmds());
     }
 
     @Test
     void mergirafReadsAFileWithItsBasesAsItIs() {
         Next next = Update.update(asked(ConflictFile.WITH_BASE), new ResolveMsg.MergirafChosen());
 
-        assertEquals(List.of(new ResolveCmd.Solve("a.txt", false)), next.cmds());
+        assertEquals(List.of(new ResolveCmd.Solve(new RepoPath("a.txt"), false)), next.cmds());
     }
 
     @Test
@@ -141,7 +144,9 @@ class ResolveUpdateTest {
 
         assertEquals(List.empty(), next.cmds());
         assertEquals(Option.none(), next.model().popup(ResolvePopup.class));
-        assertEquals(Option.of(new SolveOverEditsPopup("a.txt")), next.model().popup(SolveOverEditsPopup.class));
+        assertEquals(
+                Option.of(new SolveOverEditsPopup(new RepoPath("a.txt"))),
+                next.model().popup(SolveOverEditsPopup.class));
     }
 
     @Test
@@ -151,7 +156,7 @@ class ResolveUpdateTest {
 
         Next next = Update.update(asking, new PopupMsg.Confirmed(SolveOverEditsPopup.class));
 
-        assertEquals(List.of(new ResolveCmd.Solve("a.txt", true)), next.cmds());
+        assertEquals(List.of(new ResolveCmd.Solve(new RepoPath("a.txt"), true)), next.cmds());
     }
 
     @Test
@@ -180,7 +185,11 @@ class ResolveUpdateTest {
         Next next = Update.update(
                 rebasing(),
                 new ResolveMsg.HandedBack(
-                        new ResolveCmd.Solve("a.txt", true), List.empty(), "a.txt", true, Option.none()));
+                        new ResolveCmd.Solve(new RepoPath("a.txt"), true),
+                        List.empty(),
+                        new RepoPath("a.txt"),
+                        true,
+                        Option.none()));
 
         assertEquals(Option.of("a.txt has no conflict markers left: space stages it"), noticeText(next.model()));
     }
@@ -190,11 +199,11 @@ class ResolveUpdateTest {
         Next next = Update.update(
                 rebasing(),
                 new ResolveMsg.HandedBack(
-                        new ResolveCmd.Solve("a.txt", true),
+                        new ResolveCmd.Solve(new RepoPath("a.txt"), true),
                         List.empty(),
-                        "a.txt",
+                        new RepoPath("a.txt"),
                         true,
-                        Option.of(new MarkedFile("a.txt", List.of(12, 30)))));
+                        Option.of(new MarkedFile(new RepoPath("a.txt"), List.of(12, 30)))));
 
         assertEquals(Option.of("a.txt still has 2 conflicts, the first at line 12"), noticeText(next.model()));
     }
@@ -204,7 +213,11 @@ class ResolveUpdateTest {
         Next next = Update.update(
                 rebasing(),
                 new ResolveMsg.HandedBack(
-                        new ResolveCmd.MergeTool("a.txt", ALL), List.empty(), "a.txt", false, Option.none()));
+                        new ResolveCmd.MergeTool(new RepoPath("a.txt"), ALL),
+                        List.empty(),
+                        new RepoPath("a.txt"),
+                        false,
+                        Option.none()));
 
         assertEquals(Option.none(), noticeText(next.model()));
     }
@@ -213,7 +226,7 @@ class ResolveUpdateTest {
     void keepingASideOfAFileInConflictKeepsIt() {
         Next next = Update.update(rebasing(), new ResolveMsg.Kept(CONFLICTED, Conflict.Version.THEIRS));
 
-        assertEquals(List.of(new Keep("a.txt", BOTH, Conflict.Version.THEIRS)), next.cmds());
+        assertEquals(List.of(new Keep(new RepoPath("a.txt"), BOTH, Conflict.Version.THEIRS)), next.cmds());
     }
 
     @Test
@@ -355,7 +368,7 @@ class ResolveUpdateTest {
         Next next = Update.update(asked, new ResolveMsg.Chosen(Conflict.Version.OURS));
 
         assertEquals(Option.none(), next.model().popup(ResolvePopup.class));
-        assertEquals(List.of(new Keep("a.txt", BOTH, Conflict.Version.OURS)), next.cmds());
+        assertEquals(List.of(new Keep(new RepoPath("a.txt"), BOTH, Conflict.Version.OURS)), next.cmds());
     }
 
     @Test
@@ -374,13 +387,14 @@ class ResolveUpdateTest {
         Model model = stopped(REBASING, new Head.Detached(ONTO), List.of("c.txt"));
 
         assertEquals(
-                List.of(new Restore("c.txt")),
-                Update.update(model, new ResolveMsg.RestoreRequested("c.txt")).cmds());
+                List.of(new Restore(new RepoPath("c.txt"))),
+                Update.update(model, new ResolveMsg.RestoreRequested(new RepoPath("c.txt")))
+                        .cmds());
     }
 
     @Test
     void aFileThatWasNotResolvedHasNoConflictToBringBack() {
-        Next next = Update.update(rebasing(), new ResolveMsg.RestoreRequested("b.txt"));
+        Next next = Update.update(rebasing(), new ResolveMsg.RestoreRequested(new RepoPath("b.txt")));
 
         assertEquals(List.empty(), next.cmds());
         assertEquals(Option.of("b.txt has no conflict resolved since the operation stopped"), errorText(next.model()));
@@ -391,13 +405,15 @@ class ResolveUpdateTest {
         Model asked = Update.update(
                         rebasing(),
                         new StageMsg.MarkersRead(
-                                List.of(CONFLICTED), Option.none(), List.of(new MarkedFile("a.txt", List.of(4)))))
+                                List.of(CONFLICTED),
+                                Option.none(),
+                                List.of(new MarkedFile(new RepoPath("a.txt"), List.of(4)))))
                 .model();
 
         Next next = Update.update(asked, new ResolveMsg.MarkedKept(Conflict.Version.THEIRS));
 
         assertEquals(Option.none(), next.model().popup(MarkersLeftPopup.class));
-        assertEquals(List.of(new Keep("a.txt", BOTH, Conflict.Version.THEIRS)), next.cmds());
+        assertEquals(List.of(new Keep(new RepoPath("a.txt"), BOTH, Conflict.Version.THEIRS)), next.cmds());
     }
 
     @Test
@@ -405,7 +421,9 @@ class ResolveUpdateTest {
         Model asked = Update.update(
                         rebasing(),
                         new StageMsg.MarkersRead(
-                                List.of(CONFLICTED), Option.none(), List.of(new MarkedFile("a.txt", List.of(4)))))
+                                List.of(CONFLICTED),
+                                Option.none(),
+                                List.of(new MarkedFile(new RepoPath("a.txt"), List.of(4)))))
                 .model();
 
         Next next = Update.update(asked, new ResolveMsg.MarkedEditChosen());

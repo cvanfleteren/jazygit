@@ -106,7 +106,7 @@ public final class CliMetadata {
     static Option<MetadataStamp> diff(Locations at, Path worktree, List<FileEntry> files, Instant now) {
         List<Path> paths = files.flatMap(file -> file.paths(true).appendAll(file.paths(false)))
                 .distinct()
-                .map(worktree::resolve);
+                .map(path -> worktree.resolve(path.value()));
         return paths.exists(Files::isDirectory)
                 ? Option.none()
                 : settled(stamp(paths.append(at.gitDir().resolve("index"))), now);

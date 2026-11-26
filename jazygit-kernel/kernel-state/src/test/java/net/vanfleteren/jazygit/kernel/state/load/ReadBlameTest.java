@@ -25,6 +25,7 @@ import net.vanfleteren.jazygit.core.repo.BranchRef;
 import net.vanfleteren.jazygit.core.repo.Head;
 import net.vanfleteren.jazygit.core.repo.PrNumber;
 import net.vanfleteren.jazygit.core.repo.PullRequestCommits;
+import net.vanfleteren.jazygit.core.repo.RepoPath;
 import net.vanfleteren.jazygit.core.repo.RepoSlug;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.kernel.state.AreaId;
@@ -49,10 +50,11 @@ class ReadBlameTest {
 
     private static final Sha SHA = new Sha("aaaa");
     private static final Sha BASE = new Sha("bbbb");
-    private static final CommitFile FILE = new CommitFile("a.txt", ChangeType.MODIFIED);
-    private static final CommitFile RENAMED = new CommitFile("a.txt", ChangeType.RENAMED, Option.of("old.txt"));
-    private static final CommitFile ADDED = new CommitFile("a.txt", ChangeType.ADDED);
-    private static final FileEntry ENTRY = new FileEntry("a.txt", ChangeType.MODIFIED, true, true);
+    private static final CommitFile FILE = new CommitFile(new RepoPath("a.txt"), ChangeType.MODIFIED);
+    private static final CommitFile RENAMED =
+            new CommitFile(new RepoPath("a.txt"), ChangeType.RENAMED, Option.of(new RepoPath("old.txt")));
+    private static final CommitFile ADDED = new CommitFile(new RepoPath("a.txt"), ChangeType.ADDED);
+    private static final FileEntry ENTRY = new FileEntry(new RepoPath("a.txt"), ChangeType.MODIFIED, true, true);
     private static final PullRequestCommits COMMITS =
             new PullRequestCommits(new PrNumber(7), new RepoSlug("owner/repo"), "", BASE, SHA);
     private static final DiffText WHOLE =
@@ -60,23 +62,29 @@ class ReadBlameTest {
 
     @Test
     void aCommitIsBlamedAtItselfAndItsOriginalAtItsFirstParentUnderItsOldPath() {
-        assertEquals(List.of(new BlameAt.InCommit(SHA, "a.txt")), at(new Source.OfCommit(SHA, FILE), FileVersion.NEW));
         assertEquals(
-                List.of(new BlameAt.InCommit(SHA, 1, "old.txt")),
+                List.of(new BlameAt.InCommit(SHA, new RepoPath("a.txt"))),
+                at(new Source.OfCommit(SHA, FILE), FileVersion.NEW));
+        assertEquals(
+                List.of(new BlameAt.InCommit(SHA, 1, new RepoPath("old.txt"))),
                 at(new Source.OfCommit(SHA, RENAMED), FileVersion.ORIGINAL));
         assertEquals(
-                List.of(new BlameAt.InCommit(SHA, 1, "a.txt")),
+                List.of(new BlameAt.InCommit(SHA, 1, new RepoPath("a.txt"))),
                 at(new Source.OfFiles(new Changes.OfTip(new BranchName("main"), SHA), FILE), FileVersion.ORIGINAL));
     }
 
     @Test
     void aFileAStashAddedIsInTheStashOrAmongItsUntrackedFiles() {
-        assertEquals(List.of(new BlameAt.InCommit(SHA, "a.txt")), at(new Source.OfStash(SHA, FILE), FileVersion.NEW));
         assertEquals(
-                List.of(new BlameAt.InCommit(SHA, "a.txt"), new BlameAt.InCommit(SHA, 3, "a.txt")),
+                List.of(new BlameAt.InCommit(SHA, new RepoPath("a.txt"))),
+                at(new Source.OfStash(SHA, FILE), FileVersion.NEW));
+        assertEquals(
+                List.of(
+                        new BlameAt.InCommit(SHA, new RepoPath("a.txt")),
+                        new BlameAt.InCommit(SHA, 3, new RepoPath("a.txt"))),
                 at(new Source.OfFiles(new Changes.OfStash(SHA), ADDED), FileVersion.NEW));
         assertEquals(
-                List.of(new BlameAt.InCommit(SHA, 1, "a.txt")),
+                List.of(new BlameAt.InCommit(SHA, 1, new RepoPath("a.txt"))),
                 at(new Source.OfStash(SHA, FILE), FileVersion.ORIGINAL));
     }
 
@@ -86,33 +94,43 @@ class ReadBlameTest {
                 new Changes.OfBranch(
                         new BranchName("feature"), new BaseTip(new BranchRef.Local(new BranchName("main")), BASE), SHA),
                 FILE);
-        assertEquals(List.of(new BlameAt.InCommit(SHA, "a.txt")), at(branch, FileVersion.NEW));
-        assertEquals(List.of(new BlameAt.AtMergeBase(BASE, SHA, "a.txt")), at(branch, FileVersion.ORIGINAL));
+        assertEquals(List.of(new BlameAt.InCommit(SHA, new RepoPath("a.txt"))), at(branch, FileVersion.NEW));
         assertEquals(
-                List.of(new BlameAt.AtMergeBase(BASE, SHA, "a.txt")),
+                List.of(new BlameAt.AtMergeBase(BASE, SHA, new RepoPath("a.txt"))), at(branch, FileVersion.ORIGINAL));
+        assertEquals(
+                List.of(new BlameAt.AtMergeBase(BASE, SHA, new RepoPath("a.txt"))),
                 at(new Source.OfFiles(new Changes.OfPullRequest(COMMITS), FILE), FileVersion.ORIGINAL));
     }
 
     @Test
     void theWorkingTreeIsBlamedOnDiskInTheIndexAndAtHead() {
-        assertEquals(List.of(new BlameAt.OnDisk("a.txt")), at(new Source.WorkingTree(ENTRY, false), FileVersion.NEW));
         assertEquals(
-                List.of(new BlameAt.InIndex("a.txt")), at(new Source.WorkingTree(ENTRY, false), FileVersion.ORIGINAL));
-        assertEquals(List.of(new BlameAt.InIndex("a.txt")), at(new Source.WorkingTree(ENTRY, true), FileVersion.NEW));
+                List.of(new BlameAt.OnDisk(new RepoPath("a.txt"))),
+                at(new Source.WorkingTree(ENTRY, false), FileVersion.NEW));
         assertEquals(
-                List.of(new BlameAt.AtHead("a.txt")), at(new Source.WorkingTree(ENTRY, true), FileVersion.ORIGINAL));
+                List.of(new BlameAt.InIndex(new RepoPath("a.txt"))),
+                at(new Source.WorkingTree(ENTRY, false), FileVersion.ORIGINAL));
+        assertEquals(
+                List.of(new BlameAt.InIndex(new RepoPath("a.txt"))),
+                at(new Source.WorkingTree(ENTRY, true), FileVersion.NEW));
+        assertEquals(
+                List.of(new BlameAt.AtHead(new RepoPath("a.txt"))),
+                at(new Source.WorkingTree(ENTRY, true), FileVersion.ORIGINAL));
     }
 
     @Test
     void aFileWithoutChangesIsBlamedWhereItIsRead() {
-        assertEquals(List.of(new BlameAt.OnDisk("a.txt")), at(new Source.OnDisk("a.txt"), FileVersion.NEW));
         assertEquals(
-                List.of(new BlameAt.InCommit(SHA, "a.txt")), at(new Source.AtCommit(SHA, "a.txt"), FileVersion.NEW));
+                List.of(new BlameAt.OnDisk(new RepoPath("a.txt"))),
+                at(new Source.OnDisk(new RepoPath("a.txt")), FileVersion.NEW));
+        assertEquals(
+                List.of(new BlameAt.InCommit(SHA, new RepoPath("a.txt"))),
+                at(new Source.AtCommit(SHA, new RepoPath("a.txt")), FileVersion.NEW));
     }
 
     @Test
     void theFirstRevisionGitCanBlameTheFileAtWins() {
-        Blame found = Blame.uncommitted(1, "a.txt");
+        Blame found = Blame.uncommitted(1, new RepoPath("a.txt"));
         Env env = new Env(StubGit.of().withHistory(new StubHistory() {
             @Override
             public Either<GitError, Blame> blame(BlameAt at, BlameOptions options) {
@@ -138,7 +156,7 @@ class ReadBlameTest {
                 .model();
         Version version = new Version(
                         new ScrolledContent.Diff(WHOLE),
-                        "a.txt",
+                        new RepoPath("a.txt"),
                         Option.of(FileVersion.NEW),
                         file(new Source.WorkingTree(ENTRY, false)),
                         new Loadable.Loaded<>(WHOLE))
@@ -158,10 +176,10 @@ class ReadBlameTest {
     }
 
     private static List<BlameAt> at(Source source, FileVersion version) {
-        return ReadBlame.at(source, version, "a.txt");
+        return ReadBlame.at(source, version, new RepoPath("a.txt"));
     }
 
     private static WholeFile file(Source source) {
-        return new WholeFile(new ScrolledContent.Diff(WHOLE), source, "a.txt", DiffOptions.DEFAULT);
+        return new WholeFile(new ScrolledContent.Diff(WHOLE), source, new RepoPath("a.txt"), DiffOptions.DEFAULT);
     }
 }

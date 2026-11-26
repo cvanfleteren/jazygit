@@ -20,7 +20,7 @@ class SampleDataTest {
         List<FileEntry> files = data.status().read().get().files();
         assertFalse(files.isEmpty());
         for (FileEntry file : files) {
-            assertFalse(file.path().isBlank());
+            assertFalse(file.path().value().isBlank());
         }
     }
 

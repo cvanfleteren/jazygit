@@ -35,7 +35,7 @@ import org.junit.jupiter.api.Test;
  */
 class AllFilesUpdateTest {
 
-    private static final FileEntry CHANGED = new FileEntry("a.txt", ChangeType.MODIFIED, false, true);
+    private static final FileEntry CHANGED = new FileEntry(new RepoPath("a.txt"), ChangeType.MODIFIED, false, true);
     private static final FileContent B = new FileContent.Text(
             DiffText.of("diff --git a/b.txt b/b.txt\n--- a/b.txt\n+++ b/b.txt\n@@ -1,1 +1,1 @@\n b\n"));
 
@@ -50,14 +50,14 @@ class AllFilesUpdateTest {
             }
 
             @Override
-            public Either<GitError, List<String>> allFiles() {
+            public Either<GitError, List<RepoPath>> allFiles() {
                 listed.incrementAndGet();
-                return Either.right(List.of("a.txt", "b.txt", "docs/c.txt"));
+                return Either.right(List.of("a.txt", "b.txt", "docs/c.txt").map(RepoPath::new));
             }
 
             @Override
-            public Either<GitError, FileContent> content(String path) {
-                return path.equals("b.txt") ? Either.right(B) : StubStatus.super.content(path);
+            public Either<GitError, FileContent> content(RepoPath path) {
+                return path.equals(new RepoPath("b.txt")) ? Either.right(B) : StubStatus.super.content(path);
             }
         };
         return TestModels.program(
@@ -74,8 +74,10 @@ class AllFilesUpdateTest {
         assertTrue(program.model().repoView().files().shown().all());
         assertEquals(1, listed.get());
         assertEquals(
-                new Loadable.Loaded<>(
-                        List.of(CHANGED, FileEntry.unchanged("b.txt"), FileEntry.unchanged("docs/c.txt"))),
+                new Loadable.Loaded<>(List.of(
+                        CHANGED,
+                        FileEntry.unchanged(new RepoPath("b.txt")),
+                        FileEntry.unchanged(new RepoPath("docs/c.txt")))),
                 program.model().repo().workingFiles(true));
         assertEquals(
                 new Loadable.Loaded<>(List.of(CHANGED)), program.model().repo().workingFiles(false));
@@ -112,10 +114,10 @@ class AllFilesUpdateTest {
         Program program = program();
         program.dispatch(new AllFilesMsg.Toggled());
 
-        program.dispatch(new SelectionMsg.UnchangedFileSelected("b.txt"));
+        program.dispatch(new SelectionMsg.UnchangedFileSelected(new RepoPath("b.txt")));
 
         assertEquals(
-                Option.of(new UnchangedNode.File(new Preview<>("b.txt", new Loadable.Loaded<>(B)))),
+                Option.of(new UnchangedNode.File(new Preview<>(new RepoPath("b.txt"), new Loadable.Loaded<>(B)))),
                 program.model().repoView().files().unchanged());
     }
 
@@ -124,10 +126,10 @@ class AllFilesUpdateTest {
         Program program = program();
         program.dispatch(new AllFilesMsg.Toggled());
 
-        program.dispatch(new SelectionMsg.UnchangedDirectorySelected("docs", 1));
+        program.dispatch(new SelectionMsg.UnchangedDirectorySelected(new RepoPath("docs"), 1));
 
         assertEquals(
-                Option.of(new UnchangedNode.Directory("docs", 1)),
+                Option.of(new UnchangedNode.Directory(new RepoPath("docs"), 1)),
                 program.model().repoView().files().unchanged());
     }
 
@@ -136,7 +138,7 @@ class AllFilesUpdateTest {
         Program program = program();
         program.dispatch(new AllFilesMsg.Toggled());
         program.dispatch(new SelectionMsg.FilesSelected(List.of(CHANGED)));
-        program.dispatch(new SelectionMsg.UnchangedFileSelected("b.txt"));
+        program.dispatch(new SelectionMsg.UnchangedFileSelected(new RepoPath("b.txt")));
 
         // The diff read before is shown again, without reading it again.
         program.dispatch(new SelectionMsg.FilesSelected(List.of(CHANGED)));
@@ -149,7 +151,7 @@ class AllFilesUpdateTest {
     void leavingAllFilesDropsTheNodeWithoutChanges() {
         Program program = program();
         program.dispatch(new AllFilesMsg.Toggled());
-        program.dispatch(new SelectionMsg.UnchangedFileSelected("b.txt"));
+        program.dispatch(new SelectionMsg.UnchangedFileSelected(new RepoPath("b.txt")));
 
         program.dispatch(new AllFilesMsg.Toggled());
 
@@ -160,21 +162,27 @@ class AllFilesUpdateTest {
     @Test
     void stagingOrDiscardingWhatHasNoChangesSaysSo() {
         Model model = TestModels.loaded();
-        List<FileEntry> docs = List.of(FileEntry.unchanged("docs/guide/a.md"), FileEntry.unchanged("docs/b.md"));
+        List<FileEntry> docs = List.of(
+                FileEntry.unchanged(new RepoPath("docs/guide/a.md")), FileEntry.unchanged(new RepoPath("docs/b.md")));
 
         assertEquals(
-                Option.of(new FilesError.Unchanged("b.txt")),
-                error(model, new StageMsg.Requested(List.of(FileEntry.unchanged("b.txt")), Option.none())));
+                Option.of(new FilesError.Unchanged(new RepoPath("b.txt"))),
+                error(
+                        model,
+                        new StageMsg.Requested(List.of(FileEntry.unchanged(new RepoPath("b.txt"))), Option.none())));
         assertEquals(
-                Option.of(new FilesError.Unchanged("docs")),
-                error(model, new StageMsg.Requested(docs, Option.of("docs"))));
-        assertEquals(Option.of(new FilesError.Unchanged("docs")), error(model, new DiscardMsg.Requested(docs)));
+                Option.of(new FilesError.Unchanged(new RepoPath("docs"))),
+                error(model, new StageMsg.Requested(docs, Option.of(new RepoPath("docs")))));
+        assertEquals(
+                Option.of(new FilesError.Unchanged(new RepoPath("docs"))),
+                error(model, new DiscardMsg.Requested(docs)));
     }
 
     @Test
     void discardingADirectoryNamesOnlyItsChangedFiles() {
         Model asked = Update.update(
-                        TestModels.loaded(), new DiscardMsg.Requested(List.of(CHANGED, FileEntry.unchanged("b.txt"))))
+                        TestModels.loaded(),
+                        new DiscardMsg.Requested(List.of(CHANGED, FileEntry.unchanged(new RepoPath("b.txt")))))
                 .model();
 
         assertEquals(Option.none(), asked.outcome().error());

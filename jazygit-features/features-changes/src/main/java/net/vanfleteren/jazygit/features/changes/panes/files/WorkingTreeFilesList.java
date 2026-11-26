@@ -13,6 +13,7 @@ import net.vanfleteren.jazygit.core.git.model.Conflict;
 import net.vanfleteren.jazygit.core.git.model.FileEntry;
 import net.vanfleteren.jazygit.core.git.model.FileTree;
 import net.vanfleteren.jazygit.core.git.model.RepoStatus;
+import net.vanfleteren.jazygit.core.repo.RepoPath;
 import net.vanfleteren.jazygit.kernel.state.Loadable;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.Msg;
@@ -228,7 +229,7 @@ final class WorkingTreeFilesList {
      * The paths of the directories of {@code files} with no changes under them, which the tree of all files starts
      * collapsed: it opens on its changes (ADR 108).
      */
-    static Set<String> unchangedDirectories(List<FileEntry> files) {
+    static Set<RepoPath> unchangedDirectories(List<FileEntry> files) {
         return FileNodes.unchangedDirectories(files, FileEntry::changed);
     }
 
@@ -249,5 +250,6 @@ final class WorkingTreeFilesList {
     /**
      * All files of the working tree, merged from {@code status} and {@code paths}.
      */
-    private record Merged(Loadable<RepoStatus> status, Loadable<List<String>> paths, Loadable<List<FileEntry>> files) {}
+    private record Merged(
+            Loadable<RepoStatus> status, Loadable<List<RepoPath>> paths, Loadable<List<FileEntry>> files) {}
 }

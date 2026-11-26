@@ -8,6 +8,7 @@ import net.vanfleteren.jazygit.core.git.process.GitError;
 import net.vanfleteren.jazygit.core.git.process.GitFailure;
 import net.vanfleteren.jazygit.core.process.ExecutedCommand;
 import net.vanfleteren.jazygit.core.repo.CommitMessage;
+import net.vanfleteren.jazygit.core.repo.RepoPath;
 
 /**
  * Editing files, as git edits commit messages (ADR 69), in the editor git names. A program the user set, as an editor
@@ -43,5 +44,5 @@ public interface Editor {
      * Git stages the file when it takes it as resolved. Fails with a {@link GitError.ProgramFailed} when the merge
      * failed or was not confirmed.
      */
-    Either<GitFailure, List<ExecutedCommand>> mergeTool(String path, ConflictTools tools);
+    Either<GitFailure, List<ExecutedCommand>> mergeTool(RepoPath path, ConflictTools tools);
 }

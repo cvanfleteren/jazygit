@@ -12,6 +12,7 @@ import net.vanfleteren.jazygit.core.git.model.MarkedFile;
 import net.vanfleteren.jazygit.core.git.process.GitError;
 import net.vanfleteren.jazygit.core.git.process.GitFailure;
 import net.vanfleteren.jazygit.core.process.ExecutedCommand;
+import net.vanfleteren.jazygit.core.repo.RepoPath;
 
 /**
  * {@link Index} for tests: changing it succeeds without running anything. Fakes override what they need.
@@ -19,12 +20,12 @@ import net.vanfleteren.jazygit.core.process.ExecutedCommand;
 public interface StubIndex extends Index {
 
     @Override
-    default Either<GitFailure, List<ExecutedCommand>> stage(List<String> paths) {
+    default Either<GitFailure, List<ExecutedCommand>> stage(List<RepoPath> paths) {
         return ran();
     }
 
     @Override
-    default Either<GitFailure, List<ExecutedCommand>> unstageNew(List<String> paths) {
+    default Either<GitFailure, List<ExecutedCommand>> unstageNew(List<RepoPath> paths) {
         return ran();
     }
 
@@ -34,27 +35,27 @@ public interface StubIndex extends Index {
     }
 
     @Override
-    default Either<GitFailure, List<ExecutedCommand>> unstage(List<String> paths) {
+    default Either<GitFailure, List<ExecutedCommand>> unstage(List<RepoPath> paths) {
         return ran();
     }
 
     @Override
-    default Either<GitFailure, List<ExecutedCommand>> keep(String path, Conflict conflict, Conflict.Version version) {
+    default Either<GitFailure, List<ExecutedCommand>> keep(RepoPath path, Conflict conflict, Conflict.Version version) {
         return ran();
     }
 
     @Override
-    default Either<GitFailure, List<ExecutedCommand>> restoreConflict(String path) {
+    default Either<GitFailure, List<ExecutedCommand>> restoreConflict(RepoPath path) {
         return ran();
     }
 
     @Override
-    default Either<GitError, List<MarkedFile>> markers(List<String> paths) {
+    default Either<GitError, List<MarkedFile>> markers(List<RepoPath> paths) {
         return Either.right(List.empty());
     }
 
     @Override
-    default Either<GitError, List<String>> unmerged(List<String> paths) {
+    default Either<GitError, List<RepoPath>> unmerged(List<RepoPath> paths) {
         return Either.right(List.empty());
     }
 
@@ -64,12 +65,12 @@ public interface StubIndex extends Index {
     }
 
     @Override
-    default Either<GitError, ConflictFile> conflictFile(String path) {
+    default Either<GitError, ConflictFile> conflictFile(RepoPath path) {
         return Either.right(ConflictFile.AS_WRITTEN);
     }
 
     @Override
-    default Either<GitFailure, List<ExecutedCommand>> solve(String path, boolean rewrite) {
+    default Either<GitFailure, List<ExecutedCommand>> solve(RepoPath path, boolean rewrite) {
         return ran();
     }
 }

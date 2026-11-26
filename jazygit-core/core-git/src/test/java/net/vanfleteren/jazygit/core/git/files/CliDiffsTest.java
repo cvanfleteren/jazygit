@@ -16,6 +16,7 @@ import net.vanfleteren.jazygit.core.git.model.FileEntry;
 import net.vanfleteren.jazygit.core.git.model.Fixtures;
 import net.vanfleteren.jazygit.core.git.model.UnifiedDiff;
 import net.vanfleteren.jazygit.core.process.Limit;
+import net.vanfleteren.jazygit.core.repo.RepoPath;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -85,7 +86,7 @@ class CliDiffsTest {
         Files.writeString(repo.resolve("new.txt"), "first\n");
         List<FileEntry> files = List.of(
                 Fixtures.fileEntry("spaced.txt", ChangeType.MODIFIED),
-                new FileEntry("staged.txt", ChangeType.MODIFIED, true, false),
+                new FileEntry(new RepoPath("staged.txt"), ChangeType.MODIFIED, true, false),
                 Fixtures.fileEntry("changed.txt", ChangeType.MODIFIED),
                 Fixtures.fileEntry("new.txt", ChangeType.UNTRACKED));
 
@@ -129,7 +130,7 @@ class CliDiffsTest {
 
         net.vanfleteren.jazygit.core.git.model.Diffs diffs = diffs().uncommitted(
                         List.of(
-                                new FileEntry("a.txt", ChangeType.MODIFIED, true, false),
+                                new FileEntry(new RepoPath("a.txt"), ChangeType.MODIFIED, true, false),
                                 Fixtures.fileEntry("b.txt", ChangeType.MODIFIED),
                                 Fixtures.fileEntry("new.txt", ChangeType.UNTRACKED)),
                         DiffOptions.DEFAULT)
@@ -139,7 +140,7 @@ class CliDiffsTest {
                 diffs.staged().text().contains("--- a/a.txt\n+++ b/a.txt\n"),
                 diffs.staged().text());
         assertEquals(
-                List.of("b.txt", "new.txt"),
+                List.of(new RepoPath("b.txt"), new RepoPath("new.txt")),
                 UnifiedDiff.parse(diffs.unstaged().text()).files().map(UnifiedDiff.FileDiff::path));
         assertTrue(
                 diffs.unstaged().text().contains("+++ b/new.txt\n"),
@@ -250,10 +251,13 @@ class CliDiffsTest {
 
         assertEquals(
                 List.of(
-                        new CommitFile("added.txt", ChangeType.ADDED),
-                        new CommitFile("gone.txt", ChangeType.DELETED),
-                        new CommitFile("kept.txt", ChangeType.MODIFIED),
-                        new CommitFile("new name.txt", ChangeType.RENAMED, Option.of("old name.txt"))),
+                        new CommitFile(new RepoPath("added.txt"), ChangeType.ADDED),
+                        new CommitFile(new RepoPath("gone.txt"), ChangeType.DELETED),
+                        new CommitFile(new RepoPath("kept.txt"), ChangeType.MODIFIED),
+                        new CommitFile(
+                                new RepoPath("new name.txt"),
+                                ChangeType.RENAMED,
+                                Option.of(new RepoPath("old name.txt")))),
                 diffs().commitFiles(head()).get());
     }
 
@@ -264,7 +268,7 @@ class CliDiffsTest {
         commitAll("init");
 
         assertEquals(
-                List.of(new CommitFile("a.txt", ChangeType.ADDED)),
+                List.of(new CommitFile(new RepoPath("a.txt"), ChangeType.ADDED)),
                 diffs().commitFiles(head()).get());
     }
 
@@ -281,11 +285,12 @@ class CliDiffsTest {
         commitAll("second");
         List<CommitFile> files = diffs().commitFiles(head()).get();
 
-        String a = diffs().commitFileChanges(head(), files.filter(f -> f.path().equals("a.txt")), DiffOptions.DEFAULT)
+        String a = diffs().commitFileChanges(
+                        head(), files.filter(f -> f.path().equals(new RepoPath("a.txt"))), DiffOptions.DEFAULT)
                 .get()
                 .text();
         String renamed = diffs().commitFileChanges(
-                        head(), files.filter(f -> f.path().equals("new.txt")), DiffOptions.DEFAULT)
+                        head(), files.filter(f -> f.path().equals(new RepoPath("new.txt"))), DiffOptions.DEFAULT)
                 .get()
                 .text();
 
@@ -320,7 +325,7 @@ class CliDiffsTest {
         String combined =
                 diffs().commitChanges(merge, DiffOptions.DEFAULT).get().text();
 
-        assertEquals(List.of(new CommitFile("side.txt", ChangeType.ADDED)), files);
+        assertEquals(List.of(new CommitFile(new RepoPath("side.txt"), ChangeType.ADDED)), files);
         assertTrue(changes.contains("+side"), changes);
         assertTrue(whole.contains("diff --git a/side.txt b/side.txt"), whole);
         assertFalse(combined.contains("diff --git"), combined);
@@ -342,8 +347,12 @@ class CliDiffsTest {
                 .get()
                 .text();
 
-        assertEquals(List.of("src/one.txt"), UnifiedDiff.parse(whole).files().map(UnifiedDiff.FileDiff::path));
-        assertEquals(List.of("src/one.txt"), UnifiedDiff.parse(file).files().map(UnifiedDiff.FileDiff::path));
+        assertEquals(
+                List.of(new RepoPath("src/one.txt")),
+                UnifiedDiff.parse(whole).files().map(UnifiedDiff.FileDiff::path));
+        assertEquals(
+                List.of(new RepoPath("src/one.txt")),
+                UnifiedDiff.parse(file).files().map(UnifiedDiff.FileDiff::path));
     }
 
     @Test

@@ -11,6 +11,7 @@ import net.vanfleteren.jazygit.core.git.model.CommitFile;
 import net.vanfleteren.jazygit.core.git.model.FileEntry;
 import net.vanfleteren.jazygit.core.git.model.FileTree;
 import net.vanfleteren.jazygit.core.git.model.Fixtures;
+import net.vanfleteren.jazygit.core.repo.RepoPath;
 import net.vanfleteren.jazygit.kernel.state.Msg;
 import net.vanfleteren.jazygit.kernel.ui.keys.Keymap;
 import net.vanfleteren.jazygit.kernel.ui.keys.Scopes;
@@ -36,7 +37,7 @@ class VersionActionTest {
     @Test
     void onAFileOfACommitTheKeysActOnItsArea() {
         Option<FileTree<CommitFile>> file =
-                Option.of(new FileTree.File<>("a.md", new CommitFile("a.md", ChangeType.MODIFIED)));
+                Option.of(new FileTree.File<>("a.md", new CommitFile(new RepoPath("a.md"), ChangeType.MODIFIED)));
 
         assertEquals(Option.<Msg>of(new VersionMsg.FilesCycled()), KEYS.handle(Scopes.COMMIT_FILES, CTRL_O, file));
         assertEquals(
@@ -46,7 +47,7 @@ class VersionActionTest {
 
     @Test
     void onADirectoryTheKeysDoNothing() {
-        Option<FileTree<FileEntry>> directory = Option.of(new FileTree.Dir<>("src", "src", List.empty()));
+        Option<FileTree<FileEntry>> directory = Option.of(new FileTree.Dir<>("src", new RepoPath("src"), List.empty()));
 
         assertEquals(Option.none(), KEYS.handle(Scopes.FILES, CTRL_O, directory));
         assertEquals(Option.none(), KEYS.handle(Scopes.FILES, CTRL_T, directory));

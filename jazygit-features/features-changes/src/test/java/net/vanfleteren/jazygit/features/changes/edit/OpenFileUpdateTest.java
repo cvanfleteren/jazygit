@@ -18,6 +18,7 @@ import net.vanfleteren.jazygit.core.git.model.RepoStatus;
 import net.vanfleteren.jazygit.core.process.ExecutedCommand;
 import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.Head;
+import net.vanfleteren.jazygit.core.repo.RepoPath;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.kernel.settings.EditorProgram;
 import net.vanfleteren.jazygit.kernel.settings.Editors;
@@ -263,7 +264,8 @@ class OpenFileUpdateTest {
     private static Model inConflict(Model model) {
         RepoStatus status = new RepoStatus(
                 Head.onBranch(new BranchName("main"), new Sha("aaaa")),
-                List.of(FileEntry.conflicted("a.txt", new Conflict(Conflict.Side.UPDATED, Conflict.Side.UPDATED))));
+                List.of(FileEntry.conflicted(
+                        new RepoPath("a.txt"), new Conflict(Conflict.Side.UPDATED, Conflict.Side.UPDATED))));
         return Update.update(model, new LoadMsg.StatusLoaded(status)).model();
     }
 
@@ -287,7 +289,7 @@ class OpenFileUpdateTest {
 
     @Test
     void aRemovedLineOpensWhereItWasInTheNewFile() {
-        Anchor.OnLine removed = new Anchor.OnLine("a.txt", DiffSide.OLD, 10);
+        Anchor.OnLine removed = new Anchor.OnLine(new RepoPath("a.txt"), DiffSide.OLD, 10);
 
         assertEquals(
                 List.of(new OpenFileCmd(NVIM, "a.txt", 10)),
@@ -297,14 +299,16 @@ class OpenFileUpdateTest {
     @Test
     void aContextLineOnTheLeftOfTheSplitViewOpensAtItsOwnLineOfTheNewFile() {
         // A context line is a stop on the left by its number in the old file (ADR 139); here the same as in the new.
-        assertEquals(List.of(new OpenFileCmd(NVIM, "a.txt", 9)), opened(new Anchor.OnLine("a.txt", DiffSide.OLD, 9)));
+        assertEquals(
+                List.of(new OpenFileCmd(NVIM, "a.txt", 9)),
+                opened(new Anchor.OnLine(new RepoPath("a.txt"), DiffSide.OLD, 9)));
     }
 
     @Test
     void aRemovedLineAtTheEndOfTheFileOpensAtTheLastLineBeforeIt() {
         DiffText removedLast = DiffText.of(
                 "diff --git a/a.txt b/a.txt\n--- a/a.txt\n+++ b/a.txt\n@@ -1,3 +1,2 @@\n one\n two\n-three\n");
-        Anchor.OnLine three = new Anchor.OnLine("a.txt", DiffSide.OLD, 3);
+        Anchor.OnLine three = new Anchor.OnLine(new RepoPath("a.txt"), DiffSide.OLD, 3);
 
         assertEquals(
                 List.of(new OpenFileCmd(NVIM, "a.txt", 2)),
@@ -317,15 +321,15 @@ class OpenFileUpdateTest {
 
     @Test
     void onAMarkerOfFilteredHunksItOpensAtTheFirstLineOfItsFirstHunk() {
-        Anchor.Filtered filtered =
-                new Anchor.Filtered("a.txt", List.of(new Ranges(20, 2, 21, 3), new Ranges(40, 1, 42, 1)), false);
+        Anchor.Filtered filtered = new Anchor.Filtered(
+                new RepoPath("a.txt"), List.of(new Ranges(20, 2, 21, 3), new Ranges(40, 1, 42, 1)), false);
 
         assertEquals(List.of(new OpenFileCmd(NVIM, "a.txt", 21)), opened(filtered));
     }
 
     @Test
     void onARowOfJsonRenderedItOpensAtTheLineItWasDrawnFrom() {
-        Anchor.Node node = new Anchor.Node("a.txt", "/name", right(11));
+        Anchor.Node node = new Anchor.Node(new RepoPath("a.txt"), "/name", right(11));
 
         assertEquals(List.of(new OpenFileCmd(NVIM, "a.txt", 11)), opened(node));
     }
@@ -349,14 +353,14 @@ class OpenFileUpdateTest {
 
     @Test
     void onAMarkerItOpensAtTheFirstLineItLeavesOutAndOnTheBarOfAFileAtItsStart() {
-        Anchor.Gap below = new Anchor.Gap("a.txt", 14, Option.none());
+        Anchor.Gap below = new Anchor.Gap(new RepoPath("a.txt"), 14, Option.none());
 
         assertEquals(
                 List.of(new OpenFileCmd(NVIM, "a.txt", 14)),
                 Update.update(model(NVIM), new EditMsg.AtCursor(at(below))).cmds());
         assertEquals(
                 List.of(new OpenFileCmd(NVIM, "a.txt", 1)),
-                Update.update(model(NVIM), new EditMsg.AtCursor(at(new Anchor.File("a.txt"))))
+                Update.update(model(NVIM), new EditMsg.AtCursor(at(new Anchor.File(new RepoPath("a.txt")))))
                         .cmds());
     }
 
@@ -390,7 +394,7 @@ class OpenFileUpdateTest {
     }
 
     private static Anchor.OnLine right(int number) {
-        return new Anchor.OnLine("a.txt", DiffSide.NEW, number);
+        return new Anchor.OnLine(new RepoPath("a.txt"), DiffSide.NEW, number);
     }
 
     private static Env env(ProgramLauncher launcher) {

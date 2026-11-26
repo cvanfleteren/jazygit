@@ -12,6 +12,7 @@ import java.util.stream.Collectors;
 import net.vanfleteren.jazygit.core.git.model.DiffFilter;
 import net.vanfleteren.jazygit.core.git.model.DiffFiltering.HunkStart;
 import net.vanfleteren.jazygit.core.git.model.ParsedDiff;
+import net.vanfleteren.jazygit.core.repo.RepoPath;
 import net.vanfleteren.jazygit.kernel.state.diff.Anchor;
 import net.vanfleteren.jazygit.kernel.state.diff.Expansion;
 import net.vanfleteren.jazygit.kernel.state.diff.Filtering;
@@ -113,7 +114,8 @@ class FilteredDiffTest {
 
     @Test
     void aHunkOpenedShowsUnderAMarkerThatHidesItAgain() {
-        Opened opened = new Opened(new NoDiff(), HashSet.of(new Opened.Hunk("A.java", new HunkStart(1, 1))));
+        Opened opened =
+                new Opened(new NoDiff(), HashSet.of(new Opened.Hunk(new RepoPath("A.java"), new HunkStart(1, 1))));
 
         Drawn drawn = drawn(filtering().withOpened(Option.of(opened)), DIFF, false);
         List<String> lines = text(drawn);
@@ -132,7 +134,8 @@ class FilteredDiffTest {
 
     @Test
     void anOpenedMarkerStaysUnderTheMarkerOfTheLinesLeftOutBeforeIt() {
-        Opened opened = new Opened(new NoDiff(), HashSet.of(new Opened.Hunk("A.java", new HunkStart(40, 40))));
+        Opened opened =
+                new Opened(new NoDiff(), HashSet.of(new Opened.Hunk(new RepoPath("A.java"), new HunkStart(40, 40))));
 
         List<String> lines = text(drawn(filtering().withOpened(Option.of(opened)), DIFF, false))
                 .map(String::stripTrailing);

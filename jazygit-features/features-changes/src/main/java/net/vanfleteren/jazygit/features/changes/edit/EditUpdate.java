@@ -5,6 +5,7 @@ import io.vavr.collection.Vector;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.core.repo.Branch;
 import net.vanfleteren.jazygit.core.repo.BranchName;
+import net.vanfleteren.jazygit.core.repo.RepoPath;
 import net.vanfleteren.jazygit.kernel.settings.EditorProgram;
 import net.vanfleteren.jazygit.kernel.settings.Editors;
 import net.vanfleteren.jazygit.kernel.state.KernelEvent;
@@ -44,7 +45,7 @@ public final class EditUpdate {
                         .getOrElse(() -> Next.of(model));
             case EditMsg.AtCursor(DiffCursorAt at) ->
                 file(at.cursor())
-                        .map(path -> open(model, path, line(model, at, at.cursor())))
+                        .map(path -> open(model, path.value(), line(model, at, at.cursor())))
                         .getOrElse(() -> Next.of(model));
             case EditMsg.FirstConflictRead(String path, Option<Integer> line, Option<Phrase> title) ->
                 open(model, path, line.getOrElse(1), title);
@@ -86,8 +87,8 @@ public final class EditUpdate {
                 .status()
                 .toOption()
                 .exists(status -> status.files()
-                        .exists(file ->
-                                file.path().equals(path) && file.conflict().isDefined()));
+                        .exists(file -> file.path().value().equals(path)
+                                && file.conflict().isDefined()));
     }
 
     private static Next open(Model model, String path, int line) {
@@ -147,7 +148,7 @@ public final class EditUpdate {
      * The file the stop {@code cursor} of a rich diff is in; none before the first file, or on a thread that is on no
      * line.
      */
-    static Option<String> file(Anchor cursor) {
+    static Option<RepoPath> file(Anchor cursor) {
         return switch (cursor) {
             case Anchor.Lead lead -> Option.none();
             case Anchor.File file -> Option.of(file.path());
@@ -201,7 +202,7 @@ public final class EditUpdate {
     /**
      * The numbers in the new file of those of {@code lines} that are of the file with the path {@code path}.
      */
-    private static Vector<Integer> numbers(Vector<DiffLines.Line> lines, String path) {
+    private static Vector<Integer> numbers(Vector<DiffLines.Line> lines, RepoPath path) {
         return lines.filter(line -> line.anchor().path().equals(path))
                 .flatMap(line -> line.line().newNumber());
     }

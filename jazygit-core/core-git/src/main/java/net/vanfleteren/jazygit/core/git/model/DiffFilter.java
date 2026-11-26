@@ -7,6 +7,7 @@ import io.vavr.control.Option;
 import io.vavr.control.Try;
 import java.util.Locale;
 import java.util.regex.PatternSyntaxException;
+import net.vanfleteren.jazygit.core.repo.RepoPath;
 import net.vanfleteren.jazygit.lib.syntax.Language;
 
 /**
@@ -54,8 +55,9 @@ public record DiffFilter(
      * Whether it applies to the file at {@code path}: by its language, as its name or extension tells it, or by one
      * of its globs.
      */
-    public boolean appliesTo(String path) {
-        return Language.of(path, Option.none()).exists(languages::contains) || paths.exists(glob -> glob.matches(path));
+    public boolean appliesTo(RepoPath path) {
+        return Language.of(path.value(), Option.none()).exists(languages::contains)
+                || paths.exists(glob -> glob.matches(path));
     }
 
     /**

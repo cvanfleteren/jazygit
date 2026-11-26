@@ -67,7 +67,7 @@ public final class SampleData {
 
     private static String sample(List<FileEntry> files, java.util.function.Predicate<FileEntry> filter) {
         return files.filter(filter)
-                .map(f -> "diff --git a/" + f.path() + " b/" + f.path() + "\n@@ -1 +1 @@\n-old\n+new\n")
+                .map(f -> "diff --git a/" + f.path().value() + " b/" + f.path().value() + "\n@@ -1 +1 @@\n-old\n+new\n")
                 .mkString();
     }
 

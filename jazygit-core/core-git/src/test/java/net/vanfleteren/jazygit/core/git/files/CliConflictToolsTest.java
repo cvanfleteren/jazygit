@@ -12,6 +12,7 @@ import net.vanfleteren.jazygit.core.git.model.ConflictFile;
 import net.vanfleteren.jazygit.core.git.model.ConflictTools;
 import net.vanfleteren.jazygit.core.git.process.GitError;
 import net.vanfleteren.jazygit.core.process.ExecutedCommand;
+import net.vanfleteren.jazygit.core.repo.RepoPath;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -53,8 +54,9 @@ class CliConflictToolsTest {
     @Test
     void theFilesInConflictAreThoseUnmerged() {
         assertEquals(
-                List.of("imports.py", "value.py"),
-                index.unmerged(List.of("imports.py", "value.py", "other.py")).get());
+                List.of(new RepoPath("imports.py"), new RepoPath("value.py")),
+                index.unmerged(List.of(new RepoPath("imports.py"), new RepoPath("value.py"), new RepoPath("other.py")))
+                        .get());
     }
 
     @Test
@@ -72,29 +74,32 @@ class CliConflictToolsTest {
     @Test
     void mergirafSolvesWhatItCanInPlaceAndStagesNothing() throws Exception {
         assumeTrue(mergirafRuns(), "mergiraf is not installed");
-        List<String> ran = index.solve("imports.py", true).get().map(ExecutedCommand::line);
+        List<String> ran = index.solve(new RepoPath("imports.py"), true).get().map(ExecutedCommand::line);
 
         assertEquals("import a\nimport c\nimport b\n\n\ndef f():\n    return 1\n", read("imports.py"));
         assertEquals(
                 List.of("git checkout --conflict=diff3 -- imports.py", "mergiraf solve --keep-backup=false imports.py"),
                 ran);
         assertEquals(
-                List.of("imports.py"), index.unmerged(List.of("imports.py")).get());
+                List.of(new RepoPath("imports.py")),
+                index.unmerged(List.of(new RepoPath("imports.py"))).get());
         assertFalse(Files.exists(repo.resolve("imports.py.orig")));
     }
 
     @Test
     void conflictsMergirafLeavesAreNoFailure() throws Exception {
         assumeTrue(mergirafRuns(), "mergiraf is not installed");
-        assertTrue(index.solve("value.py", true).isRight());
+        assertTrue(index.solve(new RepoPath("value.py"), true).isRight());
 
-        assertEquals(1, index.markers(List.of("value.py")).get().size());
+        assertEquals(1, index.markers(List.of(new RepoPath("value.py"))).get().size());
         assertFalse(Files.exists(repo.resolve("value.py.orig")));
     }
 
     @Test
     void aFileAsGitWroteItIsAsWritten() {
-        assertEquals(ConflictFile.AS_WRITTEN, index.conflictFile("value.py").get());
+        assertEquals(
+                ConflictFile.AS_WRITTEN,
+                index.conflictFile(new RepoPath("value.py")).get());
     }
 
     @Test
@@ -130,14 +135,16 @@ class CliConflictToolsTest {
 
         assertEquals(
                 ConflictFile.AS_WRITTEN,
-                new CliIndex(added).conflictFile("new.txt").get());
+                new CliIndex(added).conflictFile(new RepoPath("new.txt")).get());
     }
 
     @Test
     void aFileMergedByHandIsEdited() throws Exception {
         write("value.py", "def f():\n    return 23\n");
 
-        assertEquals(ConflictFile.EDITED, index.conflictFile("value.py").get());
+        assertEquals(
+                ConflictFile.EDITED,
+                index.conflictFile(new RepoPath("value.py")).get());
     }
 
     @Test
@@ -145,7 +152,9 @@ class CliConflictToolsTest {
         git("checkout", "--conflict=diff3", "--", "imports.py");
         write("imports.py", read("imports.py").replace("return 1", "return 9"));
 
-        assertEquals(ConflictFile.WITH_BASE, index.conflictFile("imports.py").get());
+        assertEquals(
+                ConflictFile.WITH_BASE,
+                index.conflictFile(new RepoPath("imports.py")).get());
     }
 
     @Test
@@ -154,7 +163,7 @@ class CliConflictToolsTest {
         git("checkout", "--conflict=diff3", "--", "imports.py");
         write("imports.py", read("imports.py").replace("return 1", "return 9"));
 
-        List<String> ran = index.solve("imports.py", false).get().map(ExecutedCommand::line);
+        List<String> ran = index.solve(new RepoPath("imports.py"), false).get().map(ExecutedCommand::line);
 
         assertEquals("import a\nimport c\nimport b\n\n\ndef f():\n    return 9\n", read("imports.py"));
         assertEquals(List.of("mergiraf solve --keep-backup=false imports.py"), ran);
@@ -167,13 +176,14 @@ class CliConflictToolsTest {
         git("config", "mergetool.theirs.trustExitCode", "true");
 
         List<String> ran = new CliEditor(repo)
-                .mergeTool("value.py", index.tools().get())
+                .mergeTool(new RepoPath("value.py"), index.tools().get())
                 .get()
                 .map(ExecutedCommand::line);
 
         assertEquals("def f():\n    return 3\n", read("value.py"));
         assertEquals(List.of("git -c mergetool.keepBackup=false mergetool -- value.py"), ran);
-        assertEquals(List.empty(), index.unmerged(List.of("value.py")).get());
+        assertEquals(
+                List.empty(), index.unmerged(List.of(new RepoPath("value.py"))).get());
         assertFalse(Files.exists(repo.resolve("value.py.orig")));
     }
 
@@ -184,12 +194,14 @@ class CliConflictToolsTest {
         git("config", "mergetool.broken.trustExitCode", "true");
 
         GitError error = new CliEditor(repo)
-                .mergeTool("value.py", index.tools().get())
+                .mergeTool(new RepoPath("value.py"), index.tools().get())
                 .getLeft()
                 .error();
 
         assertTrue(error instanceof GitError.ProgramFailed, error.toString());
-        assertEquals(List.of("value.py"), index.unmerged(List.of("value.py")).get());
+        assertEquals(
+                List.of(new RepoPath("value.py")),
+                index.unmerged(List.of(new RepoPath("value.py"))).get());
     }
 
     /**
@@ -228,7 +240,7 @@ class CliConflictToolsTest {
         Files.writeString(at.resolve("f.txt"), content + "main\n", latin1);
         gitIn(at, "commit", "-qam", "main");
         gitAnyExitIn(at, "merge", "feature");
-        return new CliIndex(at).conflictFile("f.txt").get();
+        return new CliIndex(at).conflictFile(new RepoPath("f.txt")).get();
     }
 
     private void write(String name, String content) throws Exception {

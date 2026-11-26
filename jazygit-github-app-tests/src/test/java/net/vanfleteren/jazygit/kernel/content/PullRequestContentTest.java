@@ -59,7 +59,7 @@ public class PullRequestContentTest {
             ViewMsg.ContentScrolled next = (ViewMsg.ContentScrolled) dispatched.getLast();
             Anchor onThread = new Anchor.Thread(
                     new net.vanfleteren.jazygit.kernel.state.diff.RemarkThread.Id("T1"),
-                    Option.of(new Anchor.OnLine("a.txt", DiffSide.NEW, 1)));
+                    Option.of(new Anchor.OnLine(new RepoPath("a.txt"), DiffSide.NEW, 1)));
             assertEquals(Option.of(onThread), next.to().cursor());
 
             drawn.set(Update.update(model, next).model());
@@ -79,7 +79,7 @@ public class PullRequestContentTest {
             SettledPilot.of(testRunner).press('c');
             SettledPilot.of(testRunner).pause();
             assertEquals(
-                    new Anchor.OnLine("a.txt", DiffSide.NEW, 1),
+                    new Anchor.OnLine(new RepoPath("a.txt"), DiffSide.NEW, 1),
                     ((net.vanfleteren.jazygit.features.github.review.ReviewMsg.StartAsked) dispatched.getLast())
                             .at()
                             .cursor());
@@ -96,7 +96,7 @@ public class PullRequestContentTest {
                 msg -> dispatched.add(net.vanfleteren.jazygit.app.GitHubKeys.unwrapped(msg)));
         Model model = pullRequestDiff();
         AreaId area = reviewing.areaOfPane(model, FilesPanel.PANE).get();
-        Anchor.OnLine line = new Anchor.OnLine("a.txt", DiffSide.NEW, 1);
+        Anchor.OnLine line = new Anchor.OnLine(new RepoPath("a.txt"), DiffSide.NEW, 1);
 
         java.util.concurrent.atomic.AtomicReference<Model> drawn =
                 new java.util.concurrent.atomic.AtomicReference<>(model);
@@ -309,7 +309,7 @@ public class PullRequestContentTest {
      */
     static Model pullRequestDiff(String body, String diff) {
         Changes of = pullRequestChanges();
-        CommitFile file = new CommitFile("a.txt", ChangeType.MODIFIED);
+        CommitFile file = new CommitFile(new RepoPath("a.txt"), ChangeType.MODIFIED);
         Model rich = PullRequestContentTest.withGitHub()
                 .mapPreferences(preferences ->
                         preferences.withSettings(preferences.settings().withDiffStyle(DiffStyle.RICH)));
@@ -354,7 +354,7 @@ public class PullRequestContentTest {
     static Msg remarksLoaded(String body) {
         net.vanfleteren.jazygit.core.gh.model.ReviewThread thread =
                 new net.vanfleteren.jazygit.core.gh.model.ReviewThread(
-                        "a.txt",
+                        new RepoPath("a.txt"),
                         net.vanfleteren.jazygit.core.gh.model.ReviewThread.Side.RIGHT,
                         Option.of(1),
                         Option.none(),

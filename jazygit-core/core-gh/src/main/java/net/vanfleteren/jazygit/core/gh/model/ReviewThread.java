@@ -3,6 +3,7 @@ package net.vanfleteren.jazygit.core.gh.model;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.time.Instant;
+import net.vanfleteren.jazygit.core.repo.RepoPath;
 
 /**
  * A thread of a review on a pull request, about a line of a file of its diff, or about a whole file (ADR 55).
@@ -23,7 +24,7 @@ import java.time.Instant;
  * @param rights       what the viewer may do with it
  */
 public record ReviewThread(
-        String path,
+        RepoPath path,
         Side side,
         Option<Integer> line,
         Option<Integer> startLine,
@@ -43,7 +44,7 @@ public record ReviewThread(
      * one, which is also its path in git (ADR 55). Wherever a thread is matched to a file, it is matched by this, also
      * where the threads of each file are found by their path ({@link ThreadsByPath#on}).
      */
-    public boolean isOn(String path, Option<String> origin) {
+    public boolean isOn(RepoPath path, Option<RepoPath> origin) {
         return path.equals(this.path) || origin.contains(this.path);
     }
 

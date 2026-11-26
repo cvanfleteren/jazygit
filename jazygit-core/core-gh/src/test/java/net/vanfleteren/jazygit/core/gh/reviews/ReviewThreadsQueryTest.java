@@ -18,6 +18,7 @@ import net.vanfleteren.jazygit.core.gh.model.ReviewThread.Subject;
 import net.vanfleteren.jazygit.core.gh.process.GhError;
 import net.vanfleteren.jazygit.core.gh.process.GhProcess;
 import net.vanfleteren.jazygit.core.repo.PrNumber;
+import net.vanfleteren.jazygit.core.repo.RepoPath;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import org.junit.jupiter.api.Test;
 
@@ -66,7 +67,7 @@ class ReviewThreadsQueryTest {
 
     private static ReviewThread onLine12(List<Comment> comments, int more) {
         return new ReviewThread(
-                "src/Foo.java",
+                new RepoPath("src/Foo.java"),
                 Side.RIGHT,
                 Option.of(12),
                 Option.none(),

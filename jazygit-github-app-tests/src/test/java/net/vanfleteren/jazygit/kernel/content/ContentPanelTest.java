@@ -98,8 +98,8 @@ class ContentPanelTest {
         Model selected = TestModels.withFilesSelected(
                 SampleData.git(),
                 List.of(
-                        new FileEntry("a.txt", ChangeType.MODIFIED, true, false),
-                        new FileEntry("b.txt", ChangeType.MODIFIED, false, true)));
+                        new FileEntry(new RepoPath("a.txt"), ChangeType.MODIFIED, true, false),
+                        new FileEntry(new RepoPath("b.txt"), ChangeType.MODIFIED, false, true)));
 
         try (ToolkitTestRunner testRunner =
                 ToolkitTestRunner.runTest(() -> content.render(selected, FilesPanel.PANE))) {
@@ -284,8 +284,8 @@ class ContentPanelTest {
         Model selected = TestModels.withFilesSelected(
                 data,
                 List.of(
-                        new FileEntry("a.txt", ChangeType.MODIFIED, true, false),
-                        new FileEntry("b.txt", ChangeType.MODIFIED, false, true)));
+                        new FileEntry(new RepoPath("a.txt"), ChangeType.MODIFIED, true, false),
+                        new FileEntry(new RepoPath("b.txt"), ChangeType.MODIFIED, false, true)));
 
         try (ToolkitTestRunner testRunner =
                 ToolkitTestRunner.runTest(() -> content.render(selected, FilesPanel.PANE))) {

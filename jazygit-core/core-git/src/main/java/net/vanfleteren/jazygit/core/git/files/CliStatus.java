@@ -68,8 +68,8 @@ public final class CliStatus implements Status {
      * drops that when a rebase, cherry-pick or revert moves on to its next commit. None when it cannot be read: it
      * only says how far the user got.
      */
-    private List<String> resolved(RepoStatus status) {
-        Set<String> conflicted = status.files()
+    private List<RepoPath> resolved(RepoStatus status) {
+        Set<RepoPath> conflicted = status.files()
                 .filter(file -> file.conflict().isDefined())
                 .map(FileEntry::path)
                 .toSet();
@@ -85,10 +85,10 @@ public final class CliStatus implements Status {
      * The paths of {@code git ls-files --resolve-undo -z}: {@code <mode> <object> <stage>\t<path>}, one for each
      * stage a file had, each ended by a NUL.
      */
-    static List<String> resolveUndo(String raw) {
+    static List<RepoPath> resolveUndo(String raw) {
         return List.of(raw.split("\0"))
                 .filter(entry -> entry.contains("\t"))
-                .map(entry -> entry.substring(entry.indexOf('\t') + 1))
+                .map(entry -> new RepoPath(entry.substring(entry.indexOf('\t') + 1)))
                 .distinct();
     }
 
@@ -115,13 +115,13 @@ public final class CliStatus implements Status {
     }
 
     @Override
-    public Either<GitError, List<String>> allFiles() {
-        return CliWorkingFiles.allFiles(worktree);
+    public Either<GitError, List<RepoPath>> allFiles() {
+        return CliWorkingFiles.allFiles(worktree).map(files -> files.map(RepoPath::new));
     }
 
     @Override
-    public Either<GitError, FileContent> content(String path) {
-        return CliWorkingFiles.content(worktree, path, CliDiffs.LIMIT);
+    public Either<GitError, FileContent> content(RepoPath path) {
+        return CliWorkingFiles.content(worktree, path.value(), CliDiffs.LIMIT);
     }
 
     /**
@@ -151,7 +151,7 @@ public final class CliStatus implements Status {
 
     private static Either<UnexpectedOutput, Parsed> next(Parsed parsed, String field) {
         return parsed.origin()
-                .map(entry -> Either.<UnexpectedOutput, Parsed>right(parsed.with(entry.apply(field))))
+                .map(entry -> Either.<UnexpectedOutput, Parsed>right(parsed.with(entry.apply(new RepoPath(field)))))
                 .getOrElse(() -> field.isEmpty() ? Either.right(parsed) : entry(parsed, field));
     }
 
@@ -160,6 +160,7 @@ public final class CliStatus implements Status {
             case '#' -> Either.right(header(parsed, field));
             case '?' ->
                 GitOutput.after(field, "? ")
+                        .map(RepoPath::new)
                         .toEither(() -> new UnexpectedOutput(field))
                         .map(path -> parsed.with(new FileEntry(path, ChangeType.UNTRACKED, false, true)));
             // 1 XY sub mH mI mW hH hI path
@@ -201,7 +202,7 @@ public final class CliStatus implements Status {
                 : Either.left(new UnexpectedOutput(field));
     }
 
-    private static FileEntry changed(String path, ChangeType type, Xy xy) {
+    private static FileEntry changed(RepoPath path, ChangeType type, Xy xy) {
         return new FileEntry(path, type, xy.staged() != '.', xy.unstaged() != '.');
     }
 
@@ -214,8 +215,8 @@ public final class CliStatus implements Status {
     /**
      * Everything after the first {@code fields} space-separated fields; paths may contain spaces.
      */
-    private static Either<UnexpectedOutput, String> pathAfter(String field, int fields) {
-        return GitOutput.fields(field, " ", fields + 1).map(List::last);
+    private static Either<UnexpectedOutput, RepoPath> pathAfter(String field, int fields) {
+        return GitOutput.fields(field, " ", fields + 1).map(List::last).map(RepoPath::new);
     }
 
     /**
@@ -227,8 +228,8 @@ public final class CliStatus implements Status {
     private record Parsed(
             Option<String> head,
             Option<Sha> oid,
-            Map<String, FileEntry> byPath,
-            Option<Function<String, FileEntry>> origin) {
+            Map<RepoPath, FileEntry> byPath,
+            Option<Function<RepoPath, FileEntry>> origin) {
 
         static final Parsed NOTHING = new Parsed(Option.none(), Option.none(), TreeMap.empty(), Option.none());
 
@@ -236,7 +237,7 @@ public final class CliStatus implements Status {
             return new Parsed(head, oid, byPath.put(entry.path(), entry), Option.none());
         }
 
-        Parsed expectingOrigin(Function<String, FileEntry> entry) {
+        Parsed expectingOrigin(Function<RepoPath, FileEntry> entry) {
             return new Parsed(head, oid, byPath, Option.of(entry));
         }
 

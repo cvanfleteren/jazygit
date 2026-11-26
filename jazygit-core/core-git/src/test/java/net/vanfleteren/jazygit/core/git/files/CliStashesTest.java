@@ -19,6 +19,7 @@ import net.vanfleteren.jazygit.core.git.process.GitError;
 import net.vanfleteren.jazygit.core.git.process.GitFailure;
 import net.vanfleteren.jazygit.core.process.ExecutedCommand;
 import net.vanfleteren.jazygit.core.repo.BranchName;
+import net.vanfleteren.jazygit.core.repo.RepoPath;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.core.repo.Stash;
 import org.junit.jupiter.api.Test;
@@ -52,19 +53,20 @@ class CliStashesTest {
 
         List<CommitFile> files = stashes().files(stash()).get();
         String tracked = stashes()
-                .fileChanges(stash(), files.filter(f -> f.path().equals("a.txt")), DiffOptions.DEFAULT)
+                .fileChanges(stash(), files.filter(f -> f.path().equals(new RepoPath("a.txt"))), DiffOptions.DEFAULT)
                 .get()
                 .text();
         String untracked = stashes()
-                .fileChanges(stash(), files.filter(f -> f.path().equals("untracked.txt")), DiffOptions.DEFAULT)
+                .fileChanges(
+                        stash(), files.filter(f -> f.path().equals(new RepoPath("untracked.txt"))), DiffOptions.DEFAULT)
                 .get()
                 .text();
 
         assertEquals(
                 List.of(
-                        new CommitFile("a.txt", ChangeType.MODIFIED),
-                        new CommitFile("other.txt", ChangeType.ADDED),
-                        new CommitFile("untracked.txt", ChangeType.ADDED)),
+                        new CommitFile(new RepoPath("a.txt"), ChangeType.MODIFIED),
+                        new CommitFile(new RepoPath("other.txt"), ChangeType.ADDED),
+                        new CommitFile(new RepoPath("untracked.txt"), ChangeType.ADDED)),
                 files);
         assertTrue(tracked.contains("+two"), tracked);
         assertFalse(tracked.contains("untracked"), tracked);
@@ -104,7 +106,7 @@ class CliStashesTest {
                 .get()
                 .text();
 
-        List<String> paths = List.of("a.txt", "untracked.txt");
+        List<RepoPath> paths = List.of(new RepoPath("a.txt"), new RepoPath("untracked.txt"));
         assertEquals(paths, UnifiedDiff.parse(whole).files().map(UnifiedDiff.FileDiff::path));
         assertEquals(paths, UnifiedDiff.parse(files).files().map(UnifiedDiff.FileDiff::path));
     }
@@ -116,7 +118,10 @@ class CliStashesTest {
         git("stash", "push", "-qm", "my work");
 
         String changes = stashes()
-                .fileChanges(stash(), List.of(new CommitFile("a.txt", ChangeType.MODIFIED)), DiffOptions.DEFAULT)
+                .fileChanges(
+                        stash(),
+                        List.of(new CommitFile(new RepoPath("a.txt"), ChangeType.MODIFIED)),
+                        DiffOptions.DEFAULT)
                 .get()
                 .text();
 

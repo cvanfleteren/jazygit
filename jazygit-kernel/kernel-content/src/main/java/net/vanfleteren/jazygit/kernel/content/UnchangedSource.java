@@ -4,6 +4,7 @@ import io.vavr.collection.List;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.core.git.model.DiffText;
 import net.vanfleteren.jazygit.core.git.model.FileContent;
+import net.vanfleteren.jazygit.core.repo.RepoPath;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.kernel.settings.DiffLook;
 import net.vanfleteren.jazygit.kernel.settings.DiffStyle;
@@ -54,10 +55,12 @@ record UnchangedSource() implements ContentSource {
      */
     static Shown unchanged(Model model, UnchangedNode node, String title, Option<Sha> commit) {
         return switch (node) {
-            case UnchangedNode.Directory(String path, int files) ->
-                Shown.dim(title, Messages.get("content.directoryFiles", path.isEmpty() ? "/" : path, files));
+            case UnchangedNode.Directory(RepoPath path, int files) ->
+                Shown.dim(
+                        title,
+                        Messages.get("content.directoryFiles", path.value().isEmpty() ? "/" : path.value(), files));
             case UnchangedNode.File(var content) -> {
-                Preview<String, FileContent> shown = content.shown();
+                Preview<RepoPath, FileContent> shown = content.shown();
                 yield Shown.whenLoaded(
                         title, shown.value(), read -> fileContent(model, shown.key(), read, title, commit));
             }
@@ -68,7 +71,8 @@ record UnchangedSource() implements ContentSource {
      * What the file at {@code path} holds, {@code content}: text as a diff of itself, drawn in the rich view whatever
      * look diffs have, and anything else as a line that says what it is.
      */
-    private static Shown fileContent(Model model, String path, FileContent content, String title, Option<Sha> commit) {
+    private static Shown fileContent(
+            Model model, RepoPath path, FileContent content, String title, Option<Sha> commit) {
         return switch (content) {
             case FileContent.Text(DiffText asDiff) -> {
                 DiffLook look = model.preferences().diffLook();

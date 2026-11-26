@@ -5,6 +5,7 @@ import io.vavr.collection.List;
 import io.vavr.collection.Set;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.core.git.model.RepoStatus;
+import net.vanfleteren.jazygit.core.repo.RepoPath;
 import net.vanfleteren.jazygit.features.changes.panes.files.FileMark;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.ui.i18n.Messages;
@@ -26,7 +27,7 @@ public final class ResolvedFiles {
      * is dimmed, as it is listed only to be found again; one in conflict again is not marked.
      */
     public static Option<FileMark> mark(Model model) {
-        Set<String> resolved = model.repo()
+        Set<RepoPath> resolved = model.repo()
                 .status()
                 .toOption()
                 .map(status -> status.resolved().toSet())

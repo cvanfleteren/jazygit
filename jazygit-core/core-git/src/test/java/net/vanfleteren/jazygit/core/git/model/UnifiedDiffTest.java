@@ -11,6 +11,7 @@ import net.vanfleteren.jazygit.core.git.model.UnifiedDiff.DiffLine.Kind;
 import net.vanfleteren.jazygit.core.git.model.UnifiedDiff.FileDiff;
 import net.vanfleteren.jazygit.core.git.model.UnifiedDiff.Hunk;
 import net.vanfleteren.jazygit.core.git.model.UnifiedDiff.ModeChange;
+import net.vanfleteren.jazygit.core.repo.RepoPath;
 import org.junit.jupiter.api.Test;
 
 class UnifiedDiffTest {
@@ -53,7 +54,7 @@ class UnifiedDiffTest {
         assertEquals(
                 new FileDiff(
                         ChangeType.MODIFIED,
-                        "a.txt",
+                        new RepoPath("a.txt"),
                         Option.none(),
                         Option.none(),
                         false,
@@ -110,8 +111,15 @@ class UnifiedDiffTest {
                         ChangeType.MODIFIED,
                         ChangeType.MODIFIED),
                 files.map(FileDiff::type));
-        assertEquals(List.of("new.txt", "gone.txt", "new name.txt", "run.sh", "image.png"), files.map(FileDiff::path));
-        assertEquals(Option.of("old name.txt"), files.get(2).origin());
+        assertEquals(
+                List.of(
+                        new RepoPath("new.txt"),
+                        new RepoPath("gone.txt"),
+                        new RepoPath("new name.txt"),
+                        new RepoPath("run.sh"),
+                        new RepoPath("image.png")),
+                files.map(FileDiff::path));
+        assertEquals(Option.of(new RepoPath("old name.txt")), files.get(2).origin());
         assertTrue(files.get(2).hunks().isEmpty());
         assertEquals(Option.of(new ModeChange("100644", "100755")), files.get(3).mode());
         assertTrue(files.get(4).binary());
@@ -140,7 +148,9 @@ class UnifiedDiffTest {
                 +two
                 """).files();
 
-        assertEquals(List.of("föo.txt", "with b/space.txt", "tabbed name.txt"), files.map(FileDiff::path));
+        assertEquals(
+                List.of(new RepoPath("föo.txt"), new RepoPath("with b/space.txt"), new RepoPath("tabbed name.txt")),
+                files.map(FileDiff::path));
     }
 
     @Test
@@ -186,7 +196,7 @@ class UnifiedDiffTest {
         assertEquals(
                 new FileDiff(
                         ChangeType.CONFLICTED,
-                        "f.txt",
+                        new RepoPath("f.txt"),
                         Option.none(),
                         Option.none(),
                         false,
@@ -210,7 +220,13 @@ class UnifiedDiffTest {
                 """).files();
 
         assertEquals(
-                new FileDiff(ChangeType.CONFLICTED, "föo.txt", Option.none(), Option.none(), false, List.empty()),
+                new FileDiff(
+                        ChangeType.CONFLICTED,
+                        new RepoPath("föo.txt"),
+                        Option.none(),
+                        Option.none(),
+                        false,
+                        List.empty()),
                 files.head());
         assertEquals(List.of(ChangeType.CONFLICTED, ChangeType.MODIFIED), files.map(FileDiff::type));
         assertEquals(List.empty(), UnifiedDiff.parse("* Unmerged path f.txt\n").preamble());
@@ -219,7 +235,7 @@ class UnifiedDiffTest {
     @Test
     void theUnmergedPathIsNeverUnquotedAsGitPrintsItAsItIs() {
         assertEquals(
-                List.of("\"x\""),
+                List.of(new RepoPath("\"x\"")),
                 UnifiedDiff.parse("* Unmerged path \"x\"\n").files().map(FileDiff::path));
     }
 
@@ -234,7 +250,7 @@ class UnifiedDiffTest {
                   a
                 """).files().head();
 
-        assertEquals("föo.txt", file.path());
+        assertEquals(new RepoPath("föo.txt"), file.path());
     }
 
     @Test
@@ -263,7 +279,14 @@ class UnifiedDiffTest {
                 """).files().head();
 
         assertEquals(
-                new FileDiff(ChangeType.CONFLICTED, "bin.dat", Option.none(), Option.none(), true, List.empty()), file);
+                new FileDiff(
+                        ChangeType.CONFLICTED,
+                        new RepoPath("bin.dat"),
+                        Option.none(),
+                        Option.none(),
+                        true,
+                        List.empty()),
+                file);
     }
 
     @Test

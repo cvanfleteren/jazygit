@@ -20,6 +20,7 @@ import net.vanfleteren.jazygit.core.gh.model.ReviewThread.Side;
 import net.vanfleteren.jazygit.core.git.model.FileVersion;
 import net.vanfleteren.jazygit.core.git.model.Folding;
 import net.vanfleteren.jazygit.core.repo.PrNumber;
+import net.vanfleteren.jazygit.core.repo.RepoPath;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.features.changes.diff.CommitFilesMsg;
 import net.vanfleteren.jazygit.features.github.GitHubError;
@@ -306,7 +307,9 @@ class ReviewUpdateTest {
 
         ReviewPopup popup = asked.popup(ReviewPopup.class).get();
         Target.Start start = new Target.Start(
-                new Sha(HEAD), "a.txt", Option.of(new NewReviewThread.Lines(Side.LEFT, 2, Side.RIGHT, 3)));
+                new Sha(HEAD),
+                new RepoPath("a.txt"),
+                Option.of(new NewReviewThread.Lines(Side.LEFT, 2, Side.RIGHT, 3)));
         assertEquals(start, popup.target());
         assertEquals(List.of("-two", "+TWO", " three"), popup.quoted());
         assertEquals(Option.of(new ReviewPopup.Lines(2, 3)), popup.where().lines());
@@ -325,11 +328,11 @@ class ReviewUpdateTest {
 
     @Test
     void aThreadOnTheBarOfAFileIsAboutTheWholeFile() {
-        Model asked = Update.update(files(), new ReviewMsg.StartAsked(at(new Anchor.File("a.txt"))))
+        Model asked = Update.update(files(), new ReviewMsg.StartAsked(at(new Anchor.File(new RepoPath("a.txt")))))
                 .model();
 
         assertEquals(
-                new Target.Start(new Sha(HEAD), "a.txt", Option.none()),
+                new Target.Start(new Sha(HEAD), new RepoPath("a.txt"), Option.none()),
                 asked.popup(ReviewPopup.class).get().target());
     }
 
@@ -359,7 +362,9 @@ class ReviewUpdateTest {
         ReviewPopup popup = asked.popup(ReviewPopup.class).get();
         assertEquals(
                 new Target.Start(
-                        new Sha(HEAD), "a.txt", Option.of(new NewReviewThread.Lines(Side.RIGHT, 20, Side.RIGHT, 21))),
+                        new Sha(HEAD),
+                        new RepoPath("a.txt"),
+                        Option.of(new NewReviewThread.Lines(Side.RIGHT, 20, Side.RIGHT, 21))),
                 popup.target());
         assertEquals(List.of(" line20", " line21"), popup.quoted());
         assertEquals(
@@ -376,10 +381,10 @@ class ReviewUpdateTest {
                 AREA,
                 CONTENT,
                 new WholeFile.Source.OfFiles(new Changes.OfPullRequest(COMMITS), A),
-                "a.txt",
+                new RepoPath("a.txt"),
                 files().preferences().diffOptions());
-        Version shown =
-                new Version(CONTENT, "a.txt", Option.of(FileVersion.NEW), read.file(), new Loadable.Loaded<>(DIFF));
+        Version shown = new Version(
+                CONTENT, new RepoPath("a.txt"), Option.of(FileVersion.NEW), read.file(), new Loadable.Loaded<>(DIFF));
         Model inVersion = files().mapRepoView(view -> view.withVersion(AREA, shown));
 
         assertEquals(
@@ -388,14 +393,14 @@ class ReviewUpdateTest {
                         .model()));
         assertEquals(
                 Option.of(new GitHubError.CannotReview(Why.IN_VERSION)),
-                error(Update.update(inVersion, new ReviewMsg.StartAsked(at(new Anchor.File("a.txt"))))
+                error(Update.update(inVersion, new ReviewMsg.StartAsked(at(new Anchor.File(new RepoPath("a.txt")))))
                         .model()));
     }
 
     @Test
     void editingTheFirstCommentOfAThreadOnAnExpandedLineQuotesItsLine() {
         ReviewThread onExpanded = new ReviewThread(
-                "a.txt",
+                new RepoPath("a.txt"),
                 Side.RIGHT,
                 Option.of(20),
                 Option.none(),

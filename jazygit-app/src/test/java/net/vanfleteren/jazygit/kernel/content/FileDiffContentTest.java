@@ -48,7 +48,7 @@ class FileDiffContentTest {
                         preferences.withSettings(preferences.settings().withDiffStyle(DiffStyle.RICH)));
         AreaId area = expanding.areaOfPane(shown, CommitsPanel.PANE).get();
         ScrolledContent content = ContentView.of(shown, area).areas().head().content();
-        Anchor.Gap above = new Anchor.Gap("a.txt", 1, Option.of(9));
+        Anchor.Gap above = new Anchor.Gap(new RepoPath("a.txt"), 1, Option.of(9));
         Model onMarker = shown.withScrolled(
                 io.vavr.collection.HashMap.of(area, new Scrolled(content, 0, 0, Option.of(above), Option.none())));
 
@@ -84,7 +84,7 @@ class FileDiffContentTest {
                         preferences.withSettings(preferences.settings().withDiffStyle(DiffStyle.RICH)));
         AreaId area = versions.areaOfPane(shown, CommitsPanel.PANE).get();
         ScrolledContent content = ContentView.of(shown, area).areas().head().content();
-        Anchor.OnLine removed = new Anchor.OnLine("a.txt", DiffSide.OLD, 10);
+        Anchor.OnLine removed = new Anchor.OnLine(new RepoPath("a.txt"), DiffSide.OLD, 10);
         Model onLine = shown.withScrolled(
                 io.vavr.collection.HashMap.of(area, new Scrolled(content, 0, 0, Option.of(removed), Option.none())));
 
@@ -159,7 +159,7 @@ class FileDiffContentTest {
         ContentPanel panel = new ContentPanel(Theme.SpanStyles.NONE, () -> false);
         AreaId area = panel.areaOfPane(shown, CommitsPanel.PANE).get();
         ScrolledContent content = ContentView.of(shown, area).areas().head().content();
-        Anchor.OnLine blank = new Anchor.OnLine("a.md", DiffSide.NEW, 20);
+        Anchor.OnLine blank = new Anchor.OnLine(new RepoPath("a.md"), DiffSide.NEW, 20);
         Model onBlank = shown.withScrolled(
                 io.vavr.collection.HashMap.of(area, new Scrolled(content, 0, 0, Option.of(blank), Option.none())));
         DiffCursorAt at = new DiffCursorAt(
@@ -199,7 +199,7 @@ class FileDiffContentTest {
         ContentPanel panel = new ContentPanel(Theme.SpanStyles.NONE, () -> false, id -> {}, dispatched::add);
         AreaId area = panel.areaOfPane(shown, CommitsPanel.PANE).get();
         ScrolledContent content = ContentView.of(shown, area).areas().head().content();
-        Anchor.OnLine removed = new Anchor.OnLine("a.md", DiffSide.OLD, 2);
+        Anchor.OnLine removed = new Anchor.OnLine(new RepoPath("a.md"), DiffSide.OLD, 2);
         Model onLine = shown.withScrolled(
                 io.vavr.collection.HashMap.of(area, new Scrolled(content, 0, 0, Option.of(removed), Option.none())));
         DiffCursorAt at = new DiffCursorAt(
@@ -227,7 +227,7 @@ class FileDiffContentTest {
                 .map(net.vanfleteren.jazygit.features.changes.diff.VersionMsg.RenderToggled.class::cast);
         // With the bar of the file at the top, the first block, its first line.
         assertEquals(
-                List.of(new Anchor.OnLine("a.md", DiffSide.NEW, 1)),
+                List.of(new Anchor.OnLine(new RepoPath("a.md"), DiffSide.NEW, 1)),
                 toggled.map(msg -> msg.at().cursor()));
     }
 
@@ -245,7 +245,7 @@ class FileDiffContentTest {
         ContentPanel panel = new ContentPanel(Theme.SpanStyles.NONE, () -> false);
         AreaId area = panel.areaOfPane(shown, CommitsPanel.PANE).get();
         ScrolledContent content = ContentView.of(shown, area).areas().head().content();
-        Anchor.OnLine on = new Anchor.OnLine("a.txt", DiffSide.NEW, 39);
+        Anchor.OnLine on = new Anchor.OnLine(new RepoPath("a.txt"), DiffSide.NEW, 39);
         Model onLine = shown.withScrolled(
                 io.vavr.collection.HashMap.of(area, new Scrolled(content, 0, 0, Option.of(on), Option.none())));
         DiffCursorAt at =
@@ -281,7 +281,7 @@ class FileDiffContentTest {
         ScrolledContent shown = ContentView.of(blamed, area).areas().head().content();
 
         // Line 9 is blamed on another commit, line 10 on the commit shown; the bar of the file is no line.
-        for (Anchor on : List.<Anchor>of(onNew(9), onNew(10), new Anchor.File("a.txt"))) {
+        for (Anchor on : List.<Anchor>of(onNew(9), onNew(10), new Anchor.File(new RepoPath("a.txt")))) {
             ContentPanel opening = new ContentPanel(Theme.SpanStyles.NONE, () -> false, id -> {}, dispatched::add);
             Model onLine = blamed.withScrolled(
                     io.vavr.collection.HashMap.of(area, new Scrolled(shown, 0, 0, Option.of(on), Option.none())));
@@ -388,7 +388,7 @@ class FileDiffContentTest {
     }
 
     private static Anchor.OnLine onNew(int number) {
-        return new Anchor.OnLine("a.txt", DiffSide.NEW, number);
+        return new Anchor.OnLine(new RepoPath("a.txt"), DiffSide.NEW, number);
     }
 
     /**
@@ -425,7 +425,7 @@ class FileDiffContentTest {
         Blame.Commit other = new Blame.Commit(new Sha("b".repeat(40)), "Alex Moreau", Instant.EPOCH, "older", false);
         Blame.Commit own = new Blame.Commit(new Sha("aaaa"), "Alex Moreau", Instant.EPOCH, "this", false);
         Blame lines = new Blame(io.vavr.collection.Vector.rangeClosed(1, 10)
-                .map(n -> new Blame.Line(n == 10 ? own : other, n, "a.txt", Option.none())));
+                .map(n -> new Blame.Line(n == 10 ? own : other, n, new RepoPath("a.txt"), Option.none())));
         return TestModels.done(TestModels.running(blaming.model(), blame), blame, new LoadMsg.BlameRead(blame, lines))
                 .model();
     }
@@ -447,7 +447,7 @@ class FileDiffContentTest {
                         preferences.withSettings(preferences.settings().withDiffStyle(DiffStyle.RICH)));
         AreaId area = copying.areaOfPane(shown, CommitsPanel.PANE).get();
         ScrolledContent content = ContentView.of(shown, area).areas().head().content();
-        Anchor.OnLine added = new Anchor.OnLine("a.txt", DiffSide.NEW, 10);
+        Anchor.OnLine added = new Anchor.OnLine(new RepoPath("a.txt"), DiffSide.NEW, 10);
         Model onLine = shown.withScrolled(
                 io.vavr.collection.HashMap.of(area, new Scrolled(content, 0, 0, Option.of(added), Option.none())));
 

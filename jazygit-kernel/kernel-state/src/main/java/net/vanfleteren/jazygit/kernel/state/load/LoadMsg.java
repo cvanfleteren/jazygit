@@ -325,10 +325,10 @@ public sealed interface LoadMsg extends Msg {
     /**
      * The paths of all files of the working tree (ADR 108).
      */
-    record AllFilesLoaded(List<String> paths) implements Read<List<String>> {
+    record AllFilesLoaded(List<RepoPath> paths) implements Read<List<RepoPath>> {
 
         @Override
-        public List<String> value() {
+        public List<RepoPath> value() {
             return paths;
         }
 
@@ -341,7 +341,7 @@ public sealed interface LoadMsg extends Msg {
     /**
      * What the file at {@code path} in the working tree holds on disk (ADR 108).
      */
-    record FileContentRead(String path, FileContent content) implements Read<FileContent> {
+    record FileContentRead(RepoPath path, FileContent content) implements Read<FileContent> {
 
         @Override
         public FileContent value() {
@@ -373,7 +373,7 @@ public sealed interface LoadMsg extends Msg {
     /**
      * What the file at {@code path} holds in the commit the files of {@code of} end at (ADR 128).
      */
-    record CommitFileContentRead(Changes of, String path, FileContent content) implements Read<FileContent> {
+    record CommitFileContentRead(Changes of, RepoPath path, FileContent content) implements Read<FileContent> {
 
         @Override
         public FileContent value() {

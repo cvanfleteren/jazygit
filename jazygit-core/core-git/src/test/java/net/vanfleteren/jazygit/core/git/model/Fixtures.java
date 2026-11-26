@@ -8,6 +8,7 @@ import net.vanfleteren.jazygit.core.repo.Branch;
 import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.Commit;
 import net.vanfleteren.jazygit.core.repo.CommitMessage;
+import net.vanfleteren.jazygit.core.repo.RepoPath;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.core.repo.Tracking;
 import net.vanfleteren.jazygit.core.repo.Upstream;
@@ -84,7 +85,7 @@ public final class Fixtures {
     }
 
     public static FileEntry fileEntry(String path, ChangeType type) {
-        return new FileEntry(path, type, type == ChangeType.ADDED, type != ChangeType.ADDED);
+        return new FileEntry(new RepoPath(path), type, type == ChangeType.ADDED, type != ChangeType.ADDED);
     }
 
     /**

@@ -2,6 +2,7 @@ package net.vanfleteren.jazygit.core.gh.model;
 
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.core.gh.model.ReviewThread.Side;
+import net.vanfleteren.jazygit.core.repo.RepoPath;
 
 /**
  * A review thread to start on a pull request, with its first comment (ADR 60).
@@ -10,7 +11,7 @@ import net.vanfleteren.jazygit.core.gh.model.ReviewThread.Side;
  * @param lines the lines it is on; none when it is about the whole file
  * @param body  its first comment, in Markdown
  */
-public record NewReviewThread(String path, Option<Lines> lines, String body) {
+public record NewReviewThread(RepoPath path, Option<Lines> lines, String body) {
 
     /**
      * The lines a thread is on: from its first, {@code startLine} on {@code startSide}, to its last, {@code line} on

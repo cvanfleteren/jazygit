@@ -11,6 +11,7 @@ import net.vanfleteren.jazygit.core.git.model.ChangeType;
 import net.vanfleteren.jazygit.core.git.model.DiscardPlan;
 import net.vanfleteren.jazygit.core.git.model.FileEntry;
 import net.vanfleteren.jazygit.core.git.model.Fixtures;
+import net.vanfleteren.jazygit.core.repo.RepoPath;
 import net.vanfleteren.jazygit.features.changes.discard.DiscardCmd.Discard;
 import net.vanfleteren.jazygit.features.changes.discard.DiscardMsg.Scope;
 import net.vanfleteren.jazygit.kernel.state.Model;
@@ -22,10 +23,12 @@ import org.junit.jupiter.api.Test;
 class DiscardUpdateTest {
 
     private static final FileEntry UNSTAGED_MOD = Fixtures.fileEntry("unstaged.txt", ChangeType.MODIFIED);
-    private static final FileEntry STAGED_MOD = new FileEntry("staged.txt", ChangeType.MODIFIED, true, false);
-    private static final FileEntry BOTH_MOD = new FileEntry("both.txt", ChangeType.MODIFIED, true, true);
+    private static final FileEntry STAGED_MOD =
+            new FileEntry(new RepoPath("staged.txt"), ChangeType.MODIFIED, true, false);
+    private static final FileEntry BOTH_MOD = new FileEntry(new RepoPath("both.txt"), ChangeType.MODIFIED, true, true);
     private static final FileEntry NEW = Fixtures.fileEntry("new.txt", ChangeType.ADDED);
-    private static final FileEntry NEW_EDITED = new FileEntry("edited-new.txt", ChangeType.ADDED, true, true);
+    private static final FileEntry NEW_EDITED =
+            new FileEntry(new RepoPath("edited-new.txt"), ChangeType.ADDED, true, true);
     private static final FileEntry UNTRACKED = Fixtures.fileEntry("dir/untracked.txt", ChangeType.UNTRACKED);
     private static final List<FileEntry> ALL = List.of(UNSTAGED_MOD, STAGED_MOD, BOTH_MOD, NEW, NEW_EDITED, UNTRACKED);
 
@@ -60,10 +63,10 @@ class DiscardUpdateTest {
     void discardingEverythingResetsTrackedFilesToHeadAndRemovesTheRest() {
         assertEquals(
                 new DiscardPlan(
-                        List.of("dir/untracked.txt"),
+                        List.of(new RepoPath("dir/untracked.txt")),
                         List.of(),
-                        List.of("unstaged.txt", "staged.txt", "both.txt"),
-                        List.of("new.txt", "edited-new.txt")),
+                        List.of(new RepoPath("unstaged.txt"), new RepoPath("staged.txt"), new RepoPath("both.txt")),
+                        List.of(new RepoPath("new.txt"), new RepoPath("edited-new.txt"))),
                 DiscardUpdate.plan(ALL, Scope.ALL));
     }
 
@@ -71,8 +74,8 @@ class DiscardUpdateTest {
     void discardingUnstagedChangesKeepsWhatIsStaged() {
         assertEquals(
                 new DiscardPlan(
-                        List.of("dir/untracked.txt"),
-                        List.of("unstaged.txt", "both.txt", "edited-new.txt"),
+                        List.of(new RepoPath("dir/untracked.txt")),
+                        List.of(new RepoPath("unstaged.txt"), new RepoPath("both.txt"), new RepoPath("edited-new.txt")),
                         List.of(),
                         List.of()),
                 DiscardUpdate.plan(ALL, Scope.UNSTAGED));
@@ -80,13 +83,13 @@ class DiscardUpdateTest {
 
     @Test
     void discardingARenameRemovesItAndRestoresItsOrigin() {
-        List<FileEntry> renamed = List.of(FileEntry.renamed("b.txt", "a.txt", true, true));
+        List<FileEntry> renamed = List.of(FileEntry.renamed(new RepoPath("b.txt"), new RepoPath("a.txt"), true, true));
 
         assertEquals(
-                new DiscardPlan(List.of(), List.of(), List.of("a.txt"), List.of("b.txt")),
+                new DiscardPlan(List.of(), List.of(), List.of(new RepoPath("a.txt")), List.of(new RepoPath("b.txt"))),
                 DiscardUpdate.plan(renamed, Scope.ALL));
         assertEquals(
-                new DiscardPlan(List.of(), List.of("b.txt"), List.of(), List.of()),
+                new DiscardPlan(List.of(), List.of(new RepoPath("b.txt")), List.of(), List.of()),
                 DiscardUpdate.plan(renamed, Scope.UNSTAGED));
     }
 

@@ -67,8 +67,9 @@ public final class ListedFiles {
      * when there is none.
      */
     public static <T extends Pathed> List<T> matching(List<T> files, Option<String> filter) {
-        return filter.map(typed -> files.filter(file -> ListFilter.matches(Option.of(typed), file.path())
-                        || file.origin().exists(origin -> ListFilter.matches(Option.of(typed), origin))))
+        return filter.map(typed -> files.filter(file -> ListFilter.matches(
+                                Option.of(typed), file.path().value())
+                        || file.origin().exists(origin -> ListFilter.matches(Option.of(typed), origin.value()))))
                 .getOrElse(files);
     }
 }

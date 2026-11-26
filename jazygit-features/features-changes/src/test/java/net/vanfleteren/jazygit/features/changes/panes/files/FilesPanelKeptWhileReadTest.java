@@ -10,6 +10,7 @@ import java.time.Instant;
 import java.util.concurrent.atomic.AtomicReference;
 import net.vanfleteren.jazygit.core.git.model.ChangeType;
 import net.vanfleteren.jazygit.core.git.model.CommitFile;
+import net.vanfleteren.jazygit.core.repo.RepoPath;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.kernel.state.Loadable;
 import net.vanfleteren.jazygit.kernel.state.Model;
@@ -37,7 +38,7 @@ class FilesPanelKeptWhileReadTest {
     private static final CommitFilesView FIRST = CommitFilesView.of(
                     new Changes.OfCommit(new Sha("aaaa")), Scopes.COMMITS.pane(), FilesPanel.PANE)
             .withFollowed(true)
-            .withFiles(new Loadable.Loaded<>(List.of(new CommitFile("a.txt", ChangeType.MODIFIED))));
+            .withFiles(new Loadable.Loaded<>(List.of(new CommitFile(new RepoPath("a.txt"), ChangeType.MODIFIED))));
 
     private static Model listing(CommitFilesView view) {
         return TestModels.loaded()
@@ -80,7 +81,7 @@ class FilesPanelKeptWhileReadTest {
     @Test
     void manyFilesAreCountedAndEnterListsThem() throws Exception {
         List<CommitFile> many = List.range(0, CommitFilesView.FOLLOWED_LIMIT + 1)
-                .map(i -> new CommitFile("f" + i + ".txt", ChangeType.MODIFIED));
+                .map(i -> new CommitFile(new RepoPath("f" + i + ".txt"), ChangeType.MODIFIED));
         Model model = listing(FIRST.withFiles(new Loadable.Loaded<>(many)));
         java.util.List<Msg> sent = new java.util.ArrayList<>();
         FilesPanel panel = new FilesPanel(sent::add, () -> {});
@@ -100,7 +101,7 @@ class FilesPanelKeptWhileReadTest {
     @Test
     void enterListsNothingOnceTheCountedFilesGiveWayToARowWithNoneToList() throws Exception {
         List<CommitFile> many = List.range(0, CommitFilesView.FOLLOWED_LIMIT + 1)
-                .map(i -> new CommitFile("f" + i + ".txt", ChangeType.MODIFIED));
+                .map(i -> new CommitFile(new RepoPath("f" + i + ".txt"), ChangeType.MODIFIED));
         Model counted = listing(FIRST.withFiles(new Loadable.Loaded<>(many)));
         // A group of branches highlighted next: it has no files to list (ADR 141).
         Model unlisted = TestModels.loaded()

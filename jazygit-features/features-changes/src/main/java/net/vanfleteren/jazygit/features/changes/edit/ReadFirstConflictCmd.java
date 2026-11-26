@@ -3,6 +3,7 @@ package net.vanfleteren.jazygit.features.changes.edit;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.core.git.model.MarkedFile;
+import net.vanfleteren.jazygit.core.repo.RepoPath;
 import net.vanfleteren.jazygit.kernel.state.Cmd;
 import net.vanfleteren.jazygit.kernel.state.Env;
 import net.vanfleteren.jazygit.kernel.state.Failure;
@@ -26,7 +27,7 @@ public record ReadFirstConflictCmd(String path, Option<Phrase> title) implements
     public Msg run(Env env) {
         return env.git()
                 .index()
-                .markers(List.of(path))
+                .markers(List.of(new RepoPath(path)))
                 .fold(
                         error -> failed(Failure.of(error)),
                         marked -> new EditMsg.FirstConflictRead(path, first(marked), title));

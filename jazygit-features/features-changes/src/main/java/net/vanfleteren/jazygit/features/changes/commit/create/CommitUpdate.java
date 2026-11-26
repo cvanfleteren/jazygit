@@ -4,6 +4,7 @@ import io.vavr.collection.List;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.core.git.model.FileEntry;
 import net.vanfleteren.jazygit.core.process.ExecutedCommand;
+import net.vanfleteren.jazygit.core.repo.RepoPath;
 import net.vanfleteren.jazygit.features.changes.commit.CommitError;
 import net.vanfleteren.jazygit.features.changes.commit.create.CommitMsg.*;
 import net.vanfleteren.jazygit.features.changes.commit.create.CreateCommitCmd.StageForCommit;
@@ -43,7 +44,7 @@ public final class CommitUpdate {
     }
 
     private static Next stageAllConfirmed(Model model) {
-        List<String> paths = FileEntry.paths(model.repo().files().getOrElse(List.empty()), FileEntry::unstaged);
+        List<RepoPath> paths = FileEntry.paths(model.repo().files().getOrElse(List.empty()), FileEntry::unstaged);
         return PopupUpdate.confirm(model, StageAllPopup.class, popup -> Option.of(new StageForCommit(paths)));
     }
 }

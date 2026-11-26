@@ -7,6 +7,7 @@ import io.vavr.control.Option;
 import net.vanfleteren.jazygit.core.git.model.DiffFilter.Problem;
 import net.vanfleteren.jazygit.core.git.model.DiffFiltering.HunkStart;
 import net.vanfleteren.jazygit.core.git.model.UnifiedDiff.Hunk;
+import net.vanfleteren.jazygit.core.repo.RepoPath;
 import org.junit.jupiter.api.Test;
 
 class DiffFilteringTest {
@@ -82,9 +83,9 @@ class DiffFilteringTest {
     void aFilterAppliesByLanguageOrByPath() {
         List<DiffFilter> all = List.of(IMPORTS, COPYRIGHT, LOCKFILES);
 
-        assertEquals(List.of(IMPORTS, COPYRIGHT), DiffFiltering.applying(all, "src/A.java"));
-        assertEquals(List.of(COPYRIGHT, LOCKFILES), DiffFiltering.applying(all, "web/yarn.lock"));
-        assertEquals(List.of(COPYRIGHT), DiffFiltering.applying(all, "a.kt"));
+        assertEquals(List.of(IMPORTS, COPYRIGHT), DiffFiltering.applying(all, new RepoPath("src/A.java")));
+        assertEquals(List.of(COPYRIGHT, LOCKFILES), DiffFiltering.applying(all, new RepoPath("web/yarn.lock")));
+        assertEquals(List.of(COPYRIGHT), DiffFiltering.applying(all, new RepoPath("a.kt")));
     }
 
     @Test

@@ -9,6 +9,7 @@ import net.vanfleteren.jazygit.core.git.model.CommitFile;
 import net.vanfleteren.jazygit.core.git.model.DiffOptions;
 import net.vanfleteren.jazygit.core.git.model.DiffText;
 import net.vanfleteren.jazygit.core.git.model.FileVersion;
+import net.vanfleteren.jazygit.core.repo.RepoPath;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.kernel.state.AreaId;
 import net.vanfleteren.jazygit.kernel.state.Loadable;
@@ -29,7 +30,7 @@ class RepoViewTest {
             new Sha("5555"),
             DiffText.of("diff --git a/a.txt b/a.txt\n--- a/a.txt\n+++ b/a.txt\n@@ -1 +1 @@\n-a\n+A\n"));
     private static final Version VERSION =
-            new Version(CONTENT, "a.txt", Option.of(FileVersion.NEW), read().file(), Loadable.loading());
+            new Version(CONTENT, new RepoPath("a.txt"), Option.of(FileVersion.NEW), read().file(), Loadable.loading());
     private static final Expansion EXPANSION = Expansion.of(CONTENT);
 
     @Test
@@ -83,8 +84,8 @@ class RepoViewTest {
                 AreaId.STASH,
                 CONTENT,
                 new WholeFile.Source.OfStash(
-                        new Sha("5555"), new CommitFile("a.txt", ChangeType.MODIFIED, Option.none())),
-                "a.txt",
+                        new Sha("5555"), new CommitFile(new RepoPath("a.txt"), ChangeType.MODIFIED, Option.none())),
+                new RepoPath("a.txt"),
                 DiffOptions.DEFAULT);
     }
 }

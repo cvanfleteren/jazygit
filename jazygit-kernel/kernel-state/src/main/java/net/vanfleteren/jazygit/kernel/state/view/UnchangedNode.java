@@ -1,6 +1,7 @@
 package net.vanfleteren.jazygit.kernel.state.view;
 
 import net.vanfleteren.jazygit.core.git.model.FileContent;
+import net.vanfleteren.jazygit.core.repo.RepoPath;
 
 /**
  * A node of the files pane, listing all files of the working tree, with no changes under it (ADR 108): the content
@@ -11,10 +12,10 @@ public sealed interface UnchangedNode {
     /**
      * The file whose path is the key of {@code content}, and what it holds on disk, once read.
      */
-    record File(Preview<String, FileContent> content) implements UnchangedNode {}
+    record File(Preview<RepoPath, FileContent> content) implements UnchangedNode {}
 
     /**
      * The directory at {@code path}, the root when it is empty, which holds {@code files} files shown.
      */
-    record Directory(String path, int files) implements UnchangedNode {}
+    record Directory(RepoPath path, int files) implements UnchangedNode {}
 }

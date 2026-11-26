@@ -5,6 +5,7 @@ import io.vavr.control.Option;
 import java.util.function.Consumer;
 import net.vanfleteren.jazygit.core.git.model.InProgressAction;
 import net.vanfleteren.jazygit.core.repo.InProgress;
+import net.vanfleteren.jazygit.core.repo.RepoPath;
 import net.vanfleteren.jazygit.features.midway.plan.content.PlanRows;
 import net.vanfleteren.jazygit.kernel.state.Msg;
 import net.vanfleteren.jazygit.kernel.ui.PopupSlot;
@@ -89,7 +90,7 @@ public final class InProgressDialogs {
                 ? does
                 : Messages.get(
                                 "midway.dialog.inProgress.marked",
-                                popup.marked().mkString(", "),
+                                popup.marked().map(RepoPath::value).mkString(", "),
                                 popup.marked().size())
                         + " " + does;
     }

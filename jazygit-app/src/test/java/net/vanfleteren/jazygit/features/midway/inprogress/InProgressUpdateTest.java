@@ -14,6 +14,7 @@ import net.vanfleteren.jazygit.core.git.model.RepoStatus;
 import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.Head;
 import net.vanfleteren.jazygit.core.repo.InProgress;
+import net.vanfleteren.jazygit.core.repo.RepoPath;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.features.branches.branch.checkout.CheckoutMsg;
 import net.vanfleteren.jazygit.kernel.state.Model;
@@ -33,7 +34,7 @@ class InProgressUpdateTest {
     private static final InProgress REBASING =
             new InProgress.Rebasing(Option.of(new BranchName("feature")), new Sha("aaaa"), 1, 2);
     private static final FileEntry CONFLICTED =
-            FileEntry.conflicted("a.txt", new Conflict(Conflict.Side.UPDATED, Conflict.Side.UPDATED));
+            FileEntry.conflicted(new RepoPath("a.txt"), new Conflict(Conflict.Side.UPDATED, Conflict.Side.UPDATED));
 
     /**
      * The sample model, with the repository in the middle of {@code inProgress}, and {@code files} changed.
@@ -56,24 +57,30 @@ class InProgressUpdateTest {
     @Test
     void withFilesResolvedTheyAreReadForConflictMarkersFirst() {
         RepoStatus status = new RepoStatus(
-                new Head.Detached(new Sha("bbbb")), List.of(), Option.of(REBASING), List.of("b.txt", "c.txt"));
+                new Head.Detached(new Sha("bbbb")),
+                List.of(),
+                Option.of(REBASING),
+                List.of(new RepoPath("b.txt"), new RepoPath("c.txt")));
         Model model = Update.update(TestModels.loaded(), new LoadMsg.StatusLoaded(status))
                 .model();
 
         Next next = Update.update(model, new InProgressMsg.Requested());
 
         assertEquals(Option.none(), next.model().popup(InProgressPopup.class));
-        assertEquals(List.of(new ReadResolvedMarkersCmd(List.of("b.txt", "c.txt"))), next.cmds());
+        assertEquals(
+                List.of(new ReadResolvedMarkersCmd(List.of(new RepoPath("b.txt"), new RepoPath("c.txt")))),
+                next.cmds());
     }
 
     @Test
     void theFilesResolvedWithMarkersLeftAreAskedWith() {
         Model model = inMiddleOf(Option.of(REBASING), List.of());
 
-        Next next = Update.update(model, new InProgressMsg.MarkersRead(List.of(new MarkedFile("b.txt", List.of(3)))));
+        Next next = Update.update(
+                model, new InProgressMsg.MarkersRead(List.of(new MarkedFile(new RepoPath("b.txt"), List.of(3)))));
 
         assertEquals(
-                Option.of(new InProgressPopup(REBASING, 0, List.of("b.txt"))),
+                Option.of(new InProgressPopup(REBASING, 0, List.of(new RepoPath("b.txt")))),
                 next.model().popup(InProgressPopup.class));
     }
 

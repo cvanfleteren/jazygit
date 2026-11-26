@@ -14,6 +14,7 @@ import net.vanfleteren.jazygit.core.repo.BranchRef;
 import net.vanfleteren.jazygit.core.repo.Commit;
 import net.vanfleteren.jazygit.core.repo.Divergence;
 import net.vanfleteren.jazygit.core.repo.RemoteBranch;
+import net.vanfleteren.jazygit.core.repo.RepoPath;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.core.repo.Upstream;
 import net.vanfleteren.jazygit.features.branches.branch.commits.BranchCommitsMsg;
@@ -145,7 +146,7 @@ class StandardContentGitHubTest {
         return TestModels.loaded()
                 .mapRepoView(view -> view.mapFiles(files -> files.withShown(FilesShown.ALL))
                         .mapFiles(files -> files.withUnchanged(Option.of(new UnchangedNode.File(new Preview<>(
-                                "README.md",
+                                new RepoPath("README.md"),
                                 new Loadable.Loaded<>(new FileContent.Text(DiffText.of("# Title\n")))))))));
     }
 

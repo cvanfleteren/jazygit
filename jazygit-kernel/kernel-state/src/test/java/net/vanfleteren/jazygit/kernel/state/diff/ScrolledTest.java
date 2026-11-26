@@ -9,6 +9,7 @@ import net.vanfleteren.jazygit.core.git.model.CommitFile;
 import net.vanfleteren.jazygit.core.git.model.DiffText;
 import net.vanfleteren.jazygit.core.repo.PrNumber;
 import net.vanfleteren.jazygit.core.repo.PullRequestCommits;
+import net.vanfleteren.jazygit.core.repo.RepoPath;
 import net.vanfleteren.jazygit.core.repo.RepoSlug;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.kernel.state.AreaId;
@@ -54,12 +55,12 @@ class ScrolledTest {
     @Test
     void theSameChangesReadAgainKeepTheCursorFromTheTopButNotItsRange() {
         Changes of = new Changes.OfCommit(new Sha("aaaa"));
-        List<CommitFile> files = List.of(new CommitFile("a.txt", ChangeType.MODIFIED, Option.none()));
+        List<CommitFile> files = List.of(new CommitFile(new RepoPath("a.txt"), ChangeType.MODIFIED, Option.none()));
         ScrolledContent before = new ScrolledContent.FileChanges(of, files, DiffText.of("+a\n"));
         ScrolledContent again = new ScrolledContent.FileChanges(of, files, DiffText.of("+b\n"));
         ScrolledContent other =
                 new ScrolledContent.FileChanges(new Changes.OfCommit(new Sha("bbbb")), files, DiffText.of("+b\n"));
-        Option<Anchor> cursor = Option.of(new Anchor.File("a.txt"));
+        Option<Anchor> cursor = Option.of(new Anchor.File(new RepoPath("a.txt")));
         Model at = Update.update(
                         TestModels.loaded(),
                         new ViewMsg.ContentScrolled(AREA, new Scrolled(before, 5, 2, cursor, cursor)))
@@ -73,11 +74,11 @@ class ScrolledTest {
 
     @Test
     void aPullRequestForcePushedIsTheSameChangesSoItsCursorStays() {
-        List<CommitFile> files = List.of(new CommitFile("a.txt", ChangeType.MODIFIED, Option.none()));
+        List<CommitFile> files = List.of(new CommitFile(new RepoPath("a.txt"), ChangeType.MODIFIED, Option.none()));
         ScrolledContent before = new ScrolledContent.FileChanges(pullRequest(7, "aaaa"), files, DiffText.of("+a\n"));
         ScrolledContent pushed = new ScrolledContent.FileChanges(pullRequest(7, "bbbb"), files, DiffText.of("+b\n"));
         ScrolledContent another = new ScrolledContent.FileChanges(pullRequest(8, "aaaa"), files, DiffText.of("+a\n"));
-        Option<Anchor> cursor = Option.of(new Anchor.File("a.txt"));
+        Option<Anchor> cursor = Option.of(new Anchor.File(new RepoPath("a.txt")));
         Model at = Update.update(
                         TestModels.loaded(),
                         new ViewMsg.ContentScrolled(AREA, new Scrolled(before, 5, 2, cursor, Option.none())))

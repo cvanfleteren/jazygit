@@ -6,6 +6,7 @@ import dev.tamboui.toolkit.app.ToolkitTestRunner;
 import io.vavr.collection.List;
 import net.vanfleteren.jazygit.core.git.model.ChangeType;
 import net.vanfleteren.jazygit.core.git.model.FileEntry;
+import net.vanfleteren.jazygit.core.repo.RepoPath;
 import net.vanfleteren.jazygit.kernel.state.Loadable;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.TestModels;
@@ -22,7 +23,8 @@ class FilesPanelTreeLayoutTest {
     private final FilesPanel panel = new FilesPanel(msg -> {}, () -> {});
 
     private static Model changed(String... paths) {
-        List<FileEntry> files = List.of(paths).map(path -> new FileEntry(path, ChangeType.MODIFIED, false, true));
+        List<FileEntry> files =
+                List.of(paths).map(path -> new FileEntry(new RepoPath(path), ChangeType.MODIFIED, false, true));
         return TestModels.loaded()
                 .mapRepo(repo -> repo.withStatus(repo.status().map(status -> status.withFiles(files))));
     }

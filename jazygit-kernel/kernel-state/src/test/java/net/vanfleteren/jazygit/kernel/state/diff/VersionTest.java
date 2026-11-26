@@ -13,6 +13,7 @@ import net.vanfleteren.jazygit.core.git.model.CommitFile;
 import net.vanfleteren.jazygit.core.git.model.DiffOptions;
 import net.vanfleteren.jazygit.core.git.model.DiffText;
 import net.vanfleteren.jazygit.core.git.model.FileVersion;
+import net.vanfleteren.jazygit.core.repo.RepoPath;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.kernel.state.AreaId;
 import net.vanfleteren.jazygit.kernel.state.Loadable;
@@ -44,7 +45,11 @@ class VersionTest {
     @Test
     void aDiffOfTheWorkingTreeHoldsForAnotherDiffOfTheSameFile() {
         Version version = new Version(
-                new ScrolledContent.Diff(CHANGES), "a.txt", Option.none(), read().file(), Loadable.loading());
+                new ScrolledContent.Diff(CHANGES),
+                new RepoPath("a.txt"),
+                Option.none(),
+                read().file(),
+                Loadable.loading());
 
         assertTrue(version.holdsFor(new ScrolledContent.Diff(DiffText.of(CHANGES.text() + " four\n"))));
         assertFalse(version.holdsFor(
@@ -69,7 +74,7 @@ class VersionTest {
                         .head()
                         .lines()
                         .map(line -> line.line().text()));
-        assertEquals(Expansion.Fold.of(FileVersion.NEW, false, 1), shown.fold("a.txt"));
+        assertEquals(Expansion.Fold.of(FileVersion.NEW, false, 1), shown.fold(new RepoPath("a.txt")));
         assertSame(diff, version(Option.none(), new Loadable.Loaded<>(WHOLE)).applied(diff));
     }
 
@@ -78,13 +83,16 @@ class VersionTest {
         Version version = version(Option.of(FileVersion.ORIGINAL), new Loadable.Loaded<>(WHOLE));
 
         assertEquals(
-                new Anchor.OnLine("a.txt", DiffSide.OLD, 3),
-                version.moved(new Anchor.OnLine("a.txt", DiffSide.NEW, 4), Option.of(FileVersion.ORIGINAL)));
+                new Anchor.OnLine(new RepoPath("a.txt"), DiffSide.OLD, 3),
+                version.moved(
+                        new Anchor.OnLine(new RepoPath("a.txt"), DiffSide.NEW, 4), Option.of(FileVersion.ORIGINAL)));
         // A line in both stays, and what is no line, or of another file, too.
-        Anchor.OnLine two = new Anchor.OnLine("a.txt", DiffSide.NEW, 2);
+        Anchor.OnLine two = new Anchor.OnLine(new RepoPath("a.txt"), DiffSide.NEW, 2);
         assertEquals(two, version.moved(two, Option.of(FileVersion.ORIGINAL)));
-        assertEquals(new Anchor.File("a.txt"), version.moved(new Anchor.File("a.txt"), Option.of(FileVersion.NEW)));
-        Anchor.OnLine other = new Anchor.OnLine("b.txt", DiffSide.OLD, 1);
+        assertEquals(
+                new Anchor.File(new RepoPath("a.txt")),
+                version.moved(new Anchor.File(new RepoPath("a.txt")), Option.of(FileVersion.NEW)));
+        Anchor.OnLine other = new Anchor.OnLine(new RepoPath("b.txt"), DiffSide.OLD, 1);
         assertEquals(other, version.moved(other, Option.of(FileVersion.NEW)));
     }
 
@@ -93,8 +101,8 @@ class VersionTest {
         Version version = version(Option.of(FileVersion.NEW), new Loadable.Loaded<>(WHOLE));
 
         assertEquals(
-                new Anchor.OnLine("a.txt", DiffSide.NEW, 1),
-                version.moved(new Anchor.Gap("a.txt", 1, Option.of(2)), Option.of(FileVersion.NEW)));
+                new Anchor.OnLine(new RepoPath("a.txt"), DiffSide.NEW, 1),
+                version.moved(new Anchor.Gap(new RepoPath("a.txt"), 1, Option.of(2)), Option.of(FileVersion.NEW)));
     }
 
     @Test
@@ -103,7 +111,7 @@ class VersionTest {
                         new AreaId("a"),
                         CONTENT,
                         read().source(),
-                        "a.txt",
+                        new RepoPath("a.txt"),
                         DiffOptions.DEFAULT.withIgnoreWhitespace(true))
                 .options()
                 .ignoreWhitespace());
@@ -111,14 +119,14 @@ class VersionTest {
 
     @Test
     void theLinesOfACommitOrOfTheThreeCommitsOfAStashAreItsOwn() {
-        CommitFile file = new CommitFile("a.txt", ChangeType.MODIFIED, Option.none());
+        CommitFile file = new CommitFile(new RepoPath("a.txt"), ChangeType.MODIFIED, Option.none());
         Sha commit = new Sha("c".repeat(40));
         Sha stash = new Sha("5".repeat(40));
         Blame.Commit index = blamedOn('2', "index on main: 1234567 base");
         Blame.Commit untracked = blamedOn('3', "untracked files on main: 1234567 base");
         Blame.Commit older = blamedOn('1', "an older commit");
-        Blame blame =
-                new Blame(Vector.of(index, untracked, older).map(on -> new Blame.Line(on, 1, "a.txt", Option.none())));
+        Blame blame = new Blame(Vector.of(index, untracked, older)
+                .map(on -> new Blame.Line(on, 1, new RepoPath("a.txt"), Option.none())));
 
         assertEquals(HashSet.of(commit), Version.own(new WholeFile.Source.OfCommit(commit, file), Option.none()));
         assertEquals(
@@ -129,8 +137,8 @@ class VersionTest {
                 Version.own(new WholeFile.Source.OfStash(stash, file), Option.of(blame)));
         assertFalse(Version.own(new WholeFile.Source.OfStash(stash, file), Option.of(blame))
                 .contains(older.sha()));
-        assertTrue(
-                Version.own(new WholeFile.Source.OnDisk("a.txt"), Option.none()).isEmpty());
+        assertTrue(Version.own(new WholeFile.Source.OnDisk(new RepoPath("a.txt")), Option.none())
+                .isEmpty());
     }
 
     private static Blame.Commit blamedOn(char digit, String summary) {
@@ -138,7 +146,7 @@ class VersionTest {
     }
 
     private static Version version(Option<FileVersion> shown, Loadable<DiffText> whole) {
-        return new Version(CONTENT, "a.txt", shown, read().file(), whole);
+        return new Version(CONTENT, new RepoPath("a.txt"), shown, read().file(), whole);
     }
 
     private static ReadVersion read() {
@@ -146,8 +154,8 @@ class VersionTest {
                 new AreaId("stash-changes"),
                 CONTENT,
                 new WholeFile.Source.OfStash(
-                        new Sha("5555"), new CommitFile("a.txt", ChangeType.MODIFIED, Option.none())),
-                "a.txt",
+                        new Sha("5555"), new CommitFile(new RepoPath("a.txt"), ChangeType.MODIFIED, Option.none())),
+                new RepoPath("a.txt"),
                 DiffOptions.DEFAULT);
     }
 }

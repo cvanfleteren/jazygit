@@ -48,17 +48,17 @@ class FilesContentViewGitHubTest {
                 new AreaId("stash-changes"),
                 content,
                 new WholeFile.Source.OfStash(
-                        new Sha("5555"), new CommitFile("a.txt", ChangeType.MODIFIED, Option.none())),
-                "a.txt",
+                        new Sha("5555"), new CommitFile(new RepoPath("a.txt"), ChangeType.MODIFIED, Option.none())),
+                new RepoPath("a.txt"),
                 DiffOptions.DEFAULT);
-        return new Version(content, "a.txt", Option.of(FileVersion.NEW), read.file(), Loadable.loading());
+        return new Version(content, new RepoPath("a.txt"), Option.of(FileVersion.NEW), read.file(), Loadable.loading());
     }
 
     @Test
     void whenOnlyTheFilesOfAPullRequestWithRemarksAreListedAndNoneIsTheDiffShownBeforeIsNot() {
         Changes of = new Changes.OfPullRequest(new PullRequestCommits(
                 new PrNumber(7), new RepoSlug("owner/repo"), "", new Sha("b".repeat(40)), new Sha("a".repeat(40))));
-        CommitFile file = new CommitFile("src/a.txt", ChangeType.MODIFIED);
+        CommitFile file = new CommitFile(new RepoPath("src/a.txt"), ChangeType.MODIFIED);
         Model open = Update.update(
                         Update.update(
                                         net.vanfleteren.jazygit.kernel.content.PullRequestContentTest.withGitHub(),

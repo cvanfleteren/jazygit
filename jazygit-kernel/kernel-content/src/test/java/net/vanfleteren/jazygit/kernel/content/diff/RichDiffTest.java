@@ -20,6 +20,7 @@ import java.util.stream.Collectors;
 import net.vanfleteren.jazygit.core.git.model.FileVersion;
 import net.vanfleteren.jazygit.core.git.model.ParsedDiff;
 import net.vanfleteren.jazygit.core.git.model.WordDiff.Segment;
+import net.vanfleteren.jazygit.core.repo.RepoPath;
 import net.vanfleteren.jazygit.kernel.state.diff.Anchor;
 import net.vanfleteren.jazygit.kernel.state.diff.DiffSide;
 import net.vanfleteren.jazygit.kernel.state.diff.DiffStops;
@@ -85,9 +86,9 @@ class RichDiffTest {
                 +TEN
                 """);
         Expansion.Folded known = new Expansion.Folded(
-                diff, HashMap.of("a.txt", new Expansion.Fold(Option.of(12), Expansion.Read.WHOLE)));
+                diff, HashMap.of(new RepoPath("a.txt"), new Expansion.Fold(Option.of(12), Expansion.Read.WHOLE)));
         Expansion.Folded reading = new Expansion.Folded(
-                diff, HashMap.of("a.txt", new Expansion.Fold(Option.none(), Expansion.Read.READING)));
+                diff, HashMap.of(new RepoPath("a.txt"), new Expansion.Fold(Option.none(), Expansion.Read.READING)));
 
         Drawn drawn = RichDiff.drawn(known, Option.none(), Option.none(), RichDiff.Drawing.of(Theme.SpanStyles.NONE));
 
@@ -101,7 +102,9 @@ class RichDiffTest {
                         "┄┄┄┄┄ │ 2 lines hidden ┄"),
                 text(drawn.lines()).map(String::stripTrailing));
         assertEquals(
-                List.of(new Anchor.Gap("a.txt", 1, Option.of(9)), new Anchor.Gap("a.txt", 11, Option.of(13))),
+                List.of(
+                        new Anchor.Gap(new RepoPath("a.txt"), 1, Option.of(9)),
+                        new Anchor.Gap(new RepoPath("a.txt"), 11, Option.of(13))),
                 drawn.stops().map(stop -> stop.mark().anchor()).filter(Anchor.Gap.class::isInstance));
         assertEquals(
                 List.of("┄┄┄┄┄ │ reading the whole file ┄", "┄┄┄┄┄ │ reading the whole file ┄"),
@@ -123,11 +126,15 @@ class RichDiffTest {
                 """);
         // Read up to line 30: the lines after the last hunk can be shown up to there, and not past it.
         Expansion.Folded beforeTheCut = new Expansion.Folded(
-                diff, HashMap.of("a.txt", new Expansion.Fold(Option.none(), Expansion.Read.CUT, Option.of(30))));
+                diff,
+                HashMap.of(
+                        new RepoPath("a.txt"), new Expansion.Fold(Option.none(), Expansion.Read.CUT, Option.of(30))));
         Expansion.Folded atTheCut = new Expansion.Folded(
-                diff, HashMap.of("a.txt", new Expansion.Fold(Option.none(), Expansion.Read.CUT, Option.of(10))));
+                diff,
+                HashMap.of(
+                        new RepoPath("a.txt"), new Expansion.Fold(Option.none(), Expansion.Read.CUT, Option.of(10))));
         Expansion.Folded tooLong = new Expansion.Folded(
-                diff, HashMap.of("a.txt", new Expansion.Fold(Option.none(), Expansion.Read.TOO_LONG)));
+                diff, HashMap.of(new RepoPath("a.txt"), new Expansion.Fold(Option.none(), Expansion.Read.TOO_LONG)));
 
         assertEquals(List.of("┄┄┄┄┄ │ 8 lines hidden ┄", "┄┄┄┄┄ │ more ┄"), markers(beforeTheCut));
         assertEquals(
@@ -299,12 +306,12 @@ class RichDiffTest {
                 text(drawn.lines()).map(String::stripTrailing));
         assertEquals(
                 List.of(
-                        new Anchor.OnLine("pom.xml", DiffSide.OLD, 44),
-                        new Anchor.OnLine("pom.xml", DiffSide.NEW, 44),
-                        new Anchor.OnLine("pom.xml", DiffSide.OLD, 45),
-                        new Anchor.OnLine("pom.xml", DiffSide.NEW, 45),
-                        new Anchor.OnLine("pom.xml", DiffSide.OLD, 46),
-                        new Anchor.OnLine("pom.xml", DiffSide.NEW, 46)),
+                        new Anchor.OnLine(new RepoPath("pom.xml"), DiffSide.OLD, 44),
+                        new Anchor.OnLine(new RepoPath("pom.xml"), DiffSide.NEW, 44),
+                        new Anchor.OnLine(new RepoPath("pom.xml"), DiffSide.OLD, 45),
+                        new Anchor.OnLine(new RepoPath("pom.xml"), DiffSide.NEW, 45),
+                        new Anchor.OnLine(new RepoPath("pom.xml"), DiffSide.OLD, 46),
+                        new Anchor.OnLine(new RepoPath("pom.xml"), DiffSide.NEW, 46)),
                 drawn.stops()
                         .map(stop -> stop.mark().anchor())
                         .filter(anchor ->
@@ -332,12 +339,12 @@ class RichDiffTest {
                         .map(String::stripTrailing));
         assertEquals(
                 List.of(
-                        new Anchor.OnLine("pom.xml", DiffSide.OLD, 44),
-                        new Anchor.OnLine("pom.xml", DiffSide.OLD, 45),
-                        new Anchor.OnLine("pom.xml", DiffSide.OLD, 46),
-                        new Anchor.OnLine("pom.xml", DiffSide.NEW, 44),
-                        new Anchor.OnLine("pom.xml", DiffSide.NEW, 45),
-                        new Anchor.OnLine("pom.xml", DiffSide.NEW, 46)),
+                        new Anchor.OnLine(new RepoPath("pom.xml"), DiffSide.OLD, 44),
+                        new Anchor.OnLine(new RepoPath("pom.xml"), DiffSide.OLD, 45),
+                        new Anchor.OnLine(new RepoPath("pom.xml"), DiffSide.OLD, 46),
+                        new Anchor.OnLine(new RepoPath("pom.xml"), DiffSide.NEW, 44),
+                        new Anchor.OnLine(new RepoPath("pom.xml"), DiffSide.NEW, 45),
+                        new Anchor.OnLine(new RepoPath("pom.xml"), DiffSide.NEW, 46)),
                 drawn.stops()
                         .map(stop -> stop.mark().anchor())
                         .filter(anchor ->

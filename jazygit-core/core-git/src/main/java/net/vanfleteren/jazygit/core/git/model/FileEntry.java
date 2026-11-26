@@ -3,6 +3,7 @@ package net.vanfleteren.jazygit.core.git.model;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.util.function.Predicate;
+import net.vanfleteren.jazygit.core.repo.RepoPath;
 
 /**
  * A single file entry as it would appear in {@code git status}.
@@ -13,22 +14,22 @@ import java.util.function.Predicate;
  * @param origin   the path a {@link ChangeType#RENAMED} file was moved from
  */
 public record FileEntry(
-        String path,
+        RepoPath path,
         ChangeType type,
         boolean staged,
         boolean unstaged,
         Option<Conflict> conflict,
-        Option<String> origin)
+        Option<RepoPath> origin)
         implements Pathed {
 
-    public FileEntry(String path, ChangeType type, boolean staged, boolean unstaged) {
+    public FileEntry(RepoPath path, ChangeType type, boolean staged, boolean unstaged) {
         this(path, type, staged, unstaged, Option.none(), Option.none());
     }
 
     /**
      * A file that is in conflict; it is not staged until the conflict is resolved.
      */
-    public static FileEntry conflicted(String path, Conflict conflict) {
+    public static FileEntry conflicted(RepoPath path, Conflict conflict) {
         return new FileEntry(path, ChangeType.CONFLICTED, false, true, Option.of(conflict), Option.none());
     }
 
@@ -36,14 +37,14 @@ public record FileEntry(
      * A file moved from {@code origin} to {@code path}. The rename itself is staged unless only intent-to-add
      * of {@code path} is.
      */
-    public static FileEntry renamed(String path, String origin, boolean staged, boolean unstaged) {
+    public static FileEntry renamed(RepoPath path, RepoPath origin, boolean staged, boolean unstaged) {
         return new FileEntry(path, ChangeType.RENAMED, staged, unstaged, Option.none(), Option.of(origin));
     }
 
     /**
      * A file of the working tree that has no changes, listed with all its files (ADR 108).
      */
-    public static FileEntry unchanged(String path) {
+    public static FileEntry unchanged(RepoPath path) {
         return new FileEntry(path, ChangeType.UNCHANGED, false, false);
     }
 
@@ -58,7 +59,7 @@ public record FileEntry(
     /**
      * The paths of the {@code files} that {@code which} picks.
      */
-    public static List<String> paths(List<FileEntry> files, Predicate<? super FileEntry> which) {
+    public static List<RepoPath> paths(List<FileEntry> files, Predicate<? super FileEntry> which) {
         return files.filter(which).map(FileEntry::path);
     }
 
@@ -66,7 +67,7 @@ public record FileEntry(
      * The paths that the staged change ({@code stagedSide}) or the unstaged change of this file touches:
      * a rename also touches its origin, on the side that holds the rename.
      */
-    public List<String> paths(boolean stagedSide) {
+    public List<RepoPath> paths(boolean stagedSide) {
         return origin.filter(o -> stagedSide == staged).toList().append(path);
     }
 

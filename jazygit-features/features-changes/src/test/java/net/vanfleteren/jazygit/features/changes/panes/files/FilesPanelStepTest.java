@@ -8,6 +8,7 @@ import io.vavr.control.Option;
 import net.vanfleteren.jazygit.core.git.model.ChangeType;
 import net.vanfleteren.jazygit.core.git.model.FileEntry;
 import net.vanfleteren.jazygit.core.git.model.FileTree;
+import net.vanfleteren.jazygit.core.repo.RepoPath;
 import net.vanfleteren.jazygit.kernel.state.Loadable;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.TestModels;
@@ -25,11 +26,13 @@ import org.junit.jupiter.api.Test;
  */
 class FilesPanelStepTest {
 
-    private static final FileEntry CHANGED = new FileEntry("src/main/A.java", ChangeType.MODIFIED, false, true);
+    private static final FileEntry CHANGED =
+            new FileEntry(new RepoPath("src/main/A.java"), ChangeType.MODIFIED, false, true);
     // All nodes, depth first: /, docs/guide, intro.md, src/main, A.java, B.java, README.md. docs/guide starts
     // collapsed, as it holds no changes.
-    private static final List<String> ALL =
-            List.of("README.md", "docs/guide/intro.md", "src/main/A.java", "src/main/B.java");
+    private static final List<RepoPath> ALL = List.of(
+                    "README.md", "docs/guide/intro.md", "src/main/A.java", "src/main/B.java")
+            .map(RepoPath::new);
 
     private final FilesPanel panel = new FilesPanel(msg -> {}, () -> {});
 
@@ -72,7 +75,7 @@ class FilesPanelStepTest {
 
             assertTrue(panel.step(model, Step.NEXT));
             assertEquals(
-                    Option.of(new SelectionMsg.UnchangedFileSelected("docs/guide/intro.md")),
+                    Option.of(new SelectionMsg.UnchangedFileSelected(new RepoPath("docs/guide/intro.md"))),
                     panel.selectionChange(model));
             String opened = RenderedText.ofLarge(testRunner, () -> panel.render(model, FilesPanel.PANE));
             assertTrue(opened.contains("intro.md"), opened);
@@ -81,16 +84,22 @@ class FilesPanelStepTest {
             assertEquals(Option.of(new SelectionMsg.FilesSelected(List.of(CHANGED))), panel.selectionChange(model));
             assertTrue(panel.step(model, Step.NEXT));
             assertEquals(
-                    Option.of(new SelectionMsg.UnchangedFileSelected("src/main/B.java")), panel.selectionChange(model));
+                    Option.of(new SelectionMsg.UnchangedFileSelected(new RepoPath("src/main/B.java"))),
+                    panel.selectionChange(model));
             assertTrue(panel.step(model, Step.NEXT));
-            assertEquals(Option.of(new SelectionMsg.UnchangedFileSelected("README.md")), panel.selectionChange(model));
+            assertEquals(
+                    Option.of(new SelectionMsg.UnchangedFileSelected(new RepoPath("README.md"))),
+                    panel.selectionChange(model));
 
             assertFalse(panel.step(model, Step.NEXT));
-            assertEquals(Option.of(new SelectionMsg.UnchangedFileSelected("README.md")), panel.selectionChange(model));
+            assertEquals(
+                    Option.of(new SelectionMsg.UnchangedFileSelected(new RepoPath("README.md"))),
+                    panel.selectionChange(model));
 
             assertTrue(panel.step(model, Step.PREVIOUS));
             assertEquals(
-                    Option.of(new SelectionMsg.UnchangedFileSelected("src/main/B.java")), panel.selectionChange(model));
+                    Option.of(new SelectionMsg.UnchangedFileSelected(new RepoPath("src/main/B.java"))),
+                    panel.selectionChange(model));
             SettledPilot.of(testRunner).quit();
         }
     }
@@ -106,7 +115,7 @@ class FilesPanelStepTest {
             assertEquals(Option.of(new SelectionMsg.FilesSelected(List.of(CHANGED))), panel.selectionChange(filtered));
             assertTrue(panel.step(filtered, Step.NEXT));
             assertEquals(
-                    Option.of(new SelectionMsg.UnchangedFileSelected("src/main/B.java")),
+                    Option.of(new SelectionMsg.UnchangedFileSelected(new RepoPath("src/main/B.java"))),
                     panel.selectionChange(filtered));
             assertFalse(panel.step(filtered, Step.NEXT));
             SettledPilot.of(testRunner).quit();
@@ -114,11 +123,12 @@ class FilesPanelStepTest {
     }
 
     private static FileTree<FileEntry> dir(String path) {
-        return new FileTree.Dir<>(path, path, List.empty());
+        return new FileTree.Dir<>(path, new RepoPath(path), List.empty());
     }
 
     private static FileTree<FileEntry> file(String path) {
         return new FileTree.File<>(
-                path.substring(path.lastIndexOf('/') + 1), new FileEntry(path, ChangeType.MODIFIED, false, true));
+                path.substring(path.lastIndexOf('/') + 1),
+                new FileEntry(new RepoPath(path), ChangeType.MODIFIED, false, true));
     }
 }

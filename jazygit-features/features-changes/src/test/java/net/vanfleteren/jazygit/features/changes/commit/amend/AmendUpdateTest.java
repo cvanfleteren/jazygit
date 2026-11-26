@@ -16,6 +16,7 @@ import net.vanfleteren.jazygit.core.git.model.RepoStatus;
 import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.Commit;
 import net.vanfleteren.jazygit.core.repo.Head;
+import net.vanfleteren.jazygit.core.repo.RepoPath;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.features.changes.commit.amend.AmendTarget.LastCommit;
 import net.vanfleteren.jazygit.features.changes.commit.amend.AmendTarget.Older;
@@ -38,8 +39,8 @@ class AmendUpdateTest {
     private static final Commit TIP = commit("c3", List.of("c2"));
     private static final Commit MERGE = commit("c4", List.of("c3", "x"));
 
-    private static final FileEntry STAGED = new FileEntry("a.txt", ChangeType.MODIFIED, true, false);
-    private static final FileEntry UNSTAGED = new FileEntry("b.txt", ChangeType.MODIFIED, false, true);
+    private static final FileEntry STAGED = new FileEntry(new RepoPath("a.txt"), ChangeType.MODIFIED, true, false);
+    private static final FileEntry UNSTAGED = new FileEntry(new RepoPath("b.txt"), ChangeType.MODIFIED, false, true);
     private static final FileEntry UNTRACKED = Fixtures.fileEntry("c.txt", ChangeType.UNTRACKED);
 
     private static Commit commit(String sha, List<String> parents) {
@@ -174,7 +175,9 @@ class AmendUpdateTest {
 
         Next next = Update.update(stageAll, new AmendMsg.StageAllConfirmed());
 
-        assertEquals(List.of(new AmendCmd(new Older(MIDDLE.sha()), List.of("b.txt", "c.txt"))), next.cmds());
+        assertEquals(
+                List.of(new AmendCmd(new Older(MIDDLE.sha()), List.of(new RepoPath("b.txt"), new RepoPath("c.txt")))),
+                next.cmds());
         assertEquals(Option.none(), next.model().popup(AmendStageAllPopup.class));
     }
 

@@ -16,6 +16,7 @@ import net.vanfleteren.jazygit.core.repo.PrNumber;
 import net.vanfleteren.jazygit.core.repo.PullRequestCommits;
 import net.vanfleteren.jazygit.core.repo.RemoteName;
 import net.vanfleteren.jazygit.core.repo.RemoteUrl;
+import net.vanfleteren.jazygit.core.repo.RepoPath;
 import net.vanfleteren.jazygit.core.repo.RepoSlug;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import org.junit.jupiter.api.Test;
@@ -66,13 +67,13 @@ class CliPullRequestTest {
                 new PullRequestCommits(new PrNumber(1), new RepoSlug("owner/repo"), "", base, head);
 
         assertEquals(
-                List.of(new CommitFile("b.txt", ChangeType.ADDED)),
+                List.of(new CommitFile(new RepoPath("b.txt"), ChangeType.ADDED)),
                 CliPullRequest.files(repo, commits, HashMap.empty()).get());
         String diff = CliGit.open(repo)
                 .get()
                 .diffs()
                 .pullRequestFileChanges(
-                        commits, List.of(new CommitFile("b.txt", ChangeType.ADDED)), DiffOptions.DEFAULT)
+                        commits, List.of(new CommitFile(new RepoPath("b.txt"), ChangeType.ADDED)), DiffOptions.DEFAULT)
                 .get()
                 .text();
         assertTrue(diff.contains("diff --git a/b.txt b/b.txt"), diff);
@@ -92,10 +93,13 @@ class CliPullRequestTest {
         Diffs diffs = CliGit.open(repo).get().diffs();
 
         assertEquals(
-                List.of(new CommitFile("b.txt", ChangeType.ADDED)),
+                List.of(new CommitFile(new RepoPath("b.txt"), ChangeType.ADDED)),
                 diffs.rangeFiles(base, tip).get());
         String diff = diffs.rangeFileChanges(
-                        base, tip, List.of(new CommitFile("b.txt", ChangeType.ADDED)), DiffOptions.DEFAULT)
+                        base,
+                        tip,
+                        List.of(new CommitFile(new RepoPath("b.txt"), ChangeType.ADDED)),
+                        DiffOptions.DEFAULT)
                 .get()
                 .text();
         assertTrue(diff.contains("+b"), diff);
@@ -124,7 +128,7 @@ class CliPullRequestTest {
                 new PullRequestCommits(new PrNumber(7), new RepoSlug("Owner/Repo"), "", base, head);
 
         assertEquals(
-                List.of(new CommitFile("b.txt", ChangeType.ADDED)),
+                List.of(new CommitFile(new RepoPath("b.txt"), ChangeType.ADDED)),
                 CliPullRequest.files(repo, commits, HashMap.empty()).get());
         assertEquals(refs, git(repo, "for-each-ref"));
         assertFalse(Files.exists(repo.resolve(".git").resolve("FETCH_HEAD")));
@@ -159,7 +163,7 @@ class CliPullRequestTest {
                 new PullRequestCommits(new PrNumber(7), new RepoSlug("owner/repo"), "", base, head);
 
         assertEquals(
-                List.of(new CommitFile("b.txt", ChangeType.ADDED)),
+                List.of(new CommitFile(new RepoPath("b.txt"), ChangeType.ADDED)),
                 CliPullRequest.files(repo, commits, HashMap.empty()).get());
         assertEquals(refs, git(repo, "for-each-ref"));
     }

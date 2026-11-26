@@ -6,6 +6,7 @@ import io.vavr.collection.List;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.core.gh.model.ReviewThread.Side;
 import net.vanfleteren.jazygit.core.gh.model.ReviewThread.Subject;
+import net.vanfleteren.jazygit.core.repo.RepoPath;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -15,7 +16,7 @@ class ThreadsByPathTest {
 
     private static ReviewThread thread(String path, String id) {
         return new ReviewThread(
-                path,
+                new RepoPath(path),
                 Side.RIGHT,
                 Option.none(),
                 Option.none(),
@@ -38,14 +39,15 @@ class ThreadsByPathTest {
 
     @Test
     void theThreadsOfAFileAreThoseOnItsPath() {
-        assertEquals(List.of(A), THREADS.on("a.txt", Option.none()));
-        assertEquals(List.empty(), THREADS.on("b.txt", Option.none()));
+        assertEquals(List.of(A), THREADS.on(new RepoPath("a.txt"), Option.none()));
+        assertEquals(List.empty(), THREADS.on(new RepoPath("b.txt"), Option.none()));
     }
 
     @Test
     void aRenamedFileHasTheThreadsOnEitherPathInTheirOrder() {
-        assertEquals(List.of(OLD, NEW, OLD_AGAIN), THREADS.on("new.txt", Option.of("old.txt")));
-        assertEquals(List.of(A), THREADS.on("a.txt", Option.of("a.txt")));
+        assertEquals(
+                List.of(OLD, NEW, OLD_AGAIN), THREADS.on(new RepoPath("new.txt"), Option.of(new RepoPath("old.txt"))));
+        assertEquals(List.of(A), THREADS.on(new RepoPath("a.txt"), Option.of(new RepoPath("a.txt"))));
     }
 
     @Test
@@ -53,8 +55,10 @@ class ThreadsByPathTest {
         List<ReviewThread> all = List.of(OLD, A, NEW, OLD_AGAIN);
 
         assertEquals(
-                all.filter(thread -> thread.isOn("new.txt", Option.of("old.txt"))),
-                THREADS.on("new.txt", Option.of("old.txt")));
-        assertEquals(all.filter(thread -> thread.isOn("a.txt", Option.none())), THREADS.on("a.txt", Option.none()));
+                all.filter(thread -> thread.isOn(new RepoPath("new.txt"), Option.of(new RepoPath("old.txt")))),
+                THREADS.on(new RepoPath("new.txt"), Option.of(new RepoPath("old.txt"))));
+        assertEquals(
+                all.filter(thread -> thread.isOn(new RepoPath("a.txt"), Option.none())),
+                THREADS.on(new RepoPath("a.txt"), Option.none()));
     }
 }

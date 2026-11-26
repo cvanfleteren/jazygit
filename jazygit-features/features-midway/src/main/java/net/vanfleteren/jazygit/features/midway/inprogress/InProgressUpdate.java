@@ -5,6 +5,7 @@ import io.vavr.control.Option;
 import net.vanfleteren.jazygit.core.git.model.InProgressAction;
 import net.vanfleteren.jazygit.core.git.model.MarkedFile;
 import net.vanfleteren.jazygit.core.git.model.RepoStatus;
+import net.vanfleteren.jazygit.core.repo.RepoPath;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.Update.Next;
 import net.vanfleteren.jazygit.kernel.state.operation.OperationUpdate;
@@ -44,7 +45,7 @@ public final class InProgressUpdate {
     /**
      * Asks what to do with it, {@code marked} being the files resolved that still have conflict markers.
      */
-    private static Next ask(Model model, List<String> marked) {
+    private static Next ask(Model model, List<RepoPath> marked) {
         return PopupUpdate.ask(
                 model,
                 model.repo()

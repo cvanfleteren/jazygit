@@ -10,6 +10,7 @@ import net.vanfleteren.jazygit.core.git.history.CliInProgress;
 import net.vanfleteren.jazygit.core.git.model.Conflict;
 import net.vanfleteren.jazygit.core.git.model.MarkedFile;
 import net.vanfleteren.jazygit.core.process.ExecutedCommand;
+import net.vanfleteren.jazygit.core.repo.RepoPath;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -54,8 +55,9 @@ class CliResolveTest {
 
     @Test
     void keepingOursTakesHeadsVersionAndStagesIt() throws Exception {
-        List<String> ran =
-                index.keep("both.txt", BOTH, Conflict.Version.OURS).get().map(ExecutedCommand::line);
+        List<String> ran = index.keep(new RepoPath("both.txt"), BOTH, Conflict.Version.OURS)
+                .get()
+                .map(ExecutedCommand::line);
 
         // In a rebase, ours is what it rebases onto: main.
         assertEquals("a\nMAIN\nc\n", read("both.txt"));
@@ -65,7 +67,7 @@ class CliResolveTest {
 
     @Test
     void keepingTheirsTakesTheOtherVersionAndStagesIt() throws Exception {
-        index.keep("both.txt", BOTH, Conflict.Version.THEIRS);
+        index.keep(new RepoPath("both.txt"), BOTH, Conflict.Version.THEIRS);
 
         assertEquals("a\nFEATURE\nc\n", read("both.txt"));
         assertEquals("M  both.txt\n", git("status", "--porcelain", "--", "both.txt"));
@@ -73,7 +75,7 @@ class CliResolveTest {
 
     @Test
     void keepingTheSideThatDeletedAFileRemovesIt() throws Exception {
-        List<String> ran = index.keep("gone.txt", DELETED_BY_OURS, Conflict.Version.OURS)
+        List<String> ran = index.keep(new RepoPath("gone.txt"), DELETED_BY_OURS, Conflict.Version.OURS)
                 .get()
                 .map(ExecutedCommand::line);
 
@@ -84,7 +86,7 @@ class CliResolveTest {
 
     @Test
     void keepingTheSideThatChangedADeletedFileKeepsIt() throws Exception {
-        index.keep("gone.txt", DELETED_BY_OURS, Conflict.Version.THEIRS);
+        index.keep(new RepoPath("gone.txt"), DELETED_BY_OURS, Conflict.Version.THEIRS);
 
         assertEquals("feature\n", read("gone.txt"));
         assertEquals("both.txt\n", unmerged());
@@ -92,9 +94,9 @@ class CliResolveTest {
 
     @Test
     void aResolvedConflictIsBroughtBack() throws Exception {
-        index.keep("both.txt", BOTH, Conflict.Version.OURS);
+        index.keep(new RepoPath("both.txt"), BOTH, Conflict.Version.OURS);
 
-        List<String> ran = index.restoreConflict("both.txt").get().map(ExecutedCommand::line);
+        List<String> ran = index.restoreConflict(new RepoPath("both.txt")).get().map(ExecutedCommand::line);
 
         assertEquals(List.of("git checkout --merge -- both.txt"), ran);
         assertEquals("both.txt\ngone.txt\n", unmerged());
@@ -106,8 +108,12 @@ class CliResolveTest {
         write("other.txt", "no markers\n=======\nhere\n");
 
         assertEquals(
-                List.of(new MarkedFile("both.txt", List.of(2))),
-                index.markers(List.of("both.txt", "other.txt", "gone.txt", "missing.txt"))
+                List.of(new MarkedFile(new RepoPath("both.txt"), List.of(2))),
+                index.markers(List.of(
+                                new RepoPath("both.txt"),
+                                new RepoPath("other.txt"),
+                                new RepoPath("gone.txt"),
+                                new RepoPath("missing.txt")))
                         .get());
     }
 
@@ -116,9 +122,9 @@ class CliResolveTest {
         CliStatus status = new CliStatus(repo, CliInProgress.markers(repo).get(), Option.none());
         assertEquals(List.empty(), status.read().get().resolved());
 
-        index.keep("both.txt", BOTH, Conflict.Version.THEIRS);
+        index.keep(new RepoPath("both.txt"), BOTH, Conflict.Version.THEIRS);
 
-        assertEquals(List.of("both.txt"), status.read().get().resolved());
+        assertEquals(List.of(new RepoPath("both.txt")), status.read().get().resolved());
         assertEquals(1, status.read().get().conflicts());
     }
 
@@ -143,12 +149,12 @@ class CliResolveTest {
     @Test
     void aConflictBroughtBackIsNoLongerResolved() throws Exception {
         CliStatus status = new CliStatus(repo, CliInProgress.markers(repo).get(), Option.none());
-        index.keep("both.txt", BOTH, Conflict.Version.THEIRS);
-        index.keep("gone.txt", DELETED_BY_OURS, Conflict.Version.OURS);
+        index.keep(new RepoPath("both.txt"), BOTH, Conflict.Version.THEIRS);
+        index.keep(new RepoPath("gone.txt"), DELETED_BY_OURS, Conflict.Version.OURS);
 
-        index.restoreConflict("both.txt");
+        index.restoreConflict(new RepoPath("both.txt"));
 
-        assertEquals(List.of("gone.txt"), status.read().get().resolved());
+        assertEquals(List.of(new RepoPath("gone.txt")), status.read().get().resolved());
     }
 
     private String unmerged() throws Exception {

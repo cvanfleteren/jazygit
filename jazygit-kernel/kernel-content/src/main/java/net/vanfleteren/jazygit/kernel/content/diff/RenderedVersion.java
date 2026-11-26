@@ -13,6 +13,7 @@ import net.vanfleteren.jazygit.core.git.model.ParsedDiff.ParsedFile;
 import net.vanfleteren.jazygit.core.git.model.ParsedDiff.ParsedHunk;
 import net.vanfleteren.jazygit.core.git.model.ParsedDiff.ParsedLine;
 import net.vanfleteren.jazygit.core.git.model.UnifiedDiff.DiffLine;
+import net.vanfleteren.jazygit.core.repo.RepoPath;
 import net.vanfleteren.jazygit.kernel.content.diff.RichDiff.Change;
 import net.vanfleteren.jazygit.kernel.state.diff.Anchor;
 import net.vanfleteren.jazygit.kernel.state.diff.Expansion;
@@ -51,7 +52,7 @@ final class RenderedVersion {
      */
     static List<Marked> of(
             ParsedFile parsed, FileVersion version, Expansion.Fold fold, int width, Theme.SpanStyles styles) {
-        String path = parsed.file().path();
+        RepoPath path = parsed.file().path();
         Vector<DiffLine> lines = parsed.hunks()
                 .flatMap(ParsedHunk::lines)
                 .map(ParsedLine::line)
@@ -118,7 +119,7 @@ final class RenderedVersion {
      * of the file.
      */
     private static List<Marked> tree(Rendered kind, RenderedFile file, Span changed, Span unchanged) {
-        String path = file.path();
+        RepoPath path = file.path();
         Vector<DiffLine> lines = file.lines();
         Expansion.Fold fold = file.fold();
         int width = file.width();
@@ -207,7 +208,7 @@ final class RenderedVersion {
      * The anchors {@code line} of a version rendered is placed by: its own, then for a context line the one by its
      * number in the old file, which {@code :} goes to in the original (ADR 140).
      */
-    private static List<Anchor> placedBy(String path, DiffLine line) {
+    private static List<Anchor> placedBy(RepoPath path, DiffLine line) {
         return Anchor.of(path, line)
                 .<Anchor>map(anchor -> anchor)
                 .toList()
@@ -220,5 +221,10 @@ final class RenderedVersion {
      * the theme (ADR 103).
      */
     private record RenderedFile(
-            String path, Vector<DiffLine> lines, Expansion.Fold fold, int width, int tinted, Theme.SpanStyles styles) {}
+            RepoPath path,
+            Vector<DiffLine> lines,
+            Expansion.Fold fold,
+            int width,
+            int tinted,
+            Theme.SpanStyles styles) {}
 }

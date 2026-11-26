@@ -6,6 +6,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import net.vanfleteren.jazygit.core.git.model.UnifiedDiff.DiffLine;
 import net.vanfleteren.jazygit.core.git.model.UnifiedDiff.Hunk;
+import net.vanfleteren.jazygit.core.repo.RepoPath;
 
 /**
  * Which hunks of a diff its filters hide (ADR 144). A hunk is hidden when each of its added and removed lines matches
@@ -22,7 +23,7 @@ public final class DiffFiltering {
     /**
      * Of {@code filters}, those that apply to the file at {@code path}.
      */
-    public static List<DiffFilter> applying(List<DiffFilter> filters, String path) {
+    public static List<DiffFilter> applying(List<DiffFilter> filters, RepoPath path) {
         return filters.filter(filter -> filter.appliesTo(path));
     }
 

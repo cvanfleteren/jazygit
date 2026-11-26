@@ -4,6 +4,7 @@ import io.vavr.Tuple;
 import io.vavr.collection.HashMap;
 import io.vavr.collection.Map;
 import io.vavr.control.Option;
+import net.vanfleteren.jazygit.core.repo.RepoPath;
 import net.vanfleteren.jazygit.features.github.GitHubServices;
 import net.vanfleteren.jazygit.features.github.builds.BuildsView.FileAt;
 import net.vanfleteren.jazygit.kernel.state.Cmd;
@@ -46,7 +47,7 @@ public record ReadWorkflows(FileAt file) implements Cmd {
     private static Option<Workflow> read(Env env, FileAt at) {
         return env.git()
                 .diffs()
-                .treeText(at.sha(), at.path())
+                .treeText(at.sha(), new RepoPath(at.path()))
                 .mapLeft(error -> "")
                 .orElse(() -> GitHubServices.of(env)
                         .checks()

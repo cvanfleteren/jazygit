@@ -11,6 +11,7 @@ import io.vavr.control.Option;
 import net.vanfleteren.jazygit.core.git.model.DiffFiltering.HunkStart;
 import net.vanfleteren.jazygit.core.git.model.DiffText;
 import net.vanfleteren.jazygit.core.git.model.HiddenHunks.Ranges;
+import net.vanfleteren.jazygit.core.repo.RepoPath;
 import net.vanfleteren.jazygit.features.changes.commit.amend.AmendPopup;
 import net.vanfleteren.jazygit.features.changes.commit.amend.AmendTarget;
 import net.vanfleteren.jazygit.kernel.state.AreaId;
@@ -161,14 +162,16 @@ class DiffFiltersUpdateTest {
         Model model = enabled(loaded());
         List<Ranges> hunks = List.of(new Ranges(1, 3, 1, 3));
 
-        Model opened = Update.update(model, new FilteredMsg.Opened(at(new Anchor.Filtered("A.java", hunks, false))))
+        Model opened = Update.update(
+                        model, new FilteredMsg.Opened(at(new Anchor.Filtered(new RepoPath("A.java"), hunks, false))))
                 .model();
 
         assertEquals(
-                Option.of(HashSet.of(new Opened.Hunk("A.java", new HunkStart(1, 1)))),
+                Option.of(HashSet.of(new Opened.Hunk(new RepoPath("A.java"), new HunkStart(1, 1)))),
                 opened.repoView().opened(AREA, CONTENT).map(Opened::hunks));
 
-        Model closed = Update.update(opened, new FilteredMsg.Closed(at(new Anchor.Filtered("A.java", hunks, true))))
+        Model closed = Update.update(
+                        opened, new FilteredMsg.Closed(at(new Anchor.Filtered(new RepoPath("A.java"), hunks, true))))
                 .model();
 
         assertEquals(
@@ -178,7 +181,7 @@ class DiffFiltersUpdateTest {
 
     @Test
     void enterOnALineIsNoKeyOfTheFilters() {
-        DiffCursorAt line = at(new Anchor.OnLine("A.java", DiffSide.NEW, 2));
+        DiffCursorAt line = at(new Anchor.OnLine(new RepoPath("A.java"), DiffSide.NEW, 2));
 
         assertEquals(
                 Option.none(),

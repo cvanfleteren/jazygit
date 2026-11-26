@@ -10,6 +10,7 @@ import io.vavr.control.Option;
 import java.util.ArrayList;
 import java.util.concurrent.atomic.AtomicReference;
 import net.vanfleteren.jazygit.core.git.model.DiffText;
+import net.vanfleteren.jazygit.core.repo.RepoPath;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.features.changes.panes.commits.CommitsPanel;
 import net.vanfleteren.jazygit.features.changes.panes.files.FilesPanel;
@@ -62,7 +63,8 @@ class ContentSearchGitHubTest {
             assertTrue(driven.screen(testRunner).contains("/a 1/"), driven.screen(testRunner));
             // The path on the bar of the file, then the line: the cursor goes to each.
             assertEquals(
-                    Option.of(new Anchor.File("a.txt")), driven.lastScrolled().cursor());
+                    Option.of(new Anchor.File(new RepoPath("a.txt"))),
+                    driven.lastScrolled().cursor());
             driven.type(testRunner, "n");
             assertEquals(Option.of(onNew(1)), driven.lastScrolled().cursor());
 
@@ -161,7 +163,7 @@ class ContentSearchGitHubTest {
 
     private static final Anchor THREAD = new Anchor.Thread(
             new net.vanfleteren.jazygit.kernel.state.diff.RemarkThread.Id("T1"),
-            Option.of(new Anchor.OnLine("a.txt", DiffSide.NEW, 1)));
+            Option.of(new Anchor.OnLine(new RepoPath("a.txt"), DiffSide.NEW, 1)));
 
     /**
      * The diff of a pull request's files, of one added line {@code a} with a thread on it that asks "Why?".
@@ -177,7 +179,7 @@ class ContentSearchGitHubTest {
     }
 
     private static Anchor onNew(int line) {
-        return new Anchor.OnLine("a.txt", DiffSide.NEW, line);
+        return new Anchor.OnLine(new RepoPath("a.txt"), DiffSide.NEW, line);
     }
 
     private static Model commit(DiffStyle style) {

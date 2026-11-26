@@ -13,6 +13,7 @@ import net.vanfleteren.jazygit.core.git.CliGit;
 import net.vanfleteren.jazygit.core.git.model.Blame;
 import net.vanfleteren.jazygit.core.git.model.BlameAt;
 import net.vanfleteren.jazygit.core.git.model.BlameOptions;
+import net.vanfleteren.jazygit.core.repo.RepoPath;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.DisabledOnOs;
@@ -33,13 +34,14 @@ class CliBlameTest {
         Sha first = commit("f.txt", "a\nb\n", "first");
         Sha second = commit("f.txt", "a\nB\nc\n", "second");
 
-        Blame now = blame(new BlameAt.InCommit(second, "f.txt"));
+        Blame now = blame(new BlameAt.InCommit(second, new RepoPath("f.txt")));
         assertEquals(List.of(first, second, second), shas(now));
         assertEquals("second", now.at(2).get().commit().summary());
         assertEquals(
-                Option.of(new Blame.Previous(first, "f.txt")), now.at(2).get().previous());
+                Option.of(new Blame.Previous(first, new RepoPath("f.txt"))),
+                now.at(2).get().previous());
 
-        assertEquals(List.of(first, first), shas(blame(new BlameAt.InCommit(second, 1, "f.txt"))));
+        assertEquals(List.of(first, first), shas(blame(new BlameAt.InCommit(second, 1, new RepoPath("f.txt")))));
     }
 
     @Test
@@ -48,11 +50,11 @@ class CliBlameTest {
         git("mv", "old.txt", "new.txt");
         Sha renamed = commit("new.txt", "a\nb\n", "renamed");
 
-        Blame blame = blame(new BlameAt.InCommit(renamed, "new.txt"));
+        Blame blame = blame(new BlameAt.InCommit(renamed, new RepoPath("new.txt")));
 
         assertEquals(List.of(first, renamed), shas(blame));
-        assertEquals("old.txt", blame.at(1).get().path());
-        assertEquals("new.txt", blame.at(2).get().path());
+        assertEquals(new RepoPath("old.txt"), blame.at(1).get().path());
+        assertEquals(new RepoPath("new.txt"), blame.at(2).get().path());
     }
 
     @Test
@@ -63,7 +65,7 @@ class CliBlameTest {
         git("checkout", "-q", "main");
         Sha main = commit("f.txt", "main\n", "main");
 
-        Blame original = blame(new BlameAt.AtMergeBase(main, topic, "f.txt"));
+        Blame original = blame(new BlameAt.AtMergeBase(main, topic, new RepoPath("f.txt")));
 
         assertEquals(List.of(first), shas(original));
     }
@@ -75,12 +77,12 @@ class CliBlameTest {
         git("add", "f.txt");
         Files.writeString(repo.resolve("f.txt"), "a\nstaged\nunstaged\n");
 
-        Blame index = blame(new BlameAt.InIndex("f.txt"));
+        Blame index = blame(new BlameAt.InIndex(new RepoPath("f.txt")));
         assertEquals(2, index.lines().size());
         assertEquals(first, index.at(1).get().commit().sha());
         assertFalse(index.at(2).get().commit().committed());
 
-        Blame disk = blame(new BlameAt.OnDisk("f.txt"));
+        Blame disk = blame(new BlameAt.OnDisk(new RepoPath("f.txt")));
         assertEquals(3, disk.lines().size());
         assertTrue(disk.at(1).get().commit().committed());
         assertFalse(disk.at(3).get().commit().committed());
@@ -92,7 +94,7 @@ class CliBlameTest {
         Files.writeString(repo.resolve("f.txt"), "a\nstaged\n");
         git("add", "f.txt");
 
-        assertEquals(List.of(first), shas(blame(new BlameAt.AtHead("f.txt"))));
+        assertEquals(List.of(first), shas(blame(new BlameAt.AtHead(new RepoPath("f.txt")))));
     }
 
     @Test
@@ -102,7 +104,7 @@ class CliBlameTest {
         Files.write(repo.resolve("src/l.txt"), "café\nok\nstaged\n".getBytes(StandardCharsets.ISO_8859_1));
         git("add", "src/l.txt");
 
-        Blame index = blame(new BlameAt.InIndex("src/l.txt"));
+        Blame index = blame(new BlameAt.InIndex(new RepoPath("src/l.txt")));
 
         assertEquals(3, index.lines().size());
         assertEquals(List.of(first, first), shas(index).take(2));
@@ -118,13 +120,17 @@ class CliBlameTest {
         git("commit", "-qm", "link");
         Sha linked = Sha.parse(git("rev-parse", "HEAD").strip()).get();
 
-        assertEquals(List.of(linked), shas(blame(new BlameAt.InIndex("link"))));
+        assertEquals(List.of(linked), shas(blame(new BlameAt.InIndex(new RepoPath("link")))));
 
         Files.delete(repo.resolve("link"));
         Files.createSymbolicLink(repo.resolve("link"), Path.of("elsewhere.txt"));
         git("add", "link");
 
-        assertFalse(blame(new BlameAt.InIndex("link")).at(1).get().commit().committed());
+        assertFalse(blame(new BlameAt.InIndex(new RepoPath("link")))
+                .at(1)
+                .get()
+                .commit()
+                .committed());
     }
 
     @Test
@@ -133,7 +139,7 @@ class CliBlameTest {
         Files.writeString(repo.resolve("ita.txt"), "new\n");
         git("add", "-N", "ita.txt");
 
-        assertTrue(blame(new BlameAt.InIndex("ita.txt")).lines().isEmpty());
+        assertTrue(blame(new BlameAt.InIndex(new RepoPath("ita.txt"))).lines().isEmpty());
     }
 
     @Test
@@ -145,8 +151,8 @@ class CliBlameTest {
         Sha stash = Sha.parse(git("rev-parse", "stash@{0}").strip()).get();
         Sha untracked = Sha.parse(git("rev-parse", "stash@{0}^3").strip()).get();
 
-        assertEquals(List.of(untracked, untracked), shas(blame(new BlameAt.InCommit(stash, 3, "u.txt"))));
-        assertEquals(List.of(first), shas(blame(new BlameAt.InCommit(stash, 1, "f.txt"))));
+        assertEquals(List.of(untracked, untracked), shas(blame(new BlameAt.InCommit(stash, 3, new RepoPath("u.txt")))));
+        assertEquals(List.of(first), shas(blame(new BlameAt.InCommit(stash, 1, new RepoPath("f.txt")))));
     }
 
     @Test
@@ -159,7 +165,9 @@ class CliBlameTest {
         git("merge", "-q", "--no-ff", "-m", "merge", "topic");
         Sha merge = Sha.parse(git("rev-parse", "HEAD").strip()).get();
 
-        assertEquals(List.of(base, base, base, base, main), shas(blame(new BlameAt.InCommit(merge, 1, "f.txt"))));
+        assertEquals(
+                List.of(base, base, base, base, main),
+                shas(blame(new BlameAt.InCommit(merge, 1, new RepoPath("f.txt")))));
     }
 
     @Test
@@ -167,11 +175,13 @@ class CliBlameTest {
         Sha first = commit("f.txt", "a\nb\n", "first");
         Sha indented = commit("f.txt", "a\n  b\n", "indented");
 
-        assertEquals(List.of(first, indented), shas(blame(new BlameAt.InCommit(indented, "f.txt"))));
+        assertEquals(List.of(first, indented), shas(blame(new BlameAt.InCommit(indented, new RepoPath("f.txt")))));
         assertEquals(
                 List.of(first, first),
                 shas(history()
-                        .blame(new BlameAt.InCommit(indented, "f.txt"), new BlameOptions(true, Option.none()))
+                        .blame(
+                                new BlameAt.InCommit(indented, new RepoPath("f.txt")),
+                                new BlameOptions(true, Option.none()))
                         .get()));
     }
 
@@ -181,7 +191,7 @@ class CliBlameTest {
         Sha first = commit("f.txt", block + "rest\n", "first");
         commit("f.txt", "rest\n" + block, "moved");
 
-        Blame blame = blame(new BlameAt.OnDisk("f.txt"));
+        Blame blame = blame(new BlameAt.OnDisk(new RepoPath("f.txt")));
 
         // The line the block moved past is too short to be found moved.
         assertEquals(List.fill(7, first), shas(blame).tail());
@@ -192,7 +202,7 @@ class CliBlameTest {
         Sha first = commit("f.txt", "a\nb\nc\n", "first");
 
         Blame blame = history()
-                .blame(new BlameAt.InCommit(first, "f.txt"), new BlameOptions(false, Option.of(2)))
+                .blame(new BlameAt.InCommit(first, new RepoPath("f.txt")), new BlameOptions(false, Option.of(2)))
                 .get();
 
         assertEquals(List.of(first, first), shas(blame));
@@ -202,7 +212,7 @@ class CliBlameTest {
     void aPathGitWouldTakeForAnOptionOrAPatternIsBlamedAsItIs() throws Exception {
         Sha first = commit("-a [x].txt", "a\n", "first");
 
-        assertEquals(List.of(first), shas(blame(new BlameAt.InCommit(first, "-a [x].txt"))));
+        assertEquals(List.of(first), shas(blame(new BlameAt.InCommit(first, new RepoPath("-a [x].txt")))));
     }
 
     @Test
@@ -210,7 +220,7 @@ class CliBlameTest {
         Sha first = commit("f.txt", "a\n", "first");
 
         assertTrue(history()
-                .blame(new BlameAt.InCommit(first, "gone.txt"), BlameOptions.DEFAULT)
+                .blame(new BlameAt.InCommit(first, new RepoPath("gone.txt")), BlameOptions.DEFAULT)
                 .isLeft());
     }
 

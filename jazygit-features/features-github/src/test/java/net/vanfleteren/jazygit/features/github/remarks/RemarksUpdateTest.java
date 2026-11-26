@@ -18,6 +18,7 @@ import net.vanfleteren.jazygit.core.git.model.CommitFile;
 import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.PrNumber;
 import net.vanfleteren.jazygit.core.repo.PullRequestCommits;
+import net.vanfleteren.jazygit.core.repo.RepoPath;
 import net.vanfleteren.jazygit.core.repo.RepoSlug;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.features.changes.diff.CommitFilesMsg;
@@ -45,14 +46,14 @@ class RemarksUpdateTest {
 
     private static final Sha SHA = new Sha("aaaa");
     private static final Changes COMMIT = new Changes.OfCommit(SHA);
-    private static final CommitFile A = new CommitFile("a.txt", ChangeType.MODIFIED);
-    private static final CommitFile B = new CommitFile("dir/b.txt", ChangeType.ADDED);
+    private static final CommitFile A = new CommitFile(new RepoPath("a.txt"), ChangeType.MODIFIED);
+    private static final CommitFile B = new CommitFile(new RepoPath("dir/b.txt"), ChangeType.ADDED);
 
     private static final PullRequestCommits COMMITS = new PullRequestCommits(
             new PrNumber(7), new RepoSlug("owner/repo"), "", new Sha("b".repeat(40)), new Sha("a".repeat(40)));
     private static final Changes PULL_REQUEST = new Changes.OfPullRequest(COMMITS);
     private static final ReviewThread THREAD = new ReviewThread(
-            "a.txt",
+            new RepoPath("a.txt"),
             ReviewThread.Side.RIGHT,
             Option.of(1),
             Option.none(),
@@ -357,7 +358,7 @@ class RemarksUpdateTest {
     void aDeletedCommentLeavesItsThreadAndTheThreadGoesWithItsLastUnlessGitHubHasMore() {
         ReviewThread read = THREAD.withComments(List.of(comment("C")));
         ReviewThread more = new ReviewThread(
-                "a.txt",
+                new RepoPath("a.txt"),
                 ReviewThread.Side.RIGHT,
                 Option.of(1),
                 Option.none(),

@@ -57,6 +57,7 @@ import net.vanfleteren.jazygit.core.repo.CommitMessage;
 import net.vanfleteren.jazygit.core.repo.Head;
 import net.vanfleteren.jazygit.core.repo.RemoteBranch;
 import net.vanfleteren.jazygit.core.repo.RemoteName;
+import net.vanfleteren.jazygit.core.repo.RepoPath;
 import net.vanfleteren.jazygit.core.repo.Revision;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.core.repo.Stash;
@@ -187,13 +188,13 @@ class ProgramGitHubTest {
         public Index index() {
             return new StubIndex() {
                 @Override
-                public Either<GitFailure, List<ExecutedCommand>> stage(List<String> paths) {
-                    return onIndex("stage", paths, "git stage");
+                public Either<GitFailure, List<ExecutedCommand>> stage(List<RepoPath> paths) {
+                    return onIndex("stage", paths.map(RepoPath::value), "git stage");
                 }
 
                 @Override
-                public Either<GitFailure, List<ExecutedCommand>> unstageNew(List<String> paths) {
-                    return onIndex("unstageNew", paths, "git unstageNew");
+                public Either<GitFailure, List<ExecutedCommand>> unstageNew(List<RepoPath> paths) {
+                    return onIndex("unstageNew", paths.map(RepoPath::value), "git unstageNew");
                 }
 
                 @Override
@@ -203,8 +204,8 @@ class ProgramGitHubTest {
                 }
 
                 @Override
-                public Either<GitFailure, List<ExecutedCommand>> unstage(List<String> paths) {
-                    return onIndex("unstage", paths, "git unstage");
+                public Either<GitFailure, List<ExecutedCommand>> unstage(List<RepoPath> paths) {
+                    return onIndex("unstage", paths.map(RepoPath::value), "git unstage");
                 }
             };
         }

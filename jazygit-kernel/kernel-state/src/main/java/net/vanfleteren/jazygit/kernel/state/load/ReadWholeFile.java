@@ -10,6 +10,7 @@ import net.vanfleteren.jazygit.core.git.model.DiffText;
 import net.vanfleteren.jazygit.core.git.model.FileContent;
 import net.vanfleteren.jazygit.core.git.model.FileEntry;
 import net.vanfleteren.jazygit.core.repo.PullRequestCommits;
+import net.vanfleteren.jazygit.core.repo.RepoPath;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.kernel.state.AreaId;
 import net.vanfleteren.jazygit.kernel.state.Env;
@@ -30,7 +31,7 @@ import net.vanfleteren.jazygit.lib.lens.Lens;
  * as context, to show more of it than its hunks in the area {@code area} while it shows {@code content} (ADR 77).
  * It reads with {@code options} but for the context, so what it read with options changed since is dropped.
  */
-public record ReadWholeFile(AreaId area, ScrolledContent content, Source source, String path, DiffOptions options)
+public record ReadWholeFile(AreaId area, ScrolledContent content, Source source, RepoPath path, DiffOptions options)
         implements DiffLoad<DiffText> {
 
     @Override
@@ -108,14 +109,14 @@ public record ReadWholeFile(AreaId area, ScrolledContent content, Source source,
                                 env.git().diffs().pullRequestFileChanges(commits, List.of(file), whole);
                         };
                     // A file that is no text has no lines to show: no file is read, as for a binary one.
-                    case Source.OnDisk(String path) ->
+                    case Source.OnDisk(RepoPath path) ->
                         env.git()
                                 .status()
                                 .content(path)
                                 .map(content -> content instanceof FileContent.Text(DiffText asDiff)
                                         ? asDiff
                                         : DiffText.of(""));
-                    case Source.AtCommit(Sha sha, String path) ->
+                    case Source.AtCommit(Sha sha, RepoPath path) ->
                         env.git()
                                 .diffs()
                                 .treeContent(sha, path)

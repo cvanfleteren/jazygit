@@ -4,6 +4,7 @@ import io.vavr.collection.List;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.core.git.model.FileEntry;
 import net.vanfleteren.jazygit.core.git.model.RepoStatus;
+import net.vanfleteren.jazygit.core.repo.RepoPath;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.features.changes.commit.CommitError;
 import net.vanfleteren.jazygit.features.changes.commit.amend.AmendMsg.Confirmed;
@@ -70,7 +71,7 @@ public final class AmendUpdate {
     }
 
     private static Next stageAllConfirmed(Model model) {
-        List<String> paths = FileEntry.paths(model.repo().files().getOrElse(List.empty()), FileEntry::unstaged);
+        List<RepoPath> paths = FileEntry.paths(model.repo().files().getOrElse(List.empty()), FileEntry::unstaged);
         return PopupUpdate.confirm(
                 model, AmendStageAllPopup.class, popup -> Option.of(new AmendCmd(popup.target(), paths)));
     }

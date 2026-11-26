@@ -17,6 +17,7 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 import net.vanfleteren.jazygit.core.git.model.DiffText;
 import net.vanfleteren.jazygit.core.git.model.ParsedDiff;
+import net.vanfleteren.jazygit.core.repo.RepoPath;
 import net.vanfleteren.jazygit.kernel.content.ContentText;
 import net.vanfleteren.jazygit.kernel.settings.DiffLook;
 import net.vanfleteren.jazygit.kernel.settings.DiffStyle;
@@ -62,7 +63,7 @@ class RemarkLinesTest {
     private static RemarkThread thread(String path, int line, boolean resolved, String... bodies) {
         return new RemarkThread(
                 new RemarkThread.Id(path + line + String.join("", bodies)),
-                path,
+                new RepoPath(path),
                 Option.none(),
                 Subject.LINE,
                 Option.of(line),
@@ -108,7 +109,7 @@ class RemarkLinesTest {
     private static RemarkThread onLines(DiffSide startSide, int start, DiffSide side, int line) {
         return new RemarkThread(
                 new RemarkThread.Id("T" + startSide + start + side + line),
-                "a.txt",
+                new RepoPath("a.txt"),
                 Option.none(),
                 Subject.LINE,
                 Option.of(line),
@@ -224,7 +225,8 @@ class RemarkLinesTest {
         assertEquals(pair.appendAll(List.of("", "┄┄┄ │ more ┄")), rich(PAIRS, remarks));
         // Read whole, the file has no more lines, and nothing follows them.
         Expansion.Folded whole = new Expansion.Folded(
-                ParsedDiff.of(PAIRS), HashMap.of("a.txt", new Expansion.Fold(Option.of(2), Expansion.Read.WHOLE)));
+                ParsedDiff.of(PAIRS),
+                HashMap.of(new RepoPath("a.txt"), new Expansion.Fold(Option.of(2), Expansion.Read.WHOLE)));
         assertEquals(
                 pair,
                 text(RichDiff.drawn(
@@ -452,7 +454,7 @@ class RemarkLinesTest {
     void aThreadOnSeveralLinesMarksThemAndOneThatCannotBePlacedEndsItsFile() {
         RemarkThread several = new RemarkThread(
                 new RemarkThread.Id("T"),
-                "a.txt",
+                new RepoPath("a.txt"),
                 Option.none(),
                 Subject.LINE,
                 Option.of(3),
@@ -466,7 +468,7 @@ class RemarkLinesTest {
                 List.of(new Remark(new Remark.Id("C"), "", NOW, "All of it", Option.none())));
         RemarkThread outdated = new RemarkThread(
                 new RemarkThread.Id("T"),
-                "a.txt",
+                new RepoPath("a.txt"),
                 Option.none(),
                 Subject.LINE,
                 Option.none(),
@@ -563,7 +565,7 @@ class RemarkLinesTest {
     void aThreadAboutAWholeFileGoesUnderItsBar() {
         RemarkThread onFile = new RemarkThread(
                 new RemarkThread.Id("T"),
-                "a.txt",
+                new RepoPath("a.txt"),
                 Option.none(),
                 Subject.FILE,
                 Option.none(),
@@ -589,7 +591,7 @@ class RemarkLinesTest {
     void aThreadWhoseFirstCommentIsHiddenShowsItInFullOnceItIsOpened() {
         RemarkThread hidden = new RemarkThread(
                 new RemarkThread.Id("T"),
-                "a.txt",
+                new RepoPath("a.txt"),
                 Option.none(),
                 Subject.LINE,
                 Option.of(2),
@@ -856,19 +858,19 @@ class RemarkLinesTest {
         Drawn drawn = drawn(ParsedDiff.of(DIFF), true, Option.of(remarks), Theme.SpanStyles.NONE);
 
         // Nothing comes before the file, so there is no lead.
-        Anchor.OnLine two = new Anchor.OnLine("a.txt", DiffSide.NEW, 2);
+        Anchor.OnLine two = new Anchor.OnLine(new RepoPath("a.txt"), DiffSide.NEW, 2);
         Anchor.Thread replied = new Anchor.Thread(second.id(), Option.of(two));
         assertEquals(
                 List.of(
-                        new Anchor.File("a.txt"),
-                        new Anchor.OnLine("a.txt", DiffSide.NEW, 1),
-                        new Anchor.OnLine("a.txt", DiffSide.OLD, 2),
+                        new Anchor.File(new RepoPath("a.txt")),
+                        new Anchor.OnLine(new RepoPath("a.txt"), DiffSide.NEW, 1),
+                        new Anchor.OnLine(new RepoPath("a.txt"), DiffSide.OLD, 2),
                         two,
                         new Anchor.Thread(first.id(), Option.of(two)),
                         replied,
                         new Anchor.Remark(new Remark.Id("C1"), replied),
-                        new Anchor.OnLine("a.txt", DiffSide.NEW, 3),
-                        new Anchor.Gap("a.txt", 4, Option.none()),
+                        new Anchor.OnLine(new RepoPath("a.txt"), DiffSide.NEW, 3),
+                        new Anchor.Gap(new RepoPath("a.txt"), 4, Option.none()),
                         new Anchor.Thread(outdated.id(), Option.none())),
                 drawn.stops().map(stop -> stop.mark().anchor()));
         List<String> lines = text(drawn.lines());
@@ -889,7 +891,8 @@ class RemarkLinesTest {
         assertEquals(
                 new Anchor.Remark(
                         new Remark.Id("C1"),
-                        new Anchor.Thread(second.id(), Option.of(new Anchor.OnLine("a.txt", DiffSide.NEW, 2)))),
+                        new Anchor.Thread(
+                                second.id(), Option.of(new Anchor.OnLine(new RepoPath("a.txt"), DiffSide.NEW, 2)))),
                 comment.mark().anchor());
         assertTrue(lines.get(comment.row()).contains("┣━ bob"), lines.mkString("\n"));
         assertTrue(lines.get(comment.row() + comment.mark().lines() - 1).contains("┗━"));
@@ -931,25 +934,25 @@ class RemarkLinesTest {
 
         Drawn drawn = drawn(ParsedDiff.of(DIFF), true, Option.of(remarks), Theme.SpanStyles.NONE);
 
-        Anchor.OnLine one = new Anchor.OnLine("a.txt", DiffSide.NEW, 1);
-        Anchor.OnLine two = new Anchor.OnLine("a.txt", DiffSide.NEW, 2);
-        Anchor.OnLine three = new Anchor.OnLine("a.txt", DiffSide.NEW, 3);
+        Anchor.OnLine one = new Anchor.OnLine(new RepoPath("a.txt"), DiffSide.NEW, 1);
+        Anchor.OnLine two = new Anchor.OnLine(new RepoPath("a.txt"), DiffSide.NEW, 2);
+        Anchor.OnLine three = new Anchor.OnLine(new RepoPath("a.txt"), DiffSide.NEW, 3);
         Anchor.Thread opened = new Anchor.Thread(hidden.id(), Option.of(one));
         Anchor.Thread open = new Anchor.Thread(replied.id(), Option.of(two));
         assertEquals(
                 List.of(
-                        new Anchor.File("a.txt"),
+                        new Anchor.File(new RepoPath("a.txt")),
                         one,
                         opened,
                         new Anchor.Remark(new Remark.Id("G"), opened),
-                        new Anchor.OnLine("a.txt", DiffSide.OLD, 2),
+                        new Anchor.OnLine(new RepoPath("a.txt"), DiffSide.OLD, 2),
                         two,
                         open,
                         new Anchor.Remark(new Remark.Id("C1"), open),
                         new Anchor.Remark(new Remark.Id("C2"), open),
                         three,
                         new Anchor.Thread(collapsed.id(), Option.of(three)),
-                        new Anchor.Gap("a.txt", 4, Option.none()),
+                        new Anchor.Gap(new RepoPath("a.txt"), 4, Option.none()),
                         new Anchor.Thread(resolved.id(), Option.none())),
                 drawn.stops().map(stop -> stop.mark().anchor()));
         assertEquals(
@@ -984,7 +987,9 @@ class RemarkLinesTest {
                 .after(List.of(Line.from("commit"), Line.from("---")))
                 .withLead();
         assertEquals(new Anchor.Lead(), lead.stops().head().mark().anchor());
-        assertEquals(new Anchor.File("a.txt"), lead.stops().get(1).mark().anchor());
+        assertEquals(
+                new Anchor.File(new RepoPath("a.txt")),
+                lead.stops().get(1).mark().anchor());
         assertEquals(2, lead.stops().get(1).row());
     }
 

@@ -6,6 +6,7 @@ import net.vanfleteren.jazygit.core.git.Git;
 import net.vanfleteren.jazygit.core.git.process.GitFailure;
 import net.vanfleteren.jazygit.core.process.ExecutedCommand;
 import net.vanfleteren.jazygit.core.repo.CommitMessage;
+import net.vanfleteren.jazygit.core.repo.RepoPath;
 import net.vanfleteren.jazygit.features.changes.stage.StageCmd;
 import net.vanfleteren.jazygit.kernel.state.Msg;
 import net.vanfleteren.jazygit.kernel.state.operation.GitOperationCmd;
@@ -21,7 +22,7 @@ public sealed interface CreateCommitCmd extends GitOperationCmd {
     /**
      * Stages the paths so they can be committed; the commit dialog opens afterwards.
      */
-    record StageForCommit(List<String> paths) implements CreateCommitCmd {
+    record StageForCommit(List<RepoPath> paths) implements CreateCommitCmd {
 
         @Override
         public Operation operation() {

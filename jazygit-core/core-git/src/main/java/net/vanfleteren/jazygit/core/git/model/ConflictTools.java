@@ -1,6 +1,7 @@
 package net.vanfleteren.jazygit.core.git.model;
 
 import io.vavr.collection.List;
+import net.vanfleteren.jazygit.core.repo.RepoPath;
 
 /**
  * What a file in conflict can be handed to in a repository (ADR 201), and the command lines that hand it, which the
@@ -35,18 +36,20 @@ public record ConflictTools(boolean mergeTool, boolean backupSet, boolean mergir
     /**
      * {@code git mergetool -- <path>}, which keeps no {@code .orig} backup unless the user said whether to.
      */
-    public List<String> mergeTool(String path) {
+    public List<String> mergeTool(RepoPath path) {
         List<String> backup = backupSet ? List.empty() : List.of("-c", "mergetool.keepBackup=false");
-        return List.of("git").appendAll(backup).appendAll(List.of("mergetool", "--", path));
+        return List.of("git").appendAll(backup).appendAll(List.of("mergetool", "--", path.value()));
     }
 
     /**
      * {@code path} solved by mergiraf in place, without a backup: when {@code rewrite}, after its conflict is written
      * again with its base, which mergiraf reads; else as it is, as when it has its bases already (ADR 201).
      */
-    public static List<List<String>> mergiraf(String path, boolean rewrite) {
-        List<String> solve = List.of("mergiraf", "solve", "--keep-backup=false", path);
-        return rewrite ? List.of(List.of("git", "checkout", "--conflict=diff3", "--", path), solve) : List.of(solve);
+    public static List<List<String>> mergiraf(RepoPath path, boolean rewrite) {
+        List<String> solve = List.of("mergiraf", "solve", "--keep-backup=false", path.value());
+        return rewrite
+                ? List.of(List.of("git", "checkout", "--conflict=diff3", "--", path.value()), solve)
+                : List.of(solve);
     }
 
     private static boolean changedOnBothSides(Conflict conflict) {

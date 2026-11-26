@@ -24,6 +24,7 @@ import java.util.function.Function;
 import java.util.function.ToIntFunction;
 import net.vanfleteren.jazygit.core.git.model.FileTree;
 import net.vanfleteren.jazygit.core.git.model.Pathed;
+import net.vanfleteren.jazygit.core.repo.RepoPath;
 import net.vanfleteren.jazygit.kernel.state.Failure;
 import net.vanfleteren.jazygit.kernel.state.Loadable;
 import net.vanfleteren.jazygit.kernel.state.view.FileStepMsg;
@@ -55,7 +56,7 @@ final class FileTreeList<T extends Pathed> {
     private final Function<FileTree.File<T>, StyledElement<?>> drawFile;
     private final Theme.Highlights highlights;
     private final ToIntFunction<List<TreeNode<FileTree<T>>>> start;
-    private final Function<List<T>, Set<String>> startCollapsed;
+    private final Function<List<T>, Set<RepoPath>> startCollapsed;
     private List<TreeNode<FileTree<T>>> roots = List.of();
     // Whether the files have not been read since they started afresh, so the directories to start collapsed are
     // still to collapse.
@@ -67,17 +68,17 @@ final class FileTreeList<T extends Pathed> {
     private Placeholder placeholder = Placeholder.DEFAULT;
     // What the files were filtered on when the tree was built, and the directories collapsed before they were.
     private Option<String> filter = Option.none();
-    private Set<String> collapsedUnfiltered = HashSet.empty();
+    private Set<RepoPath> collapsedUnfiltered = HashSet.empty();
     // Whether the files have not been read since they were last loading, so the start highlight is still to place.
     private boolean unread;
     // The path of the file to highlight once the files are read, if it is listed, until it is (ADR 147).
     // What the files are of with it, so the same path among the files of another commit is wanted again.
-    private Option<Tuple2<Object, String>> wanted = Option.none();
+    private Option<Tuple2<Object, RepoPath>> wanted = Option.none();
     private boolean wantedPlaced = true;
     // The path highlighted in the other list of the same files, when the pane switched from it, to highlight once
     // these are read: the changed files and all files keep the highlight on its path. What the files are of with it,
     // so that it goes once the tree lists any others, before they were read.
-    private Option<Tuple2<Object, String>> carried = Option.none();
+    private Option<Tuple2<Object, RepoPath>> carried = Option.none();
     // The nodes drawn for the frame being rendered, with what they were drawn as, to find the one clicked on.
     private List<Drawn<T>> drawn = List.of();
     // The node a step moved the highlight to (ADR 117), until the tree is drawn again: the widget says which node is
@@ -111,7 +112,7 @@ final class FileTreeList<T extends Pathed> {
             Function<FileTree.File<T>, StyledElement<?>> drawFile,
             Theme.Highlights highlights,
             ToIntFunction<List<TreeNode<FileTree<T>>>> start,
-            Function<List<T>, Set<String>> startCollapsed) {
+            Function<List<T>, Set<RepoPath>> startCollapsed) {
         this.label = label;
         this.drawFile = drawFile;
         this.highlights = highlights;
@@ -140,8 +141,8 @@ final class FileTreeList<T extends Pathed> {
      * Makes the highlight go to the file at {@code path} among the files of {@code of} once they are read, if it is
      * listed, when another file was wanted before: else it stays where {@link #start} put it (ADR 147).
      */
-    void wanting(Object of, Option<String> path) {
-        Option<Tuple2<Object, String>> want = path.map(file -> Tuple.of(of, file));
+    void wanting(Object of, Option<RepoPath> path) {
+        Option<Tuple2<Object, RepoPath>> want = path.map(file -> Tuple.of(of, file));
         if (!wanted.equals(want)) {
             wanted = want;
             wantedPlaced = want.isEmpty();
@@ -154,7 +155,7 @@ final class FileTreeList<T extends Pathed> {
      * from. A node not listed gives it to the directory merged into a node that holds it, or else to the deepest
      * directory that holds it.
      */
-    void carrying(Object of, String path) {
+    void carrying(Object of, RepoPath path) {
         carried = Option.of(Tuple.of(of, path));
     }
 
@@ -246,22 +247,21 @@ final class FileTreeList<T extends Pathed> {
      * The node of {@code path}; else, for a directory merged with its only child directories, the node it is merged
      * into; else the deepest directory that holds it.
      */
-    private Option<TreeNode<FileTree<T>>> nearest(String path) {
+    private Option<TreeNode<FileTree<T>>> nearest(RepoPath path) {
         List<TreeNode<FileTree<T>>> all = nodes(roots);
         return all.find(n -> n.data() != null && n.data().path().equals(path))
-                .orElse(() -> all.find(n ->
-                        n.data() instanceof FileTree.Dir<T> dir && dir.path().startsWith(path + "/")))
-                .orElse(() -> all.filter(n -> n.data() instanceof FileTree.Dir<T> dir
-                                && (dir.path().isEmpty() || path.startsWith(dir.path() + "/")))
-                        .maxBy(n -> n.data().path().length()));
+                .orElse(() -> all.find(n -> n.data() instanceof FileTree.Dir<T> dir
+                        && dir.path().value().startsWith(path.value() + "/")))
+                .orElse(() -> all.filter(n -> n.data() instanceof FileTree.Dir<T> dir && path.isIn(dir.path()))
+                        .maxBy(n -> n.data().path().value().length()));
     }
 
     /**
      * The directories to collapse as {@code files} start afresh: those {@link #startCollapsed} says once they are read,
      * which ends their start. While a filter is on, all are open, and those are collapsed once it is cleared.
      */
-    private Set<String> started(Loadable<List<T>> files) {
-        Set<String> collapsed = files.toOption().map(startCollapsed).getOrElse(HashSet.empty());
+    private Set<RepoPath> started(Loadable<List<T>> files) {
+        Set<RepoPath> collapsed = files.toOption().map(startCollapsed).getOrElse(HashSet.empty());
         fresh = !(files instanceof Loadable.Loaded<List<T>>);
         if (filter.isDefined()) {
             collapsedUnfiltered = collapsed;
@@ -357,10 +357,9 @@ final class FileTreeList<T extends Pathed> {
      * Highlights {@code node}, opening the directories that hold it.
      */
     private void highlight(TreeNode<FileTree<T>> node) {
-        String path = node.data().path();
+        RepoPath path = node.data().path();
         nodes(roots)
-                .filter(n -> n.data() instanceof FileTree.Dir<T> dir
-                        && (dir.path().isEmpty() || path.startsWith(dir.path() + "/")))
+                .filter(n -> n.data() instanceof FileTree.Dir<T> dir && path.isIn(dir.path()))
                 .forEach(n -> n.expanded(true));
         tree.selected(visible(roots).indexWhere(n -> n == node));
         steppedTo = Option.of(node);
@@ -412,7 +411,7 @@ final class FileTreeList<T extends Pathed> {
         return element;
     }
 
-    private TreeNode<FileTree<T>> node(FileTree<T> node, Set<String> collapsed) {
+    private TreeNode<FileTree<T>> node(FileTree<T> node, Set<RepoPath> collapsed) {
         return switch (node) {
             case FileTree.Dir<T> dir -> {
                 TreeNode<FileTree<T>> parent = TreeNode.of(dir.name(), node).expanded(!collapsed.contains(dir.path()));
@@ -442,8 +441,8 @@ final class FileTreeList<T extends Pathed> {
      * Rebuilds the tree, keeping the {@code collapsed} directories collapsed, and the highlight on the same path or
      * the nearest one still there.
      */
-    private void rebuild(Loadable<List<T>> files, Set<String> collapsed) {
-        List<Option<String>> before = paths(visible(roots));
+    private void rebuild(Loadable<List<T>> files, Set<RepoPath> collapsed) {
+        List<Option<RepoPath>> before = paths(visible(roots));
         int previous = tree.selected();
         show(roots(files, collapsed));
         tree.selected(restored(before, previous, paths(visible(roots))));
@@ -455,13 +454,13 @@ final class FileTreeList<T extends Pathed> {
      * cleared, a path inside a directory collapsed again gives it to that directory; else it goes to the first file.
      */
     private void refilter(Loadable<List<T>> files, Option<String> before) {
-        Option<String> highlighted = selected().map(FileTree::path);
+        Option<RepoPath> highlighted = selected().map(FileTree::path);
         if (before.isEmpty()) {
             collapsedUnfiltered = collapsed(roots);
         }
         show(roots(files, filter.isDefined() ? HashSet.empty() : collapsedUnfiltered));
         List<TreeNode<FileTree<T>>> rows = visible(roots);
-        List<Option<String>> shown = paths(rows);
+        List<Option<RepoPath>> shown = paths(rows);
         int same = shown.indexWhere(path -> path.isDefined() && path.equals(highlighted));
         int row = same >= 0 || filter.isDefined()
                 ? same
@@ -472,10 +471,10 @@ final class FileTreeList<T extends Pathed> {
     /**
      * The row of the deepest of the directories {@code shown} that holds {@code path}; -1 when none does.
      */
-    private static int holding(List<Option<String>> shown, String path) {
+    private static int holding(List<Option<RepoPath>> shown, RepoPath path) {
         return shown.zipWithIndex()
-                .filter(row -> row._1.exists(dir -> dir.isEmpty() || path.startsWith(dir + "/")))
-                .maxBy(row -> row._1.get().length())
+                .filter(row -> row._1.exists(path::isIn))
+                .maxBy(row -> row._1.get().value().length())
                 .map(row -> row._2)
                 .getOrElse(-1);
     }
@@ -490,7 +489,7 @@ final class FileTreeList<T extends Pathed> {
     /**
      * The paths of the collapsed directories.
      */
-    private static <T extends Pathed> Set<String> collapsed(List<TreeNode<FileTree<T>>> roots) {
+    private static <T extends Pathed> Set<RepoPath> collapsed(List<TreeNode<FileTree<T>>> roots) {
         return nodes(roots)
                 .filter(n -> !n.isExpanded())
                 .flatMap(n -> n.data() instanceof FileTree.Dir<T> dir ? Option.of(dir.path()) : Option.none())
@@ -500,7 +499,7 @@ final class FileTreeList<T extends Pathed> {
     /**
      * The tree's roots for {@code files}, keeping the {@code collapsed} directories collapsed.
      */
-    private List<TreeNode<FileTree<T>>> roots(Loadable<List<T>> files, Set<String> collapsed) {
+    private List<TreeNode<FileTree<T>>> roots(Loadable<List<T>> files, Set<RepoPath> collapsed) {
         return switch (files) {
             case Loadable.Loading<List<T>>() ->
                 List.of(TreeNode.<FileTree<T>>of(placeholder.loading()).leaf());
@@ -518,7 +517,8 @@ final class FileTreeList<T extends Pathed> {
                         .leaf());
             case Loadable.Loaded<List<T>>(List<T> value) ->
                 List.of(node(
-                        new FileTree.Dir<>(ROOT_NAME, "", FileTree.of(ListedFiles.matching(value, filter))),
+                        new FileTree.Dir<>(
+                                ROOT_NAME, new RepoPath(""), FileTree.of(ListedFiles.matching(value, filter))),
                         collapsed));
         };
     }
@@ -526,7 +526,7 @@ final class FileTreeList<T extends Pathed> {
     /**
      * The path of each node; placeholders have none.
      */
-    private static <T extends Pathed> List<Option<String>> paths(List<TreeNode<FileTree<T>>> nodes) {
+    private static <T extends Pathed> List<Option<RepoPath>> paths(List<TreeNode<FileTree<T>>> nodes) {
         return nodes.map(n -> Option.of(n.data()).map(FileTree::path));
     }
 
@@ -534,9 +534,9 @@ final class FileTreeList<T extends Pathed> {
      * The row of {@code after} to select when row {@code previous} of {@code before} was: the same path, or
      * else the nearest one still there, below before above, or else the same row, kept inside the tree.
      */
-    private static int restored(List<Option<String>> before, int previous, List<Option<String>> after) {
-        Vector<Option<String>> rows = before.toVector();
-        Map<String, Integer> rowOf = after.zipWithIndex()
+    private static int restored(List<Option<RepoPath>> before, int previous, List<Option<RepoPath>> after) {
+        Vector<Option<RepoPath>> rows = before.toVector();
+        Map<RepoPath, Integer> rowOf = after.zipWithIndex()
                 .flatMap(row -> row._1.map(path -> Tuple.of(path, row._2)))
                 .toMap(row -> row);
         return around(previous, rows.size())
