@@ -14,8 +14,8 @@ import org.junit.jupiter.api.Test;
  */
 class FillsTest {
 
-    private static final Slot<String> KEY = Slot.of("test.key", String.class);
-    private static final Slot<String> OTHER = Slot.of("test.other", String.class);
+    private static final Slot<String> KEY = Slot.of("test.key");
+    private static final Slot<String> OTHER = Slot.of("test.other");
     private static final Model MODEL = TestModels.loaded();
 
     @Test
@@ -67,10 +67,9 @@ class FillsTest {
     }
 
     @Test
-    void keysOfTheSameNameAndTypeAreTheSameKey() {
+    void slotsOfTheSameNameAreTheSameSlot() {
         Fills fills = Fills.NONE.with(KEY, model -> Option.of("filled"));
 
-        assertEquals(Option.of("filled"), fills.of(Slot.of("test.key", String.class), MODEL));
-        assertEquals(Option.none(), fills.of(Slot.of("test.key", CharSequence.class), MODEL));
+        assertEquals(Option.of("filled"), fills.of(Slot.<String>of("test.key"), MODEL));
     }
 }

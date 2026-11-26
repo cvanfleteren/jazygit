@@ -2,13 +2,7 @@ package net.vanfleteren.jazygit.app.keys;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-import com.tngtech.archunit.core.domain.JavaField;
-import com.tngtech.archunit.core.domain.JavaModifier;
-import com.tngtech.archunit.core.importer.ClassFileImporter;
-import com.tngtech.archunit.core.importer.ImportOption;
 import io.vavr.collection.List;
-import io.vavr.control.Try;
-import java.lang.reflect.Field;
 import net.vanfleteren.jazygit.kernel.state.Part;
 import org.junit.jupiter.api.Test;
 
@@ -20,22 +14,7 @@ import org.junit.jupiter.api.Test;
 class PartNamesTest {
 
     private static List<Part<?>> declared() {
-        return List.ofAll(new ClassFileImporter()
-                        .withImportOption(new ImportOption.DoNotIncludeTests())
-                        .importPackages("net.vanfleteren.jazygit"))
-                .flatMap(type -> List.ofAll(type.getFields()))
-                .filter(field -> field.getRawType().isEquivalentTo(Part.class)
-                        && field.getModifiers().contains(JavaModifier.STATIC))
-                .map(PartNamesTest::value);
-    }
-
-    private static Part<?> value(JavaField field) {
-        return Try.of(() -> {
-                    Field reflected = field.reflect();
-                    reflected.setAccessible(true);
-                    return (Part<?>) reflected.get(null);
-                })
-                .get();
+        return Constants.of(Part.class).map(part -> part);
     }
 
     @Test

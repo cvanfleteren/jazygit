@@ -34,3 +34,5 @@ Two of them give several values in a model, where a filler gave one or none.
   declared beside what reads it, and edits no `Feature`. A kind of the other sort still adds a component.
 - The kernel's slots are listed in one place, `KernelSlots`, as the components of `Feature` listed them.
 - A spinner is filled as `model -> Option.when(showsSpinner(model), true)`, a little longer than the predicate it was.
+
+Amended by ADR 203: a slot is its name alone, `Slot.of(name)`, and no two the app declares share one.

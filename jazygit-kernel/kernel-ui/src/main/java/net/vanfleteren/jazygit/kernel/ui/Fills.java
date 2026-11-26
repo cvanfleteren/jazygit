@@ -56,12 +56,16 @@ public record Fills(Map<Slot<?>, List<Function<Model, Iterable<?>>>> fillers) {
     }
 
     // Lazily, so that of asks the fillers only up to the first that gives anything.
+    // Unchecked, but safe while what is given comes through with, which takes for a slot only what gives its type: the
+    // record's own constructor checks nothing, and is for these methods. Two slots of one name would break it too,
+    // which SlotNamesTest keeps out (ADR 203).
+    @SuppressWarnings("unchecked")
     private <T> Iterator<T> given(Slot<T> slot, Model model) {
         return fillers.get(slot)
                 .getOrElse(List.empty())
                 .iterator()
                 .flatMap(filler -> filler.apply(model))
-                .map(slot.type()::cast);
+                .map(given -> (T) given);
     }
 
     /**

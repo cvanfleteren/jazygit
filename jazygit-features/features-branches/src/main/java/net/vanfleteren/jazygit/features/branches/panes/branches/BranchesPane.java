@@ -12,9 +12,7 @@ public final class BranchesPane {
     /**
      * The tabs the features add after the worktrees, in the order of the features.
      */
-    @SuppressWarnings("unchecked")
-    public static final Slot<PaneTab<?>> TABS =
-            Slot.of("branches.panes.branches.tabs", (Class<PaneTab<?>>) (Class<?>) PaneTab.class);
+    public static final Slot<PaneTab<?>> TABS = Slot.of("branches.panes.branches.tabs");
 
     private BranchesPane() {}
 }

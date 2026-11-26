@@ -22,7 +22,7 @@ public record BranchBadges(List<Badge> badges) {
     /**
      * What a feature shows of a branch, beside what git says of it.
      */
-    public static final Slot<Badge> KEY = Slot.of("branches.panes.branches.badge", Badge.class);
+    public static final Slot<Badge> KEY = Slot.of("branches.panes.branches.badge");
 
     /**
      * No badges, as the tests of the views have them without the app.

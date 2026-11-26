@@ -12,19 +12,19 @@ public final class KernelSlots {
      * Whether a view of the feature shows a spinner, so the spinner is kept turning (ADR 171): a feature gives
      * {@code true} while one does.
      */
-    public static final Slot<Boolean> SPINNING = Slot.of("kernel.spinning", Boolean.class);
+    public static final Slot<Boolean> SPINNING = Slot.of("kernel.spinning");
 
     /**
      * The times a popup of the feature shows, for which the app is woken when they change, as for a screen's (ADR
      * 124, 168, 171).
      */
-    public static final Slot<ShownTime> CLOCKING = Slot.of("kernel.clocking", ShownTime.class);
+    public static final Slot<ShownTime> CLOCKING = Slot.of("kernel.clocking");
 
     /**
      * The pictures the views of the feature may draw, which a terminal that draws images itself is sent once they are
      * on the screen (ADR 191).
      */
-    public static final Slot<Picture> PICTURING = Slot.of("kernel.picturing", Picture.class);
+    public static final Slot<Picture> PICTURING = Slot.of("kernel.picturing");
 
     private KernelSlots() {}
 }
