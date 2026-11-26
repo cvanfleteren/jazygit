@@ -189,8 +189,8 @@ class ForgesDeletableTest {
                 Features.ids().contains(forge.id()),
                 forge.id() + " is " + forge.name() + "'s id, as the pom says (ADR 173, 174)");
         assertTrue(
-                Features.ALL.forAll(feature ->
-                        feature.applying().forAll(applying -> !applying.id().equals(forge.id()))),
+                Features.ALL.forAll(feature -> feature.applying()
+                        .forAll(applying -> !applying.id().value().equals(forge.id()))),
                 "jazygit-app's surefire sets " + Features.WITHOUT + " to name " + forge.id() + " (ADR 173, 174)");
     }
 
