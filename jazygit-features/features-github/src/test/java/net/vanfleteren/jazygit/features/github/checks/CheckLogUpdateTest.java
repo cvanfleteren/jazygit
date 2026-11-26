@@ -234,7 +234,9 @@ class CheckLogUpdateTest {
                 new CheckLogCmd(new RepoSlug("owner/repo"), "lint", LINT.run().get());
 
         assertEquals(new ChecksMsg.LogRead(cmd, FILE.toString(), 3, List.of(READ)), cmd.run(env));
-        assertEquals(java.util.List.of(java.util.List.of("owner/repo", 1L, 1, (long) "lint".hashCode())), asked);
+        assertEquals(
+                java.util.List.of(java.util.List.of(new RepoSlug("owner/repo"), 1L, 1, (long) "lint".hashCode())),
+                asked);
     }
 
     @Test

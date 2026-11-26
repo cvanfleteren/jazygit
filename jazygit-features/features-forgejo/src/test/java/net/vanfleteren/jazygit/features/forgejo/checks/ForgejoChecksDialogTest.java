@@ -23,6 +23,7 @@ import java.time.Clock;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
 import net.vanfleteren.jazygit.core.forgejo.CommitStatus;
+import net.vanfleteren.jazygit.core.repo.RepoSlug;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.Msg;
 import net.vanfleteren.jazygit.kernel.state.TestModels;
@@ -162,7 +163,7 @@ class ForgejoChecksDialogTest {
                         model.popup(ForgejoChecksPopup.class).get(), model)
                 .get();
 
-        assertEquals(Option.of("cvf/nix"), failed.repository());
+        assertEquals(Option.of(new RepoSlug("cvf/nix")), failed.repository());
         assertEquals(List.of("ci / lint (push)"), failed.jobs().map(FailedBuild.Job::name));
         assertTrue(failed.logs().contains("https://code.example.net/cvf/nix/actions/runs/12/jobs/1"));
         assertFalse(failed.running());

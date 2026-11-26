@@ -94,7 +94,7 @@ class ReadWholeFileTest {
                     @Override
                     public Either<GitError, DiffText> pullRequestFileChanges(
                             PullRequestCommits commits, List<CommitFile> files, DiffOptions options) {
-                        return said("pull request " + commits.number(), files, options);
+                        return said("pull request " + commits.number().value(), files, options);
                     }
 
                     @Override

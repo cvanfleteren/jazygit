@@ -42,7 +42,7 @@ class RecentChecksQueryTest {
                                 + rollup(VERIFY_PASSED) + ", { \"statusCheckRollup\": null } ] } } }")
                 .get();
 
-        assertEquals("cvanfleteren/jazygit", recent.repository());
+        assertEquals(new RepoSlug("cvanfleteren/jazygit"), recent.repository());
         assertEquals(List.of(VERIFY, VERIFY), recent.checks());
     }
 

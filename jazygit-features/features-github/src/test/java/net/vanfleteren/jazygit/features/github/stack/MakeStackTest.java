@@ -163,7 +163,7 @@ class MakeStackTest {
         assertEquals(false, menu.canStackOn());
         assertEquals(true, menu.canAdd());
         assertEquals(true, menu.canUnstack());
-        assertEquals(Option.of(12), menu.stack().map(PullRequestStack::number));
+        assertEquals(Option.of(new StackId(12)), menu.stack().map(PullRequestStack::number));
         assertEquals(Option.of(name("feat/b")), menu.top().map(Branch::name));
     }
 
@@ -172,7 +172,7 @@ class MakeStackTest {
         Model opened = step(STACKED, new StackMsg.MenuRequested(Option.none(), Option.of(new StackId(12))));
 
         assertEquals(
-                Option.of(12),
+                Option.of(new StackId(12)),
                 opened.popup(StackPopups.Menu.class)
                         .flatMap(StackPopups.Menu::stack)
                         .map(PullRequestStack::number));
@@ -182,7 +182,7 @@ class MakeStackTest {
     void addingPutsTheBranchesChosenAboveTheTopOnItWithAdd() {
         Model picking = step(menu(STACKED, "feat/b"), new StackMsg.AddChosen());
         StackPopups.Pick pick = picking.popup(StackPopups.Pick.class).get();
-        assertEquals(Option.of(12), pick.addTo());
+        assertEquals(Option.of(new StackId(12)), pick.addTo());
         assertEquals(
                 List.of(name("feat/b"), name("feat/c")),
                 pick.choice().rows().map(row -> row.branch().name()));

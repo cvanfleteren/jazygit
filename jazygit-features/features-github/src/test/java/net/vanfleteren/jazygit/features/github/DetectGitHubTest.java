@@ -52,7 +52,7 @@ class DetectGitHubTest {
 
         assertEquals(List.of("origin", "upstream"), claimed(detected));
         assertEquals(
-                "https://github.com/owner/repo.git",
+                new RemoteUrl("https://github.com/owner/repo.git"),
                 ((FeatureMsg.Claimed) detected)
                         .claim()
                         .claimed()

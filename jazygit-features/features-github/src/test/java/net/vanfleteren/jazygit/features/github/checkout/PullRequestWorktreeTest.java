@@ -54,7 +54,7 @@ class PullRequestWorktreeTest {
         assertEquals(Option.none(), source.busyBranch());
         assertEquals(Option.of(Cmd.Guard.REMOTE_REFS), source.guard());
         assertEquals(List.of("jazygit.pullRequestWorktreeTemplate", ReadWorktreeTemplate.KEY), source.templateKeys());
-        assertEquals(Option.of("owner/repo"), source.repository());
+        assertEquals(Option.of(new RepoSlug("owner/repo")), source.repository());
         assertEquals(LinkedHashMap.of("number", "9"), source.values());
     }
 

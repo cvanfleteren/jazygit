@@ -777,7 +777,7 @@ class ChecksDialogTest {
         }
         assertEquals(1, handed.size());
         assertEquals(List.of("verify"), handed.getFirst().jobs().map(FailedBuild.Job::name));
-        assertEquals(Option.of("owner/repo"), handed.getFirst().repository());
+        assertEquals(Option.of(new RepoSlug("owner/repo")), handed.getFirst().repository());
     }
 
     @Test

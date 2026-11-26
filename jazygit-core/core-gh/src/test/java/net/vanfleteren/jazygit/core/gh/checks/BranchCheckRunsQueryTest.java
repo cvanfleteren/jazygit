@@ -45,7 +45,7 @@ class BranchCheckRunsQueryTest {
                           "checkSuites": { "nodes": [] } } },
                         "b2": null""".formatted(VERIFY_PASSED, WAITING_SUITES)).get();
 
-        assertEquals("cvanfleteren/jazygit", runs.repository());
+        assertEquals(new RepoSlug("cvanfleteren/jazygit"), runs.repository());
         assertEquals(
                 HashMap.of(
                         new ForgeBranch("main"),

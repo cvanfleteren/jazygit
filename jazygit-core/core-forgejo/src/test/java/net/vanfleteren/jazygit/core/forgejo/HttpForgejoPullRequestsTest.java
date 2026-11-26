@@ -170,7 +170,7 @@ class HttpForgejoPullRequestsTest {
                 .openPullRequests(repository("small"))
                 .get();
 
-        assertEquals(List.rangeClosed(1L, 40L), open.map(ForgejoPullRequest::number));
+        assertEquals(List.rangeClosed(1, 40).map(PrNumber::new), open.map(ForgejoPullRequest::number));
     }
 
     @Test

@@ -98,7 +98,7 @@ class FailedBuildsTest {
         FailedBuild failed = FailedBuilds.of(FEAT, new RepoSlug("o/r"), checks, Option.none());
 
         assertEquals(List.of("verify", "e2e", "ci/jenkins"), failed.jobs().map(FailedBuild.Job::name));
-        assertEquals(Option.of("o/r"), failed.repository());
+        assertEquals(Option.of(new RepoSlug("o/r")), failed.repository());
         assertEquals("""
                 gh run view 401 --log-failed --repo o/r
                 gh run view 402 --log-failed --repo o/r

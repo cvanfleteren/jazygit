@@ -46,7 +46,9 @@ class ForgejoCommandsTest {
         assertEquals(
                 List.of("mine", "upstream"),
                 claim.claimed().keySet().toList().map(RemoteName::value).sorted());
-        assertEquals(REMOTE, claim.claimed().get(new RemoteName("upstream")).get());
+        assertEquals(
+                new RemoteUrl(REMOTE),
+                claim.claimed().get(new RemoteName("upstream")).get());
         assertEquals(HashSet.empty(), claim.unsure());
     }
 

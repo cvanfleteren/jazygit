@@ -8,7 +8,7 @@ import net.vanfleteren.jazygit.core.gh.model.PullRequestList;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestPreview;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestSummary;
 import net.vanfleteren.jazygit.core.repo.RepoSlug;
-import net.vanfleteren.jazygit.features.github.GitHubFeature;
+import net.vanfleteren.jazygit.features.github.GitHubId;
 import net.vanfleteren.jazygit.features.github.prs.unseen.UnseenPullRequests;
 import net.vanfleteren.jazygit.features.github.state.GitHubState;
 import net.vanfleteren.jazygit.features.github.state.PullRequestsError;
@@ -85,7 +85,7 @@ public record PrOverview(
             List.of(REPOSITORY_PANE, REVIEW_REQUESTED_PANE, AUTHORED_PANE),
             WIDTH,
             HEIGHTS,
-            Option.of(GitHubFeature.ID));
+            Option.of(GitHubId.ID));
 
     public static final PrOverview INITIAL = new PrOverview(
             Loadable.loading(),

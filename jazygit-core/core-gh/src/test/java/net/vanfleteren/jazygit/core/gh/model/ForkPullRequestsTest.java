@@ -42,10 +42,15 @@ class ForkPullRequestsTest {
 
     @Test
     void theRepositoryOfARemoteIsTheLastTwoPartsOfItsPath() {
-        assertEquals(Option.of("anna/repo"), GhAccount.repositoryOf(new RemoteUrl("git@github.com:anna/repo.git")));
-        assertEquals(Option.of("anna/repo"), GhAccount.repositoryOf(new RemoteUrl("https://github.com/anna/repo")));
         assertEquals(
-                Option.of("anna/repo"), GhAccount.repositoryOf(new RemoteUrl("ssh://git@github.com/anna/repo.git")));
+                Option.of(new RepoSlug("anna/repo")),
+                GhAccount.repositoryOf(new RemoteUrl("git@github.com:anna/repo.git")));
+        assertEquals(
+                Option.of(new RepoSlug("anna/repo")),
+                GhAccount.repositoryOf(new RemoteUrl("https://github.com/anna/repo")));
+        assertEquals(
+                Option.of(new RepoSlug("anna/repo")),
+                GhAccount.repositoryOf(new RemoteUrl("ssh://git@github.com/anna/repo.git")));
         assertEquals(Option.none(), GhAccount.repositoryOf(new RemoteUrl("/local/repo")));
     }
 

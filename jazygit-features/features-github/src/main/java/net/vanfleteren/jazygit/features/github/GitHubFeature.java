@@ -53,7 +53,7 @@ public final class GitHubFeature {
     /**
      * The id of the feature, by which it is on or off for a repository (ADR 171).
      */
-    public static final FeatureId ID = new FeatureId("github");
+    public static final FeatureId ID = GitHubId.ID;
 
     /**
      * How often the pull requests screen reads what GitHub has again.

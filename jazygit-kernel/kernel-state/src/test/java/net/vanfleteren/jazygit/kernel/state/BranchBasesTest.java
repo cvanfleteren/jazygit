@@ -94,6 +94,6 @@ class BranchBasesTest {
                 .withPart(FIRST, stating("feat/a", "main", "a"))
                 .withPart(SECOND, stating("feat/b", "main", "b", "develop"));
 
-        assertEquals(Option.of("owner/1"), model.parts().repository());
+        assertEquals(Option.of(new RepoSlug("owner/1")), model.parts().repository());
     }
 }

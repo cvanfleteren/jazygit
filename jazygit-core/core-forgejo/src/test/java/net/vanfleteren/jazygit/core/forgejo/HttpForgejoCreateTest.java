@@ -102,7 +102,7 @@ class HttpForgejoCreateTest {
                 .createPullRequest(repository("taken"), NEW)
                 .getLeft();
 
-        assertEquals(Option.of(7L), ((ForgejoError.Refused) refused).existing());
+        assertEquals(Option.of(new PrNumber(7)), ((ForgejoError.Refused) refused).existing());
     }
 
     @Test

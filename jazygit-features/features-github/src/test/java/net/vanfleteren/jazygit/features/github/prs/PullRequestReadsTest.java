@@ -206,8 +206,12 @@ class PullRequestReadsTest {
         Model failed = PullRequestReads.failed(read, refused("offline")).model();
 
         assertEquals(Option.none(), loaded().part(GitHubState.PART).repository());
-        assertEquals(Option.of("octo/repo"), read.part(GitHubState.PART).repository());
-        assertEquals(Option.of("octo/repo"), failed.part(GitHubState.PART).repository());
+        assertEquals(
+                Option.of(new RepoSlug("octo/repo")),
+                read.part(GitHubState.PART).repository());
+        assertEquals(
+                Option.of(new RepoSlug("octo/repo")),
+                failed.part(GitHubState.PART).repository());
     }
 
     @Test

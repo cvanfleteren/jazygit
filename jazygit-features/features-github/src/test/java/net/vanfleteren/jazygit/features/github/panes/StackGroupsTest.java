@@ -186,7 +186,7 @@ class StackGroupsTest {
         assertEquals("stack #12 → main", text(group.title()));
         assertEquals(" 3 PRs", text(group.after()));
         assertEquals(StackAction.STACKS, group.keys().scope());
-        assertEquals(12, group.keys().subject());
+        assertEquals(new StackId(12), group.keys().subject());
     }
 
     @Test

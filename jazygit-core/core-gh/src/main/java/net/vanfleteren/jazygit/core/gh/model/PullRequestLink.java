@@ -19,7 +19,7 @@ public record PullRequestLink(
      * The pull request's own URL, without an anchor.
      */
     public String pullRequest() {
-        return "https://" + host + "/" + repository + "/pull/" + number.value();
+        return "https://" + host + "/" + repository.value() + "/pull/" + number.value();
     }
 
     /**

@@ -171,7 +171,9 @@ class MergeUpdateTest {
         Next next = Update.update(listed(), new PullRequestMsg.MergeFailed(SQUASH, refused));
 
         assertEquals(
-                HashMap.of(12L, new FailedMerge(new PrNumber(12), ForgejoMergeStyle.SQUASH, refused, STANDING)),
+                HashMap.of(
+                        new PrNumber(12),
+                        new FailedMerge(new PrNumber(12), ForgejoMergeStyle.SQUASH, refused, STANDING)),
                 prs(next.model()).failedMerges());
         assertEquals(
                 Option.of(refused),
@@ -224,11 +226,11 @@ class MergeUpdateTest {
         Model stillOpen = Update.update(
                         kept, new PullRequestMsg.Listed(ORIGIN, Option.of(HashMap.of(FEATURE, LISTED)), Option.none()))
                 .model();
-        assertEquals(HashMap.of(12L, failed), prs(stillOpen).failedMerges());
+        assertEquals(HashMap.of(new PrNumber(12), failed), prs(stillOpen).failedMerges());
 
         Model unread = Update.update(kept, new PullRequestMsg.Listed(ORIGIN, Option.none(), Option.none()))
                 .model();
-        assertEquals(HashMap.of(12L, failed), prs(unread).failedMerges());
+        assertEquals(HashMap.of(new PrNumber(12), failed), prs(unread).failedMerges());
 
         Model gone = Update.update(kept, new PullRequestMsg.Listed(ORIGIN, Option.of(HashMap.empty()), Option.none()))
                 .model();
