@@ -7,7 +7,6 @@ import net.vanfleteren.jazygit.kernel.ui.PopupSlot;
 import net.vanfleteren.jazygit.kernel.ui.keys.Keymap.Binding;
 import net.vanfleteren.jazygit.kernel.ui.keys.Scopes;
 import net.vanfleteren.jazygit.kernel.ui.widgets.ConfirmDialog;
-import net.vanfleteren.jazygit.kernel.ui.widgets.PickDialog;
 
 /**
  * Showing the checks on Forgejo of the tip of the selected branch, local or remote, one by one (ADR 195), on the key
@@ -32,8 +31,7 @@ public final class ShowChecksAction {
                                     remote -> new ChecksMsg.Requested(new BranchRef.Remote(remote)))),
             dispatch -> List.of(
                     PopupSlot.returningToFocus(new ForgejoChecksDialog(dispatch)),
-                    PopupSlot.returningToFocus(new ConfirmDialog<>(RerunDialog.SPEC, dispatch)),
-                    PopupSlot.returningToFocus(new PickDialog<>(LogEditorDialog.MENU, dispatch))));
+                    PopupSlot.returningToFocus(new ConfirmDialog<>(RerunDialog.SPEC, dispatch))));
 
     private ShowChecksAction() {}
 }

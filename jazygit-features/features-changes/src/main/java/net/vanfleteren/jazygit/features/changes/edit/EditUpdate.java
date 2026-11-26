@@ -7,18 +7,22 @@ import net.vanfleteren.jazygit.core.repo.Branch;
 import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.kernel.settings.EditorProgram;
 import net.vanfleteren.jazygit.kernel.settings.Editors;
+import net.vanfleteren.jazygit.kernel.state.KernelEvent;
 import net.vanfleteren.jazygit.kernel.state.Model;
+import net.vanfleteren.jazygit.kernel.state.Phrase;
 import net.vanfleteren.jazygit.kernel.state.Update.Next;
 import net.vanfleteren.jazygit.kernel.state.diff.Anchor;
 import net.vanfleteren.jazygit.kernel.state.diff.Changes;
 import net.vanfleteren.jazygit.kernel.state.diff.DiffCursorAt;
 import net.vanfleteren.jazygit.kernel.state.diff.DiffLines;
 import net.vanfleteren.jazygit.kernel.state.diff.DiffSide;
+import net.vanfleteren.jazygit.kernel.state.edit.FileEditor;
 import net.vanfleteren.jazygit.kernel.state.operation.OperationUpdate;
 
 /**
  * Opening a file in an editor (ADR 145): in git's editor while the user set none to open files, at once in the one
- * set, else in the one chosen in a menu of them.
+ * set, else in the one chosen in a menu of them; as the user asks with {@code e}, or as another feature asks with
+ * {@link KernelEvent.FileToOpen} (ADR 206).
  */
 public final class EditUpdate {
 
@@ -26,10 +30,10 @@ public final class EditUpdate {
 
     public static Next update(Model model, EditMsg msg) {
         return switch (msg) {
-            case EditMsg.Requested(String path) ->
+            case EditMsg.Requested(String path, Option<Phrase> title) ->
                 inConflict(model, path)
-                        ? Next.of(model.clearError(), new ReadFirstConflictCmd(path))
-                        : open(model, path, 1);
+                        ? Next.of(model.clearError(), new ReadFirstConflictCmd(path, title))
+                        : open(model, path, 1, title);
             case EditMsg.ListedRequested(String path) ->
                 model.repoView()
                         .files()
@@ -42,12 +46,35 @@ public final class EditUpdate {
                 file(at.cursor())
                         .map(path -> open(model, path, line(model, at, at.cursor())))
                         .getOrElse(() -> Next.of(model));
-            case EditMsg.RequestedAt(String path, int line) -> open(model, path, line);
-            case EditMsg.FirstConflictRead(String path, Option<Integer> line) -> open(model, path, line.getOrElse(1));
+            case EditMsg.FirstConflictRead(String path, Option<Integer> line, Option<Phrase> title) ->
+                open(model, path, line.getOrElse(1), title);
             case EditMsg.Chosen(EditorProgram editor) ->
                 model.popup(EditPopup.class)
-                        .map(popup -> start(model.withoutPopup(EditPopup.class), editor, popup.path(), popup.line()))
+                        .map(popup -> start(popup.back(model), editor, popup.path(), popup.line()))
                         .getOrElse(() -> Next.of(model));
+            case EditMsg.Cancelled() ->
+                Next.of(model.popup(EditPopup.class)
+                        .map(popup -> popup.back(model))
+                        .getOrElse(model));
+        };
+    }
+
+    /**
+     * A feature asked for a file to be opened (ADR 206): at the line it asked for, else as {@code e} opens it.
+     */
+    public static Next reacting(Model model, KernelEvent event) {
+        return switch (event) {
+            case KernelEvent.FileToOpen(String path, Option<Integer> line, Option<Phrase> title) ->
+                line.map(at -> open(model, path, at, title))
+                        .getOrElse(() -> update(model, new EditMsg.Requested(path, title)));
+            case KernelEvent.LogRead _,
+                    KernelEvent.OperationDone _,
+                    KernelEvent.Fetched _,
+                    KernelEvent.RepositoryOpened _,
+                    KernelEvent.ScreenShown _,
+                    KernelEvent.ChangesOpened _,
+                    KernelEvent.Switched _,
+                    KernelEvent.TabShown _ -> Next.of(model);
         };
     }
 
@@ -63,16 +90,27 @@ public final class EditUpdate {
                                 file.path().equals(path) && file.conflict().isDefined()));
     }
 
+    private static Next open(Model model, String path, int line) {
+        return open(model, path, line, Option.none());
+    }
+
     /**
      * Opens the file at {@code path} at {@code line}: in git's editor without an editor set to open files, which
-     * opens it at its start; else in the one set, or the one chosen of those.
+     * opens it at its start; else in the one set, or the one chosen of those in a menu titled {@code title}. The menu
+     * goes over a popup that is open, which it goes back to, if that one is coverable; else the first editor opens it,
+     * as the menu would take that popup away (ADR 206).
      */
-    private static Next open(Model model, String path, int line) {
+    private static Next open(Model model, String path, int line, Option<Phrase> title) {
         return switch (FileEditor.of(model)) {
             case FileEditor.GitEditor _ -> OperationUpdate.start(model.clearError(), new EditCmd(List.of(path)));
             case FileEditor.One(EditorProgram editor) -> start(model, editor, path, line);
+            case FileEditor.Several(Editors editors)
+            when model.popup().exists(popup -> !popup.coverable()) ->
+                start(model, editors.all().head(), path, line);
             case FileEditor.Several(Editors editors) ->
-                Next.of(model.clearError().openPopup(new EditPopup(path, line, editors.lettered())));
+                Next.of(model.clearError()
+                        .openPopup(new EditPopup(
+                                path, line, editors.lettered(), title, model.popup(), model.listCursor())));
         };
     }
 

@@ -12,7 +12,8 @@ import java.util.function.Function;
  * {@link SettingKey} (ADR 163). A setting not held has its initial value, and one set back to it is not held, so two
  * settings with the same values are equal, whoever declared the keys.
  *
- * <p>The kernel's own settings have an accessor and a wither each, which read and set their key.
+ * <p>The kernel's own settings have an accessor and a wither each, which read and set their key; the editors, which
+ * only the user writes, have only an accessor.
  *
  * @param held each setting that differs from its initial value, with its value, by its path
  */
@@ -91,6 +92,15 @@ public record Settings(Map<String, Held<?>> held) {
      * Whether the remotes are fetched from every so often (ADR 125).
      */
     public static final SettingKey<Boolean> AUTO_FETCH = SettingKey.of("git.auto-fetch", true, Codec.bool());
+    /**
+     * The editors the user keeps, the programs that open files and worktrees (ADR 110, 206). An entry that is wrong is
+     * left out, and reported; the others still apply. Only editors that are no array at all are not valid as a whole.
+     */
+    public static final SettingKey<Editors> EDITORS =
+            SettingKey.userOwned(Editors.KEY, Editors.NONE, Codec.readOnly(value -> {
+                Editors.Read read = Editors.read(value);
+                return new Decoded<>(Option.some(read.editors()), read.invalid());
+            }));
     /**
      * The setting at {@code path} of how wide the left column of a screen is kept, in percent of the width: one the
      * column may have, {@link #DEFAULT_WIDTH} until the user drags it (ADR 168).
@@ -202,6 +212,10 @@ public record Settings(Map<String, Held<?>> held) {
 
     public Settings withAutoFetch(boolean on) {
         return with(AUTO_FETCH, on);
+    }
+
+    public Editors editors() {
+        return get(EDITORS);
     }
 
     /**

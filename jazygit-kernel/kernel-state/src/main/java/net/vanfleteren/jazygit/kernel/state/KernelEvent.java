@@ -1,5 +1,6 @@
 package net.vanfleteren.jazygit.kernel.state;
 
+import io.vavr.control.Option;
 import net.vanfleteren.jazygit.kernel.state.diff.Changes;
 import net.vanfleteren.jazygit.kernel.state.preferences.Screen;
 import net.vanfleteren.jazygit.kernel.state.view.TabId;
@@ -58,4 +59,40 @@ public sealed interface KernelEvent {
      * read while it is shown.
      */
     record TabShown(PaneId pane, TabId tab) implements KernelEvent {}
+
+    /**
+     * A feature asked for the file at {@code path} to be opened in an editor (ADR 206): the feature that opens files
+     * answers it, with the editors the user set, so the one that asks names none. A popup that is open stays under the
+     * menu of the editors, and comes back once it closes, when it is {@link
+     * net.vanfleteren.jazygit.kernel.state.popup.Popup#coverable() coverable}; else the first editor opens it, as the
+     * menu would take that popup away.
+     *
+     * @param path  the file, relative to the working tree, or absolute
+     * @param line  the line it opens at, counted from 1; none to open it as {@code e} does, at its first conflict when it
+     *              is in conflict, else at its start
+     * @param title what the menu of the editors is titled, if it asks, when it is not named by the file
+     */
+    record FileToOpen(String path, Option<Integer> line, Option<Phrase> title) implements KernelEvent {
+
+        /**
+         * The file at {@code path} to be opened as {@code e} opens it.
+         */
+        public static FileToOpen of(String path) {
+            return new FileToOpen(path, Option.none(), Option.none());
+        }
+
+        /**
+         * The file at {@code path} to be opened at {@code line}.
+         */
+        public static FileToOpen at(String path, int line) {
+            return new FileToOpen(path, Option.some(line), Option.none());
+        }
+
+        /**
+         * This, with the menu of the editors titled {@code title}.
+         */
+        public FileToOpen titled(Phrase title) {
+            return new FileToOpen(path, line, Option.some(title));
+        }
+    }
 }

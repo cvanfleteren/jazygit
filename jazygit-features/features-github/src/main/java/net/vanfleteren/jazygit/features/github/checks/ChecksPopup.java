@@ -236,6 +236,15 @@ public record ChecksPopup(
     }
 
     /**
+     * The checks may go under the menu of the editors to open a log in, as they are told there what is read of them
+     * meanwhile (ADR 206).
+     */
+    @Override
+    public boolean coverable() {
+        return true;
+    }
+
+    /**
      * Once what was learned of how long checks take changes from what {@code before} knows, how far the checks were
      * shown to be in it stays reached, as when they are read again; in the pull request dialog it goes back to too.
      */

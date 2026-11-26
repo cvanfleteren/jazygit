@@ -4,7 +4,7 @@ import io.vavr.control.Option;
 import net.vanfleteren.jazygit.core.git.model.ConflictFile;
 import net.vanfleteren.jazygit.core.git.model.ConflictTools;
 import net.vanfleteren.jazygit.core.git.model.FileEntry;
-import net.vanfleteren.jazygit.features.changes.edit.FileEditor;
+import net.vanfleteren.jazygit.kernel.state.edit.FileEditor;
 import net.vanfleteren.jazygit.kernel.state.popup.Popup;
 
 /**

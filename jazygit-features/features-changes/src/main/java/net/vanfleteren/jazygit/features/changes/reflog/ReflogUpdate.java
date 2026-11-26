@@ -71,7 +71,8 @@ public final class ReflogUpdate {
                     KernelEvent.Fetched _,
                     KernelEvent.ScreenShown _,
                     KernelEvent.ChangesOpened _,
-                    KernelEvent.Switched _ -> Next.of(model);
+                    KernelEvent.Switched _,
+                    KernelEvent.FileToOpen _ -> Next.of(model);
         };
     }
 

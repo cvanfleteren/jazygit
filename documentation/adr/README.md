@@ -232,3 +232,4 @@ another tool adds it there too.
 | 203 | [A slot is its name](0203-a-slot-is-its-name.md) |  |
 | 204 | [The forges split their packages by flow](0204-the-forges-split-their-packages-by-flow.md) |  |
 | 205 | [A feature says its notices itself](0205-a-feature-says-its-notices-itself.md) |  |
+| 206 | [A feature asks the kernel to open a file, and the feature that opens files answers](0206-a-feature-asks-the-kernel-to-open-a-file.md) |  |

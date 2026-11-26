@@ -1,12 +1,13 @@
-package net.vanfleteren.jazygit.features.changes.edit;
+package net.vanfleteren.jazygit.kernel.state.edit;
 
 import net.vanfleteren.jazygit.kernel.settings.EditorProgram;
 import net.vanfleteren.jazygit.kernel.settings.Editors;
 import net.vanfleteren.jazygit.kernel.state.Model;
 
 /**
- * What a file is opened with (ADR 145): git's editor while the user set none to open files, the one set, or the one
- * chosen of several. {@code e} opens a file by it, and the resolve dialog says it (ADR 200), so the two cannot differ.
+ * What a file is opened with (ADR 145, 206): git's editor while the user set none to open files, the one set, or the
+ * one chosen of several. The feature that opens files opens it by this, and a dialog that tells what opening a file
+ * runs, as the resolve dialog does (ADR 200), says it, so the two cannot differ.
  */
 public sealed interface FileEditor {
 
@@ -14,8 +15,7 @@ public sealed interface FileEditor {
      * What the editors set in {@code model} open a file with.
      */
     static FileEditor of(Model model) {
-        Editors editors =
-                model.preferences().settings().get(EditorSettings.EDITORS).files();
+        Editors editors = model.preferences().settings().editors().files();
         if (editors.isEmpty()) {
             return new GitEditor();
         }

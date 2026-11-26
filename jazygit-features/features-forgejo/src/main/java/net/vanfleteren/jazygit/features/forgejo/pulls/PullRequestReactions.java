@@ -28,7 +28,8 @@ public final class PullRequestReactions {
                     KernelEvent.RepositoryOpened _,
                     KernelEvent.LogRead _,
                     KernelEvent.ScreenShown _,
-                    KernelEvent.ChangesOpened _ -> Next.of(model);
+                    KernelEvent.ChangesOpened _,
+                    KernelEvent.FileToOpen _ -> Next.of(model);
         };
     }
 }

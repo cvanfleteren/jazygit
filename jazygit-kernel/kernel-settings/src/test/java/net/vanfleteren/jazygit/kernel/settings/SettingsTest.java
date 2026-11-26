@@ -43,7 +43,9 @@ class SettingsTest {
 
     @Test
     void eachSettingDiffersFromTheDefaultInTheChangedSettings() {
+        // The editors are the user's to write (ADR 110): the app only reads them.
         List<String> same = KERNEL.all()
+                .filter(key -> key.kept() != Kept.NEVER)
                 .filter(key -> !key.changed(Settings.DEFAULT, CHANGED))
                 .map(SettingKey::path);
 

@@ -12,13 +12,14 @@ import net.vanfleteren.jazygit.kernel.ui.widgets.PickDialog;
 public final class EditFeature {
 
     /**
-     * What the app knows of it: its keys and the menu of the editors that open files.
+     * What the app knows of it: its keys, the menu of the editors that open files, and that it opens the files other
+     * features ask for (ADR 206).
      */
     public static final Feature FEATURE = Feature.of(
                     FeatureAction.ofKeys(EditKeys::register),
                     FeatureAction.ofPopups(dispatch ->
                             List.of(PopupSlot.returningToFocus(new PickDialog<>(EditDialog.MENU, dispatch)))))
-            .keeping(EditorSettings.EDITORS);
+            .reacting(EditUpdate::reacting);
 
     private EditFeature() {}
 }

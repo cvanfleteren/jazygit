@@ -188,6 +188,15 @@ public record ForgejoChecksPopup(
     }
 
     /**
+     * The checks may go under the menu of the editors to open a log in, as they are told there what is read of them
+     * meanwhile (ADR 206).
+     */
+    @Override
+    public boolean coverable() {
+        return true;
+    }
+
+    /**
      * Whether the checks are read again, while they stay shown.
      */
     public boolean refreshing() {

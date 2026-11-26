@@ -13,19 +13,18 @@ import net.vanfleteren.jazygit.core.repo.BranchRef;
 import net.vanfleteren.jazygit.core.repo.RemoteBranch;
 import net.vanfleteren.jazygit.core.repo.RemoteRef;
 import net.vanfleteren.jazygit.core.repo.Sha;
-import net.vanfleteren.jazygit.features.changes.edit.EditCmd;
-import net.vanfleteren.jazygit.features.changes.edit.EditorSettings;
-import net.vanfleteren.jazygit.features.changes.edit.OpenFileCmd;
 import net.vanfleteren.jazygit.features.forgejo.builds.ForgejoBuilds;
 import net.vanfleteren.jazygit.features.forgejo.show.ForgejoPullRequestPopup;
-import net.vanfleteren.jazygit.kernel.settings.EditorProgram;
-import net.vanfleteren.jazygit.kernel.settings.Editors;
 import net.vanfleteren.jazygit.kernel.state.AppError;
+import net.vanfleteren.jazygit.kernel.state.Events;
 import net.vanfleteren.jazygit.kernel.state.Failure;
+import net.vanfleteren.jazygit.kernel.state.KernelEvent;
 import net.vanfleteren.jazygit.kernel.state.Model;
+import net.vanfleteren.jazygit.kernel.state.Phrase;
 import net.vanfleteren.jazygit.kernel.state.Update.Next;
 import net.vanfleteren.jazygit.kernel.state.operation.OperationUpdate;
 import net.vanfleteren.jazygit.kernel.state.popup.CheckList;
+import net.vanfleteren.jazygit.kernel.state.popup.Covering;
 import net.vanfleteren.jazygit.kernel.state.popup.PopupUpdate;
 
 /**
@@ -93,15 +92,6 @@ public final class ChecksUpdate {
                         .getOrElse(model));
             case ChecksMsg.LogRequested() -> logRequested(model);
             case ChecksMsg.LogRead(CheckLogCmd cmd, String file, int line) -> logRead(model, cmd, file, line);
-            case ChecksMsg.LogEditorChosen(EditorProgram editor) ->
-                model.popup(LogEditorPopup.class)
-                        .map(asking -> OperationUpdate.start(
-                                asking.back(model), new OpenFileCmd(editor, asking.file(), asking.line())))
-                        .getOrElse(() -> Next.of(model));
-            case ChecksMsg.LogEditorCancelled() ->
-                Next.of(model.popup(LogEditorPopup.class)
-                        .map(asking -> asking.back(model))
-                        .getOrElse(model));
         };
     }
 
@@ -148,27 +138,14 @@ public final class ChecksUpdate {
     }
 
     /**
-     * Once the log of a check was read: it opens as a file does (ADR 145): in git's editor without an editor set to
-     * open files, at its start; else in the one set, or the one chosen in a menu of them, over the checks popup; in the
-     * first of them when another popup is over the checks, which the menu would take away.
+     * Once the log of a check was read: the commands are logged, and it opens as a file does, by the feature that
+     * opens files (ADR 145, 206): the menu of the editors, if it asks, goes over the checks and back to them.
      */
     private static Next logRead(Model model, CheckLogCmd cmd, String file, int line) {
         Model done = OperationUpdate.done(model, cmd, List.empty()).clearError();
-        Editors editors =
-                done.preferences().settings().get(EditorSettings.EDITORS).files();
-        if (editors.isEmpty()) {
-            return OperationUpdate.start(done, new EditCmd(List.of(file)));
-        }
-        if (editors.all().size() == 1) {
-            return OperationUpdate.start(done, new OpenFileCmd(editors.all().head(), file, line));
-        }
-        Option<ForgejoChecksPopup> checks = done.popup(ForgejoChecksPopup.class);
-        if (checks.isEmpty() && done.popup().isDefined()) {
-            // Another popup is over the checks, which the menu would take away: the first editor opens it.
-            return OperationUpdate.start(done, new OpenFileCmd(editors.all().head(), file, line));
-        }
-        return Next.of(done.openPopup(
-                new LogEditorPopup(checks, done.listCursor(), cmd.name(), file, line, editors.lettered())));
+        return Events.happened(
+                Next.of(done),
+                KernelEvent.FileToOpen.at(file, line).titled(Phrase.of("forgejo.dialog.logEditor.title", cmd.name())));
     }
 
     /**
@@ -318,8 +295,10 @@ public final class ChecksUpdate {
         return model.popup(RerunPopup.class)
                 .filter(asking -> asking.checks().onForgejo().equals(branch))
                 .map(asking -> model.openPopup(asking.over(change.apply(asking.checks()))))
-                .orElse(() -> model.popup(LogEditorPopup.class)
-                        .flatMap(asking -> asking.checks()
+                .orElse(() -> model.popup(Covering.class)
+                        .flatMap(asking -> asking.under()
+                                .filter(ForgejoChecksPopup.class::isInstance)
+                                .map(ForgejoChecksPopup.class::cast)
                                 .filter(checks -> checks.onForgejo().equals(branch))
                                 .map(checks -> model.openPopup(asking.over(change.apply(checks))))));
     }

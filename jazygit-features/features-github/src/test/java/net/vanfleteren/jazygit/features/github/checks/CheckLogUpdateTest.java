@@ -29,7 +29,9 @@ import net.vanfleteren.jazygit.core.repo.RemoteName;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.core.repo.Upstream;
 import net.vanfleteren.jazygit.features.changes.edit.EditCmd;
-import net.vanfleteren.jazygit.features.changes.edit.EditorSettings;
+import net.vanfleteren.jazygit.features.changes.edit.EditFeature;
+import net.vanfleteren.jazygit.features.changes.edit.EditMsg;
+import net.vanfleteren.jazygit.features.changes.edit.EditPopup;
 import net.vanfleteren.jazygit.features.changes.edit.OpenFileCmd;
 import net.vanfleteren.jazygit.features.github.GitHubServices;
 import net.vanfleteren.jazygit.features.github.checks.branches.BranchChecksMsg;
@@ -37,8 +39,12 @@ import net.vanfleteren.jazygit.features.github.checks.branches.GitHubChecks;
 import net.vanfleteren.jazygit.features.github.checks.timings.PendingChecks;
 import net.vanfleteren.jazygit.kernel.settings.EditorProgram;
 import net.vanfleteren.jazygit.kernel.settings.Editors;
+import net.vanfleteren.jazygit.kernel.settings.Settings;
 import net.vanfleteren.jazygit.kernel.state.Env;
 import net.vanfleteren.jazygit.kernel.state.Model;
+import net.vanfleteren.jazygit.kernel.state.Msg;
+import net.vanfleteren.jazygit.kernel.state.Phrase;
+import net.vanfleteren.jazygit.kernel.state.Reactions;
 import net.vanfleteren.jazygit.kernel.state.TestModels;
 import net.vanfleteren.jazygit.kernel.state.Update;
 import net.vanfleteren.jazygit.kernel.state.Update.Next;
@@ -79,9 +85,11 @@ class CheckLogUpdateTest {
                 Option.of(new Upstream(new BranchRef.Remote(FEATURE), 0, 0)));
         Model model = Update.update(
                         TestModels.localBranchesRead(
-                                        loaded().mapPreferences(preferences -> preferences.withSettings(preferences
-                                                .settings()
-                                                .with(EditorSettings.EDITORS, new Editors(List.of(editors))))),
+                                        // The feature that opens files answers the log asked for (ADR 206).
+                                        loaded().withReactions(new Reactions(EditFeature.FEATURE.reactions()))
+                                                .mapPreferences(preferences -> preferences.withSettings(preferences
+                                                        .settings()
+                                                        .with(Settings.EDITORS, new Editors(List.of(editors))))),
                                         List.of(mine))
                                 .model(),
                         new BranchChecksMsg.Loaded(new GitHubChecks(
@@ -104,7 +112,7 @@ class CheckLogUpdateTest {
         return checks(model).pickedCheck(model).map(Check::name);
     }
 
-    private static Model update(Model model, ChecksMsg... msgs) {
+    private static Model update(Model model, Msg... msgs) {
         return List.of(msgs).foldLeft(model, (at, msg) -> Update.update(at, msg).model());
     }
 
@@ -264,16 +272,31 @@ class CheckLogUpdateTest {
         CheckLogCmd cmd = new CheckLogCmd("owner/repo", "verify", VERIFY.run().get());
 
         Model asking = update(model, new ChecksMsg.LogRead(cmd, FILE.toString(), 7, List.empty()));
-        Next chosen = Update.update(asking, new ChecksMsg.LogEditorChosen(CODE));
-        Model cancelled = update(asking, new ChecksMsg.LogEditorCancelled());
+        Next chosen = Update.update(asking, new EditMsg.Chosen(CODE));
+        Model cancelled = update(asking, new EditMsg.Cancelled());
 
-        LogEditorPopup menu = asking.popup(LogEditorPopup.class).get();
-        assertEquals("verify", menu.name());
+        EditPopup menu = asking.popup(EditPopup.class).get();
+        assertEquals(Option.of(Phrase.of("github.dialog.logEditor.title", "verify")), menu.title());
         assertEquals(List.of(NVIM, CODE), menu.editors().map(lettered -> lettered._2));
         assertEquals(List.of(new OpenFileCmd(CODE, FILE.toString(), 7)), chosen.cmds());
         assertEquals(Option.of(checks(model)), chosen.model().popup(ChecksPopup.class));
         assertEquals(Option.of(checks(model)), cancelled.popup(ChecksPopup.class));
         assertEquals(Option.of("verify"), picked(cancelled));
+    }
+
+    @Test
+    void theChecksUnderTheMenuKeepHowFarTheyWereShownToBeWhenWhatChecksTakeChanges() {
+        Check e2e = check("e2e", 2, "E2E", Checks.PENDING, "");
+        Model model = shown(List.of(e2e, LINT), NVIM, CODE);
+        CheckLogCmd cmd = new CheckLogCmd("owner/repo", "lint", LINT.run().get());
+        Model asking = update(model, new ChecksMsg.LogRead(cmd, FILE.toString(), 3, List.empty()));
+        ChecksPopup kept = checks(model).checkTimesChanging(asking);
+
+        Model back = update(asking.checkTimesChanged(asking), new EditMsg.Cancelled());
+
+        // The checks are running, so being told changes them: the menu has to pass it on.
+        assertNotEquals(checks(model), kept);
+        assertEquals(Option.of(kept), back.popup(ChecksPopup.class));
     }
 
     @Test
@@ -304,7 +327,7 @@ class CheckLogUpdateTest {
                 new ChecksMsg.LogRead(cmd, FILE.toString(), 3, List.empty()),
                 new ChecksMsg.Rerun(
                         rerun, rerun.runs().map(run -> new RerunCmd.Outcome(run, Option.none())), List.empty()),
-                new ChecksMsg.LogEditorCancelled());
+                new EditMsg.Cancelled());
 
         assertTrue(checks(back).asked().get().outcomes().isDefined());
     }

@@ -10,9 +10,6 @@ import net.vanfleteren.jazygit.core.git.model.ConflictTools;
 import net.vanfleteren.jazygit.core.git.model.FileEntry;
 import net.vanfleteren.jazygit.core.git.model.MarkedFile;
 import net.vanfleteren.jazygit.core.process.ExecutedCommand;
-import net.vanfleteren.jazygit.features.changes.edit.EditMsg;
-import net.vanfleteren.jazygit.features.changes.edit.EditUpdate;
-import net.vanfleteren.jazygit.features.changes.edit.FileEditor;
 import net.vanfleteren.jazygit.features.changes.stage.MarkersLeftPopup;
 import net.vanfleteren.jazygit.features.midway.resolve.ResolveMsg.Chosen;
 import net.vanfleteren.jazygit.features.midway.resolve.ResolveMsg.EditChosen;
@@ -25,8 +22,11 @@ import net.vanfleteren.jazygit.features.midway.resolve.ResolveMsg.MergirafChosen
 import net.vanfleteren.jazygit.features.midway.resolve.ResolveMsg.Requested;
 import net.vanfleteren.jazygit.features.midway.resolve.ResolveMsg.RestoreRequested;
 import net.vanfleteren.jazygit.features.midway.resolve.ResolveMsg.ToolsRead;
+import net.vanfleteren.jazygit.kernel.state.Events;
+import net.vanfleteren.jazygit.kernel.state.KernelEvent;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.Update.Next;
+import net.vanfleteren.jazygit.kernel.state.edit.FileEditor;
 import net.vanfleteren.jazygit.kernel.state.operation.OperationUpdate;
 import net.vanfleteren.jazygit.kernel.state.popup.PopupUpdate;
 
@@ -111,13 +111,10 @@ public final class ResolveUpdate {
 
     /**
      * Opens the file at {@code path} in an editor: at {@code line}, its first conflict, when that was read; else it is
-     * read first (ADR 201).
+     * read first (ADR 201), by the feature that opens files (ADR 206).
      */
     private static Next edit(Model model, String path, Option<Integer> line) {
-        return EditUpdate.update(
-                model,
-                line.<EditMsg>map(at -> new EditMsg.RequestedAt(path, at))
-                        .getOrElse(() -> new EditMsg.Requested(path)));
+        return Events.happened(Next.of(model), new KernelEvent.FileToOpen(path, line, Option.none()));
     }
 
     /**
