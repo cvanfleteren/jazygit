@@ -113,7 +113,8 @@ public final class TreeFolds {
                         + (scalar.quote() == Tree.Quote.NONE ? 0 : 2)
                         + (empty(scalar) ? "null".length() : scalar.text().length());
             case Tree.Alias alias -> alias.anchor().length() + 1;
-            default -> 0;
+            case Tree.Mapping _, Tree.Sequence _, Tree.Block _ -> 0;
+            case Tree.Markup _, Tree.Element _, Tree.Text _, Tree.Comment _ -> 0;
         };
     }
 
