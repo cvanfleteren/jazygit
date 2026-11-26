@@ -32,6 +32,7 @@ import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.Head;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.features.changes.diff.DiffFilterSettings;
+import net.vanfleteren.jazygit.features.changes.files.step.FileStepNotice;
 import net.vanfleteren.jazygit.features.changes.panes.commits.CommitsPanel;
 import net.vanfleteren.jazygit.kernel.settings.DiffStyle;
 import net.vanfleteren.jazygit.kernel.settings.Settings;
@@ -40,7 +41,6 @@ import net.vanfleteren.jazygit.kernel.state.AreaId;
 import net.vanfleteren.jazygit.kernel.state.Env;
 import net.vanfleteren.jazygit.kernel.state.Loadable;
 import net.vanfleteren.jazygit.kernel.state.Model;
-import net.vanfleteren.jazygit.kernel.state.operation.Notice;
 import net.vanfleteren.jazygit.kernel.state.view.CommitFilesView;
 import net.vanfleteren.jazygit.kernel.state.view.Preview;
 import net.vanfleteren.jazygit.kernel.state.view.UnchangedNode;
@@ -114,7 +114,8 @@ class JazygitAppFileStepTest {
 
             pilot.press('K');
 
-            awaitModel(testRunner, app, model -> model.outcome().notice().contains(new Notice.NoPreviousFile()));
+            awaitModel(
+                    testRunner, app, model -> model.outcome().notice().contains(new FileStepNotice.NoPreviousFile()));
             assertEquals(Option.of(List.of(SAMPLE_DATA)), onRenderThread(testRunner, () -> shownFiles(app.model())));
             assertInContent(testRunner);
         } finally {
@@ -171,7 +172,7 @@ class JazygitAppFileStepTest {
 
             pilot.press('J');
 
-            awaitModel(testRunner, app, model -> model.outcome().notice().contains(new Notice.NoNextFile()));
+            awaitModel(testRunner, app, model -> model.outcome().notice().contains(new FileStepNotice.NoNextFile()));
             assertEquals(Option.of(List.of("pom.xml")), onRenderThread(testRunner, () -> shownFiles(app.model())));
             assertInContent(testRunner);
         } finally {
@@ -263,7 +264,7 @@ class JazygitAppFileStepTest {
             assertFocused(testRunner, AreaId.COMMIT_FILE);
 
             pilot.press('J');
-            awaitModel(testRunner, app, model -> model.outcome().notice().contains(new Notice.NoNextFile()));
+            awaitModel(testRunner, app, model -> model.outcome().notice().contains(new FileStepNotice.NoNextFile()));
         } finally {
             app.onStop();
         }

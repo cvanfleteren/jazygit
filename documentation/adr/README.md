@@ -231,3 +231,4 @@ another tool adds it there too.
 | 202 | [A feature fills slots, which the kernel and the panes declare](0202-a-feature-fills-slots-the-kernel-and-the-panes-declare.md) |  |
 | 203 | [A slot is its name](0203-a-slot-is-its-name.md) |  |
 | 204 | [The forges split their packages by flow](0204-the-forges-split-their-packages-by-flow.md) |  |
+| 205 | [A feature says its notices itself](0205-a-feature-says-its-notices-itself.md) |  |

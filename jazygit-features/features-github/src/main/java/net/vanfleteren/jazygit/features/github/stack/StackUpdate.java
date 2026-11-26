@@ -45,7 +45,6 @@ import net.vanfleteren.jazygit.kernel.state.Failure;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.Update.Next;
 import net.vanfleteren.jazygit.kernel.state.load.AheadUpdate;
-import net.vanfleteren.jazygit.kernel.state.operation.Notice;
 import net.vanfleteren.jazygit.kernel.state.operation.OperationMsg;
 import net.vanfleteren.jazygit.kernel.state.operation.OperationUpdate;
 import net.vanfleteren.jazygit.kernel.state.popup.ListCursor;
@@ -223,7 +222,7 @@ public final class StackUpdate {
      */
     private static Next stackRead(Model model, StackRebase rebase, List<StackLayer.Commits> commits) {
         return model.popup().isDefined()
-                ? Next.of(model.inform(new Notice.StackNotAsked(rebase.stack())))
+                ? Next.of(model.inform(new StackNotice.NotAsked(rebase.stack())))
                 : PopupUpdate.ask(
                         model, new StackPopups.RebaseConfirm(new StackRebaseCmd.RebaseStack(rebase, commits, true)));
     }
@@ -345,7 +344,7 @@ public final class StackUpdate {
                 // refused.
                 .map(switched -> switched.outcome().error().isDefined()
                         ? switched
-                        : switched.inform(new Notice.StackCheckedOut(
+                        : switched.inform(new StackNotice.CheckedOut(
                                 checkout.stack(),
                                 checkout.count(StackCheckout.Kind.MADE),
                                 checkout.count(StackCheckout.Kind.FAST_FORWARDED),

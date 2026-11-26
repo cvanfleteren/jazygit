@@ -30,7 +30,6 @@ import net.vanfleteren.jazygit.kernel.state.diff.Scrolled;
 import net.vanfleteren.jazygit.kernel.state.diff.ScrolledContent;
 import net.vanfleteren.jazygit.kernel.state.load.LoadMsg;
 import net.vanfleteren.jazygit.kernel.state.load.ReadWholeFile;
-import net.vanfleteren.jazygit.kernel.state.operation.Notice;
 import org.junit.jupiter.api.Test;
 
 class CopyUpdateTest {
@@ -56,19 +55,19 @@ class CopyUpdateTest {
 
         Next next = Update.update(loaded(), new CopyMsg.ShaAsked(sha));
 
-        assertEquals(List.of(new CopyCmd("c".repeat(40), new ShaCopied(sha))), next.cmds());
+        assertEquals(List.of(new CopyCmd("c".repeat(40), new CopyNotice.ShaCopied(sha))), next.cmds());
     }
 
     @Test
     void theLineOfTheCursorIsCopiedWithoutItsMarker() {
         Next next = Update.update(loaded(), new CopyMsg.Asked(at(right(10), Option.none())));
 
-        assertEquals(List.of(new CopyCmd("changed", new Notice.Copied(1))), next.cmds());
+        assertEquals(List.of(new CopyCmd("changed", new CopyNotice.LinesCopied(1))), next.cmds());
     }
 
     @Test
     void aRangeIsCopiedInTheOrderOfTheDiffFromWhicheverEndComesFirst() {
-        CopyCmd down = new CopyCmd("line9\nline10\nchanged\nline11", new Notice.Copied(4));
+        CopyCmd down = new CopyCmd("line9\nline10\nchanged\nline11", new CopyNotice.LinesCopied(4));
 
         assertEquals(
                 List.of(down),
@@ -86,12 +85,12 @@ class CopyUpdateTest {
         Anchor.OnLine leftEleven = new Anchor.OnLine("a.txt", DiffSide.OLD, 11);
 
         assertEquals(
-                List.of(new CopyCmd("line9\nchanged\nline11", new Notice.Copied(3))),
+                List.of(new CopyCmd("line9\nchanged\nline11", new CopyNotice.LinesCopied(3))),
                 Update.update(loaded(), new CopyMsg.Asked(split(at(right(11), Option.of(right(9))))))
                         .cmds());
         // The old file's side, its context lines by their numbers there (ADR 139).
         assertEquals(
-                List.of(new CopyCmd("line9\nline10\nline11", new Notice.Copied(3))),
+                List.of(new CopyCmd("line9\nline10\nline11", new CopyNotice.LinesCopied(3))),
                 Update.update(loaded(), new CopyMsg.Asked(split(at(leftEleven, Option.of(leftNine)))))
                         .cmds());
     }
@@ -103,7 +102,7 @@ class CopyUpdateTest {
                 preferences.withSettings(preferences.settings().withDiffStyle(DiffStyle.SPLIT)));
 
         assertEquals(
-                List.of(new CopyCmd("line9\nline10\nchanged\nline11", new Notice.Copied(4))),
+                List.of(new CopyCmd("line9\nline10\nchanged\nline11", new CopyNotice.LinesCopied(4))),
                 Update.update(split, new CopyMsg.Asked(at(right(11), Option.of(right(9)))))
                         .cmds());
     }
@@ -119,7 +118,7 @@ class CopyUpdateTest {
     void onTheBarOfAFileItsPathIsCopied() {
         Next next = Update.update(loaded(), new CopyMsg.Asked(at(new Anchor.File("a.txt"), Option.none())));
 
-        assertEquals(List.of(new CopyCmd("a.txt", new Notice.PathCopied("a.txt"))), next.cmds());
+        assertEquals(List.of(new CopyCmd("a.txt", new CopyNotice.PathCopied("a.txt"))), next.cmds());
     }
 
     @Test
@@ -133,7 +132,7 @@ class CopyUpdateTest {
 
         Next next = Update.update(expanded, new CopyMsg.Asked(at(right(2), Option.of(right(3)))));
 
-        assertEquals(List.of(new CopyCmd("line2\nline3", new Notice.Copied(2))), next.cmds());
+        assertEquals(List.of(new CopyCmd("line2\nline3", new CopyNotice.LinesCopied(2))), next.cmds());
     }
 
     @Test
@@ -151,9 +150,10 @@ class CopyUpdateTest {
 
     @Test
     void theCommandLogSaysWhatWasCopied() {
-        Next next = Update.update(loaded(), new CopyMsg.Done(new Notice.Copied(3)));
+        Next next = Update.update(loaded(), new CopyMsg.Done(new CopyNotice.LinesCopied(3)));
 
-        assertEquals(Option.of(new Notice.Copied(3)), next.model().outcome().notice());
+        assertEquals(
+                Option.of(new CopyNotice.LinesCopied(3)), next.model().outcome().notice());
     }
 
     @Test
@@ -172,17 +172,17 @@ class CopyUpdateTest {
             }
         };
 
-        var done = new CopyCmd("line9\nline10", new Notice.Copied(2)).run(env(terminal));
+        var done = new CopyCmd("line9\nline10", new CopyNotice.LinesCopied(2)).run(env(terminal));
 
         assertEquals(java.util.List.of("line9\nline10"), copied);
-        assertEquals(new CopyMsg.Done(new Notice.Copied(2)), done);
+        assertEquals(new CopyMsg.Done(new CopyNotice.LinesCopied(2)), done);
     }
 
     @Test
     void withoutATerminalOfItsOwnNothingIsCopied() {
-        var done = new CopyCmd("line9", new Notice.Copied(1)).run(env(Terminal.NONE));
+        var done = new CopyCmd("line9", new CopyNotice.LinesCopied(1)).run(env(Terminal.NONE));
 
-        assertEquals(new CopyMsg.Done(new Notice.NotCopied()), done);
+        assertEquals(new CopyMsg.Done(new CopyNotice.NotCopied()), done);
     }
 
     @Test
@@ -198,11 +198,11 @@ class CopyUpdateTest {
                 return Copy.FAILED;
             }
         };
-        CopyCmd copy = new CopyCmd("line9", new Notice.Copied(1));
+        CopyCmd copy = new CopyCmd("line9", new CopyNotice.LinesCopied(1));
 
-        assertEquals(new CopyMsg.Done(new Notice.CopyFailed()), copy.run(env(broken)));
+        assertEquals(new CopyMsg.Done(new CopyNotice.CopyFailed()), copy.run(env(broken)));
         assertEquals(
-                new CopyMsg.Done(new Notice.CopyFailed()),
+                new CopyMsg.Done(new CopyNotice.CopyFailed()),
                 copy.failed(new Failure.Bug(new IllegalStateException("boom"))));
     }
 

@@ -124,7 +124,7 @@ public final class AddWorktreeUpdate {
      */
     private static Option<Notice> kept(WorktreeSource source) {
         return source instanceof WorktreeSource.Existing(BranchName branch, CatchUp.Kept(var upstream, int ahead))
-                ? Option.of(new Notice.BranchKept(branch, ahead, upstream))
+                ? Option.of(new BranchKeptNotice(branch, ahead, upstream))
                 : Option.none();
     }
 

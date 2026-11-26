@@ -5,7 +5,6 @@ import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.Msg;
 import net.vanfleteren.jazygit.kernel.state.Update;
 import net.vanfleteren.jazygit.kernel.state.diff.DiffCursorAt;
-import net.vanfleteren.jazygit.kernel.state.operation.Notice;
 
 public sealed interface CopyMsg extends Msg {
 
@@ -27,5 +26,5 @@ public sealed interface CopyMsg extends Msg {
     /**
      * The terminal was asked to copy, or could not be; {@code notice} tells the user which.
      */
-    record Done(Notice notice) implements CopyMsg {}
+    record Done(CopyNotice notice) implements CopyMsg {}
 }

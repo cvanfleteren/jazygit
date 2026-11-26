@@ -21,19 +21,6 @@ public final class NoticeText {
                 of(stopped)
                         + " "
                         + Messages.get("notice.moveStopped", branch.value(), oldest.shortSha(), target.value());
-            case Notice.MergeEnqueued(var branch) -> Messages.get("notice.mergeEnqueued", branch.value());
-            case Notice.MergeStillPending(var branch) -> Messages.get("notice.mergeStillPending", branch.value());
-            case Notice.StackNotAsked(int stack) -> Messages.get("notice.stackNotAsked", String.valueOf(stack));
-            case Notice.BranchKept(var branch, int ahead, var upstream) ->
-                Messages.get("notice.branchKept", branch.value(), ahead, upstream.shortName());
-            case Notice.StackCheckedOut(int stack, int made, int fastForwarded, int kept) ->
-                Messages.get("notice.stackCheckedOut", String.valueOf(stack), made, fastForwarded, kept);
-            case Notice.Copied(int lines) -> Messages.get("notice.copied", lines);
-            case Notice.PathCopied(var path) -> Messages.get("notice.pathCopied", path);
-            case Notice.NotCopied() -> Messages.get("notice.notCopied");
-            case Notice.CopyFailed() -> Messages.get("notice.copyFailed");
-            case Notice.NoNextFile() -> Messages.get("notice.noNextFile");
-            case Notice.NoPreviousFile() -> Messages.get("notice.noPreviousFile");
             case Notice.Phrased phrased -> ErrorText.of(phrased.phrase());
         };
     }

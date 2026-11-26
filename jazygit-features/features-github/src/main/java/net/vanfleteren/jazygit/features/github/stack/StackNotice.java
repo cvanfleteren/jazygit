@@ -21,4 +21,33 @@ public sealed interface StackNotice extends Notice.Phrased {
             return Phrase.of("github.notice.stackNotListed", String.valueOf(pullRequest.value()));
         }
     }
+
+    /**
+     * Stack {@code stack} was ready to be rebased while another dialog was open, which it does not take the place of:
+     * it was not rebased (ADR 74).
+     */
+    record NotAsked(int stack) implements StackNotice {
+
+        @Override
+        public Phrase phrase() {
+            return Phrase.of("github.notice.stackNotAsked", String.valueOf(stack));
+        }
+    }
+
+    /**
+     * The branches of stack {@code stack} were checked out (ADR 99): {@code made} were made, {@code fastForwarded}
+     * fast-forwarded, and {@code kept} kept as they were, though not where their branch on the remote is.
+     */
+    record CheckedOut(int stack, int made, int fastForwarded, int kept) implements StackNotice {
+
+        @Override
+        public Phrase phrase() {
+            return Phrase.of(
+                    "github.notice.stackCheckedOut",
+                    Phrase.verbatim(String.valueOf(stack)),
+                    Phrase.count(made),
+                    Phrase.count(fastForwarded),
+                    Phrase.count(kept));
+        }
+    }
 }
