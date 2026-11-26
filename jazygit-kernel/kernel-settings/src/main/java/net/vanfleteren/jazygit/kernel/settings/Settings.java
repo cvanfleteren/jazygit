@@ -12,7 +12,8 @@ import java.util.function.Function;
  * {@link SettingKey} (ADR 163). A setting not held has its initial value, and one set back to it is not held, so two
  * settings with the same values are equal, whoever declared the keys.
  *
- * <p>The kernel's own settings have an accessor and a wither each, which read and set their key.
+ * <p>The kernel's own settings have an accessor and a wither each, which read and set their key; the editors, which
+ * only the user writes, have only an accessor.
  *
  * @param held each setting that differs from its initial value, with its value, by its path
  */
@@ -215,10 +216,6 @@ public record Settings(Map<String, Held<?>> held) {
 
     public Editors editors() {
         return get(EDITORS);
-    }
-
-    public Settings withEditors(Editors editors) {
-        return with(EDITORS, editors);
     }
 
     /**
