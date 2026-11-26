@@ -12,8 +12,7 @@ import net.vanfleteren.jazygit.core.repo.RemoteName;
 public sealed interface ForgeDecision {
 
     /**
-     * What {@code claims} make the home, with {@code remembered} what the user chose before, if anything: a remote,
-     * or none for no forge.
+     * What {@code claims} make the home, with {@code remembered} what the user chose before.
      *
      * <ul>
      *   <li>A remembered "no forge" stands; a remembered remote that is claimed is the home; one that a forge could
@@ -23,21 +22,31 @@ public sealed interface ForgeDecision {
      *       which gives no forge until the next opening.
      * </ul>
      */
-    static ForgeDecision of(List<ForgeClaim> claims, Option<Option<RemoteName>> remembered) {
+    static ForgeDecision of(List<ForgeClaim> claims, ForgeChoice remembered) {
         List<ForgeCandidate> candidates = claims.flatMap(ForgeClaim::candidates);
         Set<RemoteName> unsure = claims.flatMap(ForgeClaim::unsure).toSet();
         Option<ForgeCandidate> pick = pick(claims, candidates);
-        if (remembered.isDefined()) {
-            return remembered
-                    .get()
-                    .map(remote -> candidates
-                            .find(candidate -> candidate.remote().equals(remote))
-                            .<ForgeDecision>map(Home::new)
-                            .getOrElse(() -> unsure.contains(remote) || candidates.isEmpty()
-                                    ? new NoForge()
-                                    : new Ask(candidates, pick)))
-                    .getOrElse(NoForge::new);
-        }
+        return switch (remembered) {
+            case ForgeChoice.NoForge() -> new NoForge();
+            case ForgeChoice.Remote(RemoteName remote) ->
+                candidates
+                        .find(candidate -> candidate.remote().equals(remote))
+                        .<ForgeDecision>map(Home::new)
+                        .getOrElse(() -> unsure.contains(remote) || candidates.isEmpty()
+                                ? new NoForge()
+                                : new Ask(candidates, pick));
+            case ForgeChoice.Unchosen() -> unchosen(claims, candidates, unsure, pick);
+        };
+    }
+
+    /**
+     * What {@code claims} make the home when the user chose nothing before.
+     */
+    private static ForgeDecision unchosen(
+            List<ForgeClaim> claims,
+            List<ForgeCandidate> candidates,
+            Set<RemoteName> unsure,
+            Option<ForgeCandidate> pick) {
         if (candidates.isEmpty()) {
             return new NoForge();
         }

@@ -20,16 +20,6 @@ import net.vanfleteren.jazygit.core.git.model.UnifiedDiff.DiffLine;
  */
 public final class WordDiff {
 
-    /**
-     * How many cells the comparisons of a whole diff may fill: each pair fills the product of the counts of its words,
-     * leaving out those it starts and ends with alike; a pair that could not keep enough to be highlighted, whatever
-     * the order of its words, fills none.
-     * The comparisons run where the diff is drawn, so a diff of many long lines must not hold that up; once this is
-     * spent, the lines left are drawn whole, but for a pair that differs in an insertion or a deletion only, which
-     * fills no cells.
-     */
-    public static final long BUDGET = 2_000_000;
-
     // What a character of a line is part of: a word, a run of whitespace, or neither, when it is a token by itself.
     static final int WORD = 0;
     static final int SPACE = 1;
@@ -46,39 +36,36 @@ public final class WordDiff {
     private WordDiff() {}
 
     /**
-     * The segments of each line of each of {@code hunks}, the hunks of a diff, which share one {@link #BUDGET}: one
-     * unchanged segment for a line that is not part of a pair, or whose pair changed too much or was not compared as
-     * the budget was spent; else the parts it shares with its pair, and those it does not.
+     * The words of each line of each of {@code hunks}, the hunks of a diff in order, which share {@code budget}: it is
+     * spent on them in that order, as {@link #hunk} tells for one.
      */
-    public static List<List<List<Segment>>> segments(List<List<DiffLine>> hunks) {
-        return segments(hunks, BUDGET);
-    }
-
-    /**
-     * Like {@link #segments(List)}, with {@code budget} cells to fill.
-     */
-    static List<List<List<Segment>>> segments(List<List<DiffLine>> hunks, long budget) {
-        return hunks.foldLeft(
-                        Tuple.of(List.<List<List<Segment>>>empty(), budget),
-                        (done, hunk) -> hunk(hunk.toVector(), done._2).map1(done._1::prepend))
+    public static List<List<LineWords>> hunks(List<List<DiffLine>> hunks, Budget budget) {
+        return hunks.foldLeft(Tuple.of(List.<List<LineWords>>empty(), budget), (done, lines) -> {
+                    HunkWords words = hunk(lines, done._2);
+                    return Tuple.of(done._1.prepend(words.lines()), words.left());
+                })
                 ._1
                 .reverse();
     }
 
     /**
-     * The segments of the lines of a hunk, with {@code budget} cells to fill, and what is left of it.
+     * The words of each line of {@code lines}, a hunk, with {@code budget} left of the cells the hunks of a diff share,
+     * and what is left of it for the hunks after this one: one unchanged segment for a line that is not part of a
+     * pair, or whose pair changed too much or was not compared as the budget was spent; else the parts it shares with
+     * its pair, and those it does not.
      */
-    private static Tuple2<List<List<Segment>>, Long> hunk(Vector<DiffLine> lines, long budget) {
+    static HunkWords hunk(List<DiffLine> lines, Budget budget) {
+        Vector<DiffLine> indexed = lines.toVector();
         // Unfolded rather than recursive, as a hunk can be longer than the stack is deep.
         List<Block> blocks = List.unfoldRight(
-                Tuple.of(0, budget),
-                at -> Option.when(at._1 < lines.size(), () -> {
-                    Block block = block(lines, at._1, at._2);
+                Tuple.of(0, budget.cells()),
+                at -> Option.when(at._1 < indexed.size(), () -> {
+                    Block block = block(indexed, at._1, at._2);
                     return Tuple.of(block, Tuple.of(block.next(), block.left()));
                 }));
-        return Tuple.of(
-                blocks.flatMap(Block::segments),
-                blocks.lastOption().map(Block::left).getOrElse(budget));
+        return new HunkWords(
+                blocks.flatMap(Block::segments).map(LineWords::new),
+                blocks.lastOption().map(block -> new Budget(block.left())).getOrElse(budget));
     }
 
     /**
@@ -136,7 +123,7 @@ public final class WordDiff {
      * The segments of {@code removed} and of {@code added}, each compared with the other.
      */
     static Tuple2<List<Segment>, List<Segment>> compared(String removed, String added) {
-        return compared(removed, added, BUDGET)._1;
+        return compared(removed, added, Budget.FULL.cells())._1;
     }
 
     /**
@@ -416,6 +403,34 @@ public final class WordDiff {
     private static List<Segment> whole(String text) {
         return List.of(new Segment(text, false));
     }
+
+    /**
+     * How many cells the comparisons of a whole diff may fill: each pair fills the product of the counts of its words,
+     * leaving out those it starts and ends with alike; a pair that could not keep enough to be highlighted, whatever
+     * the order of its words, fills none.
+     *
+     * @param cells how many are left to fill
+     */
+    public record Budget(long cells) {
+
+        /**
+         * The budget of a whole diff. The comparisons run where the diff is drawn, so a diff of many long lines must
+         * not hold that up; once this is spent, the lines left are drawn whole, but for a pair that differs in an
+         * insertion or a deletion only, which fills no cells.
+         */
+        public static final Budget FULL = new Budget(2_000_000);
+    }
+
+    /**
+     * The words of the lines of a hunk, in the order it has them, and what is left of the budget for the hunks after
+     * it.
+     */
+    public record HunkWords(List<LineWords> lines, Budget left) {}
+
+    /**
+     * The words of a line: its segments, in order, which together are its text.
+     */
+    public record LineWords(List<Segment> segments) {}
 
     /**
      * A part of a line.

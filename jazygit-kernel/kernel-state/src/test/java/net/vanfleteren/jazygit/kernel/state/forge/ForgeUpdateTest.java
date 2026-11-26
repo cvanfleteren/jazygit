@@ -49,7 +49,8 @@ class ForgeUpdateTest {
     }
 
     private static Model nothingRemembered(Model model) {
-        return Update.update(model, new ForgeMsg.Remembered(Option.none())).model();
+        return Update.update(model, new ForgeMsg.Remembered(new ForgeChoice.Unchosen()))
+                .model();
     }
 
     @Test
@@ -240,7 +241,7 @@ class ForgeUpdateTest {
     @Test
     void aRememberedChoiceIsHonoured() {
         Model remembered = Update.update(
-                        opened(), new ForgeMsg.Remembered(Option.of(Option.of(new RemoteName("codeberg")))))
+                        opened(), new ForgeMsg.Remembered(new ForgeChoice.Remote(new RemoteName("codeberg"))))
                 .model();
 
         Model decided = told(remembered, claim("github", "origin"), claim("forgejo", "codeberg"));

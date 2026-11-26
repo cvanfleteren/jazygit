@@ -1,7 +1,6 @@
 package net.vanfleteren.jazygit.kernel.state.forge;
 
 import io.vavr.control.Option;
-import net.vanfleteren.jazygit.core.repo.RemoteName;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.Msg;
 import net.vanfleteren.jazygit.kernel.state.Update.Next;
@@ -17,9 +16,9 @@ public sealed interface ForgeMsg extends Msg {
     }
 
     /**
-     * What the user chose before was read: nothing when they chose nothing, else a remote, or none for no forge.
+     * What the user chose before was read: {@code chosen}.
      */
-    record Remembered(Option<Option<RemoteName>> chosen) implements ForgeMsg {}
+    record Remembered(ForgeChoice chosen) implements ForgeMsg {}
 
     /**
      * The user chose {@code home}, or no forge.

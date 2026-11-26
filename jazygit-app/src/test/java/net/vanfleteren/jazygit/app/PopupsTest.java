@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.core.git.model.SampleData;
+import net.vanfleteren.jazygit.features.changes.panes.files.FilesPanel;
 import net.vanfleteren.jazygit.features.chrome.help.HelpMsg;
 import net.vanfleteren.jazygit.features.chrome.theme.ThemeMsg;
 import net.vanfleteren.jazygit.features.chrome.theme.ThemeScope;
@@ -13,7 +14,6 @@ import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.Msg;
 import net.vanfleteren.jazygit.kernel.state.TestModels;
 import net.vanfleteren.jazygit.kernel.state.Update;
-import net.vanfleteren.jazygit.kernel.ui.files.FilesPanel;
 import org.junit.jupiter.api.Test;
 
 /**

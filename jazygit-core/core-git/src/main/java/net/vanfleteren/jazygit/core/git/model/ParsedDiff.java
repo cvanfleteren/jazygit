@@ -1,6 +1,7 @@
 package net.vanfleteren.jazygit.core.git.model;
 
 import io.vavr.Tuple;
+import io.vavr.Tuple2;
 import io.vavr.collection.Array;
 import io.vavr.collection.List;
 import io.vavr.collection.Seq;
@@ -10,6 +11,8 @@ import java.util.Objects;
 import net.vanfleteren.jazygit.core.git.model.UnifiedDiff.DiffLine;
 import net.vanfleteren.jazygit.core.git.model.UnifiedDiff.FileDiff;
 import net.vanfleteren.jazygit.core.git.model.UnifiedDiff.Hunk;
+import net.vanfleteren.jazygit.core.git.model.WordDiff.Budget;
+import net.vanfleteren.jazygit.core.git.model.WordDiff.LineWords;
 import net.vanfleteren.jazygit.core.git.model.WordDiff.Segment;
 import net.vanfleteren.jazygit.core.git.model.syntax.DiffLexer;
 import net.vanfleteren.jazygit.core.git.model.syntax.Highlighter;
@@ -31,39 +34,54 @@ public record ParsedDiff(List<String> preamble, List<ParsedFile> files) {
     private static final Highlighter HIGHLIGHTER = new DiffLexer();
 
     /**
-     * {@code text} parsed, its words compared and its code lexed. The words of all its hunks share one budget
-     * ({@link WordDiff#segments}), so they are compared at once, in order, and then given to their files.
+     * {@code text} parsed, its words compared and its code lexed. The words of all its hunks share one
+     * {@link Budget}, spent on them in order.
      */
     public static ParsedDiff of(String text) {
-        UnifiedDiff diff = UnifiedDiff.parse(text);
-        List<List<List<Segment>>> words =
-                WordDiff.segments(diff.files().flatMap(FileDiff::hunks).map(Hunk::lines));
-        List<List<List<List<Segment>>>> byFile = diff.files()
-                .foldLeft(
-                        Tuple.of(List.<List<List<List<Segment>>>>empty(), words),
-                        (done, file) -> Tuple.of(
-                                done._1.prepend(done._2.take(file.hunks().size())),
-                                done._2.drop(file.hunks().size())))
-                ._1
-                .reverse();
-        return new ParsedDiff(diff.preamble(), diff.files().zipWith(byFile, ParsedDiff::file));
+        return of(text, Budget.FULL);
     }
 
     /**
-     * {@code file}, whose hunks have the segments {@code words}, with its code lexed.
+     * {@code text} parsed, its words compared with {@code budget} for all its hunks, and its code lexed.
      */
-    private static ParsedFile file(FileDiff file, List<List<List<Segment>>> words) {
+    static ParsedDiff of(String text, Budget budget) {
+        UnifiedDiff diff = UnifiedDiff.parse(text);
+        List<List<LineWords>> words =
+                WordDiff.hunks(diff.files().flatMap(FileDiff::hunks).map(Hunk::lines), budget);
+        // Each file takes the words of as many hunks as it has, from those left by the files before it.
+        return new ParsedDiff(
+                diff.preamble(),
+                diff.files()
+                        .foldLeft(Tuple.of(List.<ParsedFile>empty(), words), (done, file) -> {
+                            Tuple2<List<List<LineWords>>, List<List<LineWords>>> taken =
+                                    done._2.splitAt(file.hunks().size());
+                            return Tuple.of(done._1.prepend(file(file, taken._1)), taken._2);
+                        })
+                        ._1
+                        .reverse());
+    }
+
+    /**
+     * {@code file}, whose hunks have the words {@code words}, with its code lexed.
+     */
+    private static ParsedFile file(FileDiff file, List<List<LineWords>> words) {
         return new ParsedFile(
                 file,
                 file.hunks()
+                        .zip(HIGHLIGHTER.tokens(file))
+                        .zipWith(words, (lexed, lines) -> hunk(lexed._1, lines, lexed._2)));
+    }
+
+    /**
+     * {@code hunk}, whose lines have the words {@code words} and the tokens {@code tokens}.
+     */
+    private static ParsedHunk hunk(Hunk hunk, List<LineWords> words, List<Option<List<Token>>> tokens) {
+        return new ParsedHunk(
+                hunk,
+                hunk.lines()
                         .zipWith(
-                                words.zip(HIGHLIGHTER.tokens(file)),
-                                (hunk, marks) -> new ParsedHunk(
-                                        hunk,
-                                        hunk.lines()
-                                                .zipWith(
-                                                        marks._1.zip(marks._2),
-                                                        (line, mark) -> ParsedLine.of(line, mark._1, mark._2)))));
+                                words.zip(tokens),
+                                (line, marks) -> ParsedLine.of(line, marks._1.segments(), marks._2)));
     }
 
     /**
@@ -121,7 +139,7 @@ public record ParsedDiff(List<String> preamble, List<ParsedFile> files) {
     }
 
     /**
-     * A line of a hunk, with its segments as {@link WordDiff#segments} has them, and its tokens as the
+     * A line of a hunk, with its segments as {@link WordDiff#hunk} has them, and its tokens as the
      * {@link Highlighter} found them, or none when it was not lexed. It is made with {@link #of} only. A class
      * rather than a record, so that what it keeps stays its own: a record's constructor and accessors are as public
      * as the record, and would give away the sentinels and the packed tokens below. It is the one model that keeps

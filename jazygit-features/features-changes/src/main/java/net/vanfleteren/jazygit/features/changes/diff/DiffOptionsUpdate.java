@@ -61,8 +61,12 @@ public final class DiffOptionsUpdate {
                 .getOrElse(model);
     }
 
-    private static Next shown(Next next) {
-        return new Next(shown(next.model()), next.cmds());
+    /**
+     * {@code next}, with the popup of the options showing them as its model has them, if it is open; what it asks of
+     * the app, and whether the app stops, stay.
+     */
+    static Next shown(Next next) {
+        return next.map(DiffOptionsUpdate::shown);
     }
 
     /**
@@ -143,8 +147,7 @@ public final class DiffOptionsUpdate {
         List<Cmd> loads = List.<Cmd>empty()
                 .appendAll(model.repoView().preview().fileDiff().map(diff -> new LoadFileDiff(diff.key(), options)))
                 .appendAll(RereadUpdate.shown(model).filter(load -> load instanceof DiffLoad<?>));
-        return new Next(
-                model.mapRepoView(repoView -> repoView.mapPreview(
+        return Next.of(model.mapRepoView(repoView -> repoView.mapPreview(
                                 preview -> preview.withFileDiff(reloading(preview.fileDiff()))
                                         .withCommitDetail(reloading(preview.commitDetail()))
                                         .withStashDetail(reloading(preview.stashDetail())))
@@ -152,8 +155,8 @@ public final class DiffOptionsUpdate {
                                 branches -> branches.withDivergence(divergence).withBranchCommits(branchCommits))
                         .mapFiles(files -> files.withCommitFiles(commitFiles))
                         // What was expanded was read with the options before, and is folded to their context.
-                        .withoutExpansions()),
-                loads);
+                        .withoutExpansions()))
+                .and(loads);
     }
 
     /**

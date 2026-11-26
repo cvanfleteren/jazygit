@@ -29,11 +29,14 @@ public record ReadForgeChoice() implements Cmd {
                 .config()
                 .local(KEY)
                 .getOrElse(Option.none())
-                .map(value -> Option.when(!value.isBlank(), () -> new RemoteName(value.strip()))));
+                .<ForgeChoice>map(value -> value.isBlank()
+                        ? new ForgeChoice.NoForge()
+                        : new ForgeChoice.Remote(new RemoteName(value.strip())))
+                .getOrElse(ForgeChoice.Unchosen::new));
     }
 
     @Override
     public Msg failed(Failure failure) {
-        return new ForgeMsg.Remembered(Option.none());
+        return new ForgeMsg.Remembered(new ForgeChoice.Unchosen());
     }
 }

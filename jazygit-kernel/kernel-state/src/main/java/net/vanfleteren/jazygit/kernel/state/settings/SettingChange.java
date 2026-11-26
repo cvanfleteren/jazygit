@@ -41,6 +41,6 @@ public final class SettingChange {
                 .getOrElse(changed);
         List<Cmd> cmds = List.<Cmd>of(new SaveSettings(kept, chosen))
                 .appendAll(key.reopens() ? List.of(new ShowAgain(Landing.of(model.repoView()))) : List.empty());
-        return new Next(shown, cmds);
+        return Next.of(shown).and(cmds);
     }
 }

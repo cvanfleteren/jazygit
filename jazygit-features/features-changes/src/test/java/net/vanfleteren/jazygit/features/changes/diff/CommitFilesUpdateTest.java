@@ -32,6 +32,7 @@ import net.vanfleteren.jazygit.kernel.state.view.DivergenceView;
 import net.vanfleteren.jazygit.kernel.state.view.FilesLock;
 import net.vanfleteren.jazygit.kernel.state.view.Followed;
 import net.vanfleteren.jazygit.kernel.state.view.Preview;
+import net.vanfleteren.jazygit.kernel.state.view.ViewIntent;
 import net.vanfleteren.jazygit.kernel.state.view.ViewMsg;
 import net.vanfleteren.jazygit.kernel.ui.keys.Scopes;
 import org.junit.jupiter.api.Test;
@@ -89,11 +90,14 @@ class CommitFilesUpdateTest {
     void escapeLeavesThemListedAsTheAppMovesTheFocusBackAndLetsGoOfTheLock() {
         Model open = withFiles(opened());
 
-        Model closed = Update.update(open, new CommitFilesMsg.Closed()).model();
+        Next closed = Update.update(open, new CommitFilesMsg.Closed());
 
         assertEquals(
-                open.repoView().files().commitFiles(), closed.repoView().files().commitFiles());
-        assertEquals(Option.none(), closed.repoView().files().locked());
+                open.repoView().files().commitFiles(),
+                closed.model().repoView().files().commitFiles());
+        assertEquals(Option.none(), closed.model().repoView().files().locked());
+        // The app is asked to move the focus back to the list they were opened from (ADR 207).
+        assertEquals(List.of(ViewIntent.ToPane.to(Scopes.COMMITS.pane())), closed.intents());
     }
 
     @Test

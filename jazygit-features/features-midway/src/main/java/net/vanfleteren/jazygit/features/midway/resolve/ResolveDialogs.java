@@ -10,9 +10,9 @@ import net.vanfleteren.jazygit.features.changes.stage.MarkersLeftPopup;
 import net.vanfleteren.jazygit.features.changes.stage.StageMsg;
 import net.vanfleteren.jazygit.kernel.settings.EditorProgram;
 import net.vanfleteren.jazygit.kernel.state.Msg;
+import net.vanfleteren.jazygit.kernel.state.PaneId;
 import net.vanfleteren.jazygit.kernel.state.edit.FileEditor;
 import net.vanfleteren.jazygit.kernel.ui.PopupSlot;
-import net.vanfleteren.jazygit.kernel.ui.files.FilesPanel;
 import net.vanfleteren.jazygit.kernel.ui.i18n.Messages;
 import net.vanfleteren.jazygit.kernel.ui.widgets.ChoiceDialog;
 import net.vanfleteren.jazygit.kernel.ui.widgets.ChoiceDialog.Choice;
@@ -233,8 +233,8 @@ public final class ResolveDialogs {
      */
     public static List<PopupSlot> popups(Consumer<Msg> dispatch) {
         return List.of(
-                PopupSlot.returningTo(FilesPanel.PANE, new ChoiceDialog<>(RESOLVE, dispatch)),
-                PopupSlot.returningTo(FilesPanel.PANE, new ChoiceDialog<>(MARKERS_LEFT, dispatch)),
-                PopupSlot.returningTo(FilesPanel.PANE, new ConfirmDialog<>(SOLVE_OVER_EDITS, dispatch)));
+                PopupSlot.returningTo(PaneId.FILES, new ChoiceDialog<>(RESOLVE, dispatch)),
+                PopupSlot.returningTo(PaneId.FILES, new ChoiceDialog<>(MARKERS_LEFT, dispatch)),
+                PopupSlot.returningTo(PaneId.FILES, new ConfirmDialog<>(SOLVE_OVER_EDITS, dispatch)));
     }
 }

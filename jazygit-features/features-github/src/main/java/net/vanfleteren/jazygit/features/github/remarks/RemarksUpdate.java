@@ -55,9 +55,8 @@ public final class RemarksUpdate {
                 Next.of(RemarksState.mapPullRequest(
                         model, number, read -> read.withPictures(read.pictures().put(url, picture))));
             case RemarksMsg.Refreshed() ->
-                new Next(
-                        model,
-                        RemarksState.files(model)
+                Next.of(model)
+                        .and(RemarksState.files(model)
                                 .map(files -> (Cmd) new RemarksCmd.LoadReviewRemarks(
                                         files.number(), HashSet.empty(), files.version()))
                                 .toList());
@@ -70,11 +69,10 @@ public final class RemarksUpdate {
      */
     public static Next opened(Model model, Changes changes) {
         return changes instanceof Changes.OfPullRequest(PullRequestCommits commits, var _)
-                ? new Next(
-                        model.withPart(
+                ? Next.of(model.withPart(
                                 RemarksState.PART,
-                                new RemarksState(Option.of(PrRemarks.reading(new PrNumber(commits.number()))))),
-                        List.of(
+                                new RemarksState(Option.of(PrRemarks.reading(new PrNumber(commits.number()))))))
+                        .and(List.of(
                                 new RemarksCmd.LoadReviewRemarks(new PrNumber(commits.number()), HashSet.empty(), 0),
                                 new RemarksCmd.LoadCollapsed(commits.repository(), new PrNumber(commits.number()))))
                 : Next.of(model.withPart(RemarksState.PART, RemarksState.NONE));
@@ -129,13 +127,12 @@ public final class RemarksUpdate {
                 .filter(url -> !read.pictures().containsKey(url))
                 .take(Math.max(0, MAX_PICTURES - read.pictures().size()))
                 .toList();
-        return new Next(
-                RemarksState.mapPullRequest(
+        return Next.of(RemarksState.mapPullRequest(
                         model,
                         read.number(),
                         open -> open.withPictures(
-                                urls.foldLeft(open.pictures(), (pictures, url) -> pictures.put(url, Option.none())))),
-                urls.map(url -> new RemarksCmd.LoadPicture(read.number(), url)));
+                                urls.foldLeft(open.pictures(), (pictures, url) -> pictures.put(url, Option.none())))))
+                .and(urls.map(url -> new RemarksCmd.LoadPicture(read.number(), url)));
     }
 
     /**

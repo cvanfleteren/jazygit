@@ -55,9 +55,8 @@ final class MergeUpdate {
                         .inform(new MergeNotice.StillPending(merge.branch())));
         Model checking = toCheck.foldLeft(
                 left, (m, merge) -> m.mapPart(GitHubState.PART, gitHub -> gitHub.withMerge(merge.beingChecked())));
-        return new Next(
-                checking,
-                toCheck.map(merge -> new CheckMerge(merge.number(), ((MergeStatus.Pending) merge.status()).id())));
+        return Next.of(checking)
+                .and(toCheck.map(merge -> new CheckMerge(merge.number(), ((MergeStatus.Pending) merge.status()).id())));
     }
 
     /**

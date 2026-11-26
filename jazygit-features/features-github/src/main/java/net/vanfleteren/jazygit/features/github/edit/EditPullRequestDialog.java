@@ -1,30 +1,26 @@
 package net.vanfleteren.jazygit.features.github.edit;
 
-import static dev.tamboui.toolkit.Toolkit.*;
-
 import dev.tamboui.toolkit.element.Element;
+import dev.tamboui.toolkit.element.StyledElement;
 import dev.tamboui.toolkit.event.EventResult;
-import dev.tamboui.tui.bindings.KeyTrigger;
 import dev.tamboui.tui.event.KeyEvent;
-import dev.tamboui.widgets.input.TextAreaState;
-import dev.tamboui.widgets.input.TextInputState;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.util.function.Consumer;
 import net.vanfleteren.jazygit.core.repo.RemoteBranch;
-import net.vanfleteren.jazygit.features.github.create.GitHubNewPullRequestDialog;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.Msg;
-import net.vanfleteren.jazygit.kernel.ui.edit.LineEditInput;
 import net.vanfleteren.jazygit.kernel.ui.i18n.Messages;
 import net.vanfleteren.jazygit.kernel.ui.text.ErrorText;
 import net.vanfleteren.jazygit.kernel.ui.theme.Theme;
 import net.vanfleteren.jazygit.kernel.ui.widgets.BasesField;
+import net.vanfleteren.jazygit.kernel.ui.widgets.BodyField;
+import net.vanfleteren.jazygit.kernel.ui.widgets.CheckBox;
 import net.vanfleteren.jazygit.kernel.ui.widgets.DialogFrame;
-import net.vanfleteren.jazygit.kernel.ui.widgets.FocusBordered;
+import net.vanfleteren.jazygit.kernel.ui.widgets.FormKeys;
 import net.vanfleteren.jazygit.kernel.ui.widgets.HintedDialog;
 import net.vanfleteren.jazygit.kernel.ui.widgets.PopupView;
-import net.vanfleteren.jazygit.kernel.ui.widgets.SubmittableTextArea;
+import net.vanfleteren.jazygit.kernel.ui.widgets.TitleField;
 
 /**
  * Popup editing the pull request that is shown (ADR 59), laid out and keyed as the one that creates one: the list of
@@ -46,19 +42,17 @@ public final class EditPullRequestDialog implements PopupView {
     public static final String BODY_ID = "edit-pull-request-body";
     public static final String DRAFT_ID = "edit-pull-request-draft";
 
-    // With Ctrl held, saves from any field; Enter adds a line to the body.
-    private static final char CONFIRM_KEY = 's';
     // With Ctrl held, opens the body in the editor.
     private static final char EDITOR_KEY = 'o';
     private static final int WIDTH = 110;
-    private static final int INPUT_HEIGHT = 3;
-    private static final int BODY_HEIGHT = 10;
-    private static final int BOX_WIDTH = 3;
     private static final int ERROR_LINES = 3;
 
-    private final TextInputState title = new TextInputState();
-    private final TextAreaState body = new TextAreaState();
+    private final TitleField title = new TitleField(
+            ID, "github.dialog.newPullRequest.titleField", "github.dialog.newPullRequest.titlePlaceholder");
+    private final BodyField body = new BodyField(
+            BODY_ID, "github.dialog.newPullRequest.body", "github.dialog.editPullRequest.bodyPlaceholder");
     private final BasesField<RemoteBranch> bases;
+    private final FormKeys keys;
     private final Consumer<Msg> dispatch;
 
     /**
@@ -66,6 +60,11 @@ public final class EditPullRequestDialog implements PopupView {
      */
     public EditPullRequestDialog(Consumer<Msg> dispatch) {
         this.bases = new BasesField<>(BASES_ID, base -> base.branch().value(), dispatch);
+        // A blank title keeps the popup open, see EditPullRequestUpdate.
+        this.keys = new FormKeys(
+                () -> dispatch.accept(new EditPullRequestMsg.Cancelled()),
+                () -> dispatch.accept(new EditPullRequestMsg.Confirmed()),
+                this::editorKey);
         this.dispatch = dispatch;
     }
 
@@ -82,60 +81,37 @@ public final class EditPullRequestDialog implements PopupView {
      */
     @Override
     public Option<Element> render(Model model) {
-        return model.popup(EditPullRequestPopup.class).map(popup -> {
-            PullRequestFields fields = popup.fields();
-            // The fields show what the model has: what was typed in them, or what came back from the editor.
-            if (!title.text().equals(fields.title())) {
-                title.setText(fields.title());
-                title.moveCursorToEnd();
-            }
-            if (!body.text().equals(fields.body())) {
-                body.setText(fields.body());
-            }
-            // The error of saving it, or of the editor; a new try clears it.
-            List<Element> content = List.of(
-                            base(model, popup),
-                            new LineEditInput(
-                                            textInput(title)
-                                                    .title(Messages.get("github.dialog.newPullRequest.titleField"))
-                                                    .placeholder(Messages.get(
-                                                            "github.dialog.newPullRequest.titlePlaceholder"))
-                                                    .length(INPUT_HEIGHT)
-                                                    .onSubmit(this::confirm)
-                                                    .onKeyEvent(this::keys),
-                                            title,
-                                            ID)
-                                    .onChange(text -> edited(fields.draft())),
-                            new SubmittableTextArea(
-                                            textArea(body)
-                                                    .title(Messages.get("github.dialog.newPullRequest.body"))
-                                                    .placeholder(Messages.get(
-                                                            "github.dialog.editPullRequest.bodyPlaceholder")),
-                                            body,
-                                            BODY_ID,
-                                            this::confirm)
-                                    .onChange(text -> edited(fields.draft()))
-                                    .rows(BODY_HEIGHT)
-                                    .onKeyEvent(this::keys),
-                            draft(popup))
-                    .appendAll(model.outcome()
-                            .error()
-                            .filter(error -> !popup.saving())
-                            .map(error -> DialogFrame.wrapped(ErrorText.of(error), WIDTH, ERROR_LINES)
-                                    .addClass(Theme.Classes.ERROR)));
-            return new HintedDialog(
-                    DialogFrame.of(
-                            Messages.get(
-                                    "github.dialog.editPullRequest.title",
-                                    String.valueOf(popup.number().value()),
-                                    popup.pullRequestPopup().branch().value()),
-                            WIDTH,
-                            content.toJavaArray(Element[]::new)),
-                    Messages.get(
-                            popup.saving()
-                                    ? "github.dialog.editPullRequest.saving"
-                                    : "github.dialog.editPullRequest.hint"));
-        });
+        return model.popup(EditPullRequestPopup.class).map(popup -> dialog(model, popup));
+    }
+
+    /**
+     * The popup editing the pull request of {@code popup}. The fields show what the model has: what was typed in them,
+     * or what came back from the editor. Under them, the error of saving it, or of the editor; a new try clears it.
+     */
+    private Element dialog(Model model, EditPullRequestPopup popup) {
+        PullRequestFields fields = popup.fields();
+        List<Element> content = List.of(
+                        base(model, popup),
+                        title.render(fields.title(), keys, text -> edited(fields.draft())),
+                        body.render(fields.body(), keys, text -> edited(fields.draft())),
+                        draft(popup))
+                .appendAll(model.outcome()
+                        .error()
+                        .filter(error -> !popup.saving())
+                        .map(error -> DialogFrame.wrapped(ErrorText.of(error), WIDTH, ERROR_LINES)
+                                .addClass(Theme.Classes.ERROR)));
+        return new HintedDialog(
+                DialogFrame.of(
+                        Messages.get(
+                                "github.dialog.editPullRequest.title",
+                                String.valueOf(popup.number().value()),
+                                popup.pullRequestPopup().branch().value()),
+                        WIDTH,
+                        content.toJavaArray(Element[]::new)),
+                Messages.get(
+                        popup.saving()
+                                ? "github.dialog.editPullRequest.saving"
+                                : "github.dialog.editPullRequest.hint"));
     }
 
     /**
@@ -145,7 +121,7 @@ public final class EditPullRequestDialog implements PopupView {
     private Element base(Model model, EditPullRequestPopup popup) {
         RemoteBranch base = popup.fields().base();
         return popup.baseChangeable()
-                ? bases.render(popup.bases(), base, model.listCursor(), EditPullRequestMsg.BaseMoved::new, this::keys)
+                ? bases.render(popup.bases(), base, model.listCursor(), EditPullRequestMsg.BaseMoved::new, keys::handle)
                 : bases.fixed(
                         base,
                         Messages.get(
@@ -155,51 +131,22 @@ public final class EditPullRequestDialog implements PopupView {
     }
 
     /**
-     * The draft box, which takes the focus, as a cursor that the themes show by reversing it, in a border that shows
-     * the focus as those of the other fields do; dimmed and without the focus when it cannot be changed.
+     * The draft box; dimmed and without the focus when it cannot be changed.
      */
     private Element draft(EditPullRequestPopup popup) {
         boolean ticked = popup.fields().draft();
-        Element box = popup.draftChangeable()
-                ? text(GitHubNewPullRequestDialog.box(ticked))
-                        .id(DRAFT_ID)
-                        .addClass(GitHubNewPullRequestDialog.CHECKBOX)
-                        .focusable()
-                        .length(BOX_WIDTH)
-                        .onKeyEvent(event -> draftKeys(event, ticked))
-                : text(GitHubNewPullRequestDialog.box(ticked))
-                        .addClass(Theme.Classes.DIM)
-                        .length(BOX_WIDTH);
-        Element label = popup.draftChangeable()
-                ? text(" " + Messages.get("github.dialog.newPullRequest.draft"))
-                : text(" " + Messages.get("github.dialog.newPullRequest.draft")).addClass(Theme.Classes.DIM);
-        return new FocusBordered(panel(row(box, label)).length(INPUT_HEIGHT), DRAFT_ID);
+        StyledElement<?> label = CheckBox.label(Messages.get("github.dialog.newPullRequest.draft"));
+        return CheckBox.line(
+                popup.draftChangeable()
+                        ? List.of(CheckBox.of(DRAFT_ID, ticked, () -> edited(!ticked), keys), label)
+                        : List.of(CheckBox.fixed(ticked), label.addClass(Theme.Classes.DIM)),
+                List.of(DRAFT_ID));
     }
 
     /**
-     * Ticks or unticks the draft box on space or Enter; the other keys are those of every field.
+     * Opens the body in the editor on {@link #EDITOR_KEY}, after the keys of every field.
      */
-    private EventResult draftKeys(KeyEvent event, boolean draft) {
-        if (event.isConfirm() || KeyTrigger.ch(' ').matches(event)) {
-            edited(!draft);
-            return EventResult.HANDLED;
-        }
-        return keys(event);
-    }
-
-    /**
-     * Goes back on Escape, saves on {@link #CONFIRM_KEY} and opens the body in the editor on {@link #EDITOR_KEY}.
-     * The dialog around the fields only gets keys after the global handlers, and those take Escape and Ctrl+S too.
-     */
-    private EventResult keys(KeyEvent event) {
-        if (event.isCancel()) {
-            dispatch.accept(new EditPullRequestMsg.Cancelled());
-            return EventResult.HANDLED;
-        }
-        if (event.hasCtrl() && event.isChar(CONFIRM_KEY)) {
-            confirm();
-            return EventResult.HANDLED;
-        }
+    private EventResult editorKey(KeyEvent event) {
         if (event.hasCtrl() && event.isChar(EDITOR_KEY)) {
             dispatch.accept(new EditPullRequestMsg.EditorRequested());
             return EventResult.HANDLED;
@@ -213,10 +160,5 @@ public final class EditPullRequestDialog implements PopupView {
      */
     private void edited(boolean draft) {
         dispatch.accept(new EditPullRequestMsg.Edited(title.text(), body.text(), draft));
-    }
-
-    private void confirm() {
-        // A blank title keeps the popup open, see EditPullRequestUpdate.
-        dispatch.accept(new EditPullRequestMsg.Confirmed());
     }
 }

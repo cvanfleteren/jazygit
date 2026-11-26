@@ -4,8 +4,8 @@ import io.vavr.collection.List;
 import java.util.function.Consumer;
 import net.vanfleteren.jazygit.features.changes.commit.CommitDialog;
 import net.vanfleteren.jazygit.kernel.state.Msg;
+import net.vanfleteren.jazygit.kernel.state.PaneId;
 import net.vanfleteren.jazygit.kernel.ui.PopupSlot;
-import net.vanfleteren.jazygit.kernel.ui.files.FilesPanel;
 import net.vanfleteren.jazygit.kernel.ui.i18n.Messages;
 import net.vanfleteren.jazygit.kernel.ui.widgets.ConfirmDialog;
 
@@ -28,7 +28,7 @@ public final class CreateCommitDialogs {
 
     public static List<PopupSlot> popups(Consumer<Msg> dispatch) {
         return List.of(
-                PopupSlot.returningTo(FilesPanel.PANE, new ConfirmDialog<>(STAGE_ALL, dispatch)),
-                PopupSlot.returningTo(FilesPanel.PANE, new CommitDialog(dispatch)));
+                PopupSlot.returningTo(PaneId.FILES, new ConfirmDialog<>(STAGE_ALL, dispatch)),
+                PopupSlot.returningTo(PaneId.FILES, new CommitDialog(dispatch)));
     }
 }

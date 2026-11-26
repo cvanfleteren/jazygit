@@ -22,6 +22,7 @@ import net.vanfleteren.jazygit.kernel.state.view.FileFilter;
 import net.vanfleteren.jazygit.kernel.state.view.FilesLock;
 import net.vanfleteren.jazygit.kernel.state.view.Followed;
 import net.vanfleteren.jazygit.kernel.state.view.Unlisted;
+import net.vanfleteren.jazygit.kernel.state.view.ViewIntent;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -221,12 +222,21 @@ class FilesFollowedTest {
 
         Model at = Update.update(locked, new SelectionMsg.FilesLockedAt(new Followed.Files(FIRST)))
                 .model();
-        Model unlocked = Update.update(at, new SelectionMsg.FilesUnlocked()).model();
+        Next unlocked = Update.update(at, new SelectionMsg.FilesUnlocked());
 
         assertEquals(
                 Option.of(new Followed.Files(FIRST)),
                 at.repoView().files().locked().flatMap(FilesLock::at));
-        assertEquals(Option.none(), unlocked.repoView().files().locked());
+        assertEquals(Option.none(), unlocked.model().repoView().files().locked());
+        // Back to the list the files were locked to, if Escape was pressed in them (ADR 149, 207).
+        assertEquals(List.of(ViewIntent.ToPane.from(FILES, COMMITS)), unlocked.intents());
+    }
+
+    @Test
+    void escapeInTheFilesOfTheWorkingTreeAsksForNoFocus() {
+        assertEquals(
+                List.empty(),
+                Update.update(loaded(), new SelectionMsg.FilesUnlocked()).intents());
     }
 
     private static Next followed(Model model, Changes of) {

@@ -21,6 +21,7 @@ import net.vanfleteren.jazygit.kernel.settings.ThemeName;
 import net.vanfleteren.jazygit.kernel.state.Update.Launch;
 import net.vanfleteren.jazygit.kernel.state.Update.Step;
 import net.vanfleteren.jazygit.kernel.state.preferences.RepositoryTheme;
+import net.vanfleteren.jazygit.kernel.state.view.ViewIntent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -46,6 +47,7 @@ public final class Program {
     private final Consumer<Throwable> bugs;
     private final Runnable modelChanged;
     private final Runnable quit;
+    private final Consumer<ViewIntent> asked;
     private final Clock clock;
     // The command started last for each slot, to cancel when a newer one comes.
     private final Map<Cmd.Slot, Tuple2<Launch, Future<Void>>> latest = new EnumMap<>(Cmd.Slot.class);
@@ -63,9 +65,11 @@ public final class Program {
             Consumer<Throwable> bugs,
             Runnable modelChanged,
             Runnable quit,
+            Consumer<ViewIntent> asked,
             Clock clock) {
         this.env = env;
         this.quit = quit;
+        this.asked = asked;
         this.clock = clock;
         this.io = io;
         this.background = background;
@@ -99,6 +103,8 @@ public final class Program {
      *                      screen has to be drawn again
      * @param quit          run on the {@code ui} executor's thread once a message leaves a {@link Step} that asks
      *                      the app to stop
+     * @param asked         told on the {@code ui} executor's thread what a message asks the app to do with the view
+     *                      state it keeps, once the model it leaves is the program's (ADR 207)
      * @param clock         the time the model is told with every message
      */
     public static Program start(
@@ -115,8 +121,9 @@ public final class Program {
             Consumer<Throwable> bugs,
             Runnable modelChanged,
             Runnable quit,
+            Consumer<ViewIntent> asked,
             Clock clock) {
-        Program program = new Program(env, io, background, ui, bugs, modelChanged, quit, clock);
+        Program program = new Program(env, io, background, ui, bugs, modelChanged, quit, asked, clock);
         program.apply(Update.begin(
                 env.git().repositoryName(),
                 settings,
@@ -194,6 +201,7 @@ public final class Program {
             modelChanged.run();
         }
         next.launches().forEach(this::launch);
+        next.intents().forEach(asked);
         if (next.quit()) {
             quit.run();
         }
@@ -207,8 +215,7 @@ public final class Program {
     private void launch(Launch launch) {
         Cmd cmd = launch.cmd();
         Option<Lock> guard = cmd.guard().map(guards::get);
-        FutureTask<Void> task =
-                new FutureTask<>(() -> performed(guard, cmd).forEach(result -> done(launch, result)), null);
+        FutureTask<Void> task = new FutureTask<>(() -> run(launch, guard), null);
         cmd.slot()
                 .flatMap(slot -> Option.of(latest.put(slot, Tuple.of(launch, task))))
                 .filter(older -> older._2().cancel(false))
@@ -219,15 +226,16 @@ public final class Program {
     }
 
     /**
-     * What {@code cmd} reported, once it holds {@code guard}; none when it was not performed, as the program stopped.
-     * One that failed even to say so is still done, with nothing to report: else its job never ends. Not Try, which
-     * throws an OutOfMemoryError on, and that is just what may strike here.
+     * Performs the command of {@code launch}, once it holds {@code guard}, and reports it done with what it reported;
+     * not at all when it was not performed, as the program stopped. One that failed even to say so is still done, with
+     * nothing to report: else its job never ends. Not Try, which throws an OutOfMemoryError on, and that is just what
+     * may strike here.
      */
-    private Option<Option<Msg>> performed(Option<Lock> guard, Cmd cmd) {
+    private void run(Launch launch, Option<Lock> guard) {
         try {
-            return guarded(guard, () -> perform(env, cmd, bugs)).map(Option::of);
+            guarded(guard, () -> perform(env, launch.cmd(), bugs)).forEach(result -> done(launch, Option.of(result)));
         } catch (Throwable e) {
-            return Option.of(Option.none());
+            done(launch, Option.none());
         }
     }
 

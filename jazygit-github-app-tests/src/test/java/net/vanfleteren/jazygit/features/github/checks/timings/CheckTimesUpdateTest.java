@@ -118,7 +118,7 @@ class CheckTimesUpdateTest {
     private static Next ran(Next next, Env env) {
         return next.cmds().foldLeft(Next.of(next.model()), (done, cmd) -> {
             Next after = Update.update(done.model(), cmd.run(env));
-            return new Next(after.model(), done.cmds().appendAll(after.cmds()));
+            return Next.of(after.model()).and(done.cmds().appendAll(after.cmds()));
         });
     }
 

@@ -86,49 +86,53 @@ public final class PickDialog<P extends Popup, T> implements PopupView {
      */
     @Override
     public Option<Element> render(Model model) {
-        return model.popup(spec.popupType()).map(popup -> {
-            List<Row<T>> all = spec.rows().apply(popup);
-            FilteredCursor<Row<T>> view =
-                    FilteredCursor.of(typed -> shown(all, typed), row -> true, model.listCursor());
-            List<Integer> widths = widths(all);
-            list.elements(view.lines().map(row -> element(row, widths)).toJavaArray(StyledElement[]::new))
-                    .selected(view.selected());
-            List.of(list, noMatches)
-                    .appendAll(empty)
-                    .forEach(element -> element.onKeyEvent(event -> handleKey(view, !all.isEmpty(), event))
-                            .onMouseEvent(event -> ListKeys.wheel(
-                                    event,
-                                    view.selected(),
-                                    view.size(),
-                                    view::highlightable,
-                                    line -> moved(view.at(line)))));
-            ListCursor cursor = model.listCursor();
-            int width = widths.sum().intValue() + GAP * Math.max(0, widths.size() - 1);
-            ListElement<?> rows =
-                    all.isEmpty() ? empty.getOrElse(list) : view.lines().isEmpty() ? noMatches : list;
-            String hintKey = spec.hint().getOrElse(HINT);
-            // Wide enough for the hint, which would wrap otherwise.
-            int hint = Math.max(TextWidth.of(Messages.get(hintKey)), TextWidth.of(Messages.get(FILTERING_HINT)));
-            Element frame = DialogFrame.withHint(
-                            spec.title().apply(popup),
-                            Math.max(DialogFrame.LIST_WIDTH, Math.max(width, hint) + DialogFrame.FRAME),
-                            cursor.filter().isDefined() ? FILTERING_HINT : hintKey,
-                            cursor.filter()
-                                    .map(typed -> List.of(
-                                            filter.field(typed),
-                                            new PasteTarget(
-                                                    rows.constraint(Constraint.fill()),
-                                                    spec.id(),
-                                                    event -> ListKeys.pasted(event, view, filter)
-                                                            .flatMap(view::after)
-                                                            .forEach(this::moved))))
-                                    .getOrElse(() -> List.of(rows.constraint(Constraint.fill()))))
-                    // The filter, the rows of the popup whatever the filter, the blank line and the hint, plus the
-                    // border.
-                    .length((cursor.filter().isDefined() ? 1 : 0) + Math.max(1, all.size()) + 2 + 2);
-            return new WithDetails(
-                    frame, view.highlighted().flatMap(PickDialog::details), all.flatMap(PickDialog::details));
-        });
+        return model.popup(spec.popupType()).map(popup -> dialog(model, popup));
+    }
+
+    /**
+     * The popup of {@code popup}: its rows, those the filter shows, with the details of the one highlighted.
+     */
+    private Element dialog(Model model, P popup) {
+        List<Row<T>> all = spec.rows().apply(popup);
+        FilteredCursor<Row<T>> view = FilteredCursor.of(typed -> shown(all, typed), row -> true, model.listCursor());
+        List<Integer> widths = widths(all);
+        list.elements(view.lines().map(row -> element(row, widths)).toJavaArray(StyledElement[]::new))
+                .selected(view.selected());
+        List.of(list, noMatches)
+                .appendAll(empty)
+                .forEach(element -> element.onKeyEvent(event -> handleKey(view, !all.isEmpty(), event))
+                        .onMouseEvent(event -> ListKeys.wheel(
+                                event,
+                                view.selected(),
+                                view.size(),
+                                view::highlightable,
+                                line -> moved(view.at(line)))));
+        ListCursor cursor = model.listCursor();
+        int width = widths.sum().intValue() + GAP * Math.max(0, widths.size() - 1);
+        ListElement<?> rows =
+                all.isEmpty() ? empty.getOrElse(list) : view.lines().isEmpty() ? noMatches : list;
+        String hintKey = spec.hint().getOrElse(HINT);
+        // Wide enough for the hint, which would wrap otherwise.
+        int hint = Math.max(TextWidth.of(Messages.get(hintKey)), TextWidth.of(Messages.get(FILTERING_HINT)));
+        Element frame = DialogFrame.withHint(
+                        spec.title().apply(popup),
+                        Math.max(DialogFrame.LIST_WIDTH, Math.max(width, hint) + DialogFrame.FRAME),
+                        cursor.filter().isDefined() ? FILTERING_HINT : hintKey,
+                        cursor.filter()
+                                .map(typed -> List.of(
+                                        filter.field(typed),
+                                        new PasteTarget(
+                                                rows.constraint(Constraint.fill()),
+                                                spec.id(),
+                                                event -> ListKeys.pasted(event, view, filter)
+                                                        .flatMap(view::after)
+                                                        .forEach(this::moved))))
+                                .getOrElse(() -> List.of(rows.constraint(Constraint.fill()))))
+                // The filter, the rows of the popup whatever the filter, the blank line and the hint, plus the
+                // border.
+                .length((cursor.filter().isDefined() ? 1 : 0) + Math.max(1, all.size()) + 2 + 2);
+        return new WithDetails(
+                frame, view.highlighted().flatMap(PickDialog::details), all.flatMap(PickDialog::details));
     }
 
     /**

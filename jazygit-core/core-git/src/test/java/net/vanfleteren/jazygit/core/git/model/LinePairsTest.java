@@ -69,8 +69,8 @@ class LinePairsTest {
                         """).files().head().hunks().head().lines();
         // With no budget left, the pair is not compared.
         List<ParsedLine> lines = diffLines.zipWith(
-                WordDiff.segments(List.of(diffLines), 0).head(),
-                (line, words) -> ParsedLine.of(line, words, Option.none()));
+                WordDiff.hunk(diffLines, new WordDiff.Budget(0)).lines(),
+                (line, words) -> ParsedLine.of(line, words.segments(), Option.none()));
 
         assertEquals(List.of(List.of(0), List.of(1)), LinePairs.groups(lines));
     }

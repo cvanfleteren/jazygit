@@ -65,10 +65,9 @@ public final class ExpandUpdate {
                         () -> file, again -> file.withRead(again.file()).withWhole(Loadable.loading())))
                 .getOrElse(() -> new Expansion.Expanded(read.get().file(), Loadable.loading(), List.empty()));
         Expansion.Expanded asked = expanded.withLines(expanded.lines().append(lines));
-        return new Next(
-                model.mapRepoView(view -> view.withExpansion(
-                        area, expansion.withFiles(expansion.files().put(gap.path(), asked)))),
-                read.toList().map(Cmd.class::cast));
+        return Next.of(model.mapRepoView(view -> view.withExpansion(
+                        area, expansion.withFiles(expansion.files().put(gap.path(), asked)))))
+                .and(read.toList().map(Cmd.class::cast));
     }
 
     /**
