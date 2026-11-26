@@ -55,60 +55,65 @@ final class StackPickDialog implements PopupView {
 
     @Override
     public Option<Element> render(Model model) {
-        return model.popup(StackPopups.Pick.class).map(pick -> {
-            StackChoice choice = pick.choice();
-            ListCursor cursor = model.listCursor();
-            int line = Math.clamp(
-                    cursor.line().getOrElse(choice.branch()), 0, choice.rows().size() - 1);
-            List<String> lines = choice.rows()
-                    .zipWithIndex()
-                    .map(at -> line(choice, at._1(), at._2(), behind(model, choice, at._1())));
-            list.elements(lines.zipWithIndex()
-                            .map(at -> styled(choice, at._1(), at._2()))
-                            .toJavaArray(StyledElement[]::new))
-                    .selected(line)
-                    .onKeyEvent(event -> keys(event, cursor, line, choice.rows().size()));
-            // Adding, a lowest branch without a pull request is no refusal: Enter creates it (ADR 148).
-            Option<String> creating = pick.refused().isEmpty() && pick.addTo().isDefined()
-                    ? choice.toCreate()
-                            .map(row -> Messages.get(
-                                    "github.dialog.addToStack.create",
-                                    row.branch().name().value(),
-                                    choice.rows().head().branch().name().value()))
-                    : Option.none();
-            Option<String> why = pick.refused()
-                    .map(Messages::get)
-                    .orElse(() -> creating.isDefined()
-                            ? Option.none()
-                            : pick.plan()
-                                    .swap()
-                                    .toOption()
-                                    .map(refusal ->
-                                            why(refusal, choice, pick.addTo().isDefined())));
-            List<StyledElement<?>> under = why.map(text ->
-                            List.<StyledElement<?>>of(text(""), text(text).addClass(Theme.Classes.ERROR)))
-                    .orElse(() -> creating.map(text -> List.<StyledElement<?>>of(text(""), text(text))))
-                    .getOrElse(List.empty());
-            String title = pick.addTo()
-                    .map(stack -> Messages.get("github.dialog.addToStack.title", String.valueOf(stack)))
-                    .getOrElse(() -> choice.base()
-                            .map(base -> Messages.get("github.dialog.makeStack.title", base.value()))
-                            .getOrElse(() -> Messages.get("github.dialog.makeStack.titleNoBase")));
-            int width = lines.appendAll(why)
-                    .appendAll(creating)
-                    .append(Messages.get(HINT))
-                    .append(title)
-                    .map(TextWidth::of)
-                    .max()
-                    .getOrElse(0);
-            return DialogFrame.withHint(
-                            title,
-                            Math.max(DialogFrame.LIST_WIDTH, width + DialogFrame.FRAME + 2),
-                            HINT,
-                            List.<Element>of(list.length(choice.rows().size())).appendAll(under))
-                    // The branches, why they make no stack, the blank line and the hint, plus the border.
-                    .length(choice.rows().size() + under.size() + 2 + 2);
-        });
+        return model.popup(StackPopups.Pick.class).map(pick -> dialog(model, pick));
+    }
+
+    /**
+     * The popup picking the branches of the stack of {@code pick}: its branches, and why they make none, or what
+     * Enter creates.
+     */
+    private Element dialog(Model model, StackPopups.Pick pick) {
+        StackChoice choice = pick.choice();
+        ListCursor cursor = model.listCursor();
+        int line = Math.clamp(
+                cursor.line().getOrElse(choice.branch()), 0, choice.rows().size() - 1);
+        List<String> lines =
+                choice.rows().zipWithIndex().map(at -> line(choice, at._1(), at._2(), behind(model, choice, at._1())));
+        list.elements(lines.zipWithIndex()
+                        .map(at -> styled(choice, at._1(), at._2()))
+                        .toJavaArray(StyledElement[]::new))
+                .selected(line)
+                .onKeyEvent(event -> keys(event, cursor, line, choice.rows().size()));
+        // Adding, a lowest branch without a pull request is no refusal: Enter creates it (ADR 148).
+        Option<String> creating = pick.refused().isEmpty() && pick.addTo().isDefined()
+                ? choice.toCreate()
+                        .map(row -> Messages.get(
+                                "github.dialog.addToStack.create",
+                                row.branch().name().value(),
+                                choice.rows().head().branch().name().value()))
+                : Option.none();
+        Option<String> why = pick.refused()
+                .map(Messages::get)
+                .orElse(() -> creating.isDefined()
+                        ? Option.none()
+                        : pick.plan()
+                                .swap()
+                                .toOption()
+                                .map(refusal ->
+                                        why(refusal, choice, pick.addTo().isDefined())));
+        List<StyledElement<?>> under = why.map(
+                        text -> List.<StyledElement<?>>of(text(""), text(text).addClass(Theme.Classes.ERROR)))
+                .orElse(() -> creating.map(text -> List.<StyledElement<?>>of(text(""), text(text))))
+                .getOrElse(List.empty());
+        String title = pick.addTo()
+                .map(stack -> Messages.get("github.dialog.addToStack.title", String.valueOf(stack)))
+                .getOrElse(() -> choice.base()
+                        .map(base -> Messages.get("github.dialog.makeStack.title", base.value()))
+                        .getOrElse(() -> Messages.get("github.dialog.makeStack.titleNoBase")));
+        int width = lines.appendAll(why)
+                .appendAll(creating)
+                .append(Messages.get(HINT))
+                .append(title)
+                .map(TextWidth::of)
+                .max()
+                .getOrElse(0);
+        return DialogFrame.withHint(
+                        title,
+                        Math.max(DialogFrame.LIST_WIDTH, width + DialogFrame.FRAME + 2),
+                        HINT,
+                        List.<Element>of(list.length(choice.rows().size())).appendAll(under))
+                // The branches, why they make no stack, the blank line and the hint, plus the border.
+                .length(choice.rows().size() + under.size() + 2 + 2);
     }
 
     /**
