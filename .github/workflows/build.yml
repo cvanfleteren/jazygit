@@ -72,7 +72,7 @@ jobs:
           restore-keys: build-cache-verify-${{ steps.java.outputs.version }}-${{ hashFiles('flake.lock', '.mvn/maven-build-cache-config.xml') }}-
 
       - name: Install Nix
-        uses: cachix/install-nix-action@v31
+        uses: cachix/install-nix-action@v32
 
       # The git of the flake's nixpkgs rather than the runner image's, so the tests meet the same git whichever image
       # the runner has; flake.lock pins it.
@@ -216,7 +216,7 @@ jobs:
           cache-dependency-path: acceptance/requirements.txt
 
       - name: Install Nix
-        uses: cachix/install-nix-action@v31
+        uses: cachix/install-nix-action@v32
 
       # The same git as verify's: the acceptance tests check what git made of the repository.
       - name: Set up git from the flake
