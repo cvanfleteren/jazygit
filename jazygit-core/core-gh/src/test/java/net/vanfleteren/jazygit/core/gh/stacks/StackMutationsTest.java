@@ -3,6 +3,7 @@ package net.vanfleteren.jazygit.core.gh.stacks;
 import static org.junit.jupiter.api.Assertions.*;
 
 import io.vavr.collection.List;
+import net.vanfleteren.jazygit.core.gh.model.StackId;
 import net.vanfleteren.jazygit.core.gh.process.GhCommand;
 import net.vanfleteren.jazygit.core.repo.PrNumber;
 import org.junit.jupiter.api.Test;
@@ -43,13 +44,13 @@ class StackMutationsTest {
                         "repos/{owner}/{repo}/stacks/12/add",
                         "-F",
                         "pull_requests[]=98"),
-                args(StackMutations.add(12, List.of(new PrNumber(98)))));
+                args(StackMutations.add(new StackId(12), List.of(new PrNumber(98)))));
     }
 
     @Test
     void unstackingNamesOnlyTheStack() {
         assertEquals(
                 List.of("gh", "api", "--method", "POST", "repos/{owner}/{repo}/stacks/12/unstack"),
-                args(StackMutations.unstack(12)));
+                args(StackMutations.unstack(new StackId(12))));
     }
 }

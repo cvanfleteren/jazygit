@@ -34,6 +34,7 @@ import net.vanfleteren.jazygit.core.gh.model.PullRequestDetails.Size;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestDetails.State;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestDetails.Status;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestStack;
+import net.vanfleteren.jazygit.core.gh.model.StackId;
 import net.vanfleteren.jazygit.core.gh.process.GhError;
 import net.vanfleteren.jazygit.core.gh.process.GhProcess;
 import net.vanfleteren.jazygit.core.repo.PrNumber;
@@ -263,7 +264,7 @@ class DetailsQueryTest {
                                   { "position": 2, "pullRequest": { "number": 95, "state": "OPEN", "headRefName": "b95", "baseRefName": "b94" } } ] } }"""))
                 .get();
         PullRequestStack stack = new PullRequestStack(
-                96,
+                new StackId(96),
                 2,
                 2,
                 List.of(

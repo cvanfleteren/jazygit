@@ -44,7 +44,9 @@ final class StackCheckoutDialog implements PopupView {
             StackCheckout checkout = popup.checkout();
             String text = StackDialogs.checkedOut(checkout);
             return DialogFrame.withHint(
-                            Messages.get("github.dialog.checkoutStack.title", String.valueOf(checkout.stack())),
+                            Messages.get(
+                                    "github.dialog.checkoutStack.title",
+                                    String.valueOf(checkout.stack().value())),
                             WIDTH,
                             checkout.startable() ? "github.dialog.checkoutStack.hint" : "changes.dialog.hint.close",
                             List.of(DialogFrame.wrapped(text, WIDTH, Integer.MAX_VALUE)))

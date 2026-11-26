@@ -15,6 +15,7 @@ import net.vanfleteren.jazygit.core.gh.model.GhBranch;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest.Review;
+import net.vanfleteren.jazygit.core.gh.model.StackId;
 import net.vanfleteren.jazygit.core.git.model.BaseDistance;
 import net.vanfleteren.jazygit.core.git.model.Fixtures;
 import net.vanfleteren.jazygit.core.repo.Branch;
@@ -124,7 +125,7 @@ class StackPickDialogTest {
         StackChoice alone = StackChoice.above(
                 branch("feat/b"), List.of(branch("feat/b")), HashMap.empty(), b -> OPEN.get(b.name()));
 
-        String screen = render(new StackPopups.Pick(alone, Option.none(), Option.of(12)));
+        String screen = render(new StackPopups.Pick(alone, Option.none(), Option.of(new StackId(12))));
 
         assertTrue(screen.contains("No branch is built on feat/b"), screen);
     }
@@ -137,7 +138,7 @@ class StackPickDialogTest {
                 HashMap.of(name("feat/d"), name("feat/c")),
                 b -> OPEN.get(b.name()));
 
-        String screen = render(new StackPopups.Pick(above, Option.none(), Option.of(12)));
+        String screen = render(new StackPopups.Pick(above, Option.none(), Option.of(new StackId(12))));
 
         assertTrue(screen.contains("feat/d has no pull request: Enter creates one on feat/c"), screen);
     }

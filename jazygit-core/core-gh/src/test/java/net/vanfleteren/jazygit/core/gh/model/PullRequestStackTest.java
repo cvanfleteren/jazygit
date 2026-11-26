@@ -14,7 +14,7 @@ class PullRequestStackTest {
      */
     private static PullRequestStack onTopOf(State first, State second, State third) {
         return new PullRequestStack(
-                7,
+                new StackId(7),
                 4,
                 4,
                 List.of(
@@ -38,7 +38,7 @@ class PullRequestStackTest {
     @Test
     void theOnesAboveAreNotMerged() {
         PullRequestStack bottom = new PullRequestStack(
-                7,
+                new StackId(7),
                 1,
                 2,
                 List.of(

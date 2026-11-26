@@ -28,6 +28,7 @@ import net.vanfleteren.jazygit.core.gh.model.PullRequestDetails.Branches;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestDetails.State;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestEdit;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestStack;
+import net.vanfleteren.jazygit.core.gh.model.StackId;
 import net.vanfleteren.jazygit.core.gh.process.GhError;
 import net.vanfleteren.jazygit.core.gh.process.GhFailure;
 import net.vanfleteren.jazygit.core.gh.pullrequests.StubPullRequests;
@@ -181,8 +182,8 @@ class EditPullRequestUpdateTest {
 
     @Test
     void theBaseOfOneStackedOnAnotherCannotBeChanged() {
-        PullRequestStack second = new PullRequestStack(3, 2, 2, List.empty());
-        PullRequestStack first = new PullRequestStack(3, 1, 2, List.empty());
+        PullRequestStack second = new PullRequestStack(new StackId(3), 2, 2, List.empty());
+        PullRequestStack first = new PullRequestStack(new StackId(3), 1, 2, List.empty());
 
         EditPullRequestPopup above = opened(DETAILS.withStack(Option.of(second)));
         EditPullRequestPopup bottom = opened(DETAILS.withStack(Option.of(first)));

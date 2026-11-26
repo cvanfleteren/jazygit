@@ -6,6 +6,7 @@ import io.vavr.control.Option;
 import java.time.Instant;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestStack;
+import net.vanfleteren.jazygit.core.gh.model.StackId;
 import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.PrNumber;
 
@@ -30,13 +31,13 @@ public sealed interface StackChange {
      * Pull requests {@code pullRequests} were stacked: on stack {@code stack}, when they were put on one; and the stack
      * is to be rebased once it is listed, when {@code rebase} (ADR 74).
      */
-    record Stacked(List<PrNumber> pullRequests, Option<Integer> stack, Instant until, boolean rebase)
+    record Stacked(List<PrNumber> pullRequests, Option<StackId> stack, Instant until, boolean rebase)
             implements StackChange {
 
         /**
          * One after which the stack is not rebased.
          */
-        public Stacked(List<PrNumber> pullRequests, Option<Integer> stack, Instant until) {
+        public Stacked(List<PrNumber> pullRequests, Option<StackId> stack, Instant until) {
             this(pullRequests, stack, until, false);
         }
 
@@ -52,7 +53,7 @@ public sealed interface StackChange {
 
         @Override
         public boolean shownIn(Map<BranchName, PullRequest> open) {
-            List<Option<Integer>> stacks = pullRequests.map(number -> open.values()
+            List<Option<StackId>> stacks = pullRequests.map(number -> open.values()
                     .find(pr -> pr.number().equals(number))
                     .flatMap(PullRequest::stack)
                     .map(PullRequestStack::number));
@@ -65,14 +66,14 @@ public sealed interface StackChange {
     /**
      * Stack {@code stack} was taken apart.
      */
-    record Unstacked(int stack, Instant until) implements StackChange {
+    record Unstacked(StackId stack, Instant until) implements StackChange {
 
         @Override
         public boolean shownIn(Map<BranchName, PullRequest> open) {
             // A pull request in a merge queue stays in the stack on GitHub.
             return open.values()
                     .forAll(pr -> pr.stack()
-                            .forAll(on -> on.number() != stack
+                            .forAll(on -> !on.number().equals(stack)
                                     || on.own().exists(PullRequestStack.Entry::staysWhenUnstacked)));
         }
     }

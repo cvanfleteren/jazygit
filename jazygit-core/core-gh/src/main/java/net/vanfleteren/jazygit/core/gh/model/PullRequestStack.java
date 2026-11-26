@@ -15,7 +15,7 @@ import net.vanfleteren.jazygit.core.repo.Sha;
  * @param size     how many pull requests the stack holds, merged and closed ones too
  * @param entries  the pull requests of the stack, the bottom one first
  */
-public record PullRequestStack(int number, int position, int size, List<Entry> entries) {
+public record PullRequestStack(StackId number, int position, int size, List<Entry> entries) {
 
     /**
      * How many open pull requests of the stack are below this one, which merging it merges too: the ones below that

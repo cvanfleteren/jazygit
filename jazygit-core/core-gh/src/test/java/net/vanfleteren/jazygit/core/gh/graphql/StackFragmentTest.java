@@ -8,6 +8,7 @@ import io.vavr.control.Option;
 import net.vanfleteren.jazygit.core.gh.model.GhBranch;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestDetails.State;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestStack;
+import net.vanfleteren.jazygit.core.gh.model.StackId;
 import net.vanfleteren.jazygit.core.gh.process.GhError;
 import net.vanfleteren.jazygit.core.gh.process.GhProcess;
 import net.vanfleteren.jazygit.core.repo.PrNumber;
@@ -32,7 +33,7 @@ class StackFragmentTest {
     void aStackedPullRequestSaysWhereItSitsAndWhatTheStackHolds() {
         assertEquals(
                 Either.right(Option.of(new PullRequestStack(
-                        7,
+                        new StackId(7),
                         2,
                         2,
                         List.of(
@@ -121,7 +122,7 @@ class StackFragmentTest {
     void anEntryWhosePullRequestCannotBeReadIsLeftOut() {
         assertEquals(
                 Either.right(Option.of(new PullRequestStack(
-                        7, 2, 3, List.of(new PullRequestStack.Entry(2, new PrNumber(95), State.OPEN))))),
+                        new StackId(7), 2, 3, List.of(new PullRequestStack.Entry(2, new PrNumber(95), State.OPEN))))),
                 stack("""
                         { "stackEntry": { "position": 2 }, "stack": { "number": 7, "size": 3, "entries": { "nodes": [
                           { "position": 1, "pullRequest": null }, null,

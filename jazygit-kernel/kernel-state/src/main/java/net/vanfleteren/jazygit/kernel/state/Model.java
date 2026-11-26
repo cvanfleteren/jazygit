@@ -8,6 +8,7 @@ import java.util.function.UnaryOperator;
 import lombok.With;
 import net.vanfleteren.jazygit.core.git.model.*;
 import net.vanfleteren.jazygit.core.repo.*;
+import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.kernel.state.diff.Changes;
 import net.vanfleteren.jazygit.kernel.state.diff.DiffCursorAt;
 import net.vanfleteren.jazygit.kernel.state.diff.DiffLines;

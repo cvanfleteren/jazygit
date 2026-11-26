@@ -159,7 +159,8 @@ public record GitHubState(
         return open.find(pr -> pr.number().equals(number))
                 .flatMap(PullRequest::stack)
                 .map(stack -> open.filter(other -> other.stack()
-                                .exists(its -> its.number() == stack.number() && its.position() < stack.position()))
+                                .exists(its ->
+                                        its.number().equals(stack.number()) && its.position() < stack.position()))
                         .map(PullRequest::number)
                         .sorted())
                 .getOrElse(List.empty());

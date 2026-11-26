@@ -14,6 +14,7 @@ import net.vanfleteren.jazygit.core.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest.Review;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestDetails.State;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestStack;
+import net.vanfleteren.jazygit.core.gh.model.StackId;
 import net.vanfleteren.jazygit.core.git.model.Fixtures;
 import net.vanfleteren.jazygit.core.repo.Branch;
 import net.vanfleteren.jazygit.core.repo.BranchName;
@@ -145,7 +146,7 @@ class StackChoiceTest {
     @Test
     void aPullRequestInAStackAlreadyIsNotStackedAgain() {
         PullRequestStack stack = new PullRequestStack(
-                12,
+                new StackId(12),
                 1,
                 1,
                 List.of(new PullRequestStack.Entry(

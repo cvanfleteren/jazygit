@@ -13,6 +13,7 @@ import net.vanfleteren.jazygit.core.gh.model.PullRequest;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestDetails.State;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestStack;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestSummary;
+import net.vanfleteren.jazygit.core.gh.model.StackId;
 import net.vanfleteren.jazygit.core.process.ExecutedCommand;
 import net.vanfleteren.jazygit.core.repo.Branch;
 import net.vanfleteren.jazygit.core.repo.BranchName;
@@ -62,12 +63,12 @@ public final class StackUpdate {
 
     public static Next update(Model model, StackMsg msg) {
         return switch (msg) {
-            case Toggled(int stack) -> toggled(model, stack);
+            case Toggled(StackId stack) -> toggled(model, stack);
             case StackMsg.ViewToggled() -> viewToggled(model);
-            case MenuRequested(Option<BranchName> branch, Option<Integer> stack) -> menu(model, branch, stack);
+            case MenuRequested(Option<BranchName> branch, Option<StackId> stack) -> menu(model, branch, stack);
             case MakeChosen() -> make(model);
             case AddChosen() -> add(model);
-            case StackMsg.BuiltOnRead(int stack, BranchName top, var eligible, var containing) ->
+            case StackMsg.BuiltOnRead(StackId stack, BranchName top, var eligible, var containing) ->
                 builtOnRead(model, stack, top, eligible, containing);
             case StackOnChosen() -> stackOn(model);
             case TargetChosen(StackPopups.Target target) -> stackedOn(model, target);
@@ -82,8 +83,8 @@ public final class StackUpdate {
             case StackMsg.RebaseChosen() -> rebaseChosen(model);
             case StackMsg.PushChosen() -> pushChosen(model);
             case StackMsg.StackRead(StackRebase rebase, var commits) -> stackRead(model, rebase, commits);
-            case StackMsg.StackReadFailed(int stack, var failure) -> stackReadFailed(model, stack, failure);
-            case StackMsg.StackBehindRemote(int stack, BranchName branch, var remote) ->
+            case StackMsg.StackReadFailed(StackId stack, var failure) -> stackReadFailed(model, stack, failure);
+            case StackMsg.StackBehindRemote(StackId stack, BranchName branch, var remote) ->
                 behindRemote(model, stack, branch, remote);
             case StackMsg.RebaseLocallyChosen() -> rebaseLocally(model);
             case StackMsg.PullRequestMenuRequested(PullRequestSummary pullRequest) ->
@@ -99,7 +100,7 @@ public final class StackUpdate {
     /**
      * Opens stack {@code stack} in the branches pane, or closes it.
      */
-    private static Next toggled(Model model, int stack) {
+    private static Next toggled(Model model, StackId stack) {
         String group = StackAction.groupKey(stack);
         return Next.of(model.mapRepoView(repoView -> repoView.mapBranches(branches -> branches.withClosedGroups(
                 branches.closedGroups().contains(group)
@@ -230,19 +231,19 @@ public final class StackUpdate {
     /**
      * Says the commits of stack {@code stack} could not be read.
      */
-    private static Next stackReadFailed(Model model, int stack, Failure failure) {
-        return Next.of(
-                model.fail(new AppError.OperationFailed(StackRebaseCmd.REBASE_STACK, Option.of("#" + stack), failure)));
+    private static Next stackReadFailed(Model model, StackId stack, Failure failure) {
+        return Next.of(model.fail(
+                new AppError.OperationFailed(StackRebaseCmd.REBASE_STACK, Option.of("#" + stack.value()), failure)));
     }
 
     /**
      * Says {@code branch} is not rebased, as it lacks commits of {@code remote}. A pull brings in what is there only
      * when the branch follows it.
      */
-    private static Next behindRemote(Model model, int stack, BranchName branch, RemoteBranch remote) {
+    private static Next behindRemote(Model model, StackId stack, BranchName branch, RemoteBranch remote) {
         return Next.of(model.fail(new GitHubError.StackNotRebased(
                 stack,
-                branch.value(),
+                new GitHubError.StackSubject.OfBranch(branch),
                 model.repo().branch(branch).flatMap(Branch::remoteUpstream).contains(remote)
                         ? GitHubError.StackRefusal.BEHIND_REMOTE
                         : GitHubError.StackRefusal.BEHIND_UNFOLLOWED)));
@@ -408,7 +409,7 @@ public final class StackUpdate {
      * The menu of the stack of {@code branch}, or of {@code stack}; nothing for a branch that is not listed, or when
      * nothing of it applies.
      */
-    private static Next menu(Model model, Option<BranchName> branch, Option<Integer> stack) {
+    private static Next menu(Model model, Option<BranchName> branch, Option<StackId> stack) {
         Option<Branch> highlighted = branch.flatMap(model.repo()::branch);
         if (branch.isDefined() && highlighted.isEmpty()) {
             return Next.of(model);
@@ -433,13 +434,13 @@ public final class StackUpdate {
     /**
      * Stack {@code number} as a pull request of it with a local branch has it.
      */
-    private static Option<PullRequestStack> stack(Model model, int number) {
+    private static Option<PullRequestStack> stack(Model model, StackId number) {
         return model.part(GitHubState.PART)
                 .pullRequests()
                 .toList()
                 .flatMap(open -> open.values())
                 .flatMap(PullRequest::stack)
-                .filter(stack -> stack.number() == number)
+                .filter(stack -> stack.number().equals(number))
                 .maxBy(stack -> stack.entries().size());
     }
 
@@ -526,7 +527,7 @@ public final class StackUpdate {
                 .filter(StackPopups.Menu::canAdd)
                 .map(menu -> {
                     Branch top = menu.top().get();
-                    int stack = menu.stack().get().number();
+                    StackId stack = menu.stack().get().number();
                     Model closed = model.withoutPopup(StackPopups.Menu.class);
                     Map<BranchName, Sha> eligible = unplaced(model, top);
                     // A branch found can be on one listed above the top by its parent too.
@@ -572,7 +573,7 @@ public final class StackUpdate {
      */
     private static Next builtOnRead(
             Model model,
-            int stack,
+            StackId stack,
             BranchName top,
             Set<BranchName> eligible,
             Map<BranchName, List<BranchName>> containing) {
@@ -586,7 +587,7 @@ public final class StackUpdate {
                         .getOrElse(() -> Next.of(model));
     }
 
-    private static Next addPick(Model model, Branch top, int stack, Map<BranchName, BranchName> parents) {
+    private static Next addPick(Model model, Branch top, StackId stack, Map<BranchName, BranchName> parents) {
         StackChoice choice = StackChoice.above(top, local(model), parents, model.part(GitHubState.PART)::pullRequest);
         return Next.of(model.openPopup(new StackPopups.Pick(choice, Option.none(), Option.of(stack)))
                 .withListCursor(ListCursor.START.at(choice.top())));
@@ -646,7 +647,7 @@ public final class StackUpdate {
         List<StackChoice.BaseChange> changes = pr.baseBranch().contains(on.headBranch())
                 ? List.empty()
                 : List.of(new StackChoice.BaseChange(pr.number(), pr.baseBranch(), on.headBranch()));
-        Option<Integer> stack = on.stack().map(PullRequestStack::number);
+        Option<StackId> stack = on.stack().map(PullRequestStack::number);
         StackCmd.MakeStack cmd = new StackCmd.MakeStack(
                 changes, stack.isDefined() ? List.of(pr.number()) : List.of(on.number(), pr.number()), stack);
         return made(model.withoutPopup(StackPopups.StackOn.class), cmd, List.empty());

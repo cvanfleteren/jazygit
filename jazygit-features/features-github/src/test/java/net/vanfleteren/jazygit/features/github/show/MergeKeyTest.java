@@ -13,6 +13,7 @@ import net.vanfleteren.jazygit.core.gh.model.PullRequestDetails.AutoMerge;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestDetails.MergeState;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestDetails.Merging;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestStack;
+import net.vanfleteren.jazygit.core.gh.model.StackId;
 import net.vanfleteren.jazygit.core.repo.PrNumber;
 import org.junit.jupiter.api.Test;
 
@@ -46,7 +47,10 @@ class MergeKeyTest {
     @Test
     void aStackedPullRequestIsMergedNowAsGitHubHasNoAutoMergeForIt() {
         PullRequestStack stack = new PullRequestStack(
-                96, 1, 1, List.of(new PullRequestStack.Entry(1, new PrNumber(42), PullRequestDetails.State.OPEN)));
+                new StackId(96),
+                1,
+                1,
+                List.of(new PullRequestStack.Entry(1, new PrNumber(42), PullRequestDetails.State.OPEN)));
 
         assertEquals(
                 new MergeKey.Now(),

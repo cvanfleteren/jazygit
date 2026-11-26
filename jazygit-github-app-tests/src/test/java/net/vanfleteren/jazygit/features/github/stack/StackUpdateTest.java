@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import io.vavr.collection.HashSet;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
+import net.vanfleteren.jazygit.core.gh.model.StackId;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.TestModels;
 import net.vanfleteren.jazygit.kernel.state.Update;
@@ -23,14 +24,14 @@ class StackUpdateTest {
         Model loaded = TestModels.loaded();
         assertEquals(HashSet.empty(), loaded.repoView().branches().closedGroups());
 
-        Update.Next closed = Update.update(loaded, new StackMsg.Toggled(12));
+        Update.Next closed = Update.update(loaded, new StackMsg.Toggled(new StackId(12)));
         assertEquals(
                 HashSet.of("stack:12"), closed.model().repoView().branches().closedGroups());
         assertEquals(List.empty(), closed.cmds());
 
         assertEquals(
                 HashSet.empty(),
-                Update.update(closed.model(), new StackMsg.Toggled(12))
+                Update.update(closed.model(), new StackMsg.Toggled(new StackId(12)))
                         .model()
                         .repoView()
                         .branches()
@@ -41,10 +42,10 @@ class StackUpdateTest {
     void theKeysOfAHeaderToggleItsStackAndOpenItsMenu() {
         assertEquals(
                 List.of(
-                        Option.of(github(new StackMsg.Toggled(12))),
-                        Option.of(github(new StackMsg.MenuRequested(Option.none(), Option.of(12)))),
+                        Option.of(github(new StackMsg.Toggled(new StackId(12)))),
+                        Option.of(github(new StackMsg.MenuRequested(Option.none(), Option.of(new StackId(12))))),
                         Option.of(github(new StackMsg.ViewToggled()))),
-                Keymap.standard().actions(StackAction.STACKS, Option.of(12)));
+                Keymap.standard().actions(StackAction.STACKS, Option.of(new StackId(12))));
     }
 
     @Test

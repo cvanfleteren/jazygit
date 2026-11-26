@@ -22,6 +22,7 @@ import io.vavr.control.Option;
 import net.vanfleteren.jazygit.core.gh.model.GhBranch;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestDetails.State;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestStack;
+import net.vanfleteren.jazygit.core.gh.model.StackId;
 import net.vanfleteren.jazygit.core.repo.PrNumber;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.lib.json.Decoder;
@@ -60,8 +61,8 @@ public final class StackFragment {
             .map(entry -> entry.flatMap(readable -> readable));
 
     // The number, the size and the pull requests of a stack.
-    static final Decoder<Tuple3<Integer, Integer, List<PullRequestStack.Entry>>> STACK = map3(
-            field("number", integer()),
+    static final Decoder<Tuple3<StackId, Integer, List<PullRequestStack.Entry>>> STACK = map3(
+            field("number", integer().map(StackId::new)),
             field("size", integer()),
             at("entries.nodes", list(ENTRY)).map(entries -> entries.flatMap(entry -> entry)),
             Tuple::of);

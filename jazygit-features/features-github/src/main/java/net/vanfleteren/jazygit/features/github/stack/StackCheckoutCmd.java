@@ -43,7 +43,7 @@ public sealed interface StackCheckoutCmd extends OperationCmd {
 
         @Override
         public Option<String> subject() {
-            return Option.of("#" + stack.number());
+            return Option.of("#" + stack.number().value());
         }
 
         @Override
@@ -79,7 +79,7 @@ public sealed interface StackCheckoutCmd extends OperationCmd {
 
         @Override
         public Option<String> subject() {
-            return Option.of("#" + checkout.stack());
+            return Option.of("#" + checkout.stack().value());
         }
 
         // The branches that are there already, which move.

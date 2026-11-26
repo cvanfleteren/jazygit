@@ -18,6 +18,7 @@ import net.vanfleteren.jazygit.core.gh.model.PullRequestDetails.State;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestStack;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestStack.Entry;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestSummary;
+import net.vanfleteren.jazygit.core.gh.model.StackId;
 import net.vanfleteren.jazygit.core.git.model.Fixtures;
 import net.vanfleteren.jazygit.core.process.ExecutedCommand;
 import net.vanfleteren.jazygit.core.repo.AllBranches;
@@ -86,7 +87,7 @@ class CheckOutStackTest {
                     false));
 
     private static PullRequestStack stack(List<Entry> entries, int position) {
-        return new PullRequestStack(12, position, entries.size(), entries);
+        return new PullRequestStack(new StackId(12), position, entries.size(), entries);
     }
 
     private static final PullRequestStack STACK = stack(ENTRIES, 2);
@@ -401,7 +402,7 @@ class CheckOutStackTest {
                 Update.update(confirmed.model(), new StackMsg.CaughtUp(catchUp, List.<ExecutedCommand>empty()));
 
         assertEquals(
-                Option.of(new StackNotice.CheckedOut(12, 2, 1, 0)),
+                Option.of(new StackNotice.CheckedOut(new StackId(12), 2, 1, 0)),
                 done.model().outcome().notice());
         assertTrue(done.cmds().contains(new CheckoutCmd.Checkout(C)));
     }
@@ -483,7 +484,7 @@ class CheckOutStackTest {
     void whatHappensToEachBranchStartsInOneColumnAlsoAfterABranchOfWideCharacters() {
         BranchName wide = new BranchName("feat/日本語");
         StackCheckout checkout = new StackCheckout(
-                12,
+                new StackId(12),
                 List.of(
                         new StackCheckout.Line(new PrNumber(10), A, origin(A), Kind.UP_TO_DATE, 0, Option.none()),
                         new StackCheckout.Line(

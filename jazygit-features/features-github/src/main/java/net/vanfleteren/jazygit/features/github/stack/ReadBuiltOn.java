@@ -6,6 +6,7 @@ import io.vavr.collection.List;
 import io.vavr.collection.Map;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
+import net.vanfleteren.jazygit.core.gh.model.StackId;
 import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.kernel.state.Cmd;
@@ -24,7 +25,8 @@ import net.vanfleteren.jazygit.kernel.state.Msg;
  * @param listed   the branches listed above the top by their parents, with their tips, which one found can be on
  */
 public record ReadBuiltOn(
-        int stack, BranchName top, Sha tip, Map<BranchName, Sha> eligible, Map<BranchName, Sha> listed) implements Cmd {
+        StackId stack, BranchName top, Sha tip, Map<BranchName, Sha> eligible, Map<BranchName, Sha> listed)
+        implements Cmd {
 
     @Override
     public Option<Label> label() {

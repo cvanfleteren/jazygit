@@ -15,10 +15,13 @@ import net.vanfleteren.jazygit.core.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest.Review;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestDetails.State;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestStack;
+import net.vanfleteren.jazygit.core.gh.model.StackId;
 import net.vanfleteren.jazygit.core.git.model.*;
 import net.vanfleteren.jazygit.core.git.model.SampleData;
 import net.vanfleteren.jazygit.core.repo.*;
+import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.PrNumber;
+import net.vanfleteren.jazygit.core.repo.RemoteBranch;
 import net.vanfleteren.jazygit.features.github.stack.StackMsg;
 import net.vanfleteren.jazygit.features.github.state.GitHubState;
 import net.vanfleteren.jazygit.kernel.state.*;
@@ -57,7 +60,7 @@ class StackRowsTest {
                 false,
                 Checks.NONE,
                 Review.NONE,
-                Option.of(new PullRequestStack(12, position, ENTRIES.size(), ENTRIES)),
+                Option.of(new PullRequestStack(new StackId(12), position, ENTRIES.size(), ENTRIES)),
                 Option.none());
     }
 
@@ -184,7 +187,7 @@ class StackRowsTest {
             SettledPilot.of(testRunner).quit();
         }
 
-        assertEquals(java.util.List.of(new StackMsg.Toggled(12)), dispatched);
+        assertEquals(java.util.List.of(new StackMsg.Toggled(new StackId(12))), dispatched);
     }
 
     @Test
@@ -204,7 +207,9 @@ class StackRowsTest {
             SettledPilot.of(testRunner).quit();
         }
 
-        assertEquals(java.util.List.of(new StackMsg.Toggled(12), new StackMsg.Toggled(12)), dispatched);
+        assertEquals(
+                java.util.List.of(new StackMsg.Toggled(new StackId(12)), new StackMsg.Toggled(new StackId(12))),
+                dispatched);
     }
 
     @Test
@@ -227,7 +232,7 @@ class StackRowsTest {
         }
 
         assertEquals(selecting(new BranchRef.Local(FEAT_B)), shown);
-        assertEquals(java.util.List.of(new StackMsg.Toggled(12)), dispatched);
+        assertEquals(java.util.List.of(new StackMsg.Toggled(new StackId(12))), dispatched);
     }
 
     /**

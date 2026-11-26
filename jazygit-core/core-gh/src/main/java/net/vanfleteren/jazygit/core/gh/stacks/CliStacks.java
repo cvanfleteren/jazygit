@@ -2,6 +2,7 @@ package net.vanfleteren.jazygit.core.gh.stacks;
 
 import io.vavr.collection.List;
 import io.vavr.control.Either;
+import net.vanfleteren.jazygit.core.gh.model.StackId;
 import net.vanfleteren.jazygit.core.gh.process.GhFailure;
 import net.vanfleteren.jazygit.core.gh.process.GhProcess;
 import net.vanfleteren.jazygit.core.process.ExecutedCommand;
@@ -24,12 +25,12 @@ public final class CliStacks implements Stacks {
     }
 
     @Override
-    public Either<GhFailure, List<ExecutedCommand>> add(int stack, List<PrNumber> pullRequests) {
+    public Either<GhFailure, List<ExecutedCommand>> add(StackId stack, List<PrNumber> pullRequests) {
         return process.log(StackMutations.add(stack, pullRequests));
     }
 
     @Override
-    public Either<GhFailure, List<ExecutedCommand>> unstack(int stack) {
+    public Either<GhFailure, List<ExecutedCommand>> unstack(StackId stack) {
         return process.log(StackMutations.unstack(stack));
     }
 }

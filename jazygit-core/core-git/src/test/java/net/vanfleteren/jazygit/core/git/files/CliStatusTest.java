@@ -7,6 +7,7 @@ import io.vavr.control.Option;
 import net.vanfleteren.jazygit.core.git.model.*;
 import net.vanfleteren.jazygit.core.git.process.GitError;
 import net.vanfleteren.jazygit.core.repo.*;
+import net.vanfleteren.jazygit.core.repo.BranchName;
 import org.junit.jupiter.api.Test;
 
 /**

@@ -6,6 +6,7 @@ import io.vavr.control.Option;
 import java.time.Instant;
 import net.vanfleteren.jazygit.core.gh.GitHub;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestEdit;
+import net.vanfleteren.jazygit.core.gh.model.StackId;
 import net.vanfleteren.jazygit.core.gh.process.GhFailure;
 import net.vanfleteren.jazygit.core.process.ExecutedCommand;
 import net.vanfleteren.jazygit.core.repo.PrNumber;
@@ -49,7 +50,7 @@ public sealed interface StackCmd extends OperationCmd {
     /**
      * Takes stack {@code stack} apart on GitHub: its pull requests stay open, with their bases.
      */
-    record Unstack(int stack) implements StackCmd {
+    record Unstack(StackId stack) implements StackCmd {
 
         @Override
         public Operation operation() {
@@ -58,7 +59,7 @@ public sealed interface StackCmd extends OperationCmd {
 
         @Override
         public Option<String> subject() {
-            return Option.of("#" + stack);
+            return Option.of("#" + stack.value());
         }
 
         @Override
@@ -86,13 +87,13 @@ public sealed interface StackCmd extends OperationCmd {
      * one first; or puts them on the top of stack {@code stack}, when one is given. When {@code rebase}, the stack is
      * rebased once GitHub lists it (ADR 74).
      */
-    record MakeStack(List<BaseChange> changes, List<PrNumber> pullRequests, Option<Integer> stack, boolean rebase)
+    record MakeStack(List<BaseChange> changes, List<PrNumber> pullRequests, Option<StackId> stack, boolean rebase)
             implements StackCmd {
 
         /**
          * One after which the stack is not rebased.
          */
-        public MakeStack(List<BaseChange> changes, List<PrNumber> pullRequests, Option<Integer> stack) {
+        public MakeStack(List<BaseChange> changes, List<PrNumber> pullRequests, Option<StackId> stack) {
             this(changes, pullRequests, stack, false);
         }
 

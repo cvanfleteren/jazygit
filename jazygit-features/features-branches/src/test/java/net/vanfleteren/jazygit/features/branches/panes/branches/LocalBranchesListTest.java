@@ -14,6 +14,8 @@ import java.time.Duration;
 import java.time.Instant;
 import net.vanfleteren.jazygit.core.git.model.*;
 import net.vanfleteren.jazygit.core.repo.*;
+import net.vanfleteren.jazygit.core.repo.BranchName;
+import net.vanfleteren.jazygit.core.repo.RemoteBranch;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.Part;
 import net.vanfleteren.jazygit.kernel.state.StatedBases;

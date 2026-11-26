@@ -263,7 +263,7 @@ public final class PullRequestDialog implements PopupView {
     private static Line stack(PullRequestStack stack) {
         String position = Messages.get(
                 "github.dialog.pullRequest.stack.position",
-                String.valueOf(stack.number()),
+                String.valueOf(stack.number().value()),
                 String.valueOf(stack.position()),
                 String.valueOf(stack.size()));
         return stack.below() > 0

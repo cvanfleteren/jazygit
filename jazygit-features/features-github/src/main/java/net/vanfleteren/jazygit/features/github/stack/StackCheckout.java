@@ -5,6 +5,7 @@ import io.vavr.control.Option;
 import net.vanfleteren.jazygit.core.gh.model.GhBranch;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestDetails.State;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestStack;
+import net.vanfleteren.jazygit.core.gh.model.StackId;
 import net.vanfleteren.jazygit.core.repo.AllBranches;
 import net.vanfleteren.jazygit.core.repo.Branch;
 import net.vanfleteren.jazygit.core.repo.BranchName;
@@ -26,7 +27,7 @@ import net.vanfleteren.jazygit.kernel.state.Model;
  *                which are left out
  * @param on      the number of the pull request it was asked for on, if it was asked for on one
  */
-public record StackCheckout(int stack, List<Line> lines, List<PrNumber> skipped, Option<PrNumber> on) {
+public record StackCheckout(StackId stack, List<Line> lines, List<PrNumber> skipped, Option<PrNumber> on) {
 
     /**
      * The remote the branches of {@code stack} are fetched from: the one the local branch of an open pull request of

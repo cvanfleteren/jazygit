@@ -30,6 +30,7 @@ import net.vanfleteren.jazygit.core.gh.model.PullRequest.Review;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestDetails;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestDetails.*;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestStack;
+import net.vanfleteren.jazygit.core.gh.model.StackId;
 import net.vanfleteren.jazygit.core.gh.timing.CheckHistory;
 import net.vanfleteren.jazygit.core.gh.timing.CheckSample;
 import net.vanfleteren.jazygit.core.repo.BranchName;
@@ -300,7 +301,7 @@ class PullRequestDialogTest {
     @Test
     void aStackedPullRequestSaysWhatMergingItMergesToo() throws Exception {
         PullRequestDetails stacked = stacked(new PullRequestStack(
-                96,
+                new StackId(96),
                 3,
                 3,
                 List.of(
@@ -320,7 +321,7 @@ class PullRequestDialogTest {
     @Test
     void theOnesBelowInAStackThatAreMergedAlreadyAreNotMergedAgain() throws Exception {
         PullRequestDetails stacked = stacked(new PullRequestStack(
-                96,
+                new StackId(96),
                 3,
                 3,
                 List.of(
@@ -338,7 +339,7 @@ class PullRequestDialogTest {
     @Test
     void aStackWhoseOnesBelowAreAllMergedMergesOnlyItself() throws Exception {
         PullRequestDetails stacked = stacked(new PullRequestStack(
-                9,
+                new StackId(9),
                 2,
                 2,
                 List.of(
@@ -382,7 +383,7 @@ class PullRequestDialogTest {
                 Checks.PASSING,
                 Review.APPROVED,
                 Option.of(new PullRequestStack(
-                        96,
+                        new StackId(96),
                         1,
                         2,
                         List.of(
@@ -949,7 +950,7 @@ class PullRequestDialogTest {
     @Test
     void aStackedPullRequestSaysGitHubHasNoAutoMergeForIt() throws Exception {
         PullRequestDetails blocked = stacked(new PullRequestStack(
-                        96, 1, 1, List.of(new PullRequestStack.Entry(1, new PrNumber(42), State.OPEN))))
+                        new StackId(96), 1, 1, List.of(new PullRequestStack.Entry(1, new PrNumber(42), State.OPEN))))
                 .withMerging(new PullRequestDetails.Merging(
                         PullRequestDetails.MergeState.BLOCKED, true, Option.none(), true, false));
 
@@ -986,7 +987,7 @@ class PullRequestDialogTest {
     @Test
     void mergingInAStackTellsTheOnesBelowAreMergedToo() throws Exception {
         PullRequestDetails stacked = stacked(new PullRequestStack(
-                96,
+                new StackId(96),
                 3,
                 3,
                 List.of(

@@ -22,6 +22,7 @@ import net.vanfleteren.jazygit.core.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest.Review;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestDetails;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestStack;
+import net.vanfleteren.jazygit.core.gh.model.StackId;
 import net.vanfleteren.jazygit.core.gh.process.GhError;
 import net.vanfleteren.jazygit.core.gh.process.GhFailure;
 import net.vanfleteren.jazygit.core.gh.pullrequests.PullRequests;
@@ -30,6 +31,7 @@ import net.vanfleteren.jazygit.core.git.StubGit;
 import net.vanfleteren.jazygit.core.git.model.*;
 import net.vanfleteren.jazygit.core.process.ExecutedCommand;
 import net.vanfleteren.jazygit.core.repo.*;
+import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.PrNumber;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.features.changes.fetch.FetchCmd;
@@ -509,7 +511,7 @@ class PullRequestActionsUpdateTest {
         List<PullRequestStack.Entry> entries = List.of(numbers)
                 .zipWithIndex((pr, index) ->
                         new PullRequestStack.Entry(index + 1, new PrNumber(pr), PullRequestDetails.State.OPEN));
-        return new PullRequestStack(number, position, entries.size(), entries);
+        return new PullRequestStack(new StackId(number), position, entries.size(), entries);
     }
 
     /**

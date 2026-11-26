@@ -1,7 +1,10 @@
 package net.vanfleteren.jazygit.features.github;
 
 import java.util.Locale;
+import net.vanfleteren.jazygit.core.gh.model.StackId;
 import net.vanfleteren.jazygit.core.repo.BranchName;
+import net.vanfleteren.jazygit.core.repo.PrNumber;
+import net.vanfleteren.jazygit.core.repo.RemoteBranch;
 import net.vanfleteren.jazygit.kernel.state.AppError;
 import net.vanfleteren.jazygit.kernel.state.Phrase;
 
@@ -73,12 +76,12 @@ public sealed interface GitHubError extends AppError {
      * Stack {@code stack} is not rebased, as {@code branch} of it, a branch or a pull request, is as {@code why} says
      * (ADR 74).
      */
-    record StackNotRebased(int stack, String branch, StackRefusal why) implements GitHubError {
+    record StackNotRebased(StackId stack, StackSubject branch, StackRefusal why) implements GitHubError {
 
         @Override
         public Phrase phrase() {
             return Phrase.of(
-                    "github.error.stackNotRebased", Phrase.verbatim(String.valueOf(stack)), why.phrase(branch));
+                    "github.error.stackNotRebased", Phrase.verbatim(String.valueOf(stack.value())), why.phrase(branch));
         }
     }
 
@@ -86,11 +89,12 @@ public sealed interface GitHubError extends AppError {
      * Stack {@code stack} is not pushed, as {@code branch} of it, a branch or a pull request, is as {@code why} says
      * (ADR 74).
      */
-    record StackNotPushed(int stack, String branch, StackRefusal why) implements GitHubError {
+    record StackNotPushed(StackId stack, StackSubject branch, StackRefusal why) implements GitHubError {
 
         @Override
         public Phrase phrase() {
-            return Phrase.of("github.error.stackNotPushed", Phrase.verbatim(String.valueOf(stack)), why.phrase(branch));
+            return Phrase.of(
+                    "github.error.stackNotPushed", Phrase.verbatim(String.valueOf(stack.value())), why.phrase(branch));
         }
     }
 
@@ -214,6 +218,67 @@ public sealed interface GitHubError extends AppError {
     }
 
     /**
+     * What of a stack a {@link StackRefusal} is about (ADR 74).
+     */
+    public sealed interface StackSubject {
+
+        /**
+         * How the refusal names it.
+         */
+        String said();
+
+        /**
+         * The worktree, whose changes are in the way: the refusal names nothing.
+         */
+        record Worktree() implements StackSubject {
+            @Override
+            public String said() {
+                return "";
+            }
+        }
+
+        /**
+         * The stack {@code stack} as a whole.
+         */
+        record Whole(StackId stack) implements StackSubject {
+            @Override
+            public String said() {
+                return "#" + stack.value();
+            }
+        }
+
+        /**
+         * The pull request {@code number} of the stack, which has no local branch to name.
+         */
+        record OfPullRequest(PrNumber number) implements StackSubject {
+            @Override
+            public String said() {
+                return "#" + number.value();
+            }
+        }
+
+        /**
+         * The local branch {@code branch} of the stack.
+         */
+        record OfBranch(BranchName branch) implements StackSubject {
+            @Override
+            public String said() {
+                return branch.value();
+            }
+        }
+
+        /**
+         * The branch {@code branch} on a remote, as the stack's base.
+         */
+        record OnRemote(RemoteBranch branch) implements StackSubject {
+            @Override
+            public String said() {
+                return branch.shortName();
+            }
+        }
+    }
+
+    /**
      * Why a stack is not rebased or pushed (ADR 74).
      */
     enum StackRefusal {
@@ -248,9 +313,9 @@ public sealed interface GitHubError extends AppError {
         /**
          * Why, said of {@code branch}.
          */
-        Phrase phrase(String branch) {
+        Phrase phrase(StackSubject branch) {
             return Phrase.of(
-                    "github.error.stackNotRebased." + name().toLowerCase(Locale.ROOT), Phrase.verbatim(branch));
+                    "github.error.stackNotRebased." + name().toLowerCase(Locale.ROOT), Phrase.verbatim(branch.said()));
         }
     }
 }

@@ -12,6 +12,7 @@ import net.vanfleteren.jazygit.core.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest.Review;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestDetails.State;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestStack;
+import net.vanfleteren.jazygit.core.gh.model.StackId;
 import net.vanfleteren.jazygit.core.git.model.BaseDistance;
 import net.vanfleteren.jazygit.core.git.model.Fixtures;
 import net.vanfleteren.jazygit.core.repo.Branch;
@@ -54,7 +55,7 @@ class StackGroupsTest {
                 false,
                 Checks.NONE,
                 Review.NONE,
-                Option.of(new PullRequestStack(12, position, entries.size(), entries)),
+                Option.of(new PullRequestStack(new StackId(12), position, entries.size(), entries)),
                 Option.none());
     }
 

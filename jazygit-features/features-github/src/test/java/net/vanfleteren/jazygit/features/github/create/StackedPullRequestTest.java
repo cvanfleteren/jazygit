@@ -18,6 +18,7 @@ import net.vanfleteren.jazygit.core.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest.Review;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestDetails.State;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestStack;
+import net.vanfleteren.jazygit.core.gh.model.StackId;
 import net.vanfleteren.jazygit.core.git.model.Fixtures;
 import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.PrNumber;
@@ -68,7 +69,7 @@ class StackedPullRequestTest {
 
     private static PullRequestStack stackOf(int position) {
         return new PullRequestStack(
-                12,
+                new StackId(12),
                 position,
                 2,
                 List.of(
@@ -104,21 +105,21 @@ class StackedPullRequestTest {
     @Test
     void onTheTopOfAStackItIsAddedToIt() {
         PullRequestStack top = new PullRequestStack(
-                12,
+                new StackId(12),
                 1,
                 1,
                 List.of(new PullRequestStack.Entry(
                         1, new PrNumber(96), State.OPEN, new GhBranch("feat/a"), new GhBranch("main"))));
 
         assertEquals(
-                Option.of(Either.right(new Stacking(new PrNumber(96), Option.of(12)))),
+                Option.of(Either.right(new Stacking(new PrNumber(96), Option.of(new StackId(12))))),
                 GitHubCreatePullRequestUpdate.stackOn(model(Option.of(top)), FEAT_A));
     }
 
     @Test
     void notOnTheTopOfAStackItSaysWhy() {
         assertEquals(
-                Option.of(Either.left(new GitHubCreatePullRequestCmd.NotTop(new PrNumber(96), 12))),
+                Option.of(Either.left(new GitHubCreatePullRequestCmd.NotTop(new PrNumber(96), new StackId(12)))),
                 GitHubCreatePullRequestUpdate.stackOn(model(Option.of(stackOf(1))), FEAT_A));
     }
 

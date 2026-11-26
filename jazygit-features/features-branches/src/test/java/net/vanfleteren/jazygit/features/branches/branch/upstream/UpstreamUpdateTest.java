@@ -10,6 +10,8 @@ import io.vavr.control.Option;
 import java.time.Instant;
 import net.vanfleteren.jazygit.core.git.model.*;
 import net.vanfleteren.jazygit.core.repo.*;
+import net.vanfleteren.jazygit.core.repo.BranchName;
+import net.vanfleteren.jazygit.core.repo.RemoteBranch;
 import net.vanfleteren.jazygit.features.changes.commit.reset.ResetCmd;
 import net.vanfleteren.jazygit.features.changes.commit.reset.ResetMsg;
 import net.vanfleteren.jazygit.features.changes.commit.reset.ResetPopup;

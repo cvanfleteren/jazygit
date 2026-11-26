@@ -19,6 +19,7 @@ import net.vanfleteren.jazygit.core.gh.model.PullRequestList;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestStack;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestSummary;
 import net.vanfleteren.jazygit.core.gh.model.RepositoryPullRequests;
+import net.vanfleteren.jazygit.core.gh.model.StackId;
 import net.vanfleteren.jazygit.core.gh.process.GhError;
 import net.vanfleteren.jazygit.core.gh.process.GhProcess;
 import net.vanfleteren.jazygit.core.repo.PrNumber;
@@ -95,7 +96,7 @@ class RepositoryPullRequestsQueryTest {
     void aStackedPullRequestInTheListSaysWhereItSitsInItsStack() {
         assertEquals(
                 Option.of(new PullRequestStack(
-                        96,
+                        new StackId(96),
                         2,
                         2,
                         List.of(

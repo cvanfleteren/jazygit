@@ -18,6 +18,7 @@ import net.vanfleteren.jazygit.core.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest.Review;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestDetails.State;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestStack;
+import net.vanfleteren.jazygit.core.gh.model.StackId;
 import net.vanfleteren.jazygit.core.gh.process.GhError;
 import net.vanfleteren.jazygit.core.gh.process.GhFailure;
 import net.vanfleteren.jazygit.core.gh.stacks.StubStacks;
@@ -120,7 +121,7 @@ class MakeStackTest {
 
     // feat/a and feat/b make stack #12 on GitHub, feat/b its top; feat/c is built on it, on its own.
     private static final PullRequestStack STACK = new PullRequestStack(
-            12,
+            new StackId(12),
             2,
             2,
             List.of(
@@ -150,7 +151,7 @@ class MakeStackTest {
                                             false,
                                             Checks.NONE,
                                             Review.NONE,
-                                            Option.of(new PullRequestStack(12, 1, 2, STACK.entries())),
+                                            Option.of(new PullRequestStack(new StackId(12), 1, 2, STACK.entries())),
                                             Option.none())))));
 
     @Test
@@ -168,7 +169,7 @@ class MakeStackTest {
 
     @Test
     void sOnTheHeaderOfAStackOpensItsMenu() {
-        Model opened = step(STACKED, new StackMsg.MenuRequested(Option.none(), Option.of(12)));
+        Model opened = step(STACKED, new StackMsg.MenuRequested(Option.none(), Option.of(new StackId(12))));
 
         assertEquals(
                 Option.of(12),
@@ -189,7 +190,7 @@ class MakeStackTest {
         Update.Next confirmed = Update.update(step(picking, new StackMsg.TopChosen(1)), new StackMsg.PickConfirmed());
 
         assertEquals(
-                List.of(new StackCmd.MakeStack(List.empty(), List.of(new PrNumber(98)), Option.of(12))),
+                List.of(new StackCmd.MakeStack(List.empty(), List.of(new PrNumber(98)), Option.of(new StackId(12)))),
                 confirmed.cmds());
         assertEquals(
                 Option.of("github.dialog.addToStack.bottomFixed"),
@@ -215,7 +216,7 @@ class MakeStackTest {
         assertTrue(
                 adding.cmds()
                         .contains(new ReadBuiltOn(
-                                12,
+                                new StackId(12),
                                 name("feat/b"),
                                 new Sha("aaaa"),
                                 HashMap.of(name("feat/x"), new Sha("bbbb")),
@@ -229,7 +230,7 @@ class MakeStackTest {
         Model picking = step(
                 step(menu(withX(STACKED), "feat/b"), new StackMsg.AddChosen()),
                 new StackMsg.BuiltOnRead(
-                        12,
+                        new StackId(12),
                         name("feat/b"),
                         HashSet.of(name("feat/x")),
                         HashMap.of(
@@ -246,7 +247,8 @@ class MakeStackTest {
         Model asking = step(step(picking, new StackMsg.TopChosen(2)), new StackMsg.PickConfirmed());
 
         assertEquals(
-                Option.of(new StackPopups.CreateFirst(name("feat/x"), name("feat/b"), new PrNumber(97), Option.of(12))),
+                Option.of(new StackPopups.CreateFirst(
+                        name("feat/x"), name("feat/b"), new PrNumber(97), Option.of(new StackId(12)))),
                 asking.popup());
     }
 
@@ -260,7 +262,8 @@ class MakeStackTest {
                 .get();
 
         assertEquals(
-                Option.of(new StackPopups.CreateFirst(name("feat/x"), name("feat/b"), new PrNumber(97), Option.of(12))),
+                Option.of(new StackPopups.CreateFirst(
+                        name("feat/x"), name("feat/b"), new PrNumber(97), Option.of(new StackId(12)))),
                 step(choosing, new StackMsg.TargetChosen(onB)).popup());
     }
 
@@ -296,7 +299,8 @@ class MakeStackTest {
                 choosing, new StackMsg.TargetChosen(popup.targets().head()));
 
         assertEquals(
-                List.of(new StackCmd.MakeStack(List.empty(), List.of(new PrNumber(98)), Option.of(12))), chosen.cmds());
+                List.of(new StackCmd.MakeStack(List.empty(), List.of(new PrNumber(98)), Option.of(new StackId(12)))),
+                chosen.cmds());
     }
 
     @Test
@@ -330,7 +334,7 @@ class MakeStackTest {
 
     // #95 is merged and #96 in a merge queue: both stay in the stack; only #97 leaves it.
     private static final PullRequestStack STAYING = new PullRequestStack(
-            12,
+            new StackId(12),
             3,
             3,
             List.of(
@@ -357,7 +361,7 @@ class MakeStackTest {
 
     @Test
     void anUnstackedStackIsShownThoughAQueuedPullRequestStaysInIt() {
-        StackChange gone = new StackChange.Unstacked(12, MODEL.now());
+        StackChange gone = new StackChange.Unstacked(new StackId(12), MODEL.now());
         PullRequest queued = new PullRequest(
                 new PrNumber(96),
                 new GhBranch("feat/a"),
@@ -365,7 +369,7 @@ class MakeStackTest {
                 false,
                 Checks.NONE,
                 Review.NONE,
-                Option.of(new PullRequestStack(12, 2, 3, STAYING.entries())),
+                Option.of(new PullRequestStack(new StackId(12), 2, 3, STAYING.entries())),
                 Option.none());
 
         assertEquals(
@@ -574,7 +578,7 @@ class MakeStackTest {
 
     @Test
     void anUnstackedStackIsShownOnceNoPullRequestIsInItAnyMore() {
-        StackChange gone = new StackChange.Unstacked(12, MODEL.now());
+        StackChange gone = new StackChange.Unstacked(new StackId(12), MODEL.now());
 
         assertEquals(
                 false,

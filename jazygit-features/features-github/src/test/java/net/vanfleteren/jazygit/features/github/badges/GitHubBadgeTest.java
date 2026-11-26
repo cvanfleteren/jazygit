@@ -16,6 +16,7 @@ import net.vanfleteren.jazygit.core.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest.Review;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestDetails.State;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestStack;
+import net.vanfleteren.jazygit.core.gh.model.StackId;
 import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.BranchRef;
 import net.vanfleteren.jazygit.core.repo.PrNumber;
@@ -84,7 +85,7 @@ class GitHubBadgeTest {
                         Checks.PASSING,
                         Review.NONE,
                         Option.of(new PullRequestStack(
-                                96,
+                                new StackId(96),
                                 2,
                                 3,
                                 List.of(

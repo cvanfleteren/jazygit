@@ -2,6 +2,8 @@ package net.vanfleteren.jazygit.kernel.ui.keys;
 
 import net.vanfleteren.jazygit.core.git.model.*;
 import net.vanfleteren.jazygit.core.repo.*;
+import net.vanfleteren.jazygit.core.repo.BranchName;
+import net.vanfleteren.jazygit.core.repo.RemoteBranch;
 import net.vanfleteren.jazygit.kernel.state.build.FailedBuild;
 import net.vanfleteren.jazygit.kernel.state.diff.DiffCursorAt;
 import net.vanfleteren.jazygit.kernel.state.view.ShownTabs;

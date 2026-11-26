@@ -9,6 +9,7 @@ import net.vanfleteren.jazygit.core.gh.model.NewPullRequest;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest.Review;
+import net.vanfleteren.jazygit.core.gh.model.StackId;
 import net.vanfleteren.jazygit.core.git.Git;
 import net.vanfleteren.jazygit.core.git.process.GitError;
 import net.vanfleteren.jazygit.core.git.process.GitFailure;
@@ -63,7 +64,7 @@ public sealed interface GitHubCreatePullRequestCmd extends Cmd {
      * Where a new pull request goes in a stack once it is created (ADR 73): on pull request {@code below}, a new stack
      * of the two, or on the top of its stack {@code stack}.
      */
-    record Stacking(PrNumber below, Option<Integer> stack) {
+    record Stacking(PrNumber below, Option<StackId> stack) {
 
         /**
          * Puts the pull request {@code number} on {@code below}.
@@ -78,7 +79,7 @@ public sealed interface GitHubCreatePullRequestCmd extends Cmd {
      * Why a new pull request cannot be stacked on pull request {@code below}: it is in stack {@code stack}, but not on
      * its top, where only GitHub adds.
      */
-    record NotTop(PrNumber below, int stack) {}
+    record NotTop(PrNumber below, StackId stack) {}
 
     /**
      * Reads which of {@code bases} the branch {@code branch} was made from: the one recorded as such, or else the
