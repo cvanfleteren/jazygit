@@ -12,7 +12,6 @@ import net.vanfleteren.jazygit.core.gh.model.GhBranch;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestSummary;
 import net.vanfleteren.jazygit.core.git.model.*;
 import net.vanfleteren.jazygit.core.repo.*;
-import net.vanfleteren.jazygit.features.branches.branch.BranchError;
 import net.vanfleteren.jazygit.features.branches.branch.checkout.CheckoutMsg;
 import net.vanfleteren.jazygit.features.branches.branch.checkout.CheckoutWherePopup;
 import net.vanfleteren.jazygit.features.branches.branch.checkout.SwitchWorktreePopup;
@@ -259,7 +258,7 @@ class PullRequestCheckoutUpdateTest {
 
         assertEquals(List.empty(), refused.cmds());
         assertEquals(
-                Option.of(new BranchError.OtherRepository("other/repo#9")),
+                Option.of(new GitHubError.OtherRepository("other/repo#9")),
                 refused.model().outcome().error());
     }
 
@@ -353,7 +352,7 @@ class PullRequestCheckoutUpdateTest {
                 withMainWorktree(CLEAN), new CheckoutPullRequestMsg.WorktreeRequested(summary("other/repo"))));
         assertEquals(Option.none(), other.model().popup(NewWorktreePopup.class));
         assertEquals(
-                Option.of(new BranchError.OtherRepository("other/repo#9")),
+                Option.of(new GitHubError.OtherRepository("other/repo#9")),
                 other.model().outcome().error());
     }
 

@@ -19,10 +19,10 @@ import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.RemoteBranch;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.core.repo.StackLayer;
-import net.vanfleteren.jazygit.features.branches.branch.BranchError;
 import net.vanfleteren.jazygit.features.branches.branch.checkout.CheckoutMsg;
 import net.vanfleteren.jazygit.features.branches.branch.checkout.CheckoutRequest;
 import net.vanfleteren.jazygit.features.branches.branch.checkout.CheckoutUpdate;
+import net.vanfleteren.jazygit.features.github.GitHubError;
 import net.vanfleteren.jazygit.features.github.prs.PrOverview;
 import net.vanfleteren.jazygit.features.github.prs.PullRequestReads;
 import net.vanfleteren.jazygit.features.github.stack.StackMsg.AddChosen;
@@ -240,12 +240,12 @@ public final class StackUpdate {
      * when the branch follows it.
      */
     private static Next behindRemote(Model model, int stack, BranchName branch, RemoteBranch remote) {
-        return Next.of(model.fail(new BranchError.StackNotRebased(
+        return Next.of(model.fail(new GitHubError.StackNotRebased(
                 stack,
                 branch.value(),
                 model.repo().branch(branch).flatMap(Branch::remoteUpstream).contains(remote)
-                        ? BranchError.StackRefusal.BEHIND_REMOTE
-                        : BranchError.StackRefusal.BEHIND_UNFOLLOWED)));
+                        ? GitHubError.StackRefusal.BEHIND_REMOTE
+                        : GitHubError.StackRefusal.BEHIND_UNFOLLOWED)));
     }
 
     /**
@@ -322,7 +322,7 @@ public final class StackUpdate {
                                                 List.empty(),
                                                 Option.of(pullRequest.number()),
                                                 StackCheckout.status(model, stack)))
-                                : Next.of(model.fail(new BranchError.OtherRepository(pullRequest.repository() + "#"
+                                : Next.of(model.fail(new GitHubError.OtherRepository(pullRequest.repository() + "#"
                                         + pullRequest.number().value()))));
     }
 
@@ -359,7 +359,7 @@ public final class StackUpdate {
         return StackPush.of(model, stack)
                 .fold(
                         refused -> Next.of(model.fail(
-                                new BranchError.StackNotPushed(stack.number(), refused.branch(), refused.why()))),
+                                new GitHubError.StackNotPushed(stack.number(), refused.branch(), refused.why()))),
                         push -> OperationUpdate.start(model.clearError(), new StackRebaseCmd.PushStack(push)));
     }
 
