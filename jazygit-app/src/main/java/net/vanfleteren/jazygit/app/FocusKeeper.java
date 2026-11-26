@@ -77,6 +77,14 @@ final class FocusKeeper {
     }
 
     /**
+     * Whether an element of a popup has the focus: one that is closing too, until a frame without it gives the focus
+     * back.
+     */
+    boolean inPopup() {
+        return focus().exists(focused -> popups.owns(focused.id()));
+    }
+
+    /**
      * Moves the focus to {@code focus}.
      */
     void moveTo(Focus focus) {
@@ -302,13 +310,6 @@ final class FocusKeeper {
      */
     private static Option<Focus.OnScreen> onScreen(Option<Focus> focus) {
         return focus.flatMap(on -> on instanceof Focus.OnScreen onScreen ? Option.of(onScreen) : Option.none());
-    }
-
-    /**
-     * Gives the focus to the command log (ADR 129).
-     */
-    void moveToCommandLog() {
-        moveTo(CommandLogPanel.FOCUS);
     }
 
     /**

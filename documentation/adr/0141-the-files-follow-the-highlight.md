@@ -111,3 +111,6 @@ directories collapsed, about 90 ms more by ADR 108's measure.
 
 Amended by ADR 149: Enter, or `F` on a branch, locks the files pane to its list until `Esc`, whichever pane has the
 focus; `Esc` in the files lets go of it.
+
+Amended by ADR 207: the update of `CommitFilesMsg.Closed` asks the app to move the focus back to the list, with
+`ViewIntent.ToPane`.

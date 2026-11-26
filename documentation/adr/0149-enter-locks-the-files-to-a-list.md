@@ -67,3 +67,6 @@ focus into them, which Enter does not.
 - `F` is free in the commits, the stash, the commits of a branch and the divergence.
 - The lock is held in the model, beside the files of a commit it lists (`FilesView.commitFiles`), so following asks the
   locked list for its highlight, not the list with the focus.
+
+Amended by ADR 207: the update of `SelectionMsg.FilesUnlocked` asks the app to move the focus back to the list,
+with `ViewIntent.ToPane`, only from the files pane.

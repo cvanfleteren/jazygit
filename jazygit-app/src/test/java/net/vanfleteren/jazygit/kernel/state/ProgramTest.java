@@ -88,7 +88,9 @@ import net.vanfleteren.jazygit.kernel.state.load.LoadBranchLog;
 import net.vanfleteren.jazygit.kernel.state.load.SelectionMsg;
 import net.vanfleteren.jazygit.kernel.state.popup.PopupMsg;
 import net.vanfleteren.jazygit.kernel.state.preferences.RepositoryTheme;
+import net.vanfleteren.jazygit.kernel.state.view.CommandLogFocused;
 import net.vanfleteren.jazygit.kernel.state.view.Preview;
+import net.vanfleteren.jazygit.kernel.state.view.ViewIntent;
 import net.vanfleteren.jazygit.kernel.state.view.ViewMsg;
 import org.junit.jupiter.api.Test;
 
@@ -727,7 +729,7 @@ class ProgramTest {
 
         @Override
         public Update.Next apply(Model model) {
-            return new Update.Next(model, cmds);
+            return Update.Next.of(model).and(cmds);
         }
     }
 
@@ -971,6 +973,7 @@ class ProgramTest {
                 bug -> {},
                 changes::incrementAndGet,
                 () -> {},
+                intent -> {},
                 clock);
         // The first loads run from the start.
         assertEquals(start, timed.model().now());
@@ -1009,6 +1012,39 @@ class ProgramTest {
     }
 
     @Test
+    void whatAMessageAsksOfTheViewIsHandedToTheAppOnceTheModelItLeavesIsTheProgramsOwn() {
+        Queue<Runnable> queued = new ArrayDeque<>();
+        java.util.List<Model> seen = new ArrayList<>();
+        java.util.List<ViewIntent> asked = new ArrayList<>();
+        Program[] started = new Program[1];
+        started[0] = Program.start(
+                new Env(repo.git()),
+                SettingsStore.Loaded.DEFAULT,
+                Option.none(),
+                RepositoryTheme.NONE,
+                Landing.START,
+                Carried.NONE,
+                Reactions.NONE,
+                queued::add,
+                queued::add,
+                queued::add,
+                bug -> {},
+                () -> {},
+                () -> {},
+                intent -> {
+                    asked.add(intent);
+                    seen.add(started[0].model());
+                },
+                new MovingClock(Instant.parse("2026-10-26T10:00:00Z")));
+        drain(queued);
+
+        started[0].dispatch(new CommandLogFocused());
+
+        assertEquals(java.util.List.of(new ViewIntent.ToCommandLog()), asked);
+        assertEquals(java.util.List.of(started[0].model()), seen);
+    }
+
+    @Test
     void aCommandThatIsDoneIsLoggedWithHowLongItRanAndWhatItReported() {
         Instant start = Instant.parse("2026-10-26T10:00:00Z");
         MovingClock clock = new MovingClock(start);
@@ -1027,6 +1063,7 @@ class ProgramTest {
                 bug -> {},
                 () -> {},
                 () -> {},
+                intent -> {},
                 clock);
         drain(queued);
         java.util.List<String> heard = new ArrayList<>();

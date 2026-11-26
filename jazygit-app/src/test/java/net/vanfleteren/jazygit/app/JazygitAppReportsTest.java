@@ -37,13 +37,17 @@ import net.vanfleteren.jazygit.core.repo.BranchRef;
 import net.vanfleteren.jazygit.core.repo.RemoteBranch;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.core.repo.Upstream;
+import net.vanfleteren.jazygit.features.branches.panes.branches.BranchesPanel;
 import net.vanfleteren.jazygit.features.changes.panes.commits.CommitsPanel;
 import net.vanfleteren.jazygit.features.chrome.help.HelpDialog;
 import net.vanfleteren.jazygit.kernel.state.Env;
+import net.vanfleteren.jazygit.kernel.state.Loadable;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.view.Preview;
 import net.vanfleteren.jazygit.kernel.ui.CommandLogPanel;
 import net.vanfleteren.jazygit.kernel.ui.SettledPilot;
+import net.vanfleteren.jazygit.kernel.ui.files.FilesPanel;
+import net.vanfleteren.jazygit.kernel.ui.keys.Keymap;
 import net.vanfleteren.jazygit.kernel.ui.keys.Scopes;
 import net.vanfleteren.jazygit.kernel.ui.text.TimeText;
 import org.junit.jupiter.api.Test;
@@ -191,6 +195,105 @@ class JazygitAppReportsTest {
             pilot.pause();
 
             assertEquals(CommandLogPanel.ID, onRenderThread(testRunner, () -> focusedId(testRunner)));
+        } finally {
+            app.onStop();
+        }
+    }
+
+    @Test
+    void escapeInTheFilesOfACommitGivesTheFocusBackToTheCommitsAsTheUpdateAsks() throws Exception {
+        TestApp app = new TestApp();
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(app::frame, SIZE, tickless())) {
+            app.start(testRunner);
+            SettledPilot.focus(testRunner, CommitsPanel.ID, app.drawnAt::size);
+            awaitModel(testRunner, app, model -> shownCommit(model).contains(commits.get(0)));
+            Pilot pilot = SettledPilot.of(testRunner, app.drawnAt::size);
+            pilot.press(KeyCode.ENTER);
+            awaitModel(
+                    testRunner,
+                    app,
+                    model -> model.repoView().files().commitFiles().isDefined());
+            pilot.pause();
+            assertEquals(FilesPanel.ID, onRenderThread(testRunner, () -> focusedId(testRunner)));
+
+            pilot.press(KeyCode.ESCAPE);
+            pilot.pause();
+
+            // Back to the list the files were opened from (ADR 141, 207); they stay listed.
+            assertEquals(CommitsPanel.ID, onRenderThread(testRunner, () -> focusedId(testRunner)));
+            assertEquals(Option.none(), app.model().repoView().files().locked());
+        } finally {
+            app.onStop();
+        }
+    }
+
+    @Test
+    void escapeChosenFromTheHelpInTheFilesOfACommitGivesTheCommitsTheFocusOnceTheHelpIsClosed() throws Exception {
+        TestApp app = new TestApp();
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(app::frame, SIZE, tickless())) {
+            app.start(testRunner);
+            SettledPilot.focus(testRunner, CommitsPanel.ID, app.drawnAt::size);
+            awaitModel(testRunner, app, model -> shownCommit(model).contains(commits.get(0)));
+            Pilot pilot = SettledPilot.of(testRunner, app.drawnAt::size);
+            pilot.press(KeyCode.ENTER);
+            awaitModel(
+                    testRunner,
+                    app,
+                    model -> model.repoView().files().commitFiles().isDefined());
+            pilot.pause();
+            pilot.press('?');
+            awaitModel(testRunner, app, model -> model.popup().isDefined());
+
+            // Escape closes the help itself: its row is chosen with Enter.
+            int close = Keymap.standard()
+                    .bindings(Scopes.COMMIT_FILES.id())
+                    .indexWhere(binding -> binding.descriptionKey().equals("changes.help.commitFiles.close"));
+            for (int i = 0; i < close; i++) {
+                pilot.press(KeyCode.DOWN);
+            }
+            pilot.press(KeyCode.ENTER);
+            awaitModel(testRunner, app, model -> model.popup().isEmpty());
+            pilot.pause();
+
+            // The help gives the focus back to the files as it closes; the commits take it from them (ADR 207).
+            assertEquals(Option.none(), app.model().repoView().files().locked());
+            assertEquals(CommitsPanel.ID, onRenderThread(testRunner, () -> focusedId(testRunner)));
+        } finally {
+            app.onStop();
+        }
+    }
+
+    @Test
+    void escapeInTheWorkingTreeTheLockedBranchesFollowGivesTheFocusBackToTheBranches() throws Exception {
+        TestApp app = new TestApp();
+        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(app::frame, SIZE, tickless())) {
+            app.start(testRunner);
+            SettledPilot.focus(testRunner, BranchesPanel.ID, app.drawnAt::size);
+            awaitModel(testRunner, app, model -> model.repo().branches() instanceof Loadable.Loaded);
+            Pilot pilot = SettledPilot.of(testRunner, app.drawnAt::size);
+            // F locks the files to the branches (ADR 149); the branch checked out, highlighted again, lists the
+            // working tree.
+            pilot.press('F');
+            awaitModel(
+                    testRunner, app, model -> model.repoView().files().locked().isDefined());
+            pilot.pause();
+            SettledPilot.focus(testRunner, BranchesPanel.ID, app.drawnAt::size);
+            pilot.press(KeyCode.DOWN);
+            pilot.pause();
+            pilot.press(KeyCode.UP);
+            awaitModel(
+                    testRunner,
+                    app,
+                    model -> model.repoView().files().commitFiles().isEmpty());
+            SettledPilot.focus(testRunner, FilesPanel.ID, app.drawnAt::size);
+            assertTrue(app.model().repoView().files().locked().isDefined());
+
+            pilot.press(KeyCode.ESCAPE);
+            pilot.pause();
+
+            // Escape in the files lets go, and gives the focus back to the list they were locked to (ADR 149, 207).
+            assertEquals(Option.none(), app.model().repoView().files().locked());
+            assertEquals(BranchesPanel.ID, onRenderThread(testRunner, () -> focusedId(testRunner)));
         } finally {
             app.onStop();
         }

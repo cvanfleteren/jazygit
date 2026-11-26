@@ -77,12 +77,15 @@ public final class ThreadUpdate {
                                 ? Collapsed.Key.of(id)
                                 : Collapsed.Key.of(FromGitHub.id(found.thread().id())),
                         view.remarkThreads());
-        return new Next(
-                mapView(model, files -> files.withCollapsed(collapsed)),
-                view.of() instanceof Changes.OfPullRequest(PullRequestCommits commits, var _)
-                        ? List.of(new RemarksCmd.SaveCollapsed(
-                                commits.repository(), new PrNumber(commits.number()), collapsed.toggled(), model.now()))
-                        : List.empty());
+        return Next.of(mapView(model, files -> files.withCollapsed(collapsed)))
+                .and(
+                        view.of() instanceof Changes.OfPullRequest(PullRequestCommits commits, var _)
+                                ? List.of(new RemarksCmd.SaveCollapsed(
+                                        commits.repository(),
+                                        new PrNumber(commits.number()),
+                                        collapsed.toggled(),
+                                        model.now()))
+                                : List.empty());
     }
 
     /**

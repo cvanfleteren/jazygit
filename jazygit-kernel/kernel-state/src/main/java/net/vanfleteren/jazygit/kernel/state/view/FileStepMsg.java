@@ -6,8 +6,8 @@ import net.vanfleteren.jazygit.kernel.state.Update;
 
 /**
  * The user asked to move to the file {@code step} of the one highlighted in the files pane, from the content panel
- * (ADR 117). The highlight of the files pane is view state, so the app moves it itself before the message reaches the
- * update, which leaves the model as it is.
+ * (ADR 117). The highlight of the files pane is view state, so the update leaves the model as it is and asks the app
+ * to move it (ADR 207).
  */
 public record FileStepMsg(FileStepMsg.Step step) implements Msg {
 
@@ -21,6 +21,6 @@ public record FileStepMsg(FileStepMsg.Step step) implements Msg {
 
     @Override
     public Update.Next apply(Model model) {
-        return Update.Next.of(model);
+        return Update.Next.of(model).asking(new ViewIntent.StepFile(step));
     }
 }
