@@ -9,7 +9,6 @@ import io.vavr.collection.List;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.core.git.model.*;
 import net.vanfleteren.jazygit.core.repo.*;
-import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.kernel.state.Cmd;
 import net.vanfleteren.jazygit.kernel.state.Loadable.Failed;
 import net.vanfleteren.jazygit.kernel.state.Loadable.Loaded;

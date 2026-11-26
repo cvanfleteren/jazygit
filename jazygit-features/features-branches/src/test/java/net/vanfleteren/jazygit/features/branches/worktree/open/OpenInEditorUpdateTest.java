@@ -17,7 +17,6 @@ import net.vanfleteren.jazygit.core.git.StubGit;
 import net.vanfleteren.jazygit.core.git.model.*;
 import net.vanfleteren.jazygit.core.process.ExecutedCommand;
 import net.vanfleteren.jazygit.core.repo.*;
-import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.features.branches.worktree.WorktreeError;
 import net.vanfleteren.jazygit.kernel.settings.EditorProgram;
 import net.vanfleteren.jazygit.kernel.settings.Editors;

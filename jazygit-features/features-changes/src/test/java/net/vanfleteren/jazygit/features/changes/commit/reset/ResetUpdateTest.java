@@ -9,7 +9,6 @@ import io.vavr.control.Option;
 import java.time.Instant;
 import net.vanfleteren.jazygit.core.git.model.*;
 import net.vanfleteren.jazygit.core.repo.*;
-import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.kernel.state.*;
 import net.vanfleteren.jazygit.kernel.state.TestModels;
 import net.vanfleteren.jazygit.kernel.state.Update.Next;

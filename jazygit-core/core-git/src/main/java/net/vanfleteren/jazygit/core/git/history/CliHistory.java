@@ -24,8 +24,6 @@ import net.vanfleteren.jazygit.core.git.process.GitOutput;
 import net.vanfleteren.jazygit.core.git.process.GitProcess;
 import net.vanfleteren.jazygit.core.process.Parallel;
 import net.vanfleteren.jazygit.core.repo.*;
-import net.vanfleteren.jazygit.core.repo.BranchName;
-import net.vanfleteren.jazygit.core.repo.RemoteBranch;
 
 /**
  * The {@link History} of a repository, through {@code git rev-parse} and {@code git log}. The checkout and the

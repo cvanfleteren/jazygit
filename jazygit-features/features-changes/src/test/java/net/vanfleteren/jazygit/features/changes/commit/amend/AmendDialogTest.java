@@ -15,7 +15,6 @@ import java.util.function.Supplier;
 import net.vanfleteren.jazygit.core.git.model.*;
 import net.vanfleteren.jazygit.core.git.model.SampleData;
 import net.vanfleteren.jazygit.core.repo.*;
-import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.kernel.state.*;
 import net.vanfleteren.jazygit.kernel.state.load.*;
 import net.vanfleteren.jazygit.kernel.state.popup.*;

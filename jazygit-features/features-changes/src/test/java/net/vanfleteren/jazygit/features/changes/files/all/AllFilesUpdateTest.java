@@ -11,7 +11,6 @@ import net.vanfleteren.jazygit.core.git.files.StubStatus;
 import net.vanfleteren.jazygit.core.git.model.*;
 import net.vanfleteren.jazygit.core.git.process.GitError;
 import net.vanfleteren.jazygit.core.repo.*;
-import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.features.changes.discard.DiscardMsg;
 import net.vanfleteren.jazygit.features.changes.files.FilesError;
 import net.vanfleteren.jazygit.features.changes.stage.StageMsg;

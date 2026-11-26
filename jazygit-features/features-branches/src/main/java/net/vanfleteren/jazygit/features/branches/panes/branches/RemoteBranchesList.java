@@ -11,7 +11,6 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 import net.vanfleteren.jazygit.core.git.model.*;
 import net.vanfleteren.jazygit.core.repo.*;
-import net.vanfleteren.jazygit.core.repo.RemoteBranch;
 import net.vanfleteren.jazygit.kernel.state.*;
 import net.vanfleteren.jazygit.kernel.state.view.ShownTabs;
 import net.vanfleteren.jazygit.kernel.ui.i18n.Messages;

@@ -9,8 +9,6 @@ import java.util.Comparator;
 import lombok.With;
 import net.vanfleteren.jazygit.core.git.model.*;
 import net.vanfleteren.jazygit.core.repo.*;
-import net.vanfleteren.jazygit.core.repo.BranchName;
-import net.vanfleteren.jazygit.core.repo.RemoteBranch;
 
 /**
  * What git reports about the repository: each part is loading until it was read once, and the one read last when

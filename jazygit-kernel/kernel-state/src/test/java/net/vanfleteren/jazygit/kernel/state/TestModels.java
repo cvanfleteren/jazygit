@@ -12,7 +12,6 @@ import net.vanfleteren.jazygit.core.git.StubGit;
 import net.vanfleteren.jazygit.core.git.model.*;
 import net.vanfleteren.jazygit.core.git.process.GitError;
 import net.vanfleteren.jazygit.core.repo.*;
-import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.kernel.settings.DiffStyle;
 import net.vanfleteren.jazygit.kernel.settings.Settings;
 import net.vanfleteren.jazygit.kernel.settings.SettingsStore;

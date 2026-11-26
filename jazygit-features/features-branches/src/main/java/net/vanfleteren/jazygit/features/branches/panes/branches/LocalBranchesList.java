@@ -12,7 +12,6 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 import net.vanfleteren.jazygit.core.git.model.*;
 import net.vanfleteren.jazygit.core.repo.*;
-import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.features.branches.branch.Branches;
 import net.vanfleteren.jazygit.features.branches.panes.branches.BranchGroups.Group;
 import net.vanfleteren.jazygit.kernel.state.*;

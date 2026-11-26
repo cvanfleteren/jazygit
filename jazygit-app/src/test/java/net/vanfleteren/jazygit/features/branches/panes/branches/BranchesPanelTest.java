@@ -10,8 +10,6 @@ import io.vavr.control.Option;
 import net.vanfleteren.jazygit.core.git.model.*;
 import net.vanfleteren.jazygit.core.git.model.SampleData;
 import net.vanfleteren.jazygit.core.repo.*;
-import net.vanfleteren.jazygit.core.repo.BranchName;
-import net.vanfleteren.jazygit.core.repo.RemoteBranch;
 import net.vanfleteren.jazygit.features.branches.branch.checkout.CheckoutMsg;
 import net.vanfleteren.jazygit.features.branches.branch.commits.BranchCommitsMsg;
 import net.vanfleteren.jazygit.features.branches.branch.delete.DeleteBranchCmd;

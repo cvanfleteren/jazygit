@@ -21,7 +21,6 @@ import net.vanfleteren.jazygit.core.git.process.GitOutput;
 import net.vanfleteren.jazygit.core.git.process.GitProcess;
 import net.vanfleteren.jazygit.core.process.ExecutedCommand;
 import net.vanfleteren.jazygit.core.repo.*;
-import net.vanfleteren.jazygit.core.repo.BranchName;
 
 /**
  * The {@link Status} of a repository: the working tree status through the {@code git status} command line tool, and

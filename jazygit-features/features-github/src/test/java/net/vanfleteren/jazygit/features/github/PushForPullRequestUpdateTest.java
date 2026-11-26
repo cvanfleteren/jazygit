@@ -12,8 +12,6 @@ import net.vanfleteren.jazygit.core.git.StubGit;
 import net.vanfleteren.jazygit.core.git.model.*;
 import net.vanfleteren.jazygit.core.process.ExecutedCommand;
 import net.vanfleteren.jazygit.core.repo.*;
-import net.vanfleteren.jazygit.core.repo.BranchName;
-import net.vanfleteren.jazygit.core.repo.RemoteBranch;
 import net.vanfleteren.jazygit.features.branches.branch.checkout.SwitchWorktreePopup;
 import net.vanfleteren.jazygit.features.branches.branch.pullrequest.CreatePullRequestCmd.PushFirst;
 import net.vanfleteren.jazygit.features.branches.branch.pullrequest.CreatePullRequestCmd.ReadTitle;
