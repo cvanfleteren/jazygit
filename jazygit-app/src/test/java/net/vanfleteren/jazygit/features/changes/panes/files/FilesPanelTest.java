@@ -1,4 +1,4 @@
-package net.vanfleteren.jazygit.kernel.ui.files;
+package net.vanfleteren.jazygit.features.changes.panes.files;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -42,6 +42,7 @@ import net.vanfleteren.jazygit.kernel.state.view.FileFilterMsg;
 import net.vanfleteren.jazygit.kernel.state.view.FilesLock;
 import net.vanfleteren.jazygit.kernel.ui.RenderedText;
 import net.vanfleteren.jazygit.kernel.ui.SettledPilot;
+import net.vanfleteren.jazygit.kernel.ui.files.ListedFiles;
 import net.vanfleteren.jazygit.kernel.ui.keys.Scopes;
 import net.vanfleteren.jazygit.kernel.ui.text.Placeholders;
 import net.vanfleteren.jazygit.kernel.ui.widgets.BorderBar;

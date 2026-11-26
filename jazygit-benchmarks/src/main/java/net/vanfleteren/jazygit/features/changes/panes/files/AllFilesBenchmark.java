@@ -1,4 +1,4 @@
-package net.vanfleteren.jazygit.kernel.ui;
+package net.vanfleteren.jazygit.features.changes.panes.files;
 
 import io.vavr.collection.List;
 import io.vavr.collection.Set;
@@ -13,8 +13,7 @@ import net.vanfleteren.jazygit.core.repo.Head;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.kernel.state.Loadable;
 import net.vanfleteren.jazygit.kernel.state.Repo;
-import net.vanfleteren.jazygit.kernel.ui.files.FileTreeList;
-import net.vanfleteren.jazygit.kernel.ui.files.FilesPanel;
+import net.vanfleteren.jazygit.kernel.ui.files.ListedFiles;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Fork;
@@ -31,7 +30,7 @@ import org.openjdk.jmh.annotations.Warmup;
  * What all files of a large working tree cost the render thread (ADR 108): a key typed in the filter matches every
  * path and builds the tree of those that match, and a reload merges all files with the changed ones and finds the
  * directories to start collapsed. The budget of a key typed is a frame, 16 ms, at 100 000 files. In the package of
- * {@link FileTreeList}, which the app keeps to itself.
+ * the files pane, which keeps how it finds those directories to itself.
  *
  * <p>Run with {@code java -jar jazygit-benchmarks/target/benchmarks.jar AllFiles}.
  */
@@ -68,7 +67,7 @@ public class AllFilesBenchmark {
      */
     @Benchmark
     public List<FileTree<FileEntry>> filter() {
-        return FileTree.of(FileTreeList.matching(entries, Option.of("Class12Test")));
+        return FileTree.of(ListedFiles.matching(entries, Option.of("Class12Test")));
     }
 
     /**
@@ -76,7 +75,7 @@ public class AllFilesBenchmark {
      */
     @Benchmark
     public List<FileTree<FileEntry>> filterByWords() {
-        return FileTree.of(FileTreeList.matching(entries, Option.of("CT")));
+        return FileTree.of(ListedFiles.matching(entries, Option.of("CT")));
     }
 
     /**

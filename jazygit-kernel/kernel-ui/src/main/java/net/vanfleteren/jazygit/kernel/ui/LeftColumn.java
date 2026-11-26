@@ -19,7 +19,7 @@ import net.vanfleteren.jazygit.kernel.state.PaneId;
 import net.vanfleteren.jazygit.kernel.state.preferences.Screen;
 import net.vanfleteren.jazygit.kernel.state.preferences.ScreenMsg;
 import net.vanfleteren.jazygit.kernel.state.view.FileStepMsg;
-import net.vanfleteren.jazygit.kernel.ui.files.FilesPanel;
+import net.vanfleteren.jazygit.kernel.ui.screen.FilesLeftPane;
 import net.vanfleteren.jazygit.kernel.ui.screen.LeftPane;
 import net.vanfleteren.jazygit.kernel.ui.screen.Screens;
 import net.vanfleteren.jazygit.kernel.ui.theme.Theme;
@@ -43,7 +43,7 @@ public final class LeftColumn {
 
     private final Consumer<Msg> dispatch;
     private final StyleEngine styleEngine;
-    private final FilesPanel filesPanel;
+    private final FilesLeftPane filesPanel;
     private final LeftPane branchesPanel;
     private final LeftPane commitsPanel;
     private final LeftPane stashPanel;
@@ -53,6 +53,7 @@ public final class LeftColumn {
     /**
      * @param styleEngine     the active theme, which highlights the selected rows
      * @param openContent     moves the focus to the content shown for the pane given
+     * @param files           makes the files pane, which lives in a group of features (ADR 158)
      * @param branches        makes the branches pane, which lives in a group of features (ADR 158)
      * @param commits         makes the commits pane, which lives in a group of features
      * @param stash           makes the stash pane, which lives in a group of features
@@ -62,6 +63,7 @@ public final class LeftColumn {
             Consumer<Msg> dispatch,
             StyleEngine styleEngine,
             Consumer<PaneId> openContent,
+            FilesLeftPane.Factory files,
             LeftPane.Factory branches,
             LeftPane.Factory commits,
             LeftPane.Factory stash,
@@ -70,7 +72,7 @@ public final class LeftColumn {
         this.styleEngine = styleEngine;
         // How the active theme highlights the selected row of a pane, in use or not.
         Theme.Highlights highlight = active -> Theme.highlights(styleEngine).of(active);
-        this.filesPanel = new FilesPanel(dispatch, () -> openContent.accept(PaneId.FILES), highlight);
+        this.filesPanel = files.of(() -> openContent.accept(PaneId.FILES), highlight);
         this.branchesPanel = branches.of(highlight);
         this.commitsPanel = commits.of(highlight);
         this.stashPanel = stash.of(highlight);

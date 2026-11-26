@@ -1,4 +1,4 @@
-package net.vanfleteren.jazygit.kernel.ui.files;
+package net.vanfleteren.jazygit.features.changes.panes.files;
 
 import dev.tamboui.toolkit.Toolkit;
 import dev.tamboui.toolkit.element.Element;
@@ -29,9 +29,11 @@ import net.vanfleteren.jazygit.kernel.state.load.SelectionMsg;
 import net.vanfleteren.jazygit.kernel.state.view.*;
 import net.vanfleteren.jazygit.kernel.state.view.Followed;
 import net.vanfleteren.jazygit.kernel.state.view.Unlisted;
+import net.vanfleteren.jazygit.kernel.ui.files.ListedFiles;
 import net.vanfleteren.jazygit.kernel.ui.i18n.Messages;
 import net.vanfleteren.jazygit.kernel.ui.keys.Keymap;
 import net.vanfleteren.jazygit.kernel.ui.keys.Scopes;
+import net.vanfleteren.jazygit.kernel.ui.screen.FilesLeftPane;
 import net.vanfleteren.jazygit.kernel.ui.text.Placeholders;
 import net.vanfleteren.jazygit.kernel.ui.text.ShownTime;
 import net.vanfleteren.jazygit.kernel.ui.theme.Theme;
@@ -50,7 +52,7 @@ import net.vanfleteren.jazygit.kernel.ui.widgets.PasteTarget;
  * {@code a} lists all files of the working tree in place of its changed ones (ADR 108), in a tree of its own that opens
  * only on the directories with changes; in the files of a commit, all files of that commit (ADR 128), the same way.
  */
-public class FilesPanel {
+public final class FilesPanel implements FilesLeftPane {
 
     public static final String ID = Scopes.FILES.id();
 
@@ -362,10 +364,12 @@ public class FilesPanel {
                 .toList();
     }
 
-    /**
-     * The message to send when the pane lists other files than those the pane in use, {@code inUse}, follows (ADR
-     * 141); {@code branches} is what the branches follow.
-     */
+    @Override
+    public PaneId pane() {
+        return PANE;
+    }
+
+    @Override
     public Option<Msg> followChange(Model model, Option<PaneId> inUse, Option<Followed> branches) {
         return FollowedFiles.change(model, inUse, branches);
     }
@@ -374,6 +378,7 @@ public class FilesPanel {
      * The message to send when the highlighted node is not the one whose diff {@code model} holds: of the files of
      * the commit while they are open, else of the working tree.
      */
+    @Override
     public Option<Msg> selectionChange(Model model) {
         return model.repoView()
                 .files()
@@ -519,6 +524,7 @@ public class FilesPanel {
      * Moves the highlight of the tree shown in {@code model} to its file {@code step} of the highlighted node, as
      * {@link FileTreeList#step} does, and says whether there was one (ADR 117). The pane does not get the focus.
      */
+    @Override
     public boolean step(Model model, FileStepMsg.Step step) {
         return model.repoView()
                 .files()
@@ -572,6 +578,7 @@ public class FilesPanel {
      * @param inUse the left pane in use, whose highlighted node shows, as it is again when it
      *              is back in use
      */
+    @Override
     public Panel render(Model model, Option<Focus> focus, Option<PaneId> inUse) {
         focused = focus.contains(PANE);
         held = false;

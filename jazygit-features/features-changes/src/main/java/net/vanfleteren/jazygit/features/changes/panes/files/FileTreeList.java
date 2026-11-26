@@ -1,4 +1,4 @@
-package net.vanfleteren.jazygit.kernel.ui.files;
+package net.vanfleteren.jazygit.features.changes.panes.files;
 
 import dev.tamboui.layout.Rect;
 import dev.tamboui.toolkit.Toolkit;
@@ -27,6 +27,7 @@ import net.vanfleteren.jazygit.core.git.model.Pathed;
 import net.vanfleteren.jazygit.kernel.state.Failure;
 import net.vanfleteren.jazygit.kernel.state.Loadable;
 import net.vanfleteren.jazygit.kernel.state.view.FileStepMsg;
+import net.vanfleteren.jazygit.kernel.ui.files.ListedFiles;
 import net.vanfleteren.jazygit.kernel.ui.i18n.Messages;
 import net.vanfleteren.jazygit.kernel.ui.text.Placeholders;
 import net.vanfleteren.jazygit.kernel.ui.theme.Theme;

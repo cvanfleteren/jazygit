@@ -1,4 +1,4 @@
-package net.vanfleteren.jazygit.kernel.ui.files;
+package net.vanfleteren.jazygit.features.changes.panes.files;
 
 import dev.tamboui.buffer.Buffer;
 import dev.tamboui.layout.Constraint;
