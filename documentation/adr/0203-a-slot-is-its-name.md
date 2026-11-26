@@ -14,8 +14,9 @@ under them.
 
 - **A slot is a name**: `Slot.of(name)`, whose type is the one it is declared with. Two slots of one name are the
   same slot.
-- **`Fills` casts unchecked**: `Fills.with` is the only way to give for a slot, and it takes only what gives the
-  slot's type, which the compiler checks where a feature fills it.
+- **`Fills` casts unchecked**: a feature gives for a slot through `Fills.with` (by `Feature.filling`), which takes
+  only what gives the slot's type, as the compiler checks where a feature fills it. The record's own constructor
+  checks nothing, and is for `Fills`' methods.
 - **No two slots share a name**: `SlotNamesTest` finds every constant of the app's classes that holds a slot, as
   `PartNamesTest` does for the parts, and fails when two names are the same. Without it, the second slot would be
   given what was meant for the first, and its reader would fail with a `ClassCastException`.
