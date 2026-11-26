@@ -31,6 +31,7 @@ import net.vanfleteren.jazygit.core.process.SshAsking;
 import net.vanfleteren.jazygit.features.branches.panes.branches.BranchesPanel;
 import net.vanfleteren.jazygit.features.changes.files.step.FileStepEnded;
 import net.vanfleteren.jazygit.features.changes.panes.commits.CommitsPanel;
+import net.vanfleteren.jazygit.features.changes.panes.files.FilesPanel;
 import net.vanfleteren.jazygit.features.changes.panes.stash.StashPanel;
 import net.vanfleteren.jazygit.features.chrome.layout.LayoutMsg;
 import net.vanfleteren.jazygit.kernel.content.ContentPanel;
@@ -45,7 +46,6 @@ import net.vanfleteren.jazygit.kernel.state.preferences.*;
 import net.vanfleteren.jazygit.kernel.state.view.*;
 import net.vanfleteren.jazygit.kernel.ui.*;
 import net.vanfleteren.jazygit.kernel.ui.content.ContentSources;
-import net.vanfleteren.jazygit.kernel.ui.files.FilesPanel;
 import net.vanfleteren.jazygit.kernel.ui.i18n.Messages;
 import net.vanfleteren.jazygit.kernel.ui.keys.Keymap;
 import net.vanfleteren.jazygit.kernel.ui.screen.Screens;
@@ -162,6 +162,7 @@ public class JazygitApp extends ToolkitApp {
                 dispatch,
                 styleEngine,
                 focus::openContent,
+                (openDiff, highlights) -> new FilesPanel(dispatch, openDiff, highlights, Features.FILLS),
                 highlights -> new BranchesPanel(dispatch, clock, highlights, Features.FILLS),
                 highlights -> new CommitsPanel(dispatch, highlights, Features.FILLS),
                 highlights -> new StashPanel(dispatch, highlights),
@@ -245,7 +246,7 @@ public class JazygitApp extends ToolkitApp {
      */
     private void stepFile(FileStepMsg.Step step) {
         Model model = model();
-        if (!focus.inContentOf(model, FilesPanel.PANE)) {
+        if (!focus.inContentOf(model, PaneId.FILES)) {
             return;
         }
         List<ScrolledContent> before =

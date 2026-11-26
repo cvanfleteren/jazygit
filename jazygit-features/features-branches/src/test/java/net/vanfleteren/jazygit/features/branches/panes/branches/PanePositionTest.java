@@ -30,11 +30,11 @@ import net.vanfleteren.jazygit.core.repo.BranchRef;
 import net.vanfleteren.jazygit.core.repo.Commit;
 import net.vanfleteren.jazygit.core.repo.Head;
 import net.vanfleteren.jazygit.core.repo.Sha;
+import net.vanfleteren.jazygit.features.changes.panes.files.FilesPanel;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.TestModels;
 import net.vanfleteren.jazygit.kernel.ui.RenderedText;
 import net.vanfleteren.jazygit.kernel.ui.SettledPilot;
-import net.vanfleteren.jazygit.kernel.ui.files.FilesPanel;
 import net.vanfleteren.jazygit.kernel.ui.text.Placeholders;
 import org.junit.jupiter.api.Test;
 

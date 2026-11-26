@@ -234,3 +234,4 @@ another tool adds it there too.
 | 205 | [A feature says its notices itself](0205-a-feature-says-its-notices-itself.md) |  |
 | 206 | [A feature asks the kernel to open a file, and the feature that opens files answers](0206-a-feature-asks-the-kernel-to-open-a-file.md) |  |
 | 207 | [An update asks the app to move the focus, and to step the files](0207-an-update-asks-the-app-to-move-the-focus.md) |  |
+| 208 | [The files pane leaves the kernel, and the resolving marks its files through slots](0208-the-files-pane-leaves-the-kernel.md) |  |

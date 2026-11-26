@@ -4,8 +4,8 @@ import io.vavr.collection.List;
 import java.util.function.Consumer;
 import net.vanfleteren.jazygit.features.changes.discard.DiscardMsg.Scope;
 import net.vanfleteren.jazygit.kernel.state.Msg;
+import net.vanfleteren.jazygit.kernel.state.PaneId;
 import net.vanfleteren.jazygit.kernel.ui.PopupSlot;
-import net.vanfleteren.jazygit.kernel.ui.files.FilesPanel;
 import net.vanfleteren.jazygit.kernel.ui.i18n.Messages;
 import net.vanfleteren.jazygit.kernel.ui.widgets.ChoiceDialog;
 import net.vanfleteren.jazygit.kernel.ui.widgets.ChoiceDialog.Choice;
@@ -35,6 +35,6 @@ public final class DiscardDialog {
      * The popups of this feature, which send what the user does to {@code dispatch}.
      */
     public static List<PopupSlot> popups(Consumer<Msg> dispatch) {
-        return List.of(PopupSlot.returningTo(FilesPanel.PANE, new ChoiceDialog<>(SPEC, dispatch)));
+        return List.of(PopupSlot.returningTo(PaneId.FILES, new ChoiceDialog<>(SPEC, dispatch)));
     }
 }

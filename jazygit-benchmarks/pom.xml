@@ -25,6 +25,11 @@
             <groupId>net.vanfleteren</groupId>
             <artifactId>kernel-content</artifactId>
         </dependency>
+        <!-- For what all files of a large working tree cost the files pane (AllFilesBenchmark). -->
+        <dependency>
+            <groupId>net.vanfleteren</groupId>
+            <artifactId>features-changes</artifactId>
+        </dependency>
         <dependency>
             <groupId>io.vavr</groupId>
             <artifactId>vavr</artifactId>

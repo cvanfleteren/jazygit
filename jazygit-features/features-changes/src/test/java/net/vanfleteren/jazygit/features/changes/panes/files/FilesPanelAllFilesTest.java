@@ -1,4 +1,4 @@
-package net.vanfleteren.jazygit.kernel.ui.files;
+package net.vanfleteren.jazygit.features.changes.panes.files;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -117,7 +117,7 @@ class FilesPanelAllFilesTest {
                 FileEntry.unchanged("src/test/BTest.java"),
                 FileEntry.unchanged("docs/guide/intro.md"));
 
-        assertEquals(HashSet.of("src/test", "docs/guide"), FilesPanel.unchangedDirectories(files));
+        assertEquals(HashSet.of("src/test", "docs/guide"), WorkingTreeFilesList.unchangedDirectories(files));
     }
 
     @Test
