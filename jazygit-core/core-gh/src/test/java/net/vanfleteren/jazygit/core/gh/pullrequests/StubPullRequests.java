@@ -16,6 +16,7 @@ import net.vanfleteren.jazygit.core.gh.process.GhFailure;
 import net.vanfleteren.jazygit.core.process.ExecutedCommand;
 import net.vanfleteren.jazygit.core.repo.ForgeBranch;
 import net.vanfleteren.jazygit.core.repo.PrNumber;
+import net.vanfleteren.jazygit.core.repo.RepoSlug;
 import net.vanfleteren.jazygit.core.repo.Sha;
 
 /**
@@ -29,7 +30,7 @@ public interface StubPullRequests extends PullRequests {
      */
     @Override
     default Either<GhError, RepositoryPullRequests> ofRepository() {
-        return Either.right(new RepositoryPullRequests("owner/repo", PullRequestList.EMPTY));
+        return Either.right(new RepositoryPullRequests(new RepoSlug("owner/repo"), PullRequestList.EMPTY));
     }
 
     @Override

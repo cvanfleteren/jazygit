@@ -10,6 +10,7 @@ import net.vanfleteren.jazygit.core.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest.Review;
 import net.vanfleteren.jazygit.core.repo.ForgeBranch;
 import net.vanfleteren.jazygit.core.repo.PrNumber;
+import net.vanfleteren.jazygit.core.repo.RepoSlug;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -20,7 +21,7 @@ class ForkPullRequestsTest {
 
     private static PullRequestSummary summary(int number, boolean fromFork, Option<String> head) {
         return new PullRequestSummary(
-                "project/repo",
+                new RepoSlug("project/repo"),
                 new PrNumber(number),
                 "Pull request " + number,
                 "someone",
@@ -35,7 +36,7 @@ class ForkPullRequestsTest {
                 Option.none(),
                 Option.none(),
                 Option.none(),
-                head);
+                head.map(RepoSlug::new));
     }
 
     @Test
@@ -49,7 +50,7 @@ class ForkPullRequestsTest {
     @Test
     void thoseOfARemotesForkAreOfItsBranchesThoseOfOtherForksAreNot() {
         RepositoryPullRequests read = new RepositoryPullRequests(
-                "project/repo",
+                new RepoSlug("project/repo"),
                 new PullRequestList(
                         List.of(
                                 summary(1, false, Option.of("project/repo")),

@@ -26,7 +26,8 @@ public record BrowsePullRequestCmd(PullRequestSummary pullRequest) implements Op
 
     @Override
     public Option<String> subject() {
-        return Option.of(pullRequest.repository() + "#" + pullRequest.number().value());
+        return Option.of(
+                pullRequest.repository().value() + "#" + pullRequest.number().value());
     }
 
     @Override

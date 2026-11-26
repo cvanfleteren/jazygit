@@ -22,6 +22,7 @@ import net.vanfleteren.jazygit.core.gh.model.RepositoryPullRequests;
 import net.vanfleteren.jazygit.core.repo.ForgeBranch;
 import net.vanfleteren.jazygit.core.repo.PrNumber;
 import net.vanfleteren.jazygit.core.repo.RemoteName;
+import net.vanfleteren.jazygit.core.repo.RepoSlug;
 import net.vanfleteren.jazygit.features.github.prs.content.PullRequestSource;
 import net.vanfleteren.jazygit.features.github.prs.unseen.UnseenPullRequests;
 import net.vanfleteren.jazygit.features.github.state.GitHubState;
@@ -45,7 +46,7 @@ import org.junit.jupiter.api.Test;
  */
 class PrOverviewUpdateTest {
 
-    static PullRequestSummary pr(String repository, int number, Instant updatedAt) {
+    static PullRequestSummary pr(RepoSlug repository, int number, Instant updatedAt) {
         return new PullRequestSummary(
                 repository,
                 new PrNumber(number),
@@ -60,9 +61,12 @@ class PrOverviewUpdateTest {
                 "https://github.com/" + repository + "/pull/" + number);
     }
 
-    private static final PullRequestSummary OLD = pr("owner/repo", 1, Instant.parse("2026-10-01T00:00:00Z"));
-    private static final PullRequestSummary NEW = pr("owner/repo", 2, Instant.parse("2026-10-16T00:00:00Z"));
-    private static final PullRequestSummary ELSEWHERE = pr("other/repo", 3, Instant.parse("2026-10-10T00:00:00Z"));
+    private static final PullRequestSummary OLD =
+            pr(new RepoSlug("owner/repo"), 1, Instant.parse("2026-10-01T00:00:00Z"));
+    private static final PullRequestSummary NEW =
+            pr(new RepoSlug("owner/repo"), 2, Instant.parse("2026-10-16T00:00:00Z"));
+    private static final PullRequestSummary ELSEWHERE =
+            pr(new RepoSlug("other/repo"), 3, Instant.parse("2026-10-10T00:00:00Z"));
     private static final List<Object> BOTH_READS = List.of(new LoadMyPullRequests(), new LoadRepositoryPullRequests());
 
     private static final Instant READ_AT = Instant.parse("2026-10-17T12:00:00Z");
@@ -96,7 +100,7 @@ class PrOverviewUpdateTest {
             Option<String> viewer, Option<UnseenPullRequests> kept, int latest, PullRequestSummary... pullRequests) {
         return new PrOverviewMsg.RepositoryLoaded(
                 new RepositoryPullRequests(
-                        "Owner/Repo",
+                        new RepoSlug("Owner/Repo"),
                         new PullRequestList(List.of(pullRequests), pullRequests.length),
                         viewer,
                         Option.of(latest).filter(number -> number > 0).map(PrNumber::new)),
@@ -167,7 +171,7 @@ class PrOverviewUpdateTest {
                         loaded(),
                         new PrOverviewMsg.RepositoryLoaded(
                                 new RepositoryPullRequests(
-                                        "Owner/Repo", new PullRequestList(List.of(OLD, mine, theirs), 3)),
+                                        new RepoSlug("Owner/Repo"), new PullRequestList(List.of(OLD, mine, theirs), 3)),
                                 Option.none(),
                                 io.vavr.collection.HashMap.of(
                                         new RemoteName("origin"),
@@ -198,7 +202,7 @@ class PrOverviewUpdateTest {
     }
 
     private static PullRequestSummary fork(int number, String head) {
-        PullRequestSummary pr = pr("owner/repo", number, Instant.parse("2026-10-02T00:00:00Z"));
+        PullRequestSummary pr = pr(new RepoSlug("owner/repo"), number, Instant.parse("2026-10-02T00:00:00Z"));
         return new PullRequestSummary(
                 pr.repository(),
                 pr.number(),
@@ -215,7 +219,7 @@ class PrOverviewUpdateTest {
                 pr.baseCommit(),
                 pr.headCommit(),
                 pr.baseBranch(),
-                Option.of(head));
+                Option.of(new RepoSlug(head)));
     }
 
     @Test
@@ -224,13 +228,13 @@ class PrOverviewUpdateTest {
 
         assertEquals(Option.of(unseen(2)), read.model().part(PrOverview.PART).unseen());
         assertEquals(0, read.model().part(PrOverview.PART).unseenCount());
-        assertEquals(List.of(new SaveUnseenPullRequests("Owner/Repo", unseen(2))), read.cmds());
+        assertEquals(List.of(new SaveUnseenPullRequests(new RepoSlug("Owner/Repo"), unseen(2))), read.cmds());
     }
 
     @Test
     void oneAboveTheHighestNumberReadIsUnseenButNotOneTheUserOpened() {
-        PullRequestSummary third = pr("owner/repo", 3, Instant.parse("2026-10-17T00:00:00Z"));
-        PullRequestSummary fourth = by("Bob", pr("owner/repo", 4, Instant.parse("2026-10-17T00:00:00Z")));
+        PullRequestSummary third = pr(new RepoSlug("owner/repo"), 3, Instant.parse("2026-10-17T00:00:00Z"));
+        PullRequestSummary fourth = by("Bob", pr(new RepoSlug("owner/repo"), 4, Instant.parse("2026-10-17T00:00:00Z")));
 
         Next read = readTwice(loaded(), List.of(OLD), List.of(fourth, third, OLD));
 
@@ -238,7 +242,7 @@ class PrOverviewUpdateTest {
         assertEquals(1, read.model().part(PrOverview.PART).unseenCount());
         assertTrue(PrOverview.isUnseen(read.model(), third));
         assertFalse(PrOverview.isUnseen(read.model(), fourth));
-        assertEquals(List.of(new SaveUnseenPullRequests("Owner/Repo", unseen(4, 3))), read.cmds());
+        assertEquals(List.of(new SaveUnseenPullRequests(new RepoSlug("Owner/Repo"), unseen(4, 3))), read.cmds());
     }
 
     @Test
@@ -251,7 +255,7 @@ class PrOverviewUpdateTest {
 
     @Test
     void theHighestNumberIsTheOneOfThePullRequestOpenedLastSoAReopenedOneIsNotNew() {
-        PullRequestSummary reopened = pr("owner/repo", 12, Instant.parse("2026-10-17T00:00:00Z"));
+        PullRequestSummary reopened = pr(new RepoSlug("owner/repo"), 12, Instant.parse("2026-10-17T00:00:00Z"));
 
         Model none = Update.update(loaded(), repositoryRead(Option.none(), Option.none(), 45))
                 .model();
@@ -264,9 +268,9 @@ class PrOverviewUpdateTest {
 
     @Test
     void oneOfTheNewestThatWereMergedBeforeTheFirstReadIsNotNewWhenReopened() {
-        PullRequestSummary fortieth = pr("owner/repo", 40, Instant.parse("2026-10-16T00:00:00Z"));
-        PullRequestSummary reopened = pr("owner/repo", 43, Instant.parse("2026-10-17T00:00:00Z"));
-        PullRequestSummary opened = pr("owner/repo", 46, Instant.parse("2026-10-17T00:00:00Z"));
+        PullRequestSummary fortieth = pr(new RepoSlug("owner/repo"), 40, Instant.parse("2026-10-16T00:00:00Z"));
+        PullRequestSummary reopened = pr(new RepoSlug("owner/repo"), 43, Instant.parse("2026-10-17T00:00:00Z"));
+        PullRequestSummary opened = pr(new RepoSlug("owner/repo"), 46, Instant.parse("2026-10-17T00:00:00Z"));
 
         Model first = Update.update(loaded(), repositoryRead(Option.none(), Option.none(), 45, fortieth))
                 .model();
@@ -300,7 +304,7 @@ class PrOverviewUpdateTest {
         Next closed = Update.update(unseenTwo, repositoryRead(OLD));
 
         assertEquals(Option.of(unseen(2)), closed.model().part(PrOverview.PART).unseen());
-        assertEquals(List.of(new SaveUnseenPullRequests("Owner/Repo", unseen(2))), closed.cmds());
+        assertEquals(List.of(new SaveUnseenPullRequests(new RepoSlug("Owner/Repo"), unseen(2))), closed.cmds());
     }
 
     @Test
@@ -308,13 +312,16 @@ class PrOverviewUpdateTest {
         Model unseenTwo = Update.update(loaded(), repositoryRead(Option.none(), Option.of(unseen(1)), NEW, OLD))
                 .model();
 
-        Next elsewhere = Update.update(unseenTwo, new PrOverviewMsg.Highlighted(pr("other/repo", 2, NEW.updatedAt())));
+        Next elsewhere = Update.update(
+                unseenTwo, new PrOverviewMsg.Highlighted(pr(new RepoSlug("other/repo"), 2, NEW.updatedAt())));
         assertEquals(1, elsewhere.model().part(PrOverview.PART).unseenCount());
 
         Next seen = Update.update(unseenTwo, new PrOverviewMsg.Highlighted(NEW));
         assertEquals(Option.of(unseen(2)), seen.model().part(PrOverview.PART).unseen());
         assertEquals(
-                List.of(new LoadPullRequestPreview(NEW), new SaveUnseenPullRequests("Owner/Repo", unseen(2))),
+                List.of(
+                        new LoadPullRequestPreview(NEW),
+                        new SaveUnseenPullRequests(new RepoSlug("Owner/Repo"), unseen(2))),
                 seen.cmds());
         assertEquals(
                 List.empty(),
@@ -484,7 +491,7 @@ class PrOverviewUpdateTest {
                 Update.update(highlighted.model(), new PrOverviewMsg.Highlighted(NEW))
                         .cmds());
 
-        PullRequestSummary changed = pr("owner/repo", 2, Instant.parse("2026-10-17T00:00:00Z"));
+        PullRequestSummary changed = pr(new RepoSlug("owner/repo"), 2, Instant.parse("2026-10-17T00:00:00Z"));
         assertEquals(
                 List.of(new LoadPullRequestPreview(changed)),
                 Update.update(highlighted.model(), new PrOverviewMsg.Highlighted(changed))

@@ -14,6 +14,7 @@ import net.vanfleteren.jazygit.core.gh.model.PullRequest.Review;
 import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.ForgeBranch;
 import net.vanfleteren.jazygit.core.repo.PrNumber;
+import net.vanfleteren.jazygit.core.repo.RepoSlug;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import org.junit.jupiter.api.Test;
 
@@ -30,7 +31,7 @@ class PullRequestMergeTest {
                 Review.APPROVED,
                 Option.none(),
                 Option.of(new PullRequest.Commits(
-                        "owner/repo", "https://github.com/owner/repo", new Sha("base"), new Sha(head))));
+                        new RepoSlug("owner/repo"), "https://github.com/owner/repo", new Sha("base"), new Sha(head))));
     }
 
     private static final PullRequest FEATURE_PR = at("abc", false);

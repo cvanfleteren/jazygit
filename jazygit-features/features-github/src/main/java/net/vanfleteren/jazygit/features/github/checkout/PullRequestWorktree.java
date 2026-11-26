@@ -12,6 +12,7 @@ import net.vanfleteren.jazygit.core.git.process.GitFailure;
 import net.vanfleteren.jazygit.core.process.ExecutedCommand;
 import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.BranchRef;
+import net.vanfleteren.jazygit.core.repo.RepoSlug;
 import net.vanfleteren.jazygit.core.repo.Revision;
 import net.vanfleteren.jazygit.features.branches.worktree.add.ReadWorktreeTemplate;
 import net.vanfleteren.jazygit.features.branches.worktree.add.WorktreeSource;
@@ -72,7 +73,7 @@ public record PullRequestWorktree(PullRequestSummary pullRequest) implements Wor
     }
 
     @Override
-    public Option<String> repository() {
+    public Option<RepoSlug> repository() {
         return Option.of(pullRequest.repository());
     }
 

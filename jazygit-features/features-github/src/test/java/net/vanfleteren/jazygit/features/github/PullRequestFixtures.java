@@ -18,6 +18,7 @@ import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.ForgeBranch;
 import net.vanfleteren.jazygit.core.repo.PrNumber;
 import net.vanfleteren.jazygit.core.repo.RemoteBranch;
+import net.vanfleteren.jazygit.core.repo.RepoSlug;
 import net.vanfleteren.jazygit.features.github.create.GitHubCreatePullRequestCmd.*;
 import net.vanfleteren.jazygit.features.github.prs.PullRequestReads;
 import net.vanfleteren.jazygit.features.github.show.PullRequestCmd.*;
@@ -156,14 +157,14 @@ public final class PullRequestFixtures {
                 .model();
     }
 
-    static PullRequestSummary summary(String repository) {
+    static PullRequestSummary summary(RepoSlug repository) {
         return summary(repository, 9);
     }
 
     /**
      * Pull request {@code number} of {@code repository}, from a fork, listed without its commits.
      */
-    static PullRequestSummary summary(String repository, int number) {
+    static PullRequestSummary summary(RepoSlug repository, int number) {
         return new PullRequestSummary(
                 repository,
                 new PrNumber(number),
@@ -182,7 +183,7 @@ public final class PullRequestFixtures {
 
         @Override
         public Update.Next apply(Model model) {
-            return PullRequestReads.loaded(model, pullRequests, "owner/repo");
+            return PullRequestReads.loaded(model, pullRequests, new RepoSlug("owner/repo"));
         }
     }
 

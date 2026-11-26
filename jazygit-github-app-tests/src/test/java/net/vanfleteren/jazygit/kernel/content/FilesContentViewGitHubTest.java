@@ -11,6 +11,7 @@ import net.vanfleteren.jazygit.core.git.model.*;
 import net.vanfleteren.jazygit.core.git.model.SampleData;
 import net.vanfleteren.jazygit.core.repo.*;
 import net.vanfleteren.jazygit.core.repo.PrNumber;
+import net.vanfleteren.jazygit.core.repo.RepoSlug;
 import net.vanfleteren.jazygit.features.changes.diff.CommitFilesMsg;
 import net.vanfleteren.jazygit.features.changes.panes.files.FilesPanel;
 import net.vanfleteren.jazygit.features.github.remarks.RemarksMsg;
@@ -58,7 +59,7 @@ class FilesContentViewGitHubTest {
     @Test
     void whenOnlyTheFilesOfAPullRequestWithRemarksAreListedAndNoneIsTheDiffShownBeforeIsNot() {
         Changes of = new Changes.OfPullRequest(new PullRequestCommits(
-                new PrNumber(7), "owner/repo", "", new Sha("b".repeat(40)), new Sha("a".repeat(40))));
+                new PrNumber(7), new RepoSlug("owner/repo"), "", new Sha("b".repeat(40)), new Sha("a".repeat(40))));
         CommitFile file = new CommitFile("src/a.txt", ChangeType.MODIFIED);
         Model open = Update.update(
                         Update.update(

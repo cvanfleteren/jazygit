@@ -23,6 +23,7 @@ import net.vanfleteren.jazygit.core.gh.process.GhError;
 import net.vanfleteren.jazygit.core.gh.process.GhProcess;
 import net.vanfleteren.jazygit.core.repo.ForgeBranch;
 import net.vanfleteren.jazygit.core.repo.PrNumber;
+import net.vanfleteren.jazygit.core.repo.RepoSlug;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import org.junit.jupiter.api.Test;
 
@@ -46,10 +47,10 @@ class RepositoryPullRequestsQueryTest {
     void theOpenPullRequestsOfTheRepositoryWithHowManyThereAre() {
         assertEquals(
                 Either.right(new RepositoryPullRequests(
-                        "owner/repo",
+                        new RepoSlug("owner/repo"),
                         new PullRequestList(
                                 List.of(new PullRequestSummary(
-                                        "owner/repo",
+                                        new RepoSlug("owner/repo"),
                                         new PrNumber(7),
                                         "WIP",
                                         "",
@@ -161,7 +162,7 @@ class RepositoryPullRequestsQueryTest {
 
         assertEquals(
                 Option.of(new PullRequest.Commits(
-                        "owner/repo",
+                        new RepoSlug("owner/repo"),
                         "https://github.com/owner/repo/pull/95",
                         new Sha("b".repeat(40)),
                         new Sha("a".repeat(40)))),

@@ -9,6 +9,7 @@ import io.vavr.control.Try;
 import java.nio.file.Path;
 import java.time.Instant;
 import java.util.function.UnaryOperator;
+import net.vanfleteren.jazygit.core.repo.RepoSlug;
 import net.vanfleteren.jazygit.kernel.settings.RepositoryTable;
 
 /**
@@ -120,12 +121,12 @@ public final class CheckTimingsFile implements CheckTimingsStore {
     }
 
     @Override
-    public Option<Kept> load(String repository) {
-        return table.load(repository).filter(kept -> !kept.equals(Kept.EMPTY));
+    public Option<Kept> load(RepoSlug repository) {
+        return table.load(repository.value()).filter(kept -> !kept.equals(Kept.EMPTY));
     }
 
     @Override
-    public Try<Kept> change(String repository, UnaryOperator<Kept> change) {
-        return table.change(repository, change, Kept.EMPTY);
+    public Try<Kept> change(RepoSlug repository, UnaryOperator<Kept> change) {
+        return table.change(repository.value(), change, Kept.EMPTY);
     }
 }

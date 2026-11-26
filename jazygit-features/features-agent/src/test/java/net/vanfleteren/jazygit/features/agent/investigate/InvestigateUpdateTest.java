@@ -15,6 +15,7 @@ import net.vanfleteren.jazygit.core.git.model.*;
 import net.vanfleteren.jazygit.core.repo.*;
 import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.PrNumber;
+import net.vanfleteren.jazygit.core.repo.RepoSlug;
 import net.vanfleteren.jazygit.features.agent.settings.AgentProgram;
 import net.vanfleteren.jazygit.features.agent.settings.Agents;
 import net.vanfleteren.jazygit.kernel.settings.Entries;
@@ -58,7 +59,7 @@ class InvestigateUpdateTest {
 
     private static FailedBuild build(BranchName branch, List<FailedBuild.Job> jobs, boolean running) {
         return new FailedBuild(
-                Option.of("o/r"),
+                Option.of(new RepoSlug("o/r")),
                 branch,
                 Option.of(new Sha("abc123")),
                 Option.of(new FailedBuild.ChangeRequest("merge request", new PrNumber(12))),
@@ -213,8 +214,8 @@ class InvestigateUpdateTest {
 
     @Test
     void jazygitsPromptSaysTheBuildIsOfTheBranchOnTheForgeEvenWithoutItsCommit() {
-        FailedBuild tip =
-                new FailedBuild(Option.of("o/r"), FEATURE, Option.none(), Option.none(), List.of(VERIFY), false, "");
+        FailedBuild tip = new FailedBuild(
+                Option.of(new RepoSlug("o/r")), FEATURE, Option.none(), Option.none(), List.of(VERIFY), false, "");
 
         String prompt = Prompt.of(tip, Option.none(), Option.none());
 

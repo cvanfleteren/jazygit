@@ -32,6 +32,7 @@ import net.vanfleteren.jazygit.core.gh.timing.CheckTimings;
 import net.vanfleteren.jazygit.core.git.StubGit;
 import net.vanfleteren.jazygit.core.repo.ForgeBranch;
 import net.vanfleteren.jazygit.core.repo.PrNumber;
+import net.vanfleteren.jazygit.core.repo.RepoSlug;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.features.github.GitHubServices;
 import net.vanfleteren.jazygit.features.github.checks.timings.CheckTimesCmd.RecordCheckTimes;
@@ -54,7 +55,7 @@ import org.junit.jupiter.api.Test;
 class CheckTimesUpdateTest {
 
     private static final Instant NOW = Instant.parse("2026-10-25T10:00:00Z");
-    private static final String REPO = "owner/repo";
+    private static final RepoSlug REPO = new RepoSlug("owner/repo");
     private static final Check PASSED = check(1, "package", "SUCCESS", 1);
     private static final Check PENDING = check(2, "acceptance", "", 1);
     private static final CheckSample LEARNED = CheckSample.of(PASSED).get();
@@ -96,12 +97,12 @@ class CheckTimesUpdateTest {
     private static CheckTimingsStore keeping(AtomicReference<Kept> file) {
         return new CheckTimingsStore() {
             @Override
-            public Option<Kept> load(String repository) {
+            public Option<Kept> load(RepoSlug repository) {
                 return Option.of(file.get());
             }
 
             @Override
-            public Try<Kept> change(String repository, UnaryOperator<Kept> change) {
+            public Try<Kept> change(RepoSlug repository, UnaryOperator<Kept> change) {
                 file.set(change.apply(file.get()));
                 return Try.success(file.get());
             }
@@ -141,7 +142,8 @@ class CheckTimesUpdateTest {
     void aReadOfNoRepositoryLearnsNothing() {
         assertEquals(
                 List.empty(),
-                CheckTimesUpdate.read(Next.of(model()), "", List.of(PASSED)).cmds());
+                CheckTimesUpdate.read(Next.of(model()), new RepoSlug(""), List.of(PASSED))
+                        .cmds());
     }
 
     @Test

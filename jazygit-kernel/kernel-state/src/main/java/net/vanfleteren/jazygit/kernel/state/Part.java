@@ -4,6 +4,7 @@ import io.vavr.collection.List;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.core.repo.Branch;
 import net.vanfleteren.jazygit.core.repo.Commit;
+import net.vanfleteren.jazygit.core.repo.RepoSlug;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.kernel.state.diff.Changes;
 import net.vanfleteren.jazygit.kernel.state.diff.StatedRemarks;
@@ -141,7 +142,7 @@ public record Part<S>(String name, S initial, Hooks<S> hooks) {
      */
     @FunctionalInterface
     public interface Names<S> {
-        Option<String> repository(S value);
+        Option<RepoSlug> repository(S value);
     }
 
     /**

@@ -12,6 +12,7 @@ import net.vanfleteren.jazygit.core.gh.model.PullRequestList;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestSummary;
 import net.vanfleteren.jazygit.core.repo.ForgeBranch;
 import net.vanfleteren.jazygit.core.repo.PrNumber;
+import net.vanfleteren.jazygit.core.repo.RepoSlug;
 import net.vanfleteren.jazygit.features.github.prs.PrOverview;
 import net.vanfleteren.jazygit.kernel.state.Loadable;
 import net.vanfleteren.jazygit.kernel.state.Model;
@@ -29,7 +30,7 @@ class PullRequestsPanelTest {
 
     private static PullRequestSummary pr(boolean draft) {
         return new PullRequestSummary(
-                "owner/repo",
+                new RepoSlug("owner/repo"),
                 new PrNumber(12),
                 "Fix the login",
                 "alice",

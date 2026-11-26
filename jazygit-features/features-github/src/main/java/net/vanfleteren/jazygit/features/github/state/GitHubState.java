@@ -21,6 +21,7 @@ import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.PrNumber;
 import net.vanfleteren.jazygit.core.repo.RemoteBranch;
 import net.vanfleteren.jazygit.core.repo.RemoteName;
+import net.vanfleteren.jazygit.core.repo.RepoSlug;
 import net.vanfleteren.jazygit.features.github.checks.branches.GitHubChecks;
 import net.vanfleteren.jazygit.features.github.checks.branches.Waiting;
 import net.vanfleteren.jazygit.features.github.checks.timings.CheckTimes;
@@ -84,7 +85,7 @@ public record GitHubState(
         Map<PrNumber, Long> readsFrom,
         Map<Cmd, FailingRead> failing,
         Option<StackChange> stackChange,
-        Option<String> repository,
+        Option<RepoSlug> repository,
         Map<PrNumber, Set<RemoteName>> heads,
         Set<PrNumber> forks) {
 

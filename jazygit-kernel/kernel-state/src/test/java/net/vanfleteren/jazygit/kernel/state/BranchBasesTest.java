@@ -9,6 +9,7 @@ import io.vavr.control.Option;
 import net.vanfleteren.jazygit.core.git.model.Fixtures;
 import net.vanfleteren.jazygit.core.repo.Branch;
 import net.vanfleteren.jazygit.core.repo.BranchName;
+import net.vanfleteren.jazygit.core.repo.RepoSlug;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import org.junit.jupiter.api.Test;
 
@@ -24,7 +25,7 @@ class BranchBasesTest {
 
     private static final Part<StatedBases> SECOND = Part.of("b.bases", StatedBases.NONE)
             .stating(bases -> bases)
-            .naming(bases -> Option.of("owner/" + bases.roots().size()));
+            .naming(bases -> Option.of(new RepoSlug("owner/" + bases.roots().size())));
 
     private static BranchName name(String name) {
         return new BranchName(name);

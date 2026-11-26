@@ -11,6 +11,7 @@ import net.vanfleteren.jazygit.core.gh.model.PullRequest.Review;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestSummary;
 import net.vanfleteren.jazygit.core.repo.ForgeBranch;
 import net.vanfleteren.jazygit.core.repo.PrNumber;
+import net.vanfleteren.jazygit.core.repo.RepoSlug;
 import net.vanfleteren.jazygit.features.github.checks.timings.CheckTimesCmd;
 import net.vanfleteren.jazygit.features.github.checks.timings.LoadBranchCheckRuns;
 import net.vanfleteren.jazygit.features.github.prs.LoadMyPullRequests;
@@ -27,7 +28,7 @@ import org.junit.jupiter.api.Test;
 class BackgroundCmdTest {
 
     private static final PullRequestSummary PULL_REQUEST = new PullRequestSummary(
-            "owner/repo",
+            new RepoSlug("owner/repo"),
             new PrNumber(7),
             "Pull request 7",
             "alice",
@@ -47,8 +48,8 @@ class BackgroundCmdTest {
                 new PullRequestCmd.CheckMerge(new PrNumber(7), "PR_1"),
                 new LoadBranchCheckRuns(List.empty()),
                 new RemarksCmd.LoadReviewRemarks(new PrNumber(7), HashSet.empty(), 0),
-                new CheckTimesCmd.TopUpCheckTimes("owner/repo", Instant.EPOCH),
-                new CheckTimesCmd.RecordCheckTimes("owner/repo", List.empty(), Instant.EPOCH, false),
+                new CheckTimesCmd.TopUpCheckTimes(new RepoSlug("owner/repo"), Instant.EPOCH),
+                new CheckTimesCmd.RecordCheckTimes(new RepoSlug("owner/repo"), List.empty(), Instant.EPOCH, false),
                 new GitHubSettingsCmd.CheckGhExecutable(Option.none()),
                 new GitHubSettingsCmd.ReadGitHub("gh"));
 

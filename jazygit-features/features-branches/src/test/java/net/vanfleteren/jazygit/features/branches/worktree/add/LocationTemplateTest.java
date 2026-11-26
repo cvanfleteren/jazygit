@@ -18,6 +18,7 @@ import net.vanfleteren.jazygit.core.process.ExecutedCommand;
 import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.BranchRef;
 import net.vanfleteren.jazygit.core.repo.Head;
+import net.vanfleteren.jazygit.core.repo.RepoSlug;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.core.repo.Worktree;
 import net.vanfleteren.jazygit.features.branches.branch.checkout.CheckoutModels;
@@ -44,8 +45,8 @@ class LocationTemplateTest {
     private static final WorktreeSource PULL_REQUEST = new Reviewed();
 
     // The repository on the host of the remotes, as a feature names it, as GitHub's does (ADR 169).
-    private static final Part<Option<String>> NAMING =
-            Part.of("test.repository", Option.<String>none()).naming(name -> name);
+    private static final Part<Option<RepoSlug>> NAMING =
+            Part.of("test.repository", Option.<RepoSlug>none()).naming(name -> name);
 
     /**
      * What another feature adds a worktree for, with a template, a repository and a number of its own, as GitHub's
@@ -69,8 +70,8 @@ class LocationTemplateTest {
         }
 
         @Override
-        public Option<String> repository() {
-            return Option.of("octo/repo");
+        public Option<RepoSlug> repository() {
+            return Option.of(new RepoSlug("octo/repo"));
         }
 
         @Override
@@ -174,7 +175,7 @@ class LocationTemplateTest {
     @Test
     void anyOtherWorktreeIsOfTheRepositoryTheFeaturesName() {
         Option<String> template = Option.of("{owner}-{name}-{branch}");
-        Model read = model().withPart(NAMING, Option.of("octo/repo"));
+        Model read = model().withPart(NAMING, Option.of(new RepoSlug("octo/repo")));
         assertEquals(
                 Option.of(new NewWorktreePopup(BRANCH, "/repos/octo-repo-feature-login", false, true)),
                 LocationAsked.located(AddWorktreeUpdate.ask(read, BRANCH), template)
@@ -189,7 +190,7 @@ class LocationTemplateTest {
                         .popup());
 
         // So are they for a name that is not owner/name.
-        Model odd = model().withPart(NAMING, Option.of("repo"));
+        Model odd = model().withPart(NAMING, Option.of(new RepoSlug("repo")));
         assertEquals(
                 Option.of(new NewWorktreePopup(BRANCH, "/repos/{owner}-{name}-feature-login", false, true)),
                 LocationAsked.located(AddWorktreeUpdate.ask(odd, BRANCH), template)

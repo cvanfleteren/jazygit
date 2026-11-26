@@ -25,6 +25,7 @@ import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.BranchRef;
 import net.vanfleteren.jazygit.core.repo.RemoteBranch;
 import net.vanfleteren.jazygit.core.repo.RemoteName;
+import net.vanfleteren.jazygit.core.repo.RepoSlug;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.core.repo.Upstream;
 import net.vanfleteren.jazygit.features.github.GitHubFailure;
@@ -82,7 +83,7 @@ class RerunUpdateTest {
     }
 
     private static PendingChecks read(List<Check> checks) {
-        return new PendingChecks("owner/repo", HashMap.of(new BranchName("feature"), checks));
+        return new PendingChecks(new RepoSlug("owner/repo"), HashMap.of(new BranchName("feature"), checks));
     }
 
     private static ChecksPopup checks(Model model) {

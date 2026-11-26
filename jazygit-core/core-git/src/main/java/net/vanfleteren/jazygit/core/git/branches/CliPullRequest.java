@@ -19,6 +19,7 @@ import net.vanfleteren.jazygit.core.git.process.GitFailure;
 import net.vanfleteren.jazygit.core.git.process.GitProcess;
 import net.vanfleteren.jazygit.core.repo.PullRequestCommits;
 import net.vanfleteren.jazygit.core.repo.RemoteName;
+import net.vanfleteren.jazygit.core.repo.RepoSlug;
 import net.vanfleteren.jazygit.core.repo.Revision;
 import net.vanfleteren.jazygit.core.repo.Sha;
 
@@ -97,8 +98,8 @@ final class CliPullRequest {
      * host does not have the pull requests, so one on {@code host} is taken first; when none is, as when an ssh alias
      * names it, the first whose path names it. The first by name when several do.
      */
-    static Option<RemoteName> remoteOf(Map<RemoteName, String> urls, String repository, String host) {
-        String wanted = "/" + repository.toLowerCase(Locale.ROOT);
+    static Option<RemoteName> remoteOf(Map<RemoteName, String> urls, RepoSlug repository, String host) {
+        String wanted = "/" + repository.value().toLowerCase(Locale.ROOT);
         List<Tuple2<RemoteName, String>> named = urls.toList()
                 .sortBy(remote -> remote._1)
                 .filter(remote -> path(remote._2).endsWith(wanted));

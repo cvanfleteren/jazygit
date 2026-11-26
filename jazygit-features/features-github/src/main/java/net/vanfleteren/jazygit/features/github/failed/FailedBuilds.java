@@ -7,6 +7,7 @@ import net.vanfleteren.jazygit.core.gh.model.PullRequest;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestDetails.Check;
 import net.vanfleteren.jazygit.core.repo.BranchName;
+import net.vanfleteren.jazygit.core.repo.RepoSlug;
 import net.vanfleteren.jazygit.kernel.state.build.FailedBuild;
 
 /**
@@ -41,7 +42,7 @@ public final class FailedBuilds {
      * outside CI, which has no run.
      */
     public static FailedBuild of(
-            BranchName branch, String repository, List<Check> checks, Option<PullRequest> pullRequest) {
+            BranchName branch, RepoSlug repository, List<Check> checks, Option<PullRequest> pullRequest) {
         List<Failure> failures = checks.filter(check -> check.state() == Checks.FAILING)
                 .map(check -> new Failure(
                         new FailedBuild.Job(check.name(), check.url()),
@@ -64,8 +65,8 @@ public final class FailedBuilds {
      * How to read the logs of {@code failures}: with gh, once for each run they are part of; a commit status has its
      * logs outside GitHub, where it links to.
      */
-    private static String logs(Option<String> repository, List<Failure> failures) {
-        String repo = repository.map(name -> " --repo " + name).getOrElse("");
+    private static String logs(Option<RepoSlug> repository, List<Failure> failures) {
+        String repo = repository.map(name -> " --repo " + name.value()).getOrElse("");
         List<String> runs =
                 failures.flatMap(Failure::run).distinct().map(run -> "gh run view " + run + " --log-failed" + repo);
         List<String> statuses = failures.filter(failure -> failure.run().isEmpty())

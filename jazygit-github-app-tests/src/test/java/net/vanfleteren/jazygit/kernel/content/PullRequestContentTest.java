@@ -17,6 +17,7 @@ import net.vanfleteren.jazygit.core.git.model.*;
 import net.vanfleteren.jazygit.core.repo.*;
 import net.vanfleteren.jazygit.core.repo.ForgeBranch;
 import net.vanfleteren.jazygit.core.repo.PrNumber;
+import net.vanfleteren.jazygit.core.repo.RepoSlug;
 import net.vanfleteren.jazygit.features.changes.panes.files.FilesPanel;
 import net.vanfleteren.jazygit.features.github.prs.content.PullRequestBody;
 import net.vanfleteren.jazygit.kernel.settings.DiffStyle;
@@ -346,7 +347,7 @@ public class PullRequestContentTest {
 
     private static Changes pullRequestChanges() {
         return new Changes.OfPullRequest(new PullRequestCommits(
-                new PrNumber(7), "owner/repo", "", new Sha("b".repeat(40)), new Sha("a".repeat(40))));
+                new PrNumber(7), new RepoSlug("owner/repo"), "", new Sha("b".repeat(40)), new Sha("a".repeat(40))));
     }
 
     /**
@@ -390,7 +391,7 @@ public class PullRequestContentTest {
     @Test
     void aPullRequestShowsLikeACommitWithItsBranchesItsDescriptionAndItsDiff() {
         PullRequestSummary pr = new PullRequestSummary(
-                "owner/repo",
+                new RepoSlug("owner/repo"),
                 new PrNumber(12),
                 "Fix the login",
                 "alice",

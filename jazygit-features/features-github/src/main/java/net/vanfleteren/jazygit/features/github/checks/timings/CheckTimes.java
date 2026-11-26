@@ -8,6 +8,7 @@ import net.vanfleteren.jazygit.core.gh.model.PullRequestDetails.Check;
 import net.vanfleteren.jazygit.core.gh.timing.CheckHistory;
 import net.vanfleteren.jazygit.core.gh.timing.CheckTimings;
 import net.vanfleteren.jazygit.core.gh.timing.Eta;
+import net.vanfleteren.jazygit.core.repo.RepoSlug;
 
 /**
  * How long the checks of the repository took, as far as it was learned (ADR 32).
@@ -17,13 +18,13 @@ import net.vanfleteren.jazygit.core.gh.timing.Eta;
  * @param toppingUp  whether the checks that ran lately are being read from GitHub
  * @param toppedUp   when reading them from GitHub was last started, here or by another jazygit; none when never
  */
-public record CheckTimes(String repository, CheckHistory history, boolean toppingUp, Option<Instant> toppedUp) {
+public record CheckTimes(RepoSlug repository, CheckHistory history, boolean toppingUp, Option<Instant> toppedUp) {
 
     /**
      * What was learned of {@code repository} so far: {@code history}, last topped up from GitHub at
      * {@code toppedUp}.
      */
-    public static CheckTimes of(String repository, CheckHistory history, Option<Instant> toppedUp) {
+    public static CheckTimes of(RepoSlug repository, CheckHistory history, Option<Instant> toppedUp) {
         return new CheckTimes(repository, history, false, toppedUp);
     }
 

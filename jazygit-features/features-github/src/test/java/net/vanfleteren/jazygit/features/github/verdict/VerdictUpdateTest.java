@@ -28,6 +28,7 @@ import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.ForgeBranch;
 import net.vanfleteren.jazygit.core.repo.PrNumber;
 import net.vanfleteren.jazygit.core.repo.PullRequestCommits;
+import net.vanfleteren.jazygit.core.repo.RepoSlug;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.features.changes.diff.CommitFilesMsg;
 import net.vanfleteren.jazygit.features.github.GitHubError;
@@ -101,7 +102,7 @@ class VerdictUpdateTest {
                         net.vanfleteren.jazygit.features.github.PullRequestFixtures.loadedWithTheFeature(),
                         new CommitFilesMsg.Opened(
                                 new Changes.OfPullRequest(new PullRequestCommits(
-                                        new PrNumber(7), "owner/repo", "", new Sha(base), new Sha(head))),
+                                        new PrNumber(7), new RepoSlug("owner/repo"), "", new Sha(base), new Sha(head))),
                                 Scopes.BRANCHES.pane()))
                 .model();
         return Update.update(opened, new RemarksMsg.Loaded(new PrNumber(7), remarks, HashSet.empty(), 0))

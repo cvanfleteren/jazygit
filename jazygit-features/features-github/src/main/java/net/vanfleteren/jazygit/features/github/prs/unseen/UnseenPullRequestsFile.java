@@ -7,6 +7,7 @@ import io.vavr.collection.TreeSet;
 import io.vavr.control.Option;
 import io.vavr.control.Try;
 import java.nio.file.Path;
+import net.vanfleteren.jazygit.core.repo.RepoSlug;
 import net.vanfleteren.jazygit.kernel.settings.RepositoryTable;
 
 /**
@@ -66,12 +67,12 @@ public final class UnseenPullRequestsFile implements UnseenPullRequestsStore {
     }
 
     @Override
-    public Option<UnseenPullRequests> load(String repository) {
-        return table.load(repository);
+    public Option<UnseenPullRequests> load(RepoSlug repository) {
+        return table.load(repository.value());
     }
 
     @Override
-    public Try<UnseenPullRequests> save(String repository, UnseenPullRequests unseen) {
-        return table.change(repository, ignored -> unseen, unseen);
+    public Try<UnseenPullRequests> save(RepoSlug repository, UnseenPullRequests unseen) {
+        return table.change(repository.value(), ignored -> unseen, unseen);
     }
 }

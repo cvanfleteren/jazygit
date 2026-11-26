@@ -20,6 +20,7 @@ import net.vanfleteren.jazygit.core.gh.process.GhToken;
 import net.vanfleteren.jazygit.core.process.ExecutedCommand;
 import net.vanfleteren.jazygit.core.repo.ForgeBranch;
 import net.vanfleteren.jazygit.core.repo.PrNumber;
+import net.vanfleteren.jazygit.core.repo.RepoSlug;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.DisabledOnOs;
 import org.junit.jupiter.api.condition.OS;
@@ -33,7 +34,10 @@ import org.junit.jupiter.api.io.TempDir;
 class AccountBrowserTest {
 
     private static final PullRequestLink COMMENT = new PullRequestLink(
-            "github.com", "owner/repo", new PrNumber(7), Option.of(new ReviewThread.Comment.RestId("42")));
+            "github.com",
+            new RepoSlug("owner/repo"),
+            new PrNumber(7),
+            Option.of(new ReviewThread.Comment.RestId("42")));
     private static final GhAccount ACTIVE = new GhAccount("github.com", "cvf");
 
     @TempDir

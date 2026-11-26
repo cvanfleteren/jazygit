@@ -6,6 +6,7 @@ import io.vavr.collection.TreeMap;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.core.repo.Branch;
 import net.vanfleteren.jazygit.core.repo.Commit;
+import net.vanfleteren.jazygit.core.repo.RepoSlug;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.kernel.state.diff.Changes;
 import net.vanfleteren.jazygit.kernel.state.diff.StatedRemarks;
@@ -66,7 +67,7 @@ public record Parts(Map<String, Kept<?>> kept) {
      * The repository on the host of the remotes, as {@code owner/name}: as the first part kept that knows it names it,
      * in the order of their names (ADR 169).
      */
-    public Option<String> repository() {
+    public Option<RepoSlug> repository() {
         return kept.values().toStream().flatMap(Kept::repository).headOption();
     }
 
@@ -133,7 +134,7 @@ public record Parts(Map<String, Kept<?>> kept) {
             return part.hooks().states().bases(value);
         }
 
-        Option<String> repository() {
+        Option<RepoSlug> repository() {
             return part.hooks().names().repository(value);
         }
 

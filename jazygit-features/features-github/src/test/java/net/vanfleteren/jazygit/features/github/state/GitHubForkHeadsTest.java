@@ -22,6 +22,7 @@ import net.vanfleteren.jazygit.core.repo.ForgeBranch;
 import net.vanfleteren.jazygit.core.repo.PrNumber;
 import net.vanfleteren.jazygit.core.repo.RemoteBranch;
 import net.vanfleteren.jazygit.core.repo.RemoteName;
+import net.vanfleteren.jazygit.core.repo.RepoSlug;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.core.repo.Tracking;
 import net.vanfleteren.jazygit.core.repo.Upstream;
@@ -96,7 +97,7 @@ class GitHubForkHeadsTest {
         // A plain clone with a second remote of the same repository, as an alias.
         RemoteName github = new RemoteName("github");
         PullRequestSummary same = new PullRequestSummary(
-                "project/repo",
+                new RepoSlug("project/repo"),
                 new PrNumber(8),
                 "Same repository",
                 "cvf",
@@ -111,8 +112,9 @@ class GitHubForkHeadsTest {
                 Option.none(),
                 Option.none(),
                 Option.none(),
-                Option.of("project/repo"));
-        RepositoryPullRequests read = new RepositoryPullRequests("project/repo", new PullRequestList(List.of(same), 1));
+                Option.of(new RepoSlug("project/repo")));
+        RepositoryPullRequests read =
+                new RepositoryPullRequests(new RepoSlug("project/repo"), new PullRequestList(List.of(same), 1));
         GitHubState state = GitHubState.NOT_READ
                 .withListed(read.ofBranches())
                 .withHeads(read.heads(HashMap.of(github, "project/repo", ORIGIN, "Project/Repo")))

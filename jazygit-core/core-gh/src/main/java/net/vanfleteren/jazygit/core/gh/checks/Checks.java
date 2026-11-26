@@ -8,6 +8,7 @@ import net.vanfleteren.jazygit.core.gh.process.GhError;
 import net.vanfleteren.jazygit.core.gh.process.GhFailure;
 import net.vanfleteren.jazygit.core.process.ExecutedCommand;
 import net.vanfleteren.jazygit.core.repo.ForgeBranch;
+import net.vanfleteren.jazygit.core.repo.RepoSlug;
 import net.vanfleteren.jazygit.core.repo.Sha;
 
 /**
@@ -73,5 +74,5 @@ public interface Checks {
      * {@code repository}, as {@code owner/name}, kept in a file (ADR 160): read from GitHub once, and kept, as it does
      * not change once the job is done.
      */
-    Either<GhFailure, JobLog> jobLog(String repository, long runId, int attempt, long jobId);
+    Either<GhFailure, JobLog> jobLog(RepoSlug repository, long runId, int attempt, long jobId);
 }

@@ -23,6 +23,7 @@ import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.ForgeBranch;
 import net.vanfleteren.jazygit.core.repo.PrNumber;
 import net.vanfleteren.jazygit.core.repo.RemoteBranch;
+import net.vanfleteren.jazygit.core.repo.RepoSlug;
 import net.vanfleteren.jazygit.features.github.browse.BrowsePullRequestCmd;
 import net.vanfleteren.jazygit.features.github.create.GitHubCreatePullRequestCmd.*;
 import net.vanfleteren.jazygit.features.github.show.PullRequestCmd.*;
@@ -244,7 +245,7 @@ class PullRequestDetailsUpdateTest {
     @Test
     void aPullRequestFromThePullRequestsScreenIsShownAndItsDetailsRead() {
         PullRequestSummary summary = new PullRequestSummary(
-                "owner/repo",
+                new RepoSlug("owner/repo"),
                 new PrNumber(9),
                 "From a fork",
                 "bob",
@@ -256,8 +257,8 @@ class PullRequestDetailsUpdateTest {
                 Instant.EPOCH,
                 "https://github.com/owner/repo/pull/9");
 
-        Model ofOwnerRepo =
-                loaded().mapPart(GitHubState.PART, gitHub -> gitHub.withRepository(Option.of("owner/repo")));
+        Model ofOwnerRepo = loaded().mapPart(
+                        GitHubState.PART, gitHub -> gitHub.withRepository(Option.of(new RepoSlug("owner/repo"))));
 
         Next shown = Update.update(ofOwnerRepo, new PullRequestMsg.SummaryRequested(summary));
 
@@ -281,7 +282,7 @@ class PullRequestDetailsUpdateTest {
     @Test
     void aPullRequestOfAnotherRepositoryOpensInTheBrowser() {
         PullRequestSummary elsewhere = new PullRequestSummary(
-                "other/repo",
+                new RepoSlug("other/repo"),
                 new PrNumber(3),
                 "Elsewhere",
                 "carol",
@@ -292,8 +293,8 @@ class PullRequestDetailsUpdateTest {
                 Review.NONE,
                 Instant.EPOCH,
                 "https://github.com/other/repo/pull/3");
-        Model ofOwnerRepo =
-                loaded().mapPart(GitHubState.PART, gitHub -> gitHub.withRepository(Option.of("owner/repo")));
+        Model ofOwnerRepo = loaded().mapPart(
+                        GitHubState.PART, gitHub -> gitHub.withRepository(Option.of(new RepoSlug("owner/repo"))));
 
         Next opened = Update.update(ofOwnerRepo, new PullRequestMsg.SummaryRequested(elsewhere));
 

@@ -37,6 +37,7 @@ import net.vanfleteren.jazygit.core.repo.ForgeBranch;
 import net.vanfleteren.jazygit.core.repo.PrNumber;
 import net.vanfleteren.jazygit.core.repo.RemoteBranch;
 import net.vanfleteren.jazygit.core.repo.RemoteName;
+import net.vanfleteren.jazygit.core.repo.RepoSlug;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.core.repo.Upstream;
 import net.vanfleteren.jazygit.features.github.GitHubServices;
@@ -124,7 +125,8 @@ class BranchChecksUpdateTest {
                             @Override
                             public Either<GhError, BranchChecks> ofBranches() {
                                 return Either.right(new BranchChecks(
-                                        "owner/repo", HashMap.of(new ForgeBranch("main"), Checks.PASSING)));
+                                        new RepoSlug("owner/repo"),
+                                        HashMap.of(new ForgeBranch("main"), Checks.PASSING)));
                             }
                         })));
 
@@ -188,8 +190,8 @@ class BranchChecksUpdateTest {
         return Update.update(
                         Update.update(loaded(), new BranchChecksMsg.Loaded(pending("feature")))
                                 .model(),
-                        new BranchChecksMsg.RunsLoaded(
-                                new PendingChecks("owner/repo", HashMap.of(new BranchName("feature"), checks))))
+                        new BranchChecksMsg.RunsLoaded(new PendingChecks(
+                                new RepoSlug("owner/repo"), HashMap.of(new BranchName("feature"), checks))))
                 .model();
     }
 
@@ -246,7 +248,8 @@ class BranchChecksUpdateTest {
                         second.model(),
                         first.cmds().head(),
                         new BranchChecksMsg.RunsLoaded(new PendingChecks(
-                                "owner/repo", HashMap.of(new BranchName("feature"), List.of(running("verify"))))))
+                                new RepoSlug("owner/repo"),
+                                HashMap.of(new BranchName("feature"), List.of(running("verify"))))))
                 .model();
         assertEquals(
                 1,
@@ -284,7 +287,8 @@ class BranchChecksUpdateTest {
         Next read = Update.update(
                 model,
                 new BranchChecksMsg.RunsLoaded(new PendingChecks(
-                        "owner/repo", HashMap.of(new BranchName("feature"), List.of(running("verify"))))));
+                        new RepoSlug("owner/repo"),
+                        HashMap.of(new BranchName("feature"), List.of(running("verify"))))));
 
         assertEquals(
                 Option.of(new Eta.Unknown()),
@@ -292,7 +296,7 @@ class BranchChecksUpdateTest {
         assertEquals(Option.none(), read.model().part(GitHubState.PART).eta(remote("origin", "done")));
         assertEquals(
                 List.of(new CheckTimesCmd.RecordCheckTimes(
-                        "owner/repo", List.empty(), read.model().now(), true)),
+                        new RepoSlug("owner/repo"), List.empty(), read.model().now(), true)),
                 read.cmds());
     }
 
@@ -315,7 +319,8 @@ class BranchChecksUpdateTest {
                                 Duration.ofSeconds(254),
                                 "push",
                                 Instant.EPOCH.plusSeconds(i))));
-        CheckTimes times = CheckTimes.of("owner/repo", CheckHistory.EMPTY.with(samples, Instant.EPOCH), Option.none());
+        CheckTimes times = CheckTimes.of(
+                new RepoSlug("owner/repo"), CheckHistory.EMPTY.with(samples, Instant.EPOCH), Option.none());
 
         Model model = readOneByOne(List.of(running("package")))
                 .mapPart(GitHubState.PART, gitHub -> gitHub.withCheckTimes(Option.of(times)));
@@ -331,7 +336,8 @@ class BranchChecksUpdateTest {
                         Update.update(loaded(), new BranchChecksMsg.Loaded(pending("feature")))
                                 .model(),
                         new BranchChecksMsg.RunsLoaded(new PendingChecks(
-                                "owner/repo", HashMap.of(new BranchName("feature"), List.of(running("verify"))))))
+                                new RepoSlug("owner/repo"),
+                                HashMap.of(new BranchName("feature"), List.of(running("verify"))))))
                 .model();
 
         Model done = Update.update(read, new BranchChecksMsg.Loaded(pending())).model();

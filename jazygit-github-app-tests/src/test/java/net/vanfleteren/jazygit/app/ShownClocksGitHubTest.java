@@ -11,6 +11,7 @@ import net.vanfleteren.jazygit.core.gh.model.PullRequestList;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestSummary;
 import net.vanfleteren.jazygit.core.repo.ForgeBranch;
 import net.vanfleteren.jazygit.core.repo.PrNumber;
+import net.vanfleteren.jazygit.core.repo.RepoSlug;
 import net.vanfleteren.jazygit.features.github.prs.PrOverview;
 import net.vanfleteren.jazygit.kernel.state.Freshness;
 import net.vanfleteren.jazygit.kernel.state.Loadable;
@@ -40,7 +41,7 @@ class ShownClocksGitHubTest {
     void theTimesOfAScreenWakeTheAppOnlyWhileItIsShown() {
         // A pull request updated 3m 20s before NOW: 3m until 40s later (ADR 168).
         PullRequestSummary updated = new PullRequestSummary(
-                "owner/repo",
+                new RepoSlug("owner/repo"),
                 new PrNumber(7),
                 "Pull request 7",
                 "alice",

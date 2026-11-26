@@ -17,6 +17,7 @@ import net.vanfleteren.jazygit.core.gh.model.PullRequestList;
 import net.vanfleteren.jazygit.core.gh.model.RepositoryPullRequests;
 import net.vanfleteren.jazygit.core.gh.process.GhCommand;
 import net.vanfleteren.jazygit.core.repo.PrNumber;
+import net.vanfleteren.jazygit.core.repo.RepoSlug;
 import net.vanfleteren.jazygit.lib.json.Decoder;
 
 /**
@@ -62,7 +63,7 @@ final class RepositoryPullRequestsQuery {
     static final Decoder<RepositoryPullRequests> PAGE = field(
             "data",
             map4(
-                    at("repository.nameWithOwner", string()),
+                    at("repository.nameWithOwner", string()).map(RepoSlug::new),
                     at(
                             "repository.pullRequests",
                             SummaryFragment.pullRequests(

@@ -17,6 +17,7 @@ import net.vanfleteren.jazygit.core.git.StubGit;
 import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.ForgeBranch;
 import net.vanfleteren.jazygit.core.repo.PrNumber;
+import net.vanfleteren.jazygit.core.repo.RepoSlug;
 import net.vanfleteren.jazygit.features.github.GitHubFailure;
 import net.vanfleteren.jazygit.features.github.GitHubServices;
 import net.vanfleteren.jazygit.features.github.checks.branches.LoadBranchChecks;
@@ -200,7 +201,7 @@ class PullRequestReadsTest {
     @Test
     void aReadKeepsTheRepositoryOnGitHubWhichAFailedReadLeavesAsItWas() {
         // The templates of where a worktree starts out name it by its owner and name (ADR 134, ADR 168).
-        Model read = PullRequestReads.loaded(loaded(), List.of(FEATURE_PR), "octo/repo")
+        Model read = PullRequestReads.loaded(loaded(), List.of(FEATURE_PR), new RepoSlug("octo/repo"))
                 .model();
         Model failed = PullRequestReads.failed(read, refused("offline")).model();
 
@@ -281,7 +282,7 @@ class PullRequestReadsTest {
 
         @Override
         public Next apply(Model model) {
-            return PullRequestReads.loaded(model, pullRequests, "owner/repo");
+            return PullRequestReads.loaded(model, pullRequests, new RepoSlug("owner/repo"));
         }
     }
 

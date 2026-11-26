@@ -30,6 +30,7 @@ import net.vanfleteren.jazygit.core.repo.PrNumber;
 import net.vanfleteren.jazygit.core.repo.RemoteBranch;
 import net.vanfleteren.jazygit.core.repo.RemoteName;
 import net.vanfleteren.jazygit.core.repo.RemoteRef;
+import net.vanfleteren.jazygit.core.repo.RepoSlug;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.core.repo.Tracking;
 import net.vanfleteren.jazygit.core.repo.Upstream;
@@ -432,7 +433,7 @@ class CheckOutStackTest {
         assertTrue(StackDialogs.checkedOut(refused).contains("rename or delete it first"));
     }
 
-    private static PullRequestSummary summary(String repository, Option<PullRequestStack> stack) {
+    private static PullRequestSummary summary(RepoSlug repository, Option<PullRequestStack> stack) {
         return new PullRequestSummary(
                 repository,
                 new PrNumber(97),
@@ -449,7 +450,7 @@ class CheckOutStackTest {
     }
 
     private static Model ofOwnerRepo(Model model) {
-        return model.mapPart(GitHubState.PART, gitHub -> gitHub.withRepository(Option.of("owner/repo")));
+        return model.mapPart(GitHubState.PART, gitHub -> gitHub.withRepository(Option.of(new RepoSlug("owner/repo"))));
     }
 
     @Test
@@ -458,7 +459,7 @@ class CheckOutStackTest {
 
         Model menu = Update.update(
                         ofOwnerRepo(ONE_LOCAL),
-                        new StackMsg.PullRequestMenuRequested(summary("owner/repo", Option.of(stack))))
+                        new StackMsg.PullRequestMenuRequested(summary(new RepoSlug("owner/repo"), Option.of(stack))))
                 .model();
 
         StackPopups.Menu opened = menu.popup(StackPopups.Menu.class).get();
@@ -471,11 +472,11 @@ class CheckOutStackTest {
     void onThePullRequestsScreenAPullRequestOfAnotherRepositoryOrOutsideAStackOpensNoMenu() {
         Model other = Update.update(
                         ofOwnerRepo(ONE_LOCAL),
-                        new StackMsg.PullRequestMenuRequested(summary("other/repo", Option.of(STACK))))
+                        new StackMsg.PullRequestMenuRequested(summary(new RepoSlug("other/repo"), Option.of(STACK))))
                 .model();
         Model unstacked = Update.update(
                         ofOwnerRepo(ONE_LOCAL),
-                        new StackMsg.PullRequestMenuRequested(summary("owner/repo", Option.none())))
+                        new StackMsg.PullRequestMenuRequested(summary(new RepoSlug("owner/repo"), Option.none())))
                 .model();
 
         assertTrue(other.popup(StackPopups.Menu.class).isEmpty());

@@ -28,6 +28,7 @@ import net.vanfleteren.jazygit.core.gh.model.PullRequestList;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestSummary;
 import net.vanfleteren.jazygit.core.repo.ForgeBranch;
 import net.vanfleteren.jazygit.core.repo.PrNumber;
+import net.vanfleteren.jazygit.core.repo.RepoSlug;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.lib.json.Decoder;
 
@@ -55,8 +56,8 @@ public final class SummaryFragment {
             .map(commits -> commits.headOption().getOrElse(Checks.NONE));
 
     // Its repository, number, title, author, empty for a deleted account, head branch and url.
-    static final Decoder<Tuple6<String, PrNumber, String, String, ForgeBranch, String>> NAMED = map6(
-            at("repository.nameWithOwner", string()),
+    static final Decoder<Tuple6<RepoSlug, PrNumber, String, String, ForgeBranch, String>> NAMED = map6(
+            at("repository.nameWithOwner", string()).map(RepoSlug::new),
             field("number", integer().map(PrNumber::new)),
             field("title", string()),
             field("author", nullable(field("login", string()))).map(login -> login.getOrElse("")),
@@ -79,8 +80,8 @@ public final class SummaryFragment {
             map2(commit("baseRefOid"), commit("headRefOid"), Tuple::of);
 
     // The repository its branch is in, none for a fork that was deleted (ADR 177).
-    static final Decoder<Option<String>> HEAD_REPOSITORY =
-            field("headRepository", nullable(field("nameWithOwner", string())));
+    static final Decoder<Option<RepoSlug>> HEAD_REPOSITORY =
+            field("headRepository", nullable(field("nameWithOwner", string()).map(RepoSlug::new)));
 
     public static final Decoder<PullRequestSummary> SUMMARY = map6(
             NAMED,

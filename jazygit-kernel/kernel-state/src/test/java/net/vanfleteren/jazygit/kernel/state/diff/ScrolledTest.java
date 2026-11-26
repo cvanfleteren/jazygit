@@ -9,6 +9,7 @@ import net.vanfleteren.jazygit.core.git.model.CommitFile;
 import net.vanfleteren.jazygit.core.git.model.DiffText;
 import net.vanfleteren.jazygit.core.repo.PrNumber;
 import net.vanfleteren.jazygit.core.repo.PullRequestCommits;
+import net.vanfleteren.jazygit.core.repo.RepoSlug;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.kernel.state.AreaId;
 import net.vanfleteren.jazygit.kernel.state.Model;
@@ -87,8 +88,8 @@ class ScrolledTest {
     }
 
     private static Changes pullRequest(int number, String head) {
-        return new Changes.OfPullRequest(
-                new PullRequestCommits(new PrNumber(number), "owner/repo", "", new Sha("cccc"), new Sha(head)));
+        return new Changes.OfPullRequest(new PullRequestCommits(
+                new PrNumber(number), new RepoSlug("owner/repo"), "", new Sha("cccc"), new Sha(head)));
     }
 
     @Test

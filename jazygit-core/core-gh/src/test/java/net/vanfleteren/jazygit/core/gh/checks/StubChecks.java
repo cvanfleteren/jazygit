@@ -9,6 +9,7 @@ import net.vanfleteren.jazygit.core.gh.process.GhError;
 import net.vanfleteren.jazygit.core.gh.process.GhFailure;
 import net.vanfleteren.jazygit.core.process.ExecutedCommand;
 import net.vanfleteren.jazygit.core.repo.ForgeBranch;
+import net.vanfleteren.jazygit.core.repo.RepoSlug;
 import net.vanfleteren.jazygit.core.repo.Sha;
 
 /**
@@ -22,7 +23,7 @@ public interface StubChecks extends Checks {
      */
     @Override
     default Either<GhError, BranchChecks> ofBranches() {
-        return Either.right(new BranchChecks("owner/repo", HashMap.empty()));
+        return Either.right(new BranchChecks(new RepoSlug("owner/repo"), HashMap.empty()));
     }
 
     /**
@@ -30,7 +31,7 @@ public interface StubChecks extends Checks {
      */
     @Override
     default Either<GhError, BranchCheckRuns> runs(List<String> branches) {
-        return Either.right(new BranchCheckRuns("owner/repo", HashMap.empty()));
+        return Either.right(new BranchCheckRuns(new RepoSlug("owner/repo"), HashMap.empty()));
     }
 
     /**
@@ -38,7 +39,7 @@ public interface StubChecks extends Checks {
      */
     @Override
     default Either<GhError, RecentChecks> recent() {
-        return Either.right(new RecentChecks("owner/repo", List.empty()));
+        return Either.right(new RecentChecks(new RepoSlug("owner/repo"), List.empty()));
     }
 
     /**
@@ -93,7 +94,7 @@ public interface StubChecks extends Checks {
      * A job without a log: GitHub answers 404.
      */
     @Override
-    default Either<GhFailure, JobLog> jobLog(String repository, long runId, int attempt, long jobId) {
+    default Either<GhFailure, JobLog> jobLog(RepoSlug repository, long runId, int attempt, long jobId) {
         return Either.left(
                 new GhFailure(new GhError.CommandFailed(Option.of("gh: Not Found (HTTP 404)"), 1), List.empty()));
     }

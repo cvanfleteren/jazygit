@@ -16,6 +16,7 @@ import net.vanfleteren.jazygit.core.gh.process.GhError;
 import net.vanfleteren.jazygit.core.gh.process.GhProcess;
 import net.vanfleteren.jazygit.core.gh.process.GhToken;
 import net.vanfleteren.jazygit.core.repo.ForgeBranch;
+import net.vanfleteren.jazygit.core.repo.RepoSlug;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.DisabledOnOs;
 import org.junit.jupiter.api.condition.OS;
@@ -47,7 +48,7 @@ class BranchesQueryTest {
 
         assertEquals(
                 Either.right(new BranchChecks(
-                        "owner/repo",
+                        new RepoSlug("owner/repo"),
                         HashMap.of(
                                 new ForgeBranch("feature/login"),
                                 Checks.PASSING,
@@ -70,7 +71,7 @@ class BranchesQueryTest {
     void aBranchWhoseWorkflowWaitsToStartIsPendingUnlessItsChecksFailed() {
         assertEquals(
                 Either.right(new BranchChecks(
-                        "owner/repo",
+                        new RepoSlug("owner/repo"),
                         HashMap.of(
                                 new ForgeBranch("main"),
                                 Checks.PENDING,
@@ -91,7 +92,8 @@ class BranchesQueryTest {
     @Test
     void aBranchWhoseTipIsNoCommitHasNoChecks() {
         assertEquals(
-                Either.right(new BranchChecks("owner/repo", HashMap.of(new ForgeBranch("odd"), Checks.NONE))),
+                Either.right(
+                        new BranchChecks(new RepoSlug("owner/repo"), HashMap.of(new ForgeBranch("odd"), Checks.NONE))),
                 branches("[" + page("{ \"name\": \"odd\", \"target\": { \"__typename\": \"Tree\" } }") + "]"));
     }
 

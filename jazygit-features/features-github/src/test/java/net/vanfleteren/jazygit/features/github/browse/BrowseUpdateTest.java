@@ -14,6 +14,7 @@ import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.ForgeBranch;
 import net.vanfleteren.jazygit.core.repo.PrNumber;
 import net.vanfleteren.jazygit.core.repo.RemoteBranch;
+import net.vanfleteren.jazygit.core.repo.RepoSlug;
 import net.vanfleteren.jazygit.features.github.GitHubError;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.TestModels;
@@ -94,7 +95,7 @@ class BrowseUpdateTest {
     @Test
     void aPullRequestOfAnyRepositoryOpensByItsUrl() {
         PullRequestSummary pr = new PullRequestSummary(
-                "other/repo",
+                new RepoSlug("other/repo"),
                 new PrNumber(3),
                 "Elsewhere",
                 "carol",

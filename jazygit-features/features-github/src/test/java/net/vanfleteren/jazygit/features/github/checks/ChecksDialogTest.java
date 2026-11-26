@@ -36,6 +36,7 @@ import net.vanfleteren.jazygit.core.repo.BranchRef;
 import net.vanfleteren.jazygit.core.repo.ForgeBranch;
 import net.vanfleteren.jazygit.core.repo.PrNumber;
 import net.vanfleteren.jazygit.core.repo.RemoteBranch;
+import net.vanfleteren.jazygit.core.repo.RepoSlug;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.core.repo.Tracking;
 import net.vanfleteren.jazygit.core.repo.Upstream;
@@ -140,7 +141,7 @@ class ChecksDialogTest {
     }
 
     private static Either<Failure, PendingChecks> readOf(List<Check> checks) {
-        return Either.right(new PendingChecks("owner/repo", HashMap.of(new BranchName("main"), checks)));
+        return Either.right(new PendingChecks(new RepoSlug("owner/repo"), HashMap.of(new BranchName("main"), checks)));
     }
 
     @Test
@@ -196,7 +197,8 @@ class ChecksDialogTest {
                                 Duration.ofSeconds(254),
                                 "push",
                                 NOW)));
-        CheckTimes times = CheckTimes.of("owner/repo", CheckHistory.EMPTY.with(samples, NOW), Option.none());
+        CheckTimes times =
+                CheckTimes.of(new RepoSlug("owner/repo"), CheckHistory.EMPTY.with(samples, NOW), Option.none());
 
         String screen = screen(TestModels.loaded()
                 .withNow(NOW)
@@ -453,7 +455,8 @@ class ChecksDialogTest {
 
         Model learned = Update.update(
                         model,
-                        new CheckTimesMsg.Recorded("owner/repo", times(300).history(), Option.none(), false))
+                        new CheckTimesMsg.Recorded(
+                                new RepoSlug("owner/repo"), times(300).history(), Option.none(), false))
                 .model();
 
         assertEquals(0.95 * 3 / 4, shown, 1e-9);
@@ -496,7 +499,8 @@ class ChecksDialogTest {
 
         Model learned = Update.update(
                         model,
-                        new CheckTimesMsg.Recorded("owner/repo", times(300).history(), Option.none(), false))
+                        new CheckTimesMsg.Recorded(
+                                new RepoSlug("owner/repo"), times(300).history(), Option.none(), false))
                 .model();
 
         assertEquals(0.95 * 3 / 4, shown, 1e-9);
@@ -513,7 +517,8 @@ class ChecksDialogTest {
 
         Model learned = Update.update(
                         model,
-                        new CheckTimesMsg.Recorded("owner/repo", times(300).history(), Option.none(), false))
+                        new CheckTimesMsg.Recorded(
+                                new RepoSlug("owner/repo"), times(300).history(), Option.none(), false))
                 .model();
 
         assertEquals(0.95 * 3 / 4, shown, 1e-9);
@@ -600,7 +605,7 @@ class ChecksDialogTest {
         List<CheckSample> samples = List.range(0, 3)
                 .map(i -> new CheckSample(
                         "Build/verify", i, Duration.ofSeconds(seconds), Duration.ofSeconds(seconds + 2), "push", NOW));
-        return CheckTimes.of("owner/repo", CheckHistory.EMPTY.with(samples, NOW), Option.none());
+        return CheckTimes.of(new RepoSlug("owner/repo"), CheckHistory.EMPTY.with(samples, NOW), Option.none());
     }
 
     /**
@@ -631,7 +636,7 @@ class ChecksDialogTest {
                 stub.conversation(),
                 checks,
                 Option.none(),
-                "owner/repo");
+                new RepoSlug("owner/repo"));
     }
 
     /**

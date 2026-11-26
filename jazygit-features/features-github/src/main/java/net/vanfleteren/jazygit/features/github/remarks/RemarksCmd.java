@@ -6,6 +6,7 @@ import io.vavr.control.Option;
 import java.time.Instant;
 import net.vanfleteren.jazygit.core.gh.model.ReviewThread;
 import net.vanfleteren.jazygit.core.repo.PrNumber;
+import net.vanfleteren.jazygit.core.repo.RepoSlug;
 import net.vanfleteren.jazygit.features.github.GitHubFailure;
 import net.vanfleteren.jazygit.features.github.GitHubServices;
 import net.vanfleteren.jazygit.features.github.state.GitHubStores;
@@ -112,7 +113,7 @@ public sealed interface RemarksCmd extends Cmd {
      * Reads the review threads and comments of pull request {@code number} of {@code repository}, as
      * {@code owner/name}, that were collapsed or opened against their default in an earlier session (ADR 63).
      */
-    record LoadCollapsed(String repository, PrNumber number) implements RemarksCmd {
+    record LoadCollapsed(RepoSlug repository, PrNumber number) implements RemarksCmd {
 
         @Override
         public Msg run(Env env) {
@@ -135,7 +136,7 @@ public sealed interface RemarksCmd extends Cmd {
      * as {@code owner/name}, collapsed or opened against their default, flipped at {@code at}, for the next session
      * (ADR 63). That they could not be kept is only written to the debug log: they are only a convenience.
      */
-    record SaveCollapsed(String repository, PrNumber number, Map<Collapsed.Key, Boolean> flipped, Instant at)
+    record SaveCollapsed(RepoSlug repository, PrNumber number, Map<Collapsed.Key, Boolean> flipped, Instant at)
             implements RemarksCmd {
 
         @Override

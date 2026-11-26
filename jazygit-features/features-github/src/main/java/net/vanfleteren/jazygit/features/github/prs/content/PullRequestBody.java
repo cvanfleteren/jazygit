@@ -42,7 +42,7 @@ public record PullRequestBody(PullRequestSummary pullRequest, PullRequestPreview
                         Span.styled(
                                 Messages.get(
                                         "github.content.pullRequest.header",
-                                        pr.repository(),
+                                        pr.repository().value(),
                                         String.valueOf(pr.number().value())),
                                 styles.of(Theme.Classes.SHA)),
                         Span.raw(Messages.get("github.content.pullRequest.author", pr.author())),

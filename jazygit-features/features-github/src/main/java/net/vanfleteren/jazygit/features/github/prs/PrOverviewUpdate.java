@@ -7,6 +7,7 @@ import net.vanfleteren.jazygit.core.gh.model.PullRequestList;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestSummary;
 import net.vanfleteren.jazygit.core.gh.model.RepositoryPullRequests;
 import net.vanfleteren.jazygit.core.repo.PrNumber;
+import net.vanfleteren.jazygit.core.repo.RepoSlug;
 import net.vanfleteren.jazygit.features.github.prs.unseen.UnseenPullRequests;
 import net.vanfleteren.jazygit.features.github.state.FailingRead;
 import net.vanfleteren.jazygit.features.github.state.GitHubState;
@@ -66,7 +67,8 @@ public final class PrOverviewUpdate {
      * What {@code msg} does to {@code overview} at {@code now}, while {@code jobs} run, whatever the rest of the model
      * is.
      */
-    static Step update(PrOverview overview, PrOverviewMsg msg, Instant now, Jobs jobs, Option<String> repositoryName) {
+    static Step update(
+            PrOverview overview, PrOverviewMsg msg, Instant now, Jobs jobs, Option<RepoSlug> repositoryName) {
         return switch (msg) {
             // What failed to read before is read again too.
             case PrOverviewMsg.Refresh() -> {
@@ -204,7 +206,7 @@ public final class PrOverviewUpdate {
      * {@code step}, with {@code pullRequest} seen, if it is of the repository, {@code repositoryName}, and was not seen
      * yet.
      */
-    private static Step seen(Step step, PullRequestSummary pullRequest, Option<String> repositoryName) {
+    private static Step seen(Step step, PullRequestSummary pullRequest, Option<RepoSlug> repositoryName) {
         PrOverview overview = step.overview();
         return repositoryName.isDefined() && overview.isUnseen(repositoryName, pullRequest)
                 ? kept(
@@ -222,7 +224,7 @@ public final class PrOverviewUpdate {
      * {@code step}, also keeping the unseen pull requests it has of {@code repository} for the next session, unless
      * they are kept {@code already}.
      */
-    private static Step kept(Step step, boolean already, String repository) {
+    private static Step kept(Step step, boolean already, RepoSlug repository) {
         PrOverview overview = step.overview();
         return already
                 ? step

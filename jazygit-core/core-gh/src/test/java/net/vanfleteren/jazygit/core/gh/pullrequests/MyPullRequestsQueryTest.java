@@ -18,6 +18,7 @@ import net.vanfleteren.jazygit.core.gh.process.GhError;
 import net.vanfleteren.jazygit.core.gh.process.GhProcess;
 import net.vanfleteren.jazygit.core.repo.ForgeBranch;
 import net.vanfleteren.jazygit.core.repo.PrNumber;
+import net.vanfleteren.jazygit.core.repo.RepoSlug;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -52,7 +53,7 @@ class MyPullRequestsQueryTest {
                 Either.right(new MyPullRequests(
                         new PullRequestList(
                                 List.of(new PullRequestSummary(
-                                        "other/repo",
+                                        new RepoSlug("other/repo"),
                                         new PrNumber(9),
                                         "Fix the\tlogin",
                                         "alice",

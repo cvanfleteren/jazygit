@@ -56,7 +56,7 @@ public record PullRequestSource() implements ContentSource {
                         AREA,
                         Messages.get(
                                 "github.content.panel.pullRequest.titleFor",
-                                pullRequest.repository(),
+                                pullRequest.repository().value(),
                                 String.valueOf(pullRequest.number().value())),
                         new Read(pullRequest, read),
                         new PullRequestBody(pullRequest, read)));

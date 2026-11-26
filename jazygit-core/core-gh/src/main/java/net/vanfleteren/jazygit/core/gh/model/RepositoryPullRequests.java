@@ -11,6 +11,7 @@ import io.vavr.control.Option;
 import java.util.Locale;
 import net.vanfleteren.jazygit.core.repo.PrNumber;
 import net.vanfleteren.jazygit.core.repo.RemoteName;
+import net.vanfleteren.jazygit.core.repo.RepoSlug;
 
 /**
  * The open pull requests of a repository, forks included.
@@ -22,12 +23,12 @@ import net.vanfleteren.jazygit.core.repo.RemoteName;
  *                   not say
  */
 public record RepositoryPullRequests(
-        String repository, PullRequestList open, Option<String> viewer, Option<PrNumber> latest) {
+        RepoSlug repository, PullRequestList open, Option<String> viewer, Option<PrNumber> latest) {
 
     /**
      * Read as an account GitHub did not name, without the pull request opened last.
      */
-    public RepositoryPullRequests(String repository, PullRequestList open) {
+    public RepositoryPullRequests(RepoSlug repository, PullRequestList open) {
         this(repository, open, Option.none(), Option.none());
     }
 
@@ -48,7 +49,8 @@ public record RepositoryPullRequests(
         Set<String> own = forks.map(fork -> fork.toLowerCase(Locale.ROOT));
         return open.pullRequests()
                 .filter(summary -> !summary.fromFork()
-                        || summary.headRepository().exists(head -> own.contains(head.toLowerCase(Locale.ROOT))))
+                        || summary.headRepository()
+                                .exists(head -> own.contains(head.value().toLowerCase(Locale.ROOT))))
                 .map(PullRequestSummary::pullRequest);
     }
 
@@ -63,7 +65,7 @@ public record RepositoryPullRequests(
                 remotes.toList().map(remote -> Tuple.of(remote._1(), remote._2().toLowerCase(Locale.ROOT)));
         return HashMap.ofEntries(open.pullRequests()
                 .flatMap(summary -> summary.headRepository()
-                        .map(head -> head.toLowerCase(Locale.ROOT))
+                        .map(head -> head.value().toLowerCase(Locale.ROOT))
                         .map(head -> named.filter(remote -> remote._2().equals(head))
                                 .map(Tuple2::_1)
                                 .toSet())

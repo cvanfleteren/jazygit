@@ -26,6 +26,7 @@ import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.BranchRef;
 import net.vanfleteren.jazygit.core.repo.ForgeBranch;
 import net.vanfleteren.jazygit.core.repo.PrNumber;
+import net.vanfleteren.jazygit.core.repo.RepoSlug;
 import net.vanfleteren.jazygit.core.repo.Revision;
 import net.vanfleteren.jazygit.features.branches.worktree.add.AddWorktreeCmd;
 import net.vanfleteren.jazygit.features.branches.worktree.add.AddWorktreeMsg;
@@ -60,7 +61,7 @@ class PullRequestWorktreeTest {
     @Test
     void oneOfTheRepositoryIsOnItsOwnBranchWhichIsBusyMeanwhile() {
         PullRequestWorktree own = new PullRequestWorktree(new PullRequestSummary(
-                "owner/repo",
+                new RepoSlug("owner/repo"),
                 new PrNumber(9),
                 "Title",
                 "bob",
@@ -78,7 +79,7 @@ class PullRequestWorktreeTest {
 
     private static PullRequestSummary pullRequest() {
         return new PullRequestSummary(
-                "owner/repo",
+                new RepoSlug("owner/repo"),
                 new PrNumber(9),
                 "Title",
                 "bob",

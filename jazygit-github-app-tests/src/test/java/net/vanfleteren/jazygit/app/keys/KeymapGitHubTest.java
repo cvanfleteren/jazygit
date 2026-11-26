@@ -8,6 +8,7 @@ import io.vavr.collection.List;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.RemoteBranch;
+import net.vanfleteren.jazygit.core.repo.RepoSlug;
 import net.vanfleteren.jazygit.features.agent.investigate.InvestigateMsg;
 import net.vanfleteren.jazygit.features.github.browse.BrowseMsg;
 import net.vanfleteren.jazygit.features.github.builds.BuildsAction;
@@ -116,7 +117,7 @@ class KeymapGitHubTest {
     @Test
     void iHandsTheFailedBuildTheBuildsAndTheChecksShowToAnAgent() {
         FailedBuild failed = new FailedBuild(
-                Option.of("o/r"),
+                Option.of(new RepoSlug("o/r")),
                 new BranchName("feat"),
                 Option.none(),
                 Option.none(),

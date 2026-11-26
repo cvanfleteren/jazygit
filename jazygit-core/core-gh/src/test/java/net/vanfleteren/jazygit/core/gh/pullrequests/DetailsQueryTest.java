@@ -38,6 +38,7 @@ import net.vanfleteren.jazygit.core.gh.process.GhError;
 import net.vanfleteren.jazygit.core.gh.process.GhProcess;
 import net.vanfleteren.jazygit.core.repo.ForgeBranch;
 import net.vanfleteren.jazygit.core.repo.PrNumber;
+import net.vanfleteren.jazygit.core.repo.RepoSlug;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import org.junit.jupiter.api.Test;
 
@@ -143,7 +144,7 @@ class DetailsQueryTest {
                                 List.of("ui")),
                         List.of(new Check("build", Checks.PENDING), new Check("ci/lint", Checks.PASSING)),
                         Option.none(),
-                        "cvanfleteren/jazygit",
+                        new RepoSlug("cvanfleteren/jazygit"),
                         "https://github.com/cvanfleteren/jazygit",
                         "Renames a file.\n\nFixes #7")),
                 read(MERGED.put("number", "42")
@@ -188,7 +189,7 @@ class DetailsQueryTest {
                         new Conversation(Review.NONE, List.empty(), 0, ReviewThreads.NONE, List.empty()),
                         List.empty(),
                         Option.none(),
-                        "cvanfleteren/jazygit",
+                        new RepoSlug("cvanfleteren/jazygit"),
                         "https://github.com/cvanfleteren/jazygit")),
                 read(MERGED));
     }

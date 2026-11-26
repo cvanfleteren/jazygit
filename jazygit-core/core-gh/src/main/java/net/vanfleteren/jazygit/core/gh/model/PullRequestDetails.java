@@ -10,6 +10,7 @@ import net.vanfleteren.jazygit.core.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest.Review;
 import net.vanfleteren.jazygit.core.repo.ForgeBranch;
 import net.vanfleteren.jazygit.core.repo.PrNumber;
+import net.vanfleteren.jazygit.core.repo.RepoSlug;
 import net.vanfleteren.jazygit.core.repo.Sha;
 
 /**
@@ -43,7 +44,7 @@ public record PullRequestDetails(
         Conversation conversation,
         List<Check> checks,
         Option<PullRequestStack> stack,
-        String repository,
+        RepoSlug repository,
         String url,
         String body,
         Merging merging) {
@@ -63,7 +64,7 @@ public record PullRequestDetails(
             Conversation conversation,
             List<Check> checks,
             Option<PullRequestStack> stack,
-            String repository,
+            RepoSlug repository,
             String url,
             String body) {
         this(
@@ -97,7 +98,7 @@ public record PullRequestDetails(
             Conversation conversation,
             List<Check> checks,
             Option<PullRequestStack> stack,
-            String repository,
+            RepoSlug repository,
             String url) {
         this(number, title, author, status, branches, activity, size, conversation, checks, stack, repository, url, "");
     }
@@ -116,7 +117,7 @@ public record PullRequestDetails(
             Conversation conversation,
             List<Check> checks,
             Option<PullRequestStack> stack,
-            String repository) {
+            RepoSlug repository) {
         this(number, title, author, status, branches, activity, size, conversation, checks, stack, repository, "");
     }
 
@@ -133,7 +134,19 @@ public record PullRequestDetails(
             Size size,
             Conversation conversation,
             List<Check> checks) {
-        this(number, title, author, status, branches, activity, size, conversation, checks, Option.none(), "", "");
+        this(
+                number,
+                title,
+                author,
+                status,
+                branches,
+                activity,
+                size,
+                conversation,
+                checks,
+                Option.none(),
+                new RepoSlug(""),
+                "");
     }
 
     /**

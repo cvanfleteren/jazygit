@@ -13,6 +13,7 @@ import net.vanfleteren.jazygit.core.gh.model.PullRequestLink;
 import net.vanfleteren.jazygit.core.gh.model.ReviewThread;
 import net.vanfleteren.jazygit.core.gh.model.ReviewThread.Side;
 import net.vanfleteren.jazygit.core.repo.PrNumber;
+import net.vanfleteren.jazygit.core.repo.RepoSlug;
 import net.vanfleteren.jazygit.features.changes.diff.CommitFilesMsg;
 import net.vanfleteren.jazygit.features.github.browse.BrowseRemarkCmd;
 import net.vanfleteren.jazygit.features.github.remarks.FromGitHub;
@@ -34,17 +35,24 @@ class ThreadUpdateTest {
     void theBrowserOpensOnTheCommentOfTheCursorOrElseOnThePullRequest() {
         assertEquals(
                 List.of(new BrowseRemarkCmd(new PullRequestLink(
-                        "", "owner/repo", new PrNumber(7), Option.of(new ReviewThread.Comment.RestId("1"))))),
+                        "",
+                        new RepoSlug("owner/repo"),
+                        new PrNumber(7),
+                        Option.of(new ReviewThread.Comment.RestId("1"))))),
                 Update.update(files(), new ThreadMsg.OpenAsked(at(onThread("T1"))))
                         .cmds());
         assertEquals(
                 List.of(new BrowseRemarkCmd(new PullRequestLink(
-                        "", "owner/repo", new PrNumber(7), Option.of(new ReviewThread.Comment.RestId("2"))))),
+                        "",
+                        new RepoSlug("owner/repo"),
+                        new PrNumber(7),
+                        Option.of(new ReviewThread.Comment.RestId("2"))))),
                 Update.update(files(), new ThreadMsg.OpenAsked(at(new Anchor.Remark(new Remark.Id("R1"), (Anchor.Thread)
                                 onThread("T1")))))
                         .cmds());
         assertEquals(
-                List.of(new BrowseRemarkCmd(new PullRequestLink("", "owner/repo", new PrNumber(7), Option.none()))),
+                List.of(new BrowseRemarkCmd(
+                        new PullRequestLink("", new RepoSlug("owner/repo"), new PrNumber(7), Option.none()))),
                 Update.update(files(), new ThreadMsg.OpenAsked(at(line(Side.RIGHT, 2))))
                         .cmds());
     }
@@ -56,7 +64,10 @@ class ThreadUpdateTest {
 
         assertEquals(
                 List.of(new BrowseRemarkCmd(new PullRequestLink(
-                        "", "owner/repo", new PrNumber(7), Option.of(new ReviewThread.Comment.RestId("1"))))),
+                        "",
+                        new RepoSlug("owner/repo"),
+                        new PrNumber(7),
+                        Option.of(new ReviewThread.Comment.RestId("1"))))),
                 opened.cmds());
         assertEquals(Option.none(), error(opened.model()));
     }
@@ -108,14 +119,14 @@ class ThreadUpdateTest {
         // With whether each was collapsed by default, and when it was flipped (ADR 63).
         assertEquals(
                 List.of(new RemarksCmd.SaveCollapsed(
-                        "owner/repo",
+                        new RepoSlug("owner/repo"),
                         new PrNumber(7),
                         HashMap.of(new Collapsed.Key("T2"), true),
                         opened.model().now())),
                 opened.cmds());
         assertEquals(
                 List.of(new RemarksCmd.SaveCollapsed(
-                        "owner/repo",
+                        new RepoSlug("owner/repo"),
                         new PrNumber(7),
                         HashMap.empty(),
                         opened.model().now())),

@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import io.vavr.collection.List;
 import java.time.Duration;
 import net.vanfleteren.jazygit.core.gh.process.GhError;
+import net.vanfleteren.jazygit.core.repo.RepoSlug;
 import net.vanfleteren.jazygit.features.github.GitHubFailure;
 import net.vanfleteren.jazygit.features.github.state.GitHubState;
 import net.vanfleteren.jazygit.kernel.state.Failure;
@@ -50,7 +51,7 @@ class FailingPullRequestsReadTest {
 
     @Test
     void aReadThatSucceedsIsNoLongerFailing() {
-        Model read = PullRequestReads.loaded(failedTimes(4), List.empty(), "owner/repo")
+        Model read = PullRequestReads.loaded(failedTimes(4), List.empty(), new RepoSlug("owner/repo"))
                 .model();
 
         assertTrue(read.part(GitHubState.PART).failing().isEmpty());

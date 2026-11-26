@@ -15,6 +15,7 @@ import net.vanfleteren.jazygit.core.repo.ForgeBranch;
 import net.vanfleteren.jazygit.core.repo.PrNumber;
 import net.vanfleteren.jazygit.core.repo.RemoteBranch;
 import net.vanfleteren.jazygit.core.repo.RemoteName;
+import net.vanfleteren.jazygit.core.repo.RepoSlug;
 import net.vanfleteren.jazygit.features.branches.branch.delete.DeleteBranchCmd.DeleteBranch;
 import net.vanfleteren.jazygit.features.branches.branch.delete.DeleteBranchCmd.DeleteRemoteBranch;
 import net.vanfleteren.jazygit.features.branches.branch.pull.PullCmd;
@@ -60,7 +61,7 @@ class RemoteRefsGuardTest {
     @Test
     void checkingOutAPullRequestTakesIt() {
         PullRequestSummary pullRequest = new PullRequestSummary(
-                "owner/repo",
+                new RepoSlug("owner/repo"),
                 new PrNumber(9),
                 "Title",
                 "bob",

@@ -6,6 +6,7 @@ import io.vavr.collection.HashMap;
 import io.vavr.collection.List;
 import net.vanfleteren.jazygit.core.gh.model.BranchChecks;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestDetails.*;
+import net.vanfleteren.jazygit.core.repo.RepoSlug;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -15,7 +16,7 @@ class CliChecksTest {
 
     @Test
     void aRemotePointsAtTheRepositoryOverSshOrHttps() {
-        BranchChecks checks = new BranchChecks("Owner/repo", HashMap.empty());
+        BranchChecks checks = new BranchChecks(new RepoSlug("Owner/repo"), HashMap.empty());
 
         assertTrue(checks.isAt("git@github.com:owner/repo.git"));
         assertTrue(checks.isAt("https://github.com/Owner/repo"));

@@ -11,4 +11,4 @@ package net.vanfleteren.jazygit.core.repo;
  * @param base       the commit its base branch is at
  * @param head       the commit its branch is at
  */
-public record PullRequestCommits(PrNumber number, String repository, String host, Sha base, Sha head) {}
+public record PullRequestCommits(PrNumber number, RepoSlug repository, String host, Sha base, Sha head) {}

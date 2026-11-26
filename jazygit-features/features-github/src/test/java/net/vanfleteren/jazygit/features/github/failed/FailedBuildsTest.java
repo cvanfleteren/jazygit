@@ -16,6 +16,7 @@ import net.vanfleteren.jazygit.core.gh.model.PullRequestDetails.Check;
 import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.ForgeBranch;
 import net.vanfleteren.jazygit.core.repo.PrNumber;
+import net.vanfleteren.jazygit.core.repo.RepoSlug;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.kernel.state.build.FailedBuild;
 import org.junit.jupiter.api.Test;
@@ -70,7 +71,7 @@ class FailedBuildsTest {
                 FailedBuilds.of(FEAT, build, Option.of(pullRequest)).changeRequest());
         assertEquals(
                 Option.of(new FailedBuild.ChangeRequest("pull request", new PrNumber(12))),
-                FailedBuilds.of(FEAT, "o/r", List.empty(), Option.of(pullRequest))
+                FailedBuilds.of(FEAT, new RepoSlug("o/r"), List.empty(), Option.of(pullRequest))
                         .changeRequest());
         assertEquals(Option.none(), FailedBuilds.of(FEAT, build, Option.none()).changeRequest());
     }
@@ -94,7 +95,7 @@ class FailedBuildsTest {
                 new Check("e2e", Checks.FAILING, Option.of(run(402))),
                 new Check("ci/jenkins", Checks.FAILING, Option.none(), Option.of("https://jenkins.example/7")));
 
-        FailedBuild failed = FailedBuilds.of(FEAT, "o/r", checks, Option.none());
+        FailedBuild failed = FailedBuilds.of(FEAT, new RepoSlug("o/r"), checks, Option.none());
 
         assertEquals(List.of("verify", "e2e", "ci/jenkins"), failed.jobs().map(FailedBuild.Job::name));
         assertEquals(Option.of("o/r"), failed.repository());
@@ -107,7 +108,7 @@ class FailedBuildsTest {
     @Test
     void nothingFailedIsAFailedBuildWithoutJobs() {
         FailedBuild failed = FailedBuilds.of(
-                FEAT, "o/r", List.of(new Check("verify", Checks.PENDING, Option.none())), Option.none());
+                FEAT, new RepoSlug("o/r"), List.of(new Check("verify", Checks.PENDING, Option.none())), Option.none());
 
         assertFalse(failed.failed());
         assertTrue(failed.running());

@@ -4,6 +4,7 @@ import io.vavr.collection.List;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.PrNumber;
+import net.vanfleteren.jazygit.core.repo.RepoSlug;
 import net.vanfleteren.jazygit.core.repo.Sha;
 
 /**
@@ -22,7 +23,7 @@ import net.vanfleteren.jazygit.core.repo.Sha;
  *                      knows no forge's program
  */
 public record FailedBuild(
-        Option<String> repository,
+        Option<RepoSlug> repository,
         BranchName branch,
         Option<Sha> commit,
         Option<ChangeRequest> changeRequest,

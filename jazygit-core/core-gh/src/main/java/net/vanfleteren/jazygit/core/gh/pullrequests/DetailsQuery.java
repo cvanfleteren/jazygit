@@ -54,6 +54,7 @@ import net.vanfleteren.jazygit.core.gh.model.PullRequestStack;
 import net.vanfleteren.jazygit.core.gh.process.GhCommand;
 import net.vanfleteren.jazygit.core.repo.ForgeBranch;
 import net.vanfleteren.jazygit.core.repo.PrNumber;
+import net.vanfleteren.jazygit.core.repo.RepoSlug;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.lib.json.Decoder;
 
@@ -251,7 +252,7 @@ final class DetailsQuery {
     static final Decoder<PullRequestDetails> DECODER = at(
             "data.repository",
             map4(
-                    field("nameWithOwner", string()),
+                    field("nameWithOwner", string()).map(RepoSlug::new),
                     field("pullRequest", PULL_REQUEST),
                     field("url", string()),
                     optionalField("autoMergeAllowed", bool()),

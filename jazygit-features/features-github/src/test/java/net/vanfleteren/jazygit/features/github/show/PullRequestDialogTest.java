@@ -36,6 +36,7 @@ import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.ForgeBranch;
 import net.vanfleteren.jazygit.core.repo.PrNumber;
 import net.vanfleteren.jazygit.core.repo.RemoteName;
+import net.vanfleteren.jazygit.core.repo.RepoSlug;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.features.github.checks.ChecksMsg;
 import net.vanfleteren.jazygit.features.github.checks.branches.BranchChecksMsg;
@@ -123,7 +124,7 @@ class PullRequestDialogTest {
                 READY.conversation(),
                 checks,
                 Option.none(),
-                "owner/repo");
+                new RepoSlug("owner/repo"));
     }
 
     /**
@@ -167,7 +168,7 @@ class PullRequestDialogTest {
                                 Duration.ofSeconds(254),
                                 "pull_request",
                                 NOW.minusSeconds(3600 + i))));
-        return CheckTimes.of("owner/repo", CheckHistory.EMPTY.with(samples, NOW), Option.none());
+        return CheckTimes.of(new RepoSlug("owner/repo"), CheckHistory.EMPTY.with(samples, NOW), Option.none());
     }
 
     private String timedScreen(List<Check> checks, CheckTimes times) throws Exception {
@@ -371,7 +372,7 @@ class PullRequestDialogTest {
                 READY.conversation(),
                 READY.checks(),
                 Option.of(stack),
-                "");
+                new RepoSlug(""));
     }
 
     @Test

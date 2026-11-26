@@ -19,6 +19,7 @@ import net.vanfleteren.jazygit.core.gh.process.GhError;
 import net.vanfleteren.jazygit.core.gh.process.GhProcess;
 import net.vanfleteren.jazygit.core.gh.timing.CheckSample;
 import net.vanfleteren.jazygit.core.repo.ForgeBranch;
+import net.vanfleteren.jazygit.core.repo.RepoSlug;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -71,7 +72,8 @@ class BranchCheckRunsQueryTest {
 
     @Test
     void aBranchWithoutChecksIsNotThere() {
-        assertEquals(Either.right(new BranchCheckRuns("cvanfleteren/jazygit", HashMap.empty())), runs(1, """
+        assertEquals(
+                Either.right(new BranchCheckRuns(new RepoSlug("cvanfleteren/jazygit"), HashMap.empty())), runs(1, """
                         "b0": { "name": "main", "target": { "__typename": "Commit", "statusCheckRollup": null,
                           "checkSuites": { "nodes": [] } } }"""));
     }

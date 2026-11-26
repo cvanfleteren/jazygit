@@ -6,6 +6,7 @@ import net.vanfleteren.jazygit.core.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest.Review;
 import net.vanfleteren.jazygit.core.repo.ForgeBranch;
 import net.vanfleteren.jazygit.core.repo.PrNumber;
+import net.vanfleteren.jazygit.core.repo.RepoSlug;
 import net.vanfleteren.jazygit.core.repo.Sha;
 
 /**
@@ -29,7 +30,7 @@ import net.vanfleteren.jazygit.core.repo.Sha;
  * @param headRepository the repository its branch is in, as {@code owner/name}; none when that was deleted (ADR 177)
  */
 public record PullRequestSummary(
-        String repository,
+        RepoSlug repository,
         PrNumber number,
         String title,
         String author,
@@ -44,13 +45,13 @@ public record PullRequestSummary(
         Option<Sha> baseCommit,
         Option<Sha> headCommit,
         Option<ForgeBranch> baseBranch,
-        Option<String> headRepository) {
+        Option<RepoSlug> headRepository) {
 
     /**
      * One whose branch is in {@code repository}, or in a fork of it GitHub did not name.
      */
     public PullRequestSummary(
-            String repository,
+            RepoSlug repository,
             PrNumber number,
             String title,
             String author,
@@ -88,7 +89,7 @@ public record PullRequestSummary(
      * One whose base branch is not known.
      */
     public PullRequestSummary(
-            String repository,
+            RepoSlug repository,
             PrNumber number,
             String title,
             String author,
@@ -124,7 +125,7 @@ public record PullRequestSummary(
      * One whose commits are not known.
      */
     public PullRequestSummary(
-            String repository,
+            RepoSlug repository,
             PrNumber number,
             String title,
             String author,
@@ -157,7 +158,7 @@ public record PullRequestSummary(
      * One that is not stacked.
      */
     public PullRequestSummary(
-            String repository,
+            RepoSlug repository,
             PrNumber number,
             String title,
             String author,

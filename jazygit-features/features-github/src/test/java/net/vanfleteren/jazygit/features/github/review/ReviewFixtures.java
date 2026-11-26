@@ -21,6 +21,7 @@ import net.vanfleteren.jazygit.core.git.model.DiffText;
 import net.vanfleteren.jazygit.core.git.model.Folding;
 import net.vanfleteren.jazygit.core.repo.PrNumber;
 import net.vanfleteren.jazygit.core.repo.PullRequestCommits;
+import net.vanfleteren.jazygit.core.repo.RepoSlug;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.features.changes.diff.CommitFilesMsg;
 import net.vanfleteren.jazygit.features.github.remarks.FromGitHub;
@@ -46,7 +47,7 @@ final class ReviewFixtures {
     static final String HEAD = "a".repeat(40);
     static final String BASE = "b".repeat(40);
     static final PullRequestCommits COMMITS =
-            new PullRequestCommits(new PrNumber(7), "owner/repo", "", new Sha(BASE), new Sha(HEAD));
+            new PullRequestCommits(new PrNumber(7), new RepoSlug("owner/repo"), "", new Sha(BASE), new Sha(HEAD));
     static final CommitFile A = new CommitFile("a.txt", ChangeType.MODIFIED);
     static final AreaId AREA = new AreaId("commit-file-changes");
     // Line 2 of a.txt changed, in a first hunk; line 10 in a second.

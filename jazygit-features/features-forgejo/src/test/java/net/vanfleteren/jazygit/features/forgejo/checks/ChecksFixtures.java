@@ -13,6 +13,7 @@ import net.vanfleteren.jazygit.core.repo.BranchRef;
 import net.vanfleteren.jazygit.core.repo.ForgeBranch;
 import net.vanfleteren.jazygit.core.repo.PrNumber;
 import net.vanfleteren.jazygit.core.repo.RemoteBranch;
+import net.vanfleteren.jazygit.core.repo.RepoSlug;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.features.forgejo.show.ForgejoPullRequestPopup;
 import net.vanfleteren.jazygit.features.forgejo.show.ShownPullRequest;
@@ -83,7 +84,7 @@ final class ChecksFixtures {
     }
 
     static Either<Failure, ChecksRead> readOf(Sha sha, List<ForgejoCheck> checks) {
-        return Either.right(new ChecksRead("cvf/nix", sha, checks));
+        return Either.right(new ChecksRead(new RepoSlug("cvf/nix"), sha, checks));
     }
 
     /**

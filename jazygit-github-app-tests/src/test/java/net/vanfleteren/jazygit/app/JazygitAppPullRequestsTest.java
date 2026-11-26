@@ -25,6 +25,7 @@ import net.vanfleteren.jazygit.core.gh.pullrequests.StubPullRequests;
 import net.vanfleteren.jazygit.core.git.model.SampleData;
 import net.vanfleteren.jazygit.core.repo.ForgeBranch;
 import net.vanfleteren.jazygit.core.repo.PrNumber;
+import net.vanfleteren.jazygit.core.repo.RepoSlug;
 import net.vanfleteren.jazygit.features.github.GitHubServices;
 import net.vanfleteren.jazygit.features.github.prs.PrOverview;
 import net.vanfleteren.jazygit.features.github.show.PullRequestPopup;
@@ -122,7 +123,7 @@ class JazygitAppPullRequestsTest {
             return Either.right(new MyPullRequests(
                     new PullRequestList(
                             List.of(new PullRequestSummary(
-                                    "owner/repo",
+                                    new RepoSlug("owner/repo"),
                                     new PrNumber(12),
                                     "Fix the login",
                                     "alice",

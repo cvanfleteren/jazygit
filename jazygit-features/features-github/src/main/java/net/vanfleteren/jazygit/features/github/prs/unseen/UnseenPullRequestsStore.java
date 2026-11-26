@@ -2,6 +2,7 @@ package net.vanfleteren.jazygit.features.github.prs.unseen;
 
 import io.vavr.control.Option;
 import io.vavr.control.Try;
+import net.vanfleteren.jazygit.core.repo.RepoSlug;
 
 /**
  * Where the unseen pull requests of each repository are kept, from one session to the next. They are state that
@@ -15,12 +16,12 @@ public interface UnseenPullRequestsStore {
      */
     UnseenPullRequestsStore NONE = new UnseenPullRequestsStore() {
         @Override
-        public Option<UnseenPullRequests> load(String repository) {
+        public Option<UnseenPullRequests> load(RepoSlug repository) {
             return Option.none();
         }
 
         @Override
-        public Try<UnseenPullRequests> save(String repository, UnseenPullRequests unseen) {
+        public Try<UnseenPullRequests> save(RepoSlug repository, UnseenPullRequests unseen) {
             return Try.success(unseen);
         }
     };
@@ -29,10 +30,10 @@ public interface UnseenPullRequestsStore {
      * The unseen pull requests kept for {@code repository}, as {@code owner/name}; none when they were never kept or
      * cannot be read.
      */
-    Option<UnseenPullRequests> load(String repository);
+    Option<UnseenPullRequests> load(RepoSlug repository);
 
     /**
      * Keeps {@code unseen} as the unseen pull requests of {@code repository}, as {@code owner/name}.
      */
-    Try<UnseenPullRequests> save(String repository, UnseenPullRequests unseen);
+    Try<UnseenPullRequests> save(RepoSlug repository, UnseenPullRequests unseen);
 }

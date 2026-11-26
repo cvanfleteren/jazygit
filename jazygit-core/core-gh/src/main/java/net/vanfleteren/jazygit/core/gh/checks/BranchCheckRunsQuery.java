@@ -21,6 +21,7 @@ import net.vanfleteren.jazygit.core.gh.model.BranchCheckRuns;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestDetails.Check;
 import net.vanfleteren.jazygit.core.gh.process.GhCommand;
 import net.vanfleteren.jazygit.core.repo.ForgeBranch;
+import net.vanfleteren.jazygit.core.repo.RepoSlug;
 import net.vanfleteren.jazygit.lib.json.Decoder;
 
 /**
@@ -86,7 +87,7 @@ final class BranchCheckRunsQuery {
         return at(
                 "data.repository",
                 map2(
-                        field("nameWithOwner", string()),
+                        field("nameWithOwner", string()).map(RepoSlug::new),
                         branches,
                         (repository, found) -> new BranchCheckRuns(
                                 repository,

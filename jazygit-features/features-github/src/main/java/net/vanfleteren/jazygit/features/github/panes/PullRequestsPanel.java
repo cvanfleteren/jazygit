@@ -71,8 +71,8 @@ public final class PullRequestsPanel implements LeftPane {
         list = new LoadableList<>(
                 Messages.get(scope.titleKey()),
                 scope.id(),
-                (previous, next, selected) -> LoadableList.Reselect.<PullRequestSummary, String>following(
-                                pr -> pr.repository() + "#" + pr.number().value())
+                (previous, next, selected) -> LoadableList.Reselect.<PullRequestSummary, String>following(pr ->
+                                pr.repository().value() + "#" + pr.number().value())
                         .apply(previous.pullRequests(), next.pullRequests(), selected),
                 highlights);
         list.whenEmpty(Messages.get("github.prs.empty"));
@@ -131,8 +131,9 @@ public final class PullRequestsPanel implements LeftPane {
     static LoadableList.Row row(
             PullRequestSummary pr, Duration since, boolean anyRepository, Option<MergeStatus> merge, boolean unseen) {
         String plain = pr.draft() ? Theme.Classes.DIM : "";
-        String repository =
-                anyRepository ? pr.repository().substring(pr.repository().indexOf('/') + 1) : "";
+        String repository = anyRepository
+                ? pr.repository().value().substring(pr.repository().value().indexOf('/') + 1)
+                : "";
         String age = "%4s".formatted(TimeText.age(since));
         List<LoadableList.Seg> start = unseen
                 ? List.of(LoadableList.Seg.of(age), LoadableList.Seg.styled(UNSEEN_MARK, Theme.Classes.UNSEEN))

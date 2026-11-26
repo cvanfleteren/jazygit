@@ -26,6 +26,7 @@ import net.vanfleteren.jazygit.core.repo.ForgeBranch;
 import net.vanfleteren.jazygit.core.repo.PrNumber;
 import net.vanfleteren.jazygit.core.repo.RemoteBranch;
 import net.vanfleteren.jazygit.core.repo.RemoteName;
+import net.vanfleteren.jazygit.core.repo.RepoSlug;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.core.repo.Upstream;
 import net.vanfleteren.jazygit.features.github.checks.branches.BranchChecksMsg;
@@ -66,9 +67,9 @@ class ChecksUpdateTest {
                     1,
                     "push")));
     private static final PendingChecks READ =
-            new PendingChecks("owner/repo", HashMap.of(new BranchName("feature"), List.of(PASSED)));
+            new PendingChecks(new RepoSlug("owner/repo"), HashMap.of(new BranchName("feature"), List.of(PASSED)));
     private static final PendingChecks RUNNING = new PendingChecks(
-            "owner/repo",
+            new RepoSlug("owner/repo"),
             HashMap.of(new BranchName("feature"), List.of(PASSED, new Check("ci/status", Checks.PENDING))));
 
     /**
@@ -158,7 +159,7 @@ class ChecksUpdateTest {
                 next.model().popup(ChecksPopup.class));
         assertEquals(
                 List.of(new CheckTimesCmd.RecordCheckTimes(
-                        "owner/repo",
+                        new RepoSlug("owner/repo"),
                         List.of(CheckSample.of(PASSED).get()),
                         next.model().now(),
                         false)),
@@ -204,8 +205,8 @@ class ChecksUpdateTest {
     // As gh reads them when the branch is gone on GitHub.
     @Test
     void noChecksReadLeaveTheBranchesAsTheyAre() {
-        Next next =
-                Update.update(shown(), new ChecksMsg.Loaded(FEATURE, new PendingChecks("owner/repo", HashMap.empty())));
+        Next next = Update.update(
+                shown(), new ChecksMsg.Loaded(FEATURE, new PendingChecks(new RepoSlug("owner/repo"), HashMap.empty())));
 
         assertFalse(next.cmds().contains(new LoadBranchChecks()), next.cmds().toString());
         assertEquals(shown().part(GitHubState.PART), next.model().part(GitHubState.PART));
@@ -255,7 +256,7 @@ class ChecksUpdateTest {
         assertEquals(Option.none(), next.model().popup(ChecksPopup.class));
         assertEquals(
                 List.of(new CheckTimesCmd.RecordCheckTimes(
-                        "owner/repo",
+                        new RepoSlug("owner/repo"),
                         List.of(CheckSample.of(PASSED).get()),
                         next.model().now(),
                         false)),

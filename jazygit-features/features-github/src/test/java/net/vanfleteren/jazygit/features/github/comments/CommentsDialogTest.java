@@ -28,6 +28,7 @@ import net.vanfleteren.jazygit.core.gh.model.PullRequestComment.Kind;
 import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.ForgeBranch;
 import net.vanfleteren.jazygit.core.repo.PrNumber;
+import net.vanfleteren.jazygit.core.repo.RepoSlug;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.features.github.comment.CommentMsg;
 import net.vanfleteren.jazygit.features.github.show.PullRequestPopup;
@@ -363,7 +364,7 @@ class CommentsDialogTest {
                         .pullRequests()
                         .details(new PrNumber(42))
                         .get()
-                        .withRepository("owner/repo")
+                        .withRepository(new RepoSlug("owner/repo"))
                         .withUrl("https://github.com/owner/repo")),
                 0);
         model = TestModels.loaded()
@@ -406,7 +407,7 @@ class CommentsDialogTest {
                         Review.APPROVED,
                         Option.none(),
                         PullRequest.Commits.of(
-                                "owner/repo",
+                                new RepoSlug("owner/repo"),
                                 "https://github.com/owner/repo/pull/42",
                                 Option.of(new Sha("b".repeat(40))),
                                 Option.of(new Sha("h".repeat(40))))),

@@ -20,6 +20,7 @@ import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.BranchRef;
 import net.vanfleteren.jazygit.core.repo.PrNumber;
 import net.vanfleteren.jazygit.core.repo.PullRequestCommits;
+import net.vanfleteren.jazygit.core.repo.RepoSlug;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.kernel.settings.RecentRepositories;
 import net.vanfleteren.jazygit.kernel.settings.SettingsStore;
@@ -44,8 +45,8 @@ import org.junit.jupiter.api.Test;
 class EditUpdateTest {
 
     private static final ExecutedCommand NVIM = ExecutedCommand.of("nvim", "src/A.java");
-    private static final PullRequestCommits PULL_REQUEST =
-            new PullRequestCommits(new PrNumber(7), "owner/repo", "", new Sha("b".repeat(40)), new Sha("a".repeat(40)));
+    private static final PullRequestCommits PULL_REQUEST = new PullRequestCommits(
+            new PrNumber(7), new RepoSlug("owner/repo"), "", new Sha("b".repeat(40)), new Sha("a".repeat(40)));
 
     @Test
     void aFileIsOpenedInTheEditor() {

@@ -15,6 +15,7 @@ import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.ForgeBranch;
 import net.vanfleteren.jazygit.core.repo.PrNumber;
 import net.vanfleteren.jazygit.core.repo.RemoteBranch;
+import net.vanfleteren.jazygit.core.repo.RepoSlug;
 import net.vanfleteren.jazygit.features.branches.branch.commits.BranchCommitsMsg;
 import net.vanfleteren.jazygit.features.changes.panes.commits.CommitsPanel;
 import net.vanfleteren.jazygit.features.changes.panes.files.FilesPanel;
@@ -46,7 +47,7 @@ class ContentViewTest {
     private final Model model = TestModels.loaded(SampleData.git(), "feature/initial-layout");
 
     private static final PullRequestSummary PULL_REQUEST = new PullRequestSummary(
-            "owner/repo",
+            new RepoSlug("owner/repo"),
             new PrNumber(42),
             "Fix the login",
             "alice",

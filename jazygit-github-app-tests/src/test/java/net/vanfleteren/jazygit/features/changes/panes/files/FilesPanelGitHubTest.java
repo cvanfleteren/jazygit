@@ -22,6 +22,7 @@ import net.vanfleteren.jazygit.core.repo.*;
 import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.PrNumber;
 import net.vanfleteren.jazygit.core.repo.RemoteBranch;
+import net.vanfleteren.jazygit.core.repo.RepoSlug;
 import net.vanfleteren.jazygit.features.changes.diff.CommitFilesMsg;
 import net.vanfleteren.jazygit.features.github.remarks.RemarksMsg;
 import net.vanfleteren.jazygit.kernel.state.Model;
@@ -113,7 +114,7 @@ class FilesPanelGitHubTest {
     @Test
     void theFilesOfAPullRequestCountTheirUnresolvedRemarksByEitherPathOfARename() throws Exception {
         Changes of = new Changes.OfPullRequest(new PullRequestCommits(
-                new PrNumber(7), "owner/repo", "", new Sha("b".repeat(40)), new Sha("a".repeat(40))));
+                new PrNumber(7), new RepoSlug("owner/repo"), "", new Sha("b".repeat(40)), new Sha("a".repeat(40))));
         Model open = Update.update(
                         Update.update(
                                         net.vanfleteren.jazygit.kernel.content.PullRequestContentTest.withGitHub(),
@@ -156,7 +157,7 @@ class FilesPanelGitHubTest {
     @Test
     void theFilesOfAPullRequestCanBeListedOnlyWhenTheyHaveRemarks() throws Exception {
         Changes of = new Changes.OfPullRequest(new PullRequestCommits(
-                new PrNumber(7), "owner/repo", "", new Sha("b".repeat(40)), new Sha("a".repeat(40))));
+                new PrNumber(7), new RepoSlug("owner/repo"), "", new Sha("b".repeat(40)), new Sha("a".repeat(40))));
         Model open = Update.update(
                         Update.update(
                                         net.vanfleteren.jazygit.kernel.content.PullRequestContentTest.withGitHub(),
@@ -226,7 +227,7 @@ class FilesPanelGitHubTest {
     @Test
     void aHighlightedFileLeftOutOfTheFilesWithRemarksMovesTheHighlightToTheNearestRowListed() throws Exception {
         Changes of = new Changes.OfPullRequest(new PullRequestCommits(
-                new PrNumber(7), "owner/repo", "", new Sha("b".repeat(40)), new Sha("a".repeat(40))));
+                new PrNumber(7), new RepoSlug("owner/repo"), "", new Sha("b".repeat(40)), new Sha("a".repeat(40))));
         Model opened = Update.update(
                         net.vanfleteren.jazygit.kernel.content.PullRequestContentTest.withGitHub(),
                         new CommitFilesMsg.Opened(of, Scopes.BRANCHES.pane()))

@@ -10,6 +10,7 @@ import net.vanfleteren.jazygit.core.gh.process.GhError;
 import net.vanfleteren.jazygit.core.gh.process.GhFailure;
 import net.vanfleteren.jazygit.core.gh.process.GhProcess;
 import net.vanfleteren.jazygit.core.gh.process.GhToken;
+import net.vanfleteren.jazygit.core.repo.RepoSlug;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.DisabledOnOs;
 import org.junit.jupiter.api.condition.OS;
@@ -31,21 +32,23 @@ class JobLogTest {
     void theLogOfTheJobIsReadOverRestOfTheRepositoryItIsOf() {
         assertEquals(
                 List.of("gh", "api", "--allow-escape-sequences", "repos/owner/repo/actions/jobs/123/logs"),
-                JobLogQuery.command("owner/repo", 123).executed().commandLine());
+                JobLogQuery.command(new RepoSlug("owner/repo"), 123).executed().commandLine());
     }
 
     @Test
     void itIsKeptByOwnerRepositoryRunAttemptAndJob(@TempDir Path cache) {
         assertEquals(
                 Either.right(cache.resolve("logs/owner/repo/7-2-123.log")),
-                JobLogQuery.file(cache, "owner/repo", 7, 2, 123));
+                JobLogQuery.file(cache, new RepoSlug("owner/repo"), 7, 2, 123));
     }
 
     @Test
     void whatIsNoOwnerAndNameKeepsNothingOutsideTheCache(@TempDir Path cache) {
         List.of("../repo", "owner/..", "owner", "owner/repo/more", "own er/repo", "")
                 .forEach(repository -> assertTrue(
-                        JobLogQuery.file(cache, repository, 7, 1, 123).isLeft(), repository));
+                        JobLogQuery.file(cache, new RepoSlug(repository), 7, 1, 123)
+                                .isLeft(),
+                        repository));
     }
 
     @Test
@@ -62,8 +65,8 @@ class JobLogTest {
         Path gh = gh(dir, "echo \"$@\" >> '" + calls + "'\ncat <<'EOF'\n" + LOG + "EOF\n");
         CliChecks checks = new CliChecks(new GhProcess(dir, gh.toString(), GhToken.NONE), cache);
 
-        Either<GhFailure, JobLog> read = checks.jobLog("owner/repo", 7, 1, 123);
-        Either<GhFailure, JobLog> again = checks.jobLog("owner/repo", 7, 1, 123);
+        Either<GhFailure, JobLog> read = checks.jobLog(new RepoSlug("owner/repo"), 7, 1, 123);
+        Either<GhFailure, JobLog> again = checks.jobLog(new RepoSlug("owner/repo"), 7, 1, 123);
 
         Path file = cache.resolve("logs/owner/repo/7-1-123.log");
         assertEquals(file, read.get().file());
@@ -91,7 +94,7 @@ class JobLogTest {
                         + "EOF\n");
         CliChecks checks = new CliChecks(new GhProcess(dir, gh.toString(), GhToken.NONE), cache);
 
-        Either<GhFailure, JobLog> read = checks.jobLog("owner/repo", 7, 1, 123);
+        Either<GhFailure, JobLog> read = checks.jobLog(new RepoSlug("owner/repo"), 7, 1, 123);
 
         assertEquals(
                 List.of("gh api repos/owner/repo/actions/jobs/123/logs"),
@@ -105,7 +108,7 @@ class JobLogTest {
         Path gh = gh(dir, "echo 'gh: Not Found (HTTP 404)' >&2\nexit 1\n");
         CliChecks checks = new CliChecks(new GhProcess(dir, gh.toString(), GhToken.NONE), cache);
 
-        Either<GhFailure, JobLog> read = checks.jobLog("owner/repo", 7, 1, 123);
+        Either<GhFailure, JobLog> read = checks.jobLog(new RepoSlug("owner/repo"), 7, 1, 123);
 
         assertInstanceOf(GhError.CommandFailed.class, read.getLeft().error());
         assertEquals(1, read.getLeft().commands().size());
