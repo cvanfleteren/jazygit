@@ -167,6 +167,31 @@ class OpenFileUpdateTest {
     }
 
     @Test
+    void aFileAskedForWithoutALineKeepsTheTitleOfTheMenu() {
+        Next next = asked(model(CODE, NVIM), KernelEvent.FileToOpen.of("a.txt").titled(Phrase.verbatim("the log")));
+
+        assertEquals(
+                Option.of(Phrase.verbatim("the log")),
+                next.model().popup(EditPopup.class).flatMap(EditPopup::title));
+    }
+
+    @Test
+    void aFileInConflictAskedForWithoutALineKeepsTheTitleOfTheMenuOnceItsFirstConflictIsRead() {
+        Model model = inConflict(model(CODE, NVIM));
+        Next reading = asked(model, KernelEvent.FileToOpen.of("a.txt").titled(Phrase.verbatim("the log")));
+        ReadFirstConflictCmd read = (ReadFirstConflictCmd) reading.cmds().head();
+
+        Next read7 =
+                Update.update(reading.model(), new EditMsg.FirstConflictRead(read.path(), Option.of(7), read.title()));
+
+        assertEquals(new ReadFirstConflictCmd("a.txt", Option.of(Phrase.verbatim("the log"))), read);
+        assertEquals(
+                Option.of(Phrase.verbatim("the log")),
+                read7.model().popup(EditPopup.class).flatMap(EditPopup::title));
+        assertEquals(Option.of(7), read7.model().popup(EditPopup.class).map(EditPopup::line));
+    }
+
+    @Test
     void theMenuGoesOverACoverablePopupWithTheTitleAskedAndBackToItOnceAnEditorIsChosen() {
         Model over = model(CODE, NVIM).openPopup(new Shown(true)).withListCursor(ListCursor.START.at(4));
 

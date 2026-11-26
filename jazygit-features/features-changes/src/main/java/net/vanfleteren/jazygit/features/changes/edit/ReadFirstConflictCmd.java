@@ -7,18 +7,29 @@ import net.vanfleteren.jazygit.kernel.state.Cmd;
 import net.vanfleteren.jazygit.kernel.state.Env;
 import net.vanfleteren.jazygit.kernel.state.Failure;
 import net.vanfleteren.jazygit.kernel.state.Msg;
+import net.vanfleteren.jazygit.kernel.state.Phrase;
 
 /**
- * Reads the file in conflict at {@code path} for where its first conflict starts, to open it there (ADR 201).
+ * Reads the file in conflict at {@code path} for where its first conflict starts, to open it there (ADR 201), in the
+ * menu titled {@code title} if it asks (ADR 206).
  */
-public record ReadFirstConflictCmd(String path) implements Cmd {
+public record ReadFirstConflictCmd(String path, Option<Phrase> title) implements Cmd {
+
+    /**
+     * Reads the file in conflict at {@code path}, to open it with the menu, if it asks, titled by the file.
+     */
+    public ReadFirstConflictCmd(String path) {
+        this(path, Option.none());
+    }
 
     @Override
     public Msg run(Env env) {
         return env.git()
                 .index()
                 .markers(List.of(path))
-                .fold(error -> failed(Failure.of(error)), marked -> new EditMsg.FirstConflictRead(path, first(marked)));
+                .fold(
+                        error -> failed(Failure.of(error)),
+                        marked -> new EditMsg.FirstConflictRead(path, first(marked), title));
     }
 
     private static Option<Integer> first(List<MarkedFile> marked) {
@@ -30,6 +41,6 @@ public record ReadFirstConflictCmd(String path) implements Cmd {
      */
     @Override
     public Msg failed(Failure failure) {
-        return new EditMsg.FirstConflictRead(path, Option.none());
+        return new EditMsg.FirstConflictRead(path, Option.none(), title);
     }
 }

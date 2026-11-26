@@ -30,10 +30,10 @@ public final class EditUpdate {
 
     public static Next update(Model model, EditMsg msg) {
         return switch (msg) {
-            case EditMsg.Requested(String path) ->
+            case EditMsg.Requested(String path, Option<Phrase> title) ->
                 inConflict(model, path)
-                        ? Next.of(model.clearError(), new ReadFirstConflictCmd(path))
-                        : open(model, path, 1);
+                        ? Next.of(model.clearError(), new ReadFirstConflictCmd(path, title))
+                        : open(model, path, 1, title);
             case EditMsg.ListedRequested(String path) ->
                 model.repoView()
                         .files()
@@ -46,7 +46,8 @@ public final class EditUpdate {
                 file(at.cursor())
                         .map(path -> open(model, path, line(model, at, at.cursor())))
                         .getOrElse(() -> Next.of(model));
-            case EditMsg.FirstConflictRead(String path, Option<Integer> line) -> open(model, path, line.getOrElse(1));
+            case EditMsg.FirstConflictRead(String path, Option<Integer> line, Option<Phrase> title) ->
+                open(model, path, line.getOrElse(1), title);
             case EditMsg.Chosen(EditorProgram editor) ->
                 model.popup(EditPopup.class)
                         .map(popup -> start(popup.back(model), editor, popup.path(), popup.line()))
@@ -65,7 +66,7 @@ public final class EditUpdate {
         return switch (event) {
             case KernelEvent.FileToOpen(String path, Option<Integer> line, Option<Phrase> title) ->
                 line.map(at -> open(model, path, at, title))
-                        .getOrElse(() -> update(model, new EditMsg.Requested(path)));
+                        .getOrElse(() -> update(model, new EditMsg.Requested(path, title)));
             case KernelEvent.LogRead _,
                     KernelEvent.OperationDone _,
                     KernelEvent.Fetched _,
