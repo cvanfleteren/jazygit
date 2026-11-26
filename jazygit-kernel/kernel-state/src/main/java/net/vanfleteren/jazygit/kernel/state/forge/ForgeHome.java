@@ -4,6 +4,7 @@ import io.vavr.collection.HashSet;
 import io.vavr.collection.List;
 import io.vavr.collection.Set;
 import io.vavr.control.Option;
+import lombok.With;
 import net.vanfleteren.jazygit.core.repo.RemoteName;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.Part;
@@ -20,6 +21,7 @@ import net.vanfleteren.jazygit.kernel.state.Part;
  * @param home       the home, while its forge is on
  * @param decided    whether the kernel decided, so that it does so once an opening
  */
+@With
 public record ForgeHome(
         Set<String> awaiting,
         List<ForgeClaim> claims,
@@ -46,7 +48,7 @@ public record ForgeHome(
      * These waiting for the claims of {@code feature} too.
      */
     public ForgeHome awaiting(String feature) {
-        return new ForgeHome(awaiting.add(feature), claims, remembered, read, home, decided);
+        return withAwaiting(awaiting.add(feature));
     }
 
     /**
@@ -54,7 +56,7 @@ public record ForgeHome(
      */
     public ForgeHome claimed(ForgeClaim claim) {
         return awaiting.contains(claim.feature())
-                ? new ForgeHome(awaiting.remove(claim.feature()), claims.append(claim), remembered, read, home, decided)
+                ? withAwaiting(awaiting.remove(claim.feature())).withClaims(claims.append(claim))
                 : this;
     }
 
@@ -62,7 +64,7 @@ public record ForgeHome(
      * These with what the user chose before read: {@code remembered}.
      */
     public ForgeHome remembering(Option<Option<RemoteName>> chosen) {
-        return new ForgeHome(awaiting, claims, chosen, true, home, decided);
+        return withRemembered(chosen).withRead(true);
     }
 
     /**
@@ -76,7 +78,7 @@ public record ForgeHome(
      * These once the kernel decided, with {@code chosen} the home, if any.
      */
     public ForgeHome deciding(Option<ForgeCandidate> chosen) {
-        return new ForgeHome(awaiting, claims, remembered, read, chosen, true);
+        return withHome(chosen).withDecided(true);
     }
 
     /**
@@ -86,8 +88,7 @@ public record ForgeHome(
      */
     public Option<ForgeHome> carried() {
         return Option.when(
-                decided && (home.isDefined() || candidates().isEmpty()),
-                () -> new ForgeHome(HashSet.empty(), claims, remembered, read, home, true));
+                decided && (home.isDefined() || candidates().isEmpty()), () -> withAwaiting(HashSet.empty()));
     }
 
     /**

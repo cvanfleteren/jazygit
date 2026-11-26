@@ -81,7 +81,8 @@ public final class TreeFolds {
         return switch (tree) {
             case Tree.Mapping mapping -> mapping.fields().map(Tree.Field::value);
             case Tree.Sequence sequence -> sequence.elements();
-            default -> List.empty();
+            case Tree.Scalar _, Tree.Block _, Tree.Alias _ -> List.empty();
+            case Tree.Markup _, Tree.Element _, Tree.Text _, Tree.Comment _ -> List.empty();
         };
     }
 
@@ -112,7 +113,8 @@ public final class TreeFolds {
                         + (scalar.quote() == Tree.Quote.NONE ? 0 : 2)
                         + (empty(scalar) ? "null".length() : scalar.text().length());
             case Tree.Alias alias -> alias.anchor().length() + 1;
-            default -> 0;
+            case Tree.Mapping _, Tree.Sequence _, Tree.Block _ -> 0;
+            case Tree.Markup _, Tree.Element _, Tree.Text _, Tree.Comment _ -> 0;
         };
     }
 
@@ -157,7 +159,9 @@ public final class TreeFolds {
         return switch (tree) {
             case Tree.Element element -> !oneRow(element);
             case Tree.Comment comment -> comment.lines().size() > 1;
-            default -> (container(tree) && !oneLine(tree)) || tree instanceof Tree.Block;
+            case Tree.Mapping _, Tree.Sequence _ -> !oneLine(tree);
+            case Tree.Block _ -> true;
+            case Tree.Scalar _, Tree.Alias _, Tree.Markup _, Tree.Text _ -> false;
         };
     }
 
@@ -375,7 +379,7 @@ public final class TreeFolds {
                 sequence.elements().zipWithIndex((element, index) -> Tuple.of(child(pointer, "" + index), element));
             case Tree.Markup markup -> xpaths(markup.nodes(), pointer).map(Placed::pair);
             case Tree.Element element -> xpaths(element.children(), pointer).map(Placed::pair);
-            default -> List.empty();
+            case Tree.Scalar _, Tree.Block _, Tree.Alias _, Tree.Text _, Tree.Comment _ -> List.empty();
         };
     }
 
