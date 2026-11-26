@@ -12,6 +12,9 @@ import java.util.regex.Pattern;
 import java.util.stream.IntStream;
 import net.vanfleteren.jazygit.core.git.model.UnifiedDiff.DiffLine;
 import net.vanfleteren.jazygit.core.git.model.UnifiedDiff.DiffLine.Kind;
+import net.vanfleteren.jazygit.core.git.model.WordDiff.Budget;
+import net.vanfleteren.jazygit.core.git.model.WordDiff.HunkWords;
+import net.vanfleteren.jazygit.core.git.model.WordDiff.LineWords;
 import net.vanfleteren.jazygit.core.git.model.WordDiff.Segment;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.parallel.Execution;
@@ -123,7 +126,7 @@ class WordDiffTest {
                                 List.of(changed(false, "a = "), changed(true, "1")),
                                 List.of(changed(false, "a = "), changed(true, "2"))),
                         List.of(List.of(changed(false, "a = 1")), List.of(changed(false, "a = 2")))),
-                WordDiff.segments(List.of(hunk, hunk), 1));
+                segments(List.of(hunk, hunk), new Budget(1)));
     }
 
     @Test
@@ -141,7 +144,7 @@ class WordDiffTest {
                         List.of(changed(false, "a = "), changed(true, "1")),
                         List.of(changed(false, "gamma delta")),
                         List.of(changed(false, "a = "), changed(true, "2")))),
-                WordDiff.segments(List.of(hunk), 9));
+                segments(List.of(hunk), new Budget(9)));
     }
 
     @Test
@@ -167,7 +170,7 @@ class WordDiffTest {
                         List.of(changed(false, "a = 1")),
                         List.of(changed(false, "four three two one")),
                         List.of(changed(false, "a = 2")))),
-                WordDiff.segments(List.of(hunk), 49));
+                segments(List.of(hunk), new Budget(49)));
     }
 
     @Test
@@ -180,7 +183,7 @@ class WordDiffTest {
 
         // Within the budget it takes under a second; without one, hundreds of times as long. The rest is margin for a
         // busy CI runner, where the other modules' tests run alongside.
-        assertTimeoutPreemptively(Duration.ofSeconds(5), () -> WordDiff.segments(List.of(hunk)));
+        assertTimeoutPreemptively(Duration.ofSeconds(5), () -> WordDiff.hunk(hunk, Budget.FULL));
     }
 
     @Test
@@ -226,7 +229,7 @@ class WordDiffTest {
                 List.of(List.of(
                         List.of(changed(false, "foo(a)")),
                         List.of(changed(false, "foo(a"), changed(true, ", b"), changed(false, ")")))),
-                WordDiff.segments(List.of(hunk), 0));
+                segments(List.of(hunk), new Budget(0)));
     }
 
     @Test
@@ -281,7 +284,19 @@ class WordDiffTest {
     }
 
     private static List<List<Segment>> segments(List<DiffLine> lines) {
-        return WordDiff.segments(List.of(lines)).head();
+        return WordDiff.hunk(lines, Budget.FULL).lines().map(LineWords::segments);
+    }
+
+    /**
+     * The segments of each line of each of {@code hunks}, which share {@code budget}, as a diff spends it.
+     */
+    private static List<List<List<Segment>>> segments(List<List<DiffLine>> hunks, Budget budget) {
+        return hunks.foldLeft(Tuple.of(List.<List<List<Segment>>>empty(), budget), (done, hunk) -> {
+                    HunkWords words = WordDiff.hunk(hunk, done._2);
+                    return Tuple.of(done._1.prepend(words.lines().map(LineWords::segments)), words.left());
+                })
+                ._1
+                .reverse();
     }
 
     private static Segment changed(boolean changed, String text) {

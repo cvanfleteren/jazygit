@@ -215,8 +215,7 @@ public final class Program {
     private void launch(Launch launch) {
         Cmd cmd = launch.cmd();
         Option<Lock> guard = cmd.guard().map(guards::get);
-        FutureTask<Void> task =
-                new FutureTask<>(() -> performed(guard, cmd).forEach(result -> done(launch, result)), null);
+        FutureTask<Void> task = new FutureTask<>(() -> run(launch, guard), null);
         cmd.slot()
                 .flatMap(slot -> Option.of(latest.put(slot, Tuple.of(launch, task))))
                 .filter(older -> older._2().cancel(false))
@@ -227,15 +226,16 @@ public final class Program {
     }
 
     /**
-     * What {@code cmd} reported, once it holds {@code guard}; none when it was not performed, as the program stopped.
-     * One that failed even to say so is still done, with nothing to report: else its job never ends. Not Try, which
-     * throws an OutOfMemoryError on, and that is just what may strike here.
+     * Performs the command of {@code launch}, once it holds {@code guard}, and reports it done with what it reported;
+     * not at all when it was not performed, as the program stopped. One that failed even to say so is still done, with
+     * nothing to report: else its job never ends. Not Try, which throws an OutOfMemoryError on, and that is just what
+     * may strike here.
      */
-    private Option<Option<Msg>> performed(Option<Lock> guard, Cmd cmd) {
+    private void run(Launch launch, Option<Lock> guard) {
         try {
-            return guarded(guard, () -> perform(env, cmd, bugs)).map(Option::of);
+            guarded(guard, () -> perform(env, launch.cmd(), bugs)).forEach(result -> done(launch, Option.of(result)));
         } catch (Throwable e) {
-            return Option.of(Option.none());
+            done(launch, Option.none());
         }
     }
 

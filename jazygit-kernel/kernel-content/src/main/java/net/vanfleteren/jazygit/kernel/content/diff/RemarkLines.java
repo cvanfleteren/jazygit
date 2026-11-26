@@ -9,10 +9,13 @@ import io.vavr.collection.Iterator;
 import io.vavr.collection.List;
 import io.vavr.collection.Map;
 import io.vavr.collection.Set;
+import io.vavr.control.Option;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.function.Function;
+import net.vanfleteren.jazygit.kernel.state.diff.Anchor;
 import net.vanfleteren.jazygit.kernel.state.diff.Collapsed;
+import net.vanfleteren.jazygit.kernel.state.diff.DiffStops;
 import net.vanfleteren.jazygit.kernel.state.diff.Remark;
 import net.vanfleteren.jazygit.kernel.state.diff.RemarkThread;
 import net.vanfleteren.jazygit.kernel.ui.i18n.Messages;
@@ -59,20 +62,24 @@ final class RemarkLines {
      */
     static List<Line> threads(
             List<RemarkThread> threads, int indent, int width, RemarkStyle style, Theme.SpanStyles styles) {
-        return blocks(threads, indent, width, style, styles)
-                .map(parts -> parts.flatMap(Function.identity()))
+        return blocks(threads, Option.none(), indent, width, style, styles)
+                .map(DrawnThread::lines)
                 .intersperse(List.of(Line.from("")))
                 .flatMap(Function.identity());
     }
 
     /**
-     * The lines of each of {@code threads}, as {@link #threads} draws them, without the blank lines between them, in
-     * parts that are each a stop of the cursor (ADR 60, 62): the thread, then each of its other comments while it is
-     * open, as {@link net.vanfleteren.jazygit.kernel.state.diff.DiffStops#anchors} gives them.
+     * Each of {@code threads}, after {@code line} if they are, as {@link #threads} draws them, without the blank lines
+     * between them.
      */
-    static List<List<List<Line>>> blocks(
-            List<RemarkThread> threads, int indent, int width, RemarkStyle style, Theme.SpanStyles styles) {
-        return threads.map(thread -> thread(thread, indent, width, true, style, styles));
+    static List<DrawnThread> blocks(
+            List<RemarkThread> threads,
+            Option<Anchor.OnLine> line,
+            int indent,
+            int width,
+            RemarkStyle style,
+            Theme.SpanStyles styles) {
+        return threads.map(thread -> thread(thread, line, indent, width, true, style, styles));
     }
 
     /**
@@ -84,7 +91,7 @@ final class RemarkLines {
         return threads.isEmpty()
                 ? List.empty()
                 : unplacedBlocks(threads, indent, width, style, styles)
-                        .map(parts -> parts.flatMap(Function.identity()))
+                        .map(DrawnThread::lines)
                         .intersperse(List.of(Line.from("")))
                         .flatMap(Function.identity())
                         .prepend(unplacedHeading(indent, styles));
@@ -100,21 +107,25 @@ final class RemarkLines {
     }
 
     /**
-     * The lines of each of {@code threads}, which cannot be placed, as {@link #unplaced} draws them under its heading,
-     * without the blank lines between them, in parts as {@link #blocks} gives them.
+     * Each of {@code threads}, which cannot be placed, as {@link #unplaced} draws them under its heading, without the
+     * blank lines between them; the header that says which line it was made on starts its first stop.
      */
-    static List<List<List<Line>>> unplacedBlocks(
+    static List<DrawnThread> unplacedBlocks(
             List<RemarkThread> threads, int indent, int width, RemarkStyle style, Theme.SpanStyles styles) {
         Span margin = Span.raw(" ".repeat(indent));
         return threads.map(thread -> {
-            List<List<Line>> parts = thread(thread, indent, width, false, style, styles);
-            return parts.tail()
-                    .prepend(parts.head()
-                            .prepend(header(
-                                    List.of(margin, styled(TOP, Theme.Classes.DIFF_THREAD, styles)),
-                                    List.of(styled(madeOn(thread), Theme.Classes.DIM, styles)),
-                                    text(indent, width),
-                                    styles)));
+            List<Stop> stops = thread(thread, Option.none(), indent, width, false, style, styles)
+                    .stops();
+            Stop first = stops.head();
+            return new DrawnThread(stops.tail()
+                    .prepend(new Stop(
+                            first.anchor(),
+                            first.lines()
+                                    .prepend(header(
+                                            List.of(margin, styled(TOP, Theme.Classes.DIFF_THREAD, styles)),
+                                            List.of(styled(madeOn(thread), Theme.Classes.DIM, styles)),
+                                            text(indent, width),
+                                            styles)))));
         });
     }
 
@@ -130,12 +141,38 @@ final class RemarkLines {
     }
 
     /**
-     * The lines of {@code thread} in parts, one for each stop of the cursor it has (ADR 62), its first header the
-     * {@code top} of its block, or under a line above it, and a line where its rule turns at the end: the thread with
-     * its first comment, then each of its other comments with the rule after it. A collapsed thread is one line, which
-     * ends the rule of the line above it, or has a rule of its own.
+     * {@code thread}, after {@code line} if it is, in its stops of the cursor as {@link DiffStops#anchors} gives them
+     * (ADR 62), its first header the {@code top} of its block, or under a line above it, and a line where its rule
+     * turns at the end: the thread with its first comment, then each of its other comments with the rule after it. A
+     * collapsed thread is one line, which ends the rule of the line above it, or has a rule of its own.
      */
-    private static List<List<Line>> thread(
+    private static DrawnThread thread(
+            RemarkThread thread,
+            Option<Anchor.OnLine> line,
+            int indent,
+            int width,
+            boolean top,
+            RemarkStyle style,
+            Theme.SpanStyles styles) {
+        return stops(
+                DiffStops.anchors(thread, line, style.collapsed()), parts(thread, indent, width, top, style, styles));
+    }
+
+    /**
+     * Each of {@code parts} the stop of the anchor at its place in {@code anchors}, which have one for each of them.
+     */
+    private static DrawnThread stops(List<Anchor> anchors, List<List<Line>> parts) {
+        if (anchors.size() != parts.size()) {
+            throw new IllegalStateException(
+                    "A thread is drawn in " + parts.size() + " parts for its " + anchors.size() + " stops");
+        }
+        return new DrawnThread(anchors.zipWith(parts, Stop::new));
+    }
+
+    /**
+     * The lines of {@code thread} in parts, one for each stop of the cursor it has, as {@link #thread} draws them.
+     */
+    private static List<List<Line>> parts(
             RemarkThread thread, int indent, int width, boolean top, RemarkStyle style, Theme.SpanStyles styles) {
         Span margin = Span.raw(" ".repeat(indent));
         List<Span> rule = List.of(margin, styled(RULE, Theme.Classes.DIFF_THREAD, styles));
@@ -343,6 +380,25 @@ final class RemarkLines {
     private static Span deleting(Theme.SpanStyles styles) {
         return styled(" · " + Messages.get("content.remarks.deleting"), Theme.Classes.DIM, styles);
     }
+
+    /**
+     * A review thread as it is drawn, in the order the cursor stops on its parts (ADR 60, 62).
+     */
+    record DrawnThread(List<Stop> stops) {
+
+        /**
+         * All the lines of the thread.
+         */
+        List<Line> lines() {
+            return stops.flatMap(Stop::lines);
+        }
+    }
+
+    /**
+     * A stop of the cursor in a thread and the lines it covers, the first of them where the cursor is when it is on
+     * {@code anchor}.
+     */
+    record Stop(Anchor anchor, List<Line> lines) {}
 
     /**
      * How the threads are drawn: which are collapsed, what is being sent or deleted, and the time it is, to tell how
