@@ -9,6 +9,7 @@ import net.vanfleteren.jazygit.core.git.model.RepoStatus;
 import net.vanfleteren.jazygit.kernel.settings.DiffLook;
 import net.vanfleteren.jazygit.kernel.state.AreaId;
 import net.vanfleteren.jazygit.kernel.state.Model;
+import net.vanfleteren.jazygit.kernel.state.PaneId;
 import net.vanfleteren.jazygit.kernel.state.diff.ScrolledContent;
 import net.vanfleteren.jazygit.kernel.state.view.Preview;
 import net.vanfleteren.jazygit.kernel.ui.content.ContentArea;
@@ -16,7 +17,7 @@ import net.vanfleteren.jazygit.kernel.ui.content.ContentSource;
 import net.vanfleteren.jazygit.kernel.ui.content.Mirrored;
 import net.vanfleteren.jazygit.kernel.ui.content.Shown;
 import net.vanfleteren.jazygit.kernel.ui.content.ShownChanges;
-import net.vanfleteren.jazygit.kernel.ui.files.FilesPanel;
+import net.vanfleteren.jazygit.kernel.ui.files.ListedFiles;
 import net.vanfleteren.jazygit.kernel.ui.i18n.Messages;
 
 /**
@@ -28,12 +29,12 @@ record FileDiffsSource() implements ContentSource {
     /**
      * The staged changes of the node highlighted in the files pane.
      */
-    static final ContentArea STAGED = ContentArea.of(AreaId.STAGED, FilesPanel.PANE);
+    static final ContentArea STAGED = ContentArea.of(AreaId.STAGED, PaneId.FILES);
 
     /**
      * The unstaged changes of the node highlighted in the files pane.
      */
-    static final ContentArea UNSTAGED = ContentArea.of(AreaId.UNSTAGED, FilesPanel.PANE);
+    static final ContentArea UNSTAGED = ContentArea.of(AreaId.UNSTAGED, PaneId.FILES);
 
     @Override
     public Option<Shown> shown(Model model, Mirrored pane) {
@@ -53,7 +54,7 @@ record FileDiffsSource() implements ContentSource {
         if (status.exists(read -> read.files().isEmpty())) {
             return Shown.dim(title, Messages.get("content.noChangedFiles"));
         }
-        if (status.exists(read -> FilesPanel.noneMatch(model, read.files()))) {
+        if (status.exists(read -> ListedFiles.noneMatch(model, read.files()))) {
             return Shown.dim(title, Messages.get("panel.files.noMatches"));
         }
         return model.repoView()

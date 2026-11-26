@@ -32,7 +32,6 @@ import net.vanfleteren.jazygit.kernel.ui.text.Placeholders;
 import net.vanfleteren.jazygit.kernel.ui.theme.Theme;
 import net.vanfleteren.jazygit.kernel.ui.widgets.BorderBar;
 import net.vanfleteren.jazygit.kernel.ui.widgets.KnownHeight;
-import net.vanfleteren.jazygit.kernel.ui.widgets.ListFilter;
 
 /**
  * Changed files as a directory tree under a root that holds them all, in a tree widget that keeps its own selection
@@ -294,18 +293,9 @@ final class FileTreeList<T extends Pathed> {
      */
     Option<Integer> count(Loadable<List<T>> files) {
         return files.toOption()
-                .map(read ->
-                        matching(read, filter).isEmpty() ? 0 : visible(roots).size());
-    }
-
-    /**
-     * Those of {@code files} whose path, or the path a renamed one came from, contains {@code filter}: all of them
-     * when there is none.
-     */
-    static <T extends Pathed> List<T> matching(List<T> files, Option<String> filter) {
-        return filter.map(typed -> files.filter(file -> ListFilter.matches(Option.of(typed), file.path())
-                        || file.origin().exists(origin -> ListFilter.matches(Option.of(typed), origin))))
-                .getOrElse(files);
+                .map(read -> ListedFiles.matching(read, filter).isEmpty()
+                        ? 0
+                        : visible(roots).size());
     }
 
     /**
@@ -522,11 +512,13 @@ final class FileTreeList<T extends Pathed> {
                         .map(empty -> TreeNode.<FileTree<T>>of(empty).leaf())
                         .toList();
             case Loadable.Loaded<List<T>>(List<T> value)
-            when matching(value, filter).isEmpty() ->
+            when ListedFiles.matching(value, filter).isEmpty() ->
                 List.of(TreeNode.<FileTree<T>>of(Messages.get("panel.files.noMatches"))
                         .leaf());
             case Loadable.Loaded<List<T>>(List<T> value) ->
-                List.of(node(new FileTree.Dir<>(ROOT_NAME, "", FileTree.of(matching(value, filter))), collapsed));
+                List.of(node(
+                        new FileTree.Dir<>(ROOT_NAME, "", FileTree.of(ListedFiles.matching(value, filter))),
+                        collapsed));
         };
     }
 

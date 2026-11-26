@@ -9,6 +9,7 @@ import net.vanfleteren.jazygit.kernel.settings.DiffLook;
 import net.vanfleteren.jazygit.kernel.settings.DiffStyle;
 import net.vanfleteren.jazygit.kernel.state.AreaId;
 import net.vanfleteren.jazygit.kernel.state.Model;
+import net.vanfleteren.jazygit.kernel.state.PaneId;
 import net.vanfleteren.jazygit.kernel.state.diff.ScrolledContent;
 import net.vanfleteren.jazygit.kernel.state.view.Preview;
 import net.vanfleteren.jazygit.kernel.state.view.UnchangedNode;
@@ -17,7 +18,6 @@ import net.vanfleteren.jazygit.kernel.ui.content.ContentSource;
 import net.vanfleteren.jazygit.kernel.ui.content.Mirrored;
 import net.vanfleteren.jazygit.kernel.ui.content.Shown;
 import net.vanfleteren.jazygit.kernel.ui.content.ShownChanges;
-import net.vanfleteren.jazygit.kernel.ui.files.FilesPanel;
 import net.vanfleteren.jazygit.kernel.ui.i18n.Messages;
 
 /**
@@ -29,7 +29,7 @@ record UnchangedSource() implements ContentSource {
     /**
      * A file without changes highlighted among all files of the working tree, as it is on disk (ADR 108).
      */
-    static final ContentArea AREA = ContentArea.of(AreaId.FILE_CONTENT, FilesPanel.PANE);
+    static final ContentArea AREA = ContentArea.of(AreaId.FILE_CONTENT, PaneId.FILES);
 
     @Override
     public Option<Shown> shown(Model model, Mirrored pane) {

@@ -70,7 +70,7 @@ public final class LeftColumn {
         this.styleEngine = styleEngine;
         // How the active theme highlights the selected row of a pane, in use or not.
         Theme.Highlights highlight = active -> Theme.highlights(styleEngine).of(active);
-        this.filesPanel = new FilesPanel(dispatch, () -> openContent.accept(FilesPanel.PANE), highlight);
+        this.filesPanel = new FilesPanel(dispatch, () -> openContent.accept(PaneId.FILES), highlight);
         this.branchesPanel = branches.of(highlight);
         this.commitsPanel = commits.of(highlight);
         this.stashPanel = stash.of(highlight);

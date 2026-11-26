@@ -311,18 +311,7 @@ public class FilesPanel {
                 view.shownFiles() instanceof Loadable.Loaded<?>
                         ? Messages.get("panel.commitFiles.readingRemarks")
                         : Placeholders.loading(),
-                nothingListed(view.listed()));
-    }
-
-    /**
-     * Why none of the files of a pull request is listed, when only some of them are.
-     */
-    public static Option<String> nothingListed(CommitFilesView.Listed listed) {
-        return switch (listed) {
-            case ALL -> Option.none();
-            case UNRESOLVED -> Option.of(Messages.get("panel.commitFiles.noneUnresolved"));
-            case REMARKED -> Option.of(Messages.get("panel.commitFiles.noneRemarked"));
-        };
+                ListedFiles.nothingListed(view.listed()));
     }
 
     /**
@@ -608,9 +597,10 @@ public class FilesPanel {
                                                 ended == StatedRemarks.Ended.MERGED
                                                         ? "panel.commitFiles.titleForMerged"
                                                         : "panel.commitFiles.titleForClosed",
-                                                changesName(model, view.of())))
+                                                ListedFiles.changesName(model, view.of())))
                                         .getOrElse(() -> Messages.get(
-                                                "panel.commitFiles.titleFor", changesName(model, view.of())))
+                                                "panel.commitFiles.titleFor",
+                                                ListedFiles.changesName(model, view.of())))
                                 + listedTitle(view.listed()).map(Messages::get).getOrElse("")
                                 + (view.allFiles() ? Messages.get("panel.files.all") : "")
                                 + filteredTitle()
@@ -739,17 +729,6 @@ public class FilesPanel {
     }
 
     /**
-     * Whether the files pane, showing {@code files}, shows none of them for its filter: the content panel then says
-     * so too, in place of the diff of a node no longer highlighted (ADR 105).
-     */
-    public static <T extends Pathed> boolean noneMatch(Model model, List<T> files) {
-        Option<String> shown = FileFilter.shown(FileFilterUpdate.shown(model));
-        return shown.isDefined()
-                && !files.isEmpty()
-                && FileTreeList.matching(files, shown).isEmpty();
-    }
-
-    /**
      * The tree widget of the files of the working tree, which holds their selection and expansion state.
      */
     TreeElement<FileTree<FileEntry>> tree() {
@@ -775,25 +754,6 @@ public class FilesPanel {
      */
     TreeElement<FileTree<CommitFile>> commitAllTree() {
         return commitAllTree.tree();
-    }
-
-    /**
-     * How the commit, the stash, the pull request or the branch {@code of} is named: by its short sha, by its
-     * {@code stash@{n}}, by its {@code #n}, by its name and the base it is compared with (ADR 61), or the main branch
-     * by its name and the commit it is at (ADR 128): what it shows is that commit, not what the branch changed.
-     */
-    public static String changesName(Model model, Changes of) {
-        return switch (of) {
-            case Changes.OfCommit(Sha sha) -> sha.shortSha();
-            case Changes.OfTip(var branch, Sha sha) ->
-                Messages.get("panel.commitFiles.tip", branch.value(), sha.shortSha());
-            case Changes.OfStash(Sha sha) ->
-                model.repo().stash(sha).map(Stash::ref).getOrElse(sha::shortSha);
-            case Changes.OfPullRequest(var commits, var _) -> "#" + commits.number();
-            case Changes.OfBranch(var branch, var base, var sha) ->
-                Messages.get(
-                        "panel.commitFiles.branch", branch.value(), base.ref().name());
-        };
     }
 
     /**

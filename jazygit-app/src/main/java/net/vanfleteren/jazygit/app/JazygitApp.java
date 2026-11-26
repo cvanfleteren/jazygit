@@ -45,7 +45,6 @@ import net.vanfleteren.jazygit.kernel.state.preferences.*;
 import net.vanfleteren.jazygit.kernel.state.view.*;
 import net.vanfleteren.jazygit.kernel.ui.*;
 import net.vanfleteren.jazygit.kernel.ui.content.ContentSources;
-import net.vanfleteren.jazygit.kernel.ui.files.FilesPanel;
 import net.vanfleteren.jazygit.kernel.ui.i18n.Messages;
 import net.vanfleteren.jazygit.kernel.ui.keys.Keymap;
 import net.vanfleteren.jazygit.kernel.ui.screen.Screens;
@@ -245,7 +244,7 @@ public class JazygitApp extends ToolkitApp {
      */
     private void stepFile(FileStepMsg.Step step) {
         Model model = model();
-        if (!focus.inContentOf(model, FilesPanel.PANE)) {
+        if (!focus.inContentOf(model, PaneId.FILES)) {
             return;
         }
         List<ScrolledContent> before =

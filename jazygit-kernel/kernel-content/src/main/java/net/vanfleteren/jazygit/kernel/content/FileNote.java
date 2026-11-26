@@ -1,11 +1,11 @@
 package net.vanfleteren.jazygit.kernel.content;
 
 import net.vanfleteren.jazygit.kernel.state.AreaId;
+import net.vanfleteren.jazygit.kernel.state.PaneId;
 import net.vanfleteren.jazygit.kernel.state.diff.ScrolledContent;
 import net.vanfleteren.jazygit.kernel.ui.content.ContentArea;
 import net.vanfleteren.jazygit.kernel.ui.content.Shown;
 import net.vanfleteren.jazygit.kernel.ui.content.Tone;
-import net.vanfleteren.jazygit.kernel.ui.files.FilesPanel;
 
 /**
  * What the files pane shows in place of a diff or a file's content, such as that a file is binary, or still read: a
@@ -16,7 +16,7 @@ final class FileNote {
     /**
      * The area of the note, which the focus is not moved into from the files pane.
      */
-    static final ContentArea AREA = ContentArea.of(AreaId.FILE_NOTE, FilesPanel.PANE);
+    static final ContentArea AREA = ContentArea.of(AreaId.FILE_NOTE, PaneId.FILES);
 
     private FileNote() {}
 
