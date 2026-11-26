@@ -30,7 +30,7 @@ import org.junit.jupiter.api.Test;
  */
 class FeatureGatedTest {
 
-    private static final Slot<String> KEY = Slot.of("test.key", String.class);
+    private static final Slot<String> KEY = Slot.of("test.key");
 
     private static final Feature FEATURE = Feature.of()
             .every(Duration.ofMinutes(1), () -> new Probe("tick"))

@@ -163,7 +163,8 @@ it reaches through them. `lens` and `image` are below `settings` and `state`, an
   (`Features.FILLS`). A pane asks for the first feature that gives anything (`Fills.of`), or for all of them in
   their order (`Fills.all`), as the branches pane joins the badges and the groups of every feature. A filler gives an
   `Iterable`, an `Option` or a `List`. The kernel declares its own slots in `KernelSlots`: whether a view spins, the
-  times a popup shows and the pictures a view may draw, which the app asks of `Features.FILLS`.
+  times a popup shows and the pictures a view may draw, which the app asks of `Features.FILLS`. A slot is its name,
+  as a part is, and no two share one (`SlotNamesTest`, ADR 203).
 - **The kernel names no forge** (ADR 167, 169, 171): GitHub's state, its stores, its screen, its stack and its
   review threads are `features-github`'s. The kernel composes what the features state the branches are built on
   (`BranchBases`, from each part's `StatedBases`), tells the reactions which commands started (`Reaction.started`, as

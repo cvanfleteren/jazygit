@@ -27,7 +27,7 @@ public record BranchGroups(List<Grouping> groupings) {
     /**
      * How a feature groups the local branches.
      */
-    public static final Slot<Grouping> KEY = Slot.of("branches.panes.branches.grouping", Grouping.class);
+    public static final Slot<Grouping> KEY = Slot.of("branches.panes.branches.grouping");
 
     /**
      * No groups, as the tests of the views have them without the app.

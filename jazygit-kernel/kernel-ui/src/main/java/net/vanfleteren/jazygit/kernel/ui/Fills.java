@@ -56,12 +56,15 @@ public record Fills(Map<Slot<?>, List<Function<Model, Iterable<?>>>> fillers) {
     }
 
     // Lazily, so that of asks the fillers only up to the first that gives anything.
+    // Unchecked, but safe: with is the only way in, and it takes for a slot only what gives its type. Two slots of one
+    // name would break that, which SlotNamesTest keeps out (ADR 202).
+    @SuppressWarnings("unchecked")
     private <T> Iterator<T> given(Slot<T> slot, Model model) {
         return fillers.get(slot)
                 .getOrElse(List.empty())
                 .iterator()
                 .flatMap(filler -> filler.apply(model))
-                .map(slot.type()::cast);
+                .map(given -> (T) given);
     }
 
     /**
