@@ -7,6 +7,7 @@ import io.vavr.collection.Map;
 import io.vavr.collection.Set;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.core.repo.RemoteName;
+import net.vanfleteren.jazygit.core.repo.RemoteUrl;
 import net.vanfleteren.jazygit.kernel.state.FeatureId;
 
 /**
@@ -22,7 +23,7 @@ import net.vanfleteren.jazygit.kernel.state.FeatureId;
 public record ForgeClaim(
         FeatureId feature,
         String forge,
-        Map<RemoteName, String> claimed,
+        Map<RemoteName, RemoteUrl> claimed,
         Set<RemoteName> unsure,
         Option<RemoteName> preferred) {
 

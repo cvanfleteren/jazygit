@@ -4,6 +4,7 @@ import io.vavr.control.Option;
 import net.vanfleteren.jazygit.core.gh.model.GhAccount;
 import net.vanfleteren.jazygit.core.git.Git;
 import net.vanfleteren.jazygit.core.repo.RemoteName;
+import net.vanfleteren.jazygit.core.repo.RemoteUrl;
 import net.vanfleteren.jazygit.features.github.GitHubServices;
 import net.vanfleteren.jazygit.kernel.state.Env;
 import net.vanfleteren.jazygit.kernel.state.build.ForgeAccount;
@@ -67,7 +68,8 @@ public final class GitHubAccount {
         return git.remotes()
                 .urls()
                 .toOption()
-                .flatMap(urls -> GhAccount.remoteHost(urls.mapKeys(RemoteName::value)))
+                .flatMap(urls ->
+                        GhAccount.remoteHost(urls.mapKeys(RemoteName::value).mapValues(RemoteUrl::value)))
                 .getOrElse(GhAccount.GITHUB);
     }
 }

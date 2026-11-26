@@ -56,7 +56,7 @@ public final class ForgeChoiceDialog {
                                         "chrome.dialog.forge.remote",
                                         candidate.forge(),
                                         candidate.remote().value(),
-                                        candidate.url()))
+                                        candidate.url().value()))
                                 .getOrElse(""),
                         () -> new ForgeMsg.Picked(index))
                 .withDetails("chrome.dialog.forge.remote.details")

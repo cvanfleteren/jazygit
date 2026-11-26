@@ -21,6 +21,7 @@ import net.vanfleteren.jazygit.core.repo.ForgeBranch;
 import net.vanfleteren.jazygit.core.repo.PrNumber;
 import net.vanfleteren.jazygit.core.repo.RemoteBranch;
 import net.vanfleteren.jazygit.core.repo.RemoteName;
+import net.vanfleteren.jazygit.core.repo.RemoteUrl;
 import net.vanfleteren.jazygit.features.forgejo.create.ForgejoCreatePullRequestCmd.CheckHead;
 import net.vanfleteren.jazygit.features.forgejo.create.ForgejoCreatePullRequestCmd.CreatePullRequest;
 import net.vanfleteren.jazygit.features.forgejo.pulls.PullRequestFixtures.FakeForgejo;
@@ -49,8 +50,8 @@ class ForgejoCreatePullRequestCommandsTest {
     /**
      * origin is Anna's fork, upstream the project, the home.
      */
-    private static final Map<RemoteName, String> FORKED =
-            HashMap.of(ORIGIN, "git@code.example.net:anna/nix.git", UPSTREAM, URL);
+    private static final Map<RemoteName, RemoteUrl> FORKED =
+            HashMap.of(ORIGIN, new RemoteUrl("git@code.example.net:anna/nix.git"), UPSTREAM, new RemoteUrl(URL));
 
     private final ConcurrentLinkedQueue<ForgejoNewPullRequest> sent = new ConcurrentLinkedQueue<>();
 
@@ -82,7 +83,8 @@ class ForgejoCreatePullRequestCommandsTest {
     @Test
     void aBranchPushedToAnotherHostCannot() {
         RemoteBranch onGitHub = new RemoteBranch(new RemoteName("github"), BRANCH);
-        Map<RemoteName, String> urls = HashMap.of(ORIGIN, URL, onGitHub.remote(), "git@github.com:cvf/nix.git");
+        Map<RemoteName, RemoteUrl> urls =
+                HashMap.of(ORIGIN, new RemoteUrl(URL), onGitHub.remote(), new RemoteUrl("git@github.com:cvf/nix.git"));
 
         assertEquals(
                 new ForgejoCreatePullRequestMsg.HeadChecked(
@@ -95,7 +97,7 @@ class ForgejoCreatePullRequestCommandsTest {
     void aBranchInTheHomeIsSentByItsNameAndADraftWithThePrefix() {
         CreatePullRequest cmd = create(ORIGIN, true);
 
-        Msg created = cmd.run(answering(Either.right(CREATED)).ahead(HashMap.of(ORIGIN, URL), 2));
+        Msg created = cmd.run(answering(Either.right(CREATED)).ahead(HashMap.of(ORIGIN, new RemoteUrl(URL)), 2));
 
         assertEquals(new ForgejoCreatePullRequestMsg.Created(cmd, CREATED), created);
         ForgejoNewPullRequest pullRequest = List.ofAll(sent).single();
@@ -113,7 +115,8 @@ class ForgejoCreatePullRequestCommandsTest {
 
     @Test
     void aBranchWithNoCommitTheBaseLacksIsNotSent() {
-        Msg failed = create(ORIGIN, false).run(answering(Either.right(CREATED)).ahead(HashMap.of(ORIGIN, URL), 0));
+        Msg failed = create(ORIGIN, false)
+                .run(answering(Either.right(CREATED)).ahead(HashMap.of(ORIGIN, new RemoteUrl(URL)), 0));
 
         assertEquals(Option.of(new CreateFailure.Empty(BRANCH, MAIN).phrase()), failure(failed));
         assertEquals(List.empty(), List.ofAll(sent));
@@ -127,14 +130,15 @@ class ForgejoCreatePullRequestCommandsTest {
 
         assertEquals(
                 new ForgejoCreatePullRequestMsg.AlreadyOpen(cmd, new PrNumber(7)),
-                cmd.run(answering(Either.left(taken)).ahead(HashMap.of(ORIGIN, URL), 2)));
+                cmd.run(answering(Either.left(taken)).ahead(HashMap.of(ORIGIN, new RemoteUrl(URL)), 2)));
     }
 
     @Test
     void withoutATokenItSaysHowToGetOne() {
         ForgejoError locked = new ForgejoError.Refused(401, "{\"message\":\"token is required\"}");
 
-        Msg failed = create(ORIGIN, false).run(answering(Either.left(locked)).ahead(HashMap.of(ORIGIN, URL), 2));
+        Msg failed = create(ORIGIN, false)
+                .run(answering(Either.left(locked)).ahead(HashMap.of(ORIGIN, new RemoteUrl(URL)), 2));
 
         assertEquals(Option.of(Phrase.of("forgejo.error.create.token", HOST)), failure(failed));
     }
@@ -152,7 +156,8 @@ class ForgejoCreatePullRequestCommandsTest {
     void otherRefusalsGiveForgejosMessage() {
         ForgejoError same = new ForgejoError.Refused(422, "{\"message\":\"There are no changes\"}");
 
-        Msg failed = create(ORIGIN, false).run(answering(Either.left(same)).ahead(HashMap.of(ORIGIN, URL), 2));
+        Msg failed = create(ORIGIN, false)
+                .run(answering(Either.left(same)).ahead(HashMap.of(ORIGIN, new RemoteUrl(URL)), 2));
 
         assertEquals(
                 Option.of(Phrase.of("forgejo.error.create.refused", "422", "There are no changes")), failure(failed));

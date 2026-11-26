@@ -1,6 +1,7 @@
 package net.vanfleteren.jazygit.kernel.state.forge;
 
 import net.vanfleteren.jazygit.core.repo.RemoteName;
+import net.vanfleteren.jazygit.core.repo.RemoteUrl;
 import net.vanfleteren.jazygit.kernel.state.FeatureId;
 
 /**
@@ -11,4 +12,4 @@ import net.vanfleteren.jazygit.kernel.state.FeatureId;
  * @param remote  the remote
  * @param url     where it is
  */
-public record ForgeCandidate(FeatureId feature, String forge, RemoteName remote, String url) {}
+public record ForgeCandidate(FeatureId feature, String forge, RemoteName remote, RemoteUrl url) {}

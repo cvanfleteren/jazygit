@@ -18,6 +18,7 @@ import net.vanfleteren.jazygit.core.forgejo.ForgejoReview;
 import net.vanfleteren.jazygit.core.repo.ForgeBranch;
 import net.vanfleteren.jazygit.core.repo.PrNumber;
 import net.vanfleteren.jazygit.core.repo.RemoteName;
+import net.vanfleteren.jazygit.core.repo.RemoteUrl;
 import net.vanfleteren.jazygit.features.forgejo.ForgejoFailure;
 import net.vanfleteren.jazygit.features.forgejo.pulls.PullRequestFixtures.FakeForgejo;
 import net.vanfleteren.jazygit.features.forgejo.show.LoadPullRequest;
@@ -68,9 +69,9 @@ class PullRequestCommandsTest {
                 new ReadPullRequests(new RemoteName("upstream"))
                         .run(forgejo.env(HashMap.of(
                                 ORIGIN,
-                                "git@code.example.net:anna/nix.git",
+                                new RemoteUrl("git@code.example.net:anna/nix.git"),
                                 new RemoteName("upstream"),
-                                "https://code.example.net/cvf/nix.git"))));
+                                new RemoteUrl("https://code.example.net/cvf/nix.git")))));
     }
 
     @Test
@@ -79,7 +80,8 @@ class PullRequestCommandsTest {
 
         assertEquals(
                 new PullRequestMsg.PlainHttpChecked(Option.of("http://code.example.net")),
-                new CheckPlainHttp(ORIGIN).run(forgejo.env(HashMap.of(ORIGIN, "http://code.example.net/cvf/nix.git"))));
+                new CheckPlainHttp(ORIGIN)
+                        .run(forgejo.env(HashMap.of(ORIGIN, new RemoteUrl("http://code.example.net/cvf/nix.git")))));
         assertEquals(new PullRequestMsg.PlainHttpChecked(Option.none()), new CheckPlainHttp(ORIGIN).run(forgejo.env()));
     }
 
@@ -90,7 +92,8 @@ class PullRequestCommandsTest {
         assertEquals(
                 new PullRequestMsg.Listed(new RemoteName("github"), Option.none(), Option.none()),
                 new ReadPullRequests(new RemoteName("github"))
-                        .run(forgejo.env(HashMap.of(new RemoteName("github"), "git@github.com:cvf/nix.git"))));
+                        .run(forgejo.env(
+                                HashMap.of(new RemoteName("github"), new RemoteUrl("git@github.com:cvf/nix.git")))));
     }
 
     @Test
@@ -140,6 +143,7 @@ class PullRequestCommandsTest {
         assertEquals(
                 new PullRequestMsg.Read(3, Either.<Failure, ShownPullRequest>left(new ForgejoFailure.NoHome())),
                 new LoadPullRequest(ORIGIN, new PrNumber(12), 3)
-                        .run(FakeForgejo.of(details("Show")).env(HashMap.of(ORIGIN, "git@github.com:cvf/nix.git"))));
+                        .run(FakeForgejo.of(details("Show"))
+                                .env(HashMap.of(ORIGIN, new RemoteUrl("git@github.com:cvf/nix.git")))));
     }
 }

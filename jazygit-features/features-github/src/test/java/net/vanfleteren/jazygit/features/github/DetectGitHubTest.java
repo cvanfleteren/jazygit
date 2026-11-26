@@ -16,6 +16,7 @@ import net.vanfleteren.jazygit.core.git.StubGit;
 import net.vanfleteren.jazygit.core.git.branches.StubRemotes;
 import net.vanfleteren.jazygit.core.git.process.GitError;
 import net.vanfleteren.jazygit.core.repo.RemoteName;
+import net.vanfleteren.jazygit.core.repo.RemoteUrl;
 import net.vanfleteren.jazygit.kernel.state.Env;
 import net.vanfleteren.jazygit.kernel.state.FeatureMsg;
 import net.vanfleteren.jazygit.kernel.state.Msg;
@@ -44,9 +45,9 @@ class DetectGitHubTest {
         Msg detected = new DetectGitHub("gh")
                 .run(env(
                         HashMap.of(
-                                new RemoteName("origin"), "https://github.com/me/repo.git",
-                                new RemoteName("upstream"), "https://github.com/owner/repo.git",
-                                new RemoteName("codeberg"), "https://codeberg.org/owner/repo.git"),
+                                new RemoteName("origin"), new RemoteUrl("https://github.com/me/repo.git"),
+                                new RemoteName("upstream"), new RemoteUrl("https://github.com/owner/repo.git"),
+                                new RemoteName("codeberg"), new RemoteUrl("https://codeberg.org/owner/repo.git")),
                         StubGitHub.of()));
 
         assertEquals(List.of("origin", "upstream"), claimed(detected));
@@ -61,12 +62,12 @@ class DetectGitHubTest {
 
     @Test
     void theRemoteGhRepoSetDefaultChoseIsTheOneItPrefers() {
-        Map<RemoteName, String> urls = HashMap.of(
-                new RemoteName("origin"), "https://codeberg.org/owner/repo.git",
-                new RemoteName("hub"), "https://github.com/owner/repo.git");
+        Map<RemoteName, RemoteUrl> urls = HashMap.of(
+                new RemoteName("origin"), new RemoteUrl("https://codeberg.org/owner/repo.git"),
+                new RemoteName("hub"), new RemoteUrl("https://github.com/owner/repo.git"));
         Env chosen = new Env(StubGit.of().withRemotes(new StubRemotes() {
                     @Override
-                    public Either<GitError, Map<RemoteName, String>> urls() {
+                    public Either<GitError, Map<RemoteName, RemoteUrl>> urls() {
                         return Either.right(urls);
                     }
 
@@ -137,13 +138,13 @@ class DetectGitHubTest {
     }
 
     private static Msg detect(String url, GitHub gh) {
-        return new DetectGitHub("gh").run(env(HashMap.of(new RemoteName("origin"), url), gh));
+        return new DetectGitHub("gh").run(env(HashMap.of(new RemoteName("origin"), new RemoteUrl(url)), gh));
     }
 
-    private static Env env(Map<RemoteName, String> urls, GitHub gh) {
+    private static Env env(Map<RemoteName, RemoteUrl> urls, GitHub gh) {
         return new Env(StubGit.of().withRemotes(new StubRemotes() {
                     @Override
-                    public Either<GitError, Map<RemoteName, String>> urls() {
+                    public Either<GitError, Map<RemoteName, RemoteUrl>> urls() {
                         return Either.right(urls);
                     }
                 }))

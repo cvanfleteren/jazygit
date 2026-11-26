@@ -9,6 +9,7 @@ import net.vanfleteren.jazygit.core.git.branches.StubRemotes;
 import net.vanfleteren.jazygit.core.git.model.SampleData;
 import net.vanfleteren.jazygit.core.git.process.GitError;
 import net.vanfleteren.jazygit.core.repo.RemoteName;
+import net.vanfleteren.jazygit.core.repo.RemoteUrl;
 import net.vanfleteren.jazygit.features.github.GitHubFeature;
 import net.vanfleteren.jazygit.features.github.GitHubServices;
 import net.vanfleteren.jazygit.kernel.state.Env;
@@ -45,8 +46,9 @@ public final class GitHubKeys {
     public static Git onGitHub(Git git) {
         return git.withRemotes(new StubRemotes() {
             @Override
-            public Either<GitError, Map<RemoteName, String>> urls() {
-                return Either.right(HashMap.of(new RemoteName("origin"), "https://github.com/owner/repo.git"));
+            public Either<GitError, Map<RemoteName, RemoteUrl>> urls() {
+                return Either.right(
+                        HashMap.of(new RemoteName("origin"), new RemoteUrl("https://github.com/owner/repo.git")));
             }
         });
     }

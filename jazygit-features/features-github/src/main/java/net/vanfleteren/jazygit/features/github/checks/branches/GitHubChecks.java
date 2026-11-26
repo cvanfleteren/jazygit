@@ -6,6 +6,7 @@ import net.vanfleteren.jazygit.core.gh.model.BranchChecks;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.RemoteName;
+import net.vanfleteren.jazygit.core.repo.RemoteUrl;
 import net.vanfleteren.jazygit.features.github.state.FromGitHub;
 
 /**
@@ -21,8 +22,9 @@ public record GitHubChecks(Set<RemoteName> remotes, Map<BranchName, Checks> byBr
      * The checks of {@code checks}, on the remotes of {@code urls}, the URL of each remote by its name, that
      * point at its repository.
      */
-    public static GitHubChecks of(BranchChecks checks, Map<RemoteName, String> urls) {
+    public static GitHubChecks of(BranchChecks checks, Map<RemoteName, RemoteUrl> urls) {
         return new GitHubChecks(
-                urls.filterValues(checks::isAt).keySet(), checks.checks().mapKeys(FromGitHub::branch));
+                urls.filterValues(url -> checks.isAt(url.value())).keySet(),
+                checks.checks().mapKeys(FromGitHub::branch));
     }
 }

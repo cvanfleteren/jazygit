@@ -10,6 +10,7 @@ import net.vanfleteren.jazygit.core.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest.Review;
 import net.vanfleteren.jazygit.core.repo.ForgeBranch;
 import net.vanfleteren.jazygit.core.repo.PrNumber;
+import net.vanfleteren.jazygit.core.repo.RemoteUrl;
 import net.vanfleteren.jazygit.core.repo.RepoSlug;
 import org.junit.jupiter.api.Test;
 
@@ -41,10 +42,11 @@ class ForkPullRequestsTest {
 
     @Test
     void theRepositoryOfARemoteIsTheLastTwoPartsOfItsPath() {
-        assertEquals(Option.of("anna/repo"), GhAccount.repositoryOf("git@github.com:anna/repo.git"));
-        assertEquals(Option.of("anna/repo"), GhAccount.repositoryOf("https://github.com/anna/repo"));
-        assertEquals(Option.of("anna/repo"), GhAccount.repositoryOf("ssh://git@github.com/anna/repo.git"));
-        assertEquals(Option.none(), GhAccount.repositoryOf("/local/repo"));
+        assertEquals(Option.of("anna/repo"), GhAccount.repositoryOf(new RemoteUrl("git@github.com:anna/repo.git")));
+        assertEquals(Option.of("anna/repo"), GhAccount.repositoryOf(new RemoteUrl("https://github.com/anna/repo")));
+        assertEquals(
+                Option.of("anna/repo"), GhAccount.repositoryOf(new RemoteUrl("ssh://git@github.com/anna/repo.git")));
+        assertEquals(Option.none(), GhAccount.repositoryOf(new RemoteUrl("/local/repo")));
     }
 
     @Test
@@ -61,7 +63,7 @@ class ForkPullRequestsTest {
 
         assertEquals(
                 List.of(1, 2),
-                read.ofBranches(HashSet.of("anna/repo", "project/repo"))
+                read.ofBranches(HashSet.of(new RepoSlug("anna/repo"), new RepoSlug("project/repo")))
                         .map(pr -> pr.number().value()));
         assertEquals(List.of(1), read.ofBranches().map(pr -> pr.number().value()));
     }

@@ -26,6 +26,7 @@ import net.vanfleteren.jazygit.core.git.branches.StubRemotes;
 import net.vanfleteren.jazygit.core.git.process.GitError;
 import net.vanfleteren.jazygit.core.repo.PrNumber;
 import net.vanfleteren.jazygit.core.repo.RemoteName;
+import net.vanfleteren.jazygit.core.repo.RemoteUrl;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.kernel.state.Env;
 
@@ -35,8 +36,8 @@ import net.vanfleteren.jazygit.kernel.state.Env;
 record FakeForgejo(Set<String> hosts, Map<Sha, CommitStatus.State> states) implements Forgejo {
 
     @Override
-    public Option<ForgejoRepository> repository(String remoteUrl) {
-        return ForgejoRepository.of(remoteUrl, FjKeys.NONE.aliases());
+    public Option<ForgejoRepository> repository(RemoteUrl remoteUrl) {
+        return ForgejoRepository.of(remoteUrl.value(), FjKeys.NONE.aliases());
     }
 
     /**
@@ -127,17 +128,17 @@ record FakeForgejo(Set<String> hosts, Map<Sha, CommitStatus.State> states) imple
     /**
      * An environment with this Forgejo and remotes of {@code urls}.
      */
-    Env env(Map<RemoteName, String> urls) {
+    Env env(Map<RemoteName, RemoteUrl> urls) {
         return new Env(StubGit.of().withRemotes(new StubRemotes() {
                     @Override
-                    public Either<GitError, Map<RemoteName, String>> urls() {
+                    public Either<GitError, Map<RemoteName, RemoteUrl>> urls() {
                         return Either.right(urls);
                     }
                 }))
                 .with(ForgejoServices.FORGEJO, this);
     }
 
-    static Map<RemoteName, String> origin(String url) {
-        return HashMap.of(new RemoteName("origin"), url);
+    static Map<RemoteName, RemoteUrl> origin(String url) {
+        return HashMap.of(new RemoteName("origin"), new RemoteUrl(url));
     }
 }

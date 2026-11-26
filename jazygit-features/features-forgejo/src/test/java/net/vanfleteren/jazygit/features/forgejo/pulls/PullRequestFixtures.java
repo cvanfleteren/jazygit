@@ -35,6 +35,7 @@ import net.vanfleteren.jazygit.core.repo.ForgeBranch;
 import net.vanfleteren.jazygit.core.repo.PrNumber;
 import net.vanfleteren.jazygit.core.repo.RemoteBranch;
 import net.vanfleteren.jazygit.core.repo.RemoteName;
+import net.vanfleteren.jazygit.core.repo.RemoteUrl;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.core.repo.Tracking;
 import net.vanfleteren.jazygit.core.repo.Upstream;
@@ -102,8 +103,8 @@ public final class PullRequestFixtures {
                 .model()
                 .withPart(
                         ForgeHome.PART,
-                        ForgeHome.NONE.deciding(
-                                Option.of(new ForgeCandidate(new FeatureId("forgejo"), "Forgejo", ORIGIN, URL))));
+                        ForgeHome.NONE.deciding(Option.of(
+                                new ForgeCandidate(new FeatureId("forgejo"), "Forgejo", ORIGIN, new RemoteUrl(URL)))));
     }
 
     /**
@@ -283,7 +284,7 @@ public final class PullRequestFixtures {
          * An environment with this Forgejo, remotes of {@code urls}, and {@code ahead} commits of every branch that
          * its base does not have.
          */
-        public Env ahead(Map<RemoteName, String> urls, int ahead) {
+        public Env ahead(Map<RemoteName, RemoteUrl> urls, int ahead) {
             Env env = env(urls);
             return new Env(env.git().withHistory(new StubHistory() {
                         @Override
@@ -306,8 +307,8 @@ public final class PullRequestFixtures {
         }
 
         @Override
-        public Option<ForgejoRepository> repository(String remoteUrl) {
-            return ForgejoRepository.of(remoteUrl, FjKeys.NONE.aliases());
+        public Option<ForgejoRepository> repository(RemoteUrl remoteUrl) {
+            return ForgejoRepository.of(remoteUrl.value(), FjKeys.NONE.aliases());
         }
 
         @Override
@@ -339,10 +340,10 @@ public final class PullRequestFixtures {
         /**
          * An environment with this Forgejo and remotes of {@code urls}.
          */
-        public Env env(Map<RemoteName, String> urls) {
+        public Env env(Map<RemoteName, RemoteUrl> urls) {
             return new Env(StubGit.of().withRemotes(new StubRemotes() {
                         @Override
-                        public Either<GitError, Map<RemoteName, String>> urls() {
+                        public Either<GitError, Map<RemoteName, RemoteUrl>> urls() {
                             return Either.right(urls);
                         }
                     }))
@@ -350,7 +351,7 @@ public final class PullRequestFixtures {
         }
 
         public Env env() {
-            return env(HashMap.of(ORIGIN, URL));
+            return env(HashMap.of(ORIGIN, new RemoteUrl(URL)));
         }
 
         /**

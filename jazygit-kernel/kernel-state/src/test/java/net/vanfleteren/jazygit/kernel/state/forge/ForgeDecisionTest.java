@@ -7,6 +7,7 @@ import io.vavr.collection.LinkedHashMap;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.core.repo.RemoteName;
+import net.vanfleteren.jazygit.core.repo.RemoteUrl;
 import net.vanfleteren.jazygit.kernel.state.FeatureId;
 import org.junit.jupiter.api.Test;
 
@@ -26,8 +27,8 @@ class ForgeDecisionTest {
                 Option.none());
     }
 
-    static String url(String remote) {
-        return "https://example.net/" + remote + ".git";
+    static RemoteUrl url(String remote) {
+        return new RemoteUrl("https://example.net/" + remote + ".git");
     }
 
     static ForgeCandidate candidate(String feature, String remote) {

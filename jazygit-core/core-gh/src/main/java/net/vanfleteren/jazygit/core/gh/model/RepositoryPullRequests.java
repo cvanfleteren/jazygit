@@ -45,8 +45,8 @@ public record RepositoryPullRequests(
      * fork is a remote, and its pull requests into the repository are those of its branches (ADR 177). Those from
      * other forks are left out, though a branch of theirs may have the name of one of these.
      */
-    public List<PullRequest> ofBranches(Set<String> forks) {
-        Set<String> own = forks.map(fork -> fork.toLowerCase(Locale.ROOT));
+    public List<PullRequest> ofBranches(Set<RepoSlug> forks) {
+        Set<String> own = forks.map(fork -> fork.value().toLowerCase(Locale.ROOT));
         return open.pullRequests()
                 .filter(summary -> !summary.fromFork()
                         || summary.headRepository()
@@ -60,9 +60,9 @@ public record RepositoryPullRequests(
      * repository, one from a fork in those of the fork; every remote of one repository, as {@code origin} and an
      * alias of it. One whose repository is no remote's is left out, as one whose fork was deleted.
      */
-    public Map<PrNumber, Set<RemoteName>> heads(Map<RemoteName, String> remotes) {
-        List<Tuple2<RemoteName, String>> named =
-                remotes.toList().map(remote -> Tuple.of(remote._1(), remote._2().toLowerCase(Locale.ROOT)));
+    public Map<PrNumber, Set<RemoteName>> heads(Map<RemoteName, RepoSlug> remotes) {
+        List<Tuple2<RemoteName, String>> named = remotes.toList()
+                .map(remote -> Tuple.of(remote._1(), remote._2().value().toLowerCase(Locale.ROOT)));
         return HashMap.ofEntries(open.pullRequests()
                 .flatMap(summary -> summary.headRepository()
                         .map(head -> head.value().toLowerCase(Locale.ROOT))

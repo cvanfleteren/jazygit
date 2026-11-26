@@ -29,6 +29,7 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.function.Supplier;
 import java.util.function.UnaryOperator;
 import net.vanfleteren.jazygit.core.repo.PrNumber;
+import net.vanfleteren.jazygit.core.repo.RemoteUrl;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.lib.json.Decoder;
 
@@ -110,8 +111,8 @@ public final class HttpForgejo implements Forgejo {
     }
 
     @Override
-    public Option<ForgejoRepository> repository(String remoteUrl) {
-        return ForgejoRepository.of(remoteUrl, keys.get().aliases());
+    public Option<ForgejoRepository> repository(RemoteUrl remoteUrl) {
+        return ForgejoRepository.of(remoteUrl.value(), keys.get().aliases());
     }
 
     /**

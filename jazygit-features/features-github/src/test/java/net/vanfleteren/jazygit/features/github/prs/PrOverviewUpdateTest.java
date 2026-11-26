@@ -175,9 +175,9 @@ class PrOverviewUpdateTest {
                                 Option.none(),
                                 io.vavr.collection.HashMap.of(
                                         new RemoteName("origin"),
-                                        "anna/repo",
+                                        new RepoSlug("anna/repo"),
                                         new RemoteName("upstream"),
-                                        "owner/repo")))
+                                        new RepoSlug("owner/repo"))))
                 .model();
 
         assertEquals(

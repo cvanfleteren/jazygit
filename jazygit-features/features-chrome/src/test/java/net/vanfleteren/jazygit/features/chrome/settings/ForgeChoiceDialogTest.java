@@ -13,6 +13,7 @@ import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.util.ArrayList;
 import net.vanfleteren.jazygit.core.repo.RemoteName;
+import net.vanfleteren.jazygit.core.repo.RemoteUrl;
 import net.vanfleteren.jazygit.kernel.state.CursorFeedback;
 import net.vanfleteren.jazygit.kernel.state.FeatureId;
 import net.vanfleteren.jazygit.kernel.state.Model;
@@ -32,9 +33,15 @@ import org.junit.jupiter.api.Test;
 class ForgeChoiceDialogTest {
 
     private static final ForgeCandidate GITHUB = new ForgeCandidate(
-            new FeatureId("github"), "GitHub", new RemoteName("origin"), "https://github.com/cvf/nix.git");
+            new FeatureId("github"),
+            "GitHub",
+            new RemoteName("origin"),
+            new RemoteUrl("https://github.com/cvf/nix.git"));
     private static final ForgeCandidate FORGEJO = new ForgeCandidate(
-            new FeatureId("forgejo"), "Forgejo", new RemoteName("codeberg"), "https://codeberg.org/cvf/nix.git");
+            new FeatureId("forgejo"),
+            "Forgejo",
+            new RemoteName("codeberg"),
+            new RemoteUrl("https://codeberg.org/cvf/nix.git"));
 
     private final java.util.List<Msg> dispatched = new ArrayList<>();
     private final CursorFeedback cursor = new CursorFeedback(dispatched::add);

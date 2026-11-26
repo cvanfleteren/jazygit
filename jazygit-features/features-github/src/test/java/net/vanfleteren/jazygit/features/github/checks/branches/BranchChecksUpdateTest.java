@@ -37,6 +37,7 @@ import net.vanfleteren.jazygit.core.repo.ForgeBranch;
 import net.vanfleteren.jazygit.core.repo.PrNumber;
 import net.vanfleteren.jazygit.core.repo.RemoteBranch;
 import net.vanfleteren.jazygit.core.repo.RemoteName;
+import net.vanfleteren.jazygit.core.repo.RemoteUrl;
 import net.vanfleteren.jazygit.core.repo.RepoSlug;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.core.repo.Upstream;
@@ -110,7 +111,7 @@ class BranchChecksUpdateTest {
         Msg msg = new LoadBranchChecks()
                 .run(new Env(StubGit.of().withRemotes(new StubRemotes() {
                             @Override
-                            public Either<GitError, Map<RemoteName, String>> urls() {
+                            public Either<GitError, Map<RemoteName, RemoteUrl>> urls() {
                                 return Either.right(HashMap.of(
                                                 "origin",
                                                 "git@github.com:me/repo.git",
@@ -118,7 +119,8 @@ class BranchChecksUpdateTest {
                                                 "git@github.com:owner/repo.git",
                                                 "mirror",
                                                 "https://github.com/owner/repo")
-                                        .mapKeys(RemoteName::new));
+                                        .mapKeys(RemoteName::new)
+                                        .mapValues(RemoteUrl::new));
                             }
                         }))
                         .with(GitHubServices.GH, StubGitHub.of().withChecks(new StubChecks() {

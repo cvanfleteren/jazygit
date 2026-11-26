@@ -10,6 +10,7 @@ import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.BranchRef;
 import net.vanfleteren.jazygit.core.repo.RemoteBranch;
 import net.vanfleteren.jazygit.core.repo.RemoteRef;
+import net.vanfleteren.jazygit.core.repo.RemoteUrl;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.features.branches.branch.pullrequest.AfterPush;
 import net.vanfleteren.jazygit.features.branches.branch.pullrequest.CreatePullRequestCmd.ReadTitle;
@@ -45,7 +46,7 @@ class ForgejoCreatePullRequestContractTest extends CreatePullRequestContract {
                 .withPart(
                         ForgeHome.PART,
                         ForgeHome.NONE.deciding(Option.of(new ForgeCandidate(
-                                new FeatureId("forgejo"), "Forgejo", ORIGIN, PullRequestFixtures.URL))));
+                                new FeatureId("forgejo"), "Forgejo", ORIGIN, new RemoteUrl(PullRequestFixtures.URL)))));
     }
 
     /**

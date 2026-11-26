@@ -21,6 +21,7 @@ import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.PrNumber;
 import net.vanfleteren.jazygit.core.repo.RemoteBranch;
 import net.vanfleteren.jazygit.core.repo.RemoteName;
+import net.vanfleteren.jazygit.core.repo.RemoteUrl;
 import net.vanfleteren.jazygit.features.forgejo.ForgejoFailure;
 import net.vanfleteren.jazygit.features.forgejo.ForgejoFeature;
 import net.vanfleteren.jazygit.features.forgejo.browse.OpenPullRequestCmd;
@@ -191,8 +192,8 @@ class PullRequestUpdateTest {
         RemoteName upstream = new RemoteName("upstream");
         Model moved = listed().withPart(
                         ForgeHome.PART,
-                        ForgeHome.NONE.deciding(
-                                Option.of(new ForgeCandidate(new FeatureId("forgejo"), "Forgejo", upstream, URL))));
+                        ForgeHome.NONE.deciding(Option.of(new ForgeCandidate(
+                                new FeatureId("forgejo"), "Forgejo", upstream, new RemoteUrl(URL)))));
 
         Next next = requested(moved, "feature");
         assertEquals(Option.none(), next.model().popup(ForgejoPullRequestPopup.class));
@@ -220,8 +221,8 @@ class PullRequestUpdateTest {
         RemoteName upstream = new RemoteName("upstream");
         Model moved = model().withPart(
                         ForgeHome.PART,
-                        ForgeHome.NONE.deciding(
-                                Option.of(new ForgeCandidate(new FeatureId("forgejo"), "Forgejo", upstream, URL))));
+                        ForgeHome.NONE.deciding(Option.of(new ForgeCandidate(
+                                new FeatureId("forgejo"), "Forgejo", upstream, new RemoteUrl(URL)))));
 
         Model late = PullRequestUpdate.update(
                         moved, new PullRequestMsg.Listed(ORIGIN, Option.of(HashMap.of(FEATURE, LISTED)), Option.none()))

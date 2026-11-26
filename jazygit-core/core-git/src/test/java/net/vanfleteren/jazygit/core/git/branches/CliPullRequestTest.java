@@ -15,6 +15,7 @@ import net.vanfleteren.jazygit.core.git.model.DiffOptions;
 import net.vanfleteren.jazygit.core.repo.PrNumber;
 import net.vanfleteren.jazygit.core.repo.PullRequestCommits;
 import net.vanfleteren.jazygit.core.repo.RemoteName;
+import net.vanfleteren.jazygit.core.repo.RemoteUrl;
 import net.vanfleteren.jazygit.core.repo.RepoSlug;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import org.junit.jupiter.api.Test;
@@ -186,12 +187,13 @@ class CliPullRequestTest {
 
     @Test
     void theRemoteOfARepositoryIsTheOneWhoseUrlNamesIt() {
-        HashMap<RemoteName, String> urls = HashMap.of(
+        HashMap<RemoteName, RemoteUrl> urls = HashMap.of(
                         "upstream", "git@github.com:Owner/Repo.git",
                         "origin", "https://github.com/me/repo",
                         "mirror", "ssh://git@github.com/owner/repo/",
                         "other", "https://github.com/owner/repository.git")
-                .mapKeys(RemoteName::new);
+                .mapKeys(RemoteName::new)
+                .mapValues(RemoteUrl::new);
 
         assertEquals(
                 Option.of(new RemoteName("mirror")),
@@ -208,11 +210,12 @@ class CliPullRequestTest {
 
     @Test
     void aRemoteOnTheHostOfTheRepositoryComesBeforeAMirrorElsewhere() {
-        HashMap<RemoteName, String> urls = HashMap.of(
+        HashMap<RemoteName, RemoteUrl> urls = HashMap.of(
                         "backup", "https://gitlab.com/owner/repo.git",
                         "origin", "git@github.com:owner/repo.git",
                         "work", "https://user@ghe.example.com:8443/owner/repo")
-                .mapKeys(RemoteName::new);
+                .mapKeys(RemoteName::new)
+                .mapValues(RemoteUrl::new);
 
         assertEquals(
                 Option.of(new RemoteName("origin")),

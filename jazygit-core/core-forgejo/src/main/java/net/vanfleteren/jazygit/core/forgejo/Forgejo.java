@@ -4,6 +4,7 @@ import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.core.repo.PrNumber;
+import net.vanfleteren.jazygit.core.repo.RemoteUrl;
 import net.vanfleteren.jazygit.core.repo.Sha;
 
 /**
@@ -16,7 +17,7 @@ public interface Forgejo {
      */
     Forgejo NONE = new Forgejo() {
         @Override
-        public Option<ForgejoRepository> repository(String remoteUrl) {
+        public Option<ForgejoRepository> repository(RemoteUrl remoteUrl) {
             return Option.none();
         }
 
@@ -99,7 +100,7 @@ public interface Forgejo {
      * The repository the git remote {@code remoteUrl} names, on a host that may be Forgejo; none for a remote that
      * cannot be.
      */
-    Option<ForgejoRepository> repository(String remoteUrl);
+    Option<ForgejoRepository> repository(RemoteUrl remoteUrl);
 
     /**
      * Whether the host of {@code repository} is Forgejo: it answers {@code /api/forgejo/v1/version}. Each host is

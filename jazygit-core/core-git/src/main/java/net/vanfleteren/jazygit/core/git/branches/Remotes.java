@@ -16,6 +16,7 @@ import net.vanfleteren.jazygit.core.repo.BranchRef;
 import net.vanfleteren.jazygit.core.repo.PullRequestCommits;
 import net.vanfleteren.jazygit.core.repo.RemoteBranch;
 import net.vanfleteren.jazygit.core.repo.RemoteName;
+import net.vanfleteren.jazygit.core.repo.RemoteUrl;
 
 /**
  * The remotes, and everything that talks to them: pushing, pulling and fetching, deleting a branch on its remote and
@@ -33,7 +34,7 @@ public interface Remotes {
     /**
      * The URL of each remote, by its name.
      */
-    Either<GitError, Map<RemoteName, String>> urls();
+    Either<GitError, Map<RemoteName, RemoteUrl>> urls();
 
     /**
      * The value of {@code remote.<name>.<key>} of each remote that has it, by its name: a setting a tool keeps on a

@@ -18,6 +18,7 @@ import net.vanfleteren.jazygit.core.forgejo.ForgejoMerged;
 import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.BranchRef;
 import net.vanfleteren.jazygit.core.repo.PrNumber;
+import net.vanfleteren.jazygit.core.repo.RemoteUrl;
 import net.vanfleteren.jazygit.features.forgejo.ForgejoFailure;
 import net.vanfleteren.jazygit.features.forgejo.pulls.PullRequestFixtures.FakeForgejo;
 import net.vanfleteren.jazygit.features.forgejo.pulls.PullRequestMsg;
@@ -63,7 +64,7 @@ class MergeCommandsTest {
                 REBASE.run(forgejo.env()));
         assertEquals(
                 new PullRequestMsg.MergeFailed(REBASE, new ForgejoFailure.NoHome()),
-                REBASE.run(forgejo.env(HashMap.of(ORIGIN, "git@github.com:cvf/nix.git"))));
+                REBASE.run(forgejo.env(HashMap.of(ORIGIN, new RemoteUrl("git@github.com:cvf/nix.git")))));
     }
 
     @Test

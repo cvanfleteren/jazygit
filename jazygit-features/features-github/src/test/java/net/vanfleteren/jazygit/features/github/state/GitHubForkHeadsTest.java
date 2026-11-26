@@ -117,7 +117,8 @@ class GitHubForkHeadsTest {
                 new RepositoryPullRequests(new RepoSlug("project/repo"), new PullRequestList(List.of(same), 1));
         GitHubState state = GitHubState.NOT_READ
                 .withListed(read.ofBranches())
-                .withHeads(read.heads(HashMap.of(github, "project/repo", ORIGIN, "Project/Repo")))
+                .withHeads(read.heads(
+                        HashMap.of(github, new RepoSlug("project/repo"), ORIGIN, new RepoSlug("Project/Repo"))))
                 // Both remotes on GitHub, so that their remote branches are looked up.
                 .withBranchChecks(Option.of(new GitHubChecks(HashSet.of(ORIGIN, github), HashMap.empty())));
 
