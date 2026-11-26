@@ -35,12 +35,6 @@ public sealed interface EditMsg extends Msg {
     record AtCursor(DiffCursorAt at) implements EditMsg {}
 
     /**
-     * The user asked to open the file at {@code path}, relative to the working tree, in an editor, at {@code line}, as
-     * the resolve dialog does at the first conflict it read (ADR 201).
-     */
-    record RequestedAt(String path, int line) implements EditMsg {}
-
-    /**
      * The file in conflict at {@code path}, asked to be opened, was read: its first conflict starts at {@code line},
      * if it has markers left (ADR 201).
      */
@@ -50,4 +44,9 @@ public sealed interface EditMsg extends Msg {
      * The user chose {@code editor} in the menu of the editors that open files.
      */
     record Chosen(EditorProgram editor) implements EditMsg {}
+
+    /**
+     * The user closed the menu of the editors that open files without choosing one: the popup under it comes back.
+     */
+    record Cancelled() implements EditMsg {}
 }

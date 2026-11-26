@@ -17,6 +17,14 @@ public interface Popup {
     }
 
     /**
+     * Whether this popup may go under a {@link Covering} popup, and come back once that closes (ADR 206): only one
+     * whose feature still tells it, there, what it learns meanwhile, as a popup that reads by itself must be told.
+     */
+    default boolean coverable() {
+        return false;
+    }
+
+    /**
      * This popup once what was learned of how long checks take changes from what {@code before} knows; as it is,
      * unless it shows something it learned from them.
      */

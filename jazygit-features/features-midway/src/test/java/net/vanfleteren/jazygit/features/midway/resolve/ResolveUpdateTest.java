@@ -20,9 +20,8 @@ import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.Head;
 import net.vanfleteren.jazygit.core.repo.InProgress;
 import net.vanfleteren.jazygit.core.repo.Sha;
-import net.vanfleteren.jazygit.features.changes.edit.EditMsg;
-import net.vanfleteren.jazygit.features.changes.edit.EditorSettings;
-import net.vanfleteren.jazygit.features.changes.edit.FileEditor;
+import net.vanfleteren.jazygit.features.changes.edit.EditFeature;
+import net.vanfleteren.jazygit.features.changes.edit.EditUpdate;
 import net.vanfleteren.jazygit.features.changes.edit.ReadFirstConflictCmd;
 import net.vanfleteren.jazygit.features.changes.stage.MarkersLeftPopup;
 import net.vanfleteren.jazygit.features.changes.stage.StageMsg;
@@ -30,9 +29,13 @@ import net.vanfleteren.jazygit.features.midway.resolve.ResolveCmd.Keep;
 import net.vanfleteren.jazygit.features.midway.resolve.ResolveCmd.Restore;
 import net.vanfleteren.jazygit.kernel.settings.EditorProgram;
 import net.vanfleteren.jazygit.kernel.settings.Editors;
+import net.vanfleteren.jazygit.kernel.settings.Settings;
+import net.vanfleteren.jazygit.kernel.state.KernelEvent;
 import net.vanfleteren.jazygit.kernel.state.Model;
+import net.vanfleteren.jazygit.kernel.state.Reactions;
 import net.vanfleteren.jazygit.kernel.state.Update;
 import net.vanfleteren.jazygit.kernel.state.Update.Next;
+import net.vanfleteren.jazygit.kernel.state.edit.FileEditor;
 import net.vanfleteren.jazygit.kernel.state.load.LoadMsg;
 import net.vanfleteren.jazygit.kernel.state.popup.PopupMsg;
 import org.junit.jupiter.api.Test;
@@ -51,7 +54,9 @@ class ResolveUpdateTest {
             new InProgress.Rebasing(Option.of(new BranchName("feature")), ONTO, 2, 3);
 
     private static Model stopped(InProgress inProgress, Head head, List<String> resolved) {
-        Model branches = localBranchesRead(loaded(), List.of(Fixtures.branch(new BranchName("main"), false, ONTO)))
+        // The feature that opens files answers the file the dialog asks for (ADR 206).
+        Model answering = loaded().withReactions(new Reactions(EditFeature.FEATURE.reactions()));
+        Model branches = localBranchesRead(answering, List.of(Fixtures.branch(new BranchName("main"), false, ONTO)))
                 .model();
         RepoStatus status = new RepoStatus(head, List.of(CONFLICTED, MODIFIED), Option.of(inProgress), resolved);
         return Update.update(branches, new LoadMsg.StatusLoaded(status)).model();
@@ -165,7 +170,9 @@ class ResolveUpdateTest {
         Next next = Update.update(asked(), new ResolveMsg.EditChosen());
 
         assertEquals(
-                Update.update(rebasing(), new EditMsg.RequestedAt("a.txt", 4)).cmds(), next.cmds());
+                EditUpdate.reacting(rebasing(), KernelEvent.FileToOpen.at("a.txt", 4))
+                        .cmds(),
+                next.cmds());
     }
 
     @Test
@@ -237,7 +244,9 @@ class ResolveUpdateTest {
     @Test
     void theDialogNamesTheSideOfARebaseByTheCommitItStoppedAtOnceItsStepsAreKnown() {
         Sha stoppedAt = new Sha("4".repeat(40));
-        Model branches = localBranchesRead(loaded(), List.of(Fixtures.branch(new BranchName("main"), false, ONTO)))
+        // The feature that opens files answers the file the dialog asks for (ADR 206).
+        Model answering = loaded().withReactions(new Reactions(EditFeature.FEATURE.reactions()));
+        Model branches = localBranchesRead(answering, List.of(Fixtures.branch(new BranchName("main"), false, ONTO)))
                 .model();
         RepoStatus status = new RepoStatus(
                 new Head.Detached(ONTO),
@@ -277,7 +286,9 @@ class ResolveUpdateTest {
 
     @Test
     void theDialogOpensOnAConflictLeftWithNoOperationInProgress() {
-        Model branches = localBranchesRead(loaded(), List.of(Fixtures.branch(new BranchName("main"), false, ONTO)))
+        // The feature that opens files answers the file the dialog asks for (ADR 206).
+        Model answering = loaded().withReactions(new Reactions(EditFeature.FEATURE.reactions()));
+        Model branches = localBranchesRead(answering, List.of(Fixtures.branch(new BranchName("main"), false, ONTO)))
                 .model();
         RepoStatus status = new RepoStatus(
                 Head.onBranch(new BranchName("feature"), new Sha("3333333333")),
@@ -332,8 +343,8 @@ class ResolveUpdateTest {
     }
 
     private static Model withEditors(Model model, EditorProgram... editors) {
-        return model.mapPreferences(preferences -> preferences.withSettings(
-                preferences.settings().with(EditorSettings.EDITORS, new Editors(List.of(editors)))));
+        return model.mapPreferences(preferences ->
+                preferences.withSettings(preferences.settings().with(Settings.EDITORS, new Editors(List.of(editors)))));
     }
 
     @Test
@@ -401,6 +412,8 @@ class ResolveUpdateTest {
 
         assertEquals(Option.none(), next.model().popup(MarkersLeftPopup.class));
         assertEquals(
-                Update.update(rebasing(), new EditMsg.RequestedAt("a.txt", 4)).cmds(), next.cmds());
+                EditUpdate.reacting(rebasing(), KernelEvent.FileToOpen.at("a.txt", 4))
+                        .cmds(),
+                next.cmds());
     }
 }

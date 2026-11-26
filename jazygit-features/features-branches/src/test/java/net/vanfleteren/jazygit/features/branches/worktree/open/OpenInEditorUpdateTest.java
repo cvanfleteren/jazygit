@@ -18,9 +18,9 @@ import net.vanfleteren.jazygit.core.git.model.*;
 import net.vanfleteren.jazygit.core.process.ExecutedCommand;
 import net.vanfleteren.jazygit.core.repo.*;
 import net.vanfleteren.jazygit.features.branches.worktree.WorktreeError;
-import net.vanfleteren.jazygit.features.changes.edit.EditorSettings;
 import net.vanfleteren.jazygit.kernel.settings.EditorProgram;
 import net.vanfleteren.jazygit.kernel.settings.Editors;
+import net.vanfleteren.jazygit.kernel.settings.Settings;
 import net.vanfleteren.jazygit.kernel.state.*;
 import net.vanfleteren.jazygit.kernel.state.Update.Next;
 import net.vanfleteren.jazygit.kernel.state.launch.ProgramFailure;
@@ -84,8 +84,8 @@ class OpenInEditorUpdateTest {
                 .model();
         return Update.update(branches, new LoadMsg.WorktreesLoaded(List.of(MAIN, LINKED, MISSING)))
                 .model()
-                .mapPreferences(preferences -> preferences.withSettings(
-                        preferences.settings().with(EditorSettings.EDITORS, new Editors(editors))));
+                .mapPreferences(preferences ->
+                        preferences.withSettings(preferences.settings().with(Settings.EDITORS, new Editors(editors))));
     }
 
     private static Branch elsewhere(BranchName name, Path worktree) {

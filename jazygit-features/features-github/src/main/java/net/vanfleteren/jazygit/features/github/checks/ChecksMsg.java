@@ -6,7 +6,6 @@ import net.vanfleteren.jazygit.core.process.ExecutedCommand;
 import net.vanfleteren.jazygit.core.repo.BranchRef;
 import net.vanfleteren.jazygit.core.repo.RemoteBranch;
 import net.vanfleteren.jazygit.features.github.checks.timings.PendingChecks;
-import net.vanfleteren.jazygit.kernel.settings.EditorProgram;
 import net.vanfleteren.jazygit.kernel.state.Failure;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.Msg;
@@ -90,16 +89,6 @@ public sealed interface ChecksMsg extends Msg {
      * editor at {@code line}.
      */
     record LogRead(CheckLogCmd cmd, String file, int line, List<ExecutedCommand> commands) implements ChecksMsg {}
-
-    /**
-     * The user chose {@code editor} in the menu of the editors to open the log of a check in.
-     */
-    record LogEditorChosen(EditorProgram editor) implements ChecksMsg {}
-
-    /**
-     * The user chose no editor to open the log of a check in.
-     */
-    record LogEditorCancelled() implements ChecksMsg {}
 
     /**
      * Periodic prompt to read the checks again, while they are shown.

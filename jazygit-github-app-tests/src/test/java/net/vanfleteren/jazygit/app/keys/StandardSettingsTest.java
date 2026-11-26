@@ -11,7 +11,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import net.vanfleteren.jazygit.features.agent.settings.AgentProgram;
 import net.vanfleteren.jazygit.features.agent.settings.Agents;
-import net.vanfleteren.jazygit.features.changes.edit.EditorSettings;
 import net.vanfleteren.jazygit.features.github.settings.AccountBrowsers;
 import net.vanfleteren.jazygit.features.github.settings.GitHubSettings;
 import net.vanfleteren.jazygit.kernel.settings.EditorProgram;
@@ -151,7 +150,7 @@ class StandardSettingsTest {
                 new Editors(List.of(
                         EditorProgram.ofDir("IntelliJ", List.of("idea", "{dir}"), false, Option.of('i')),
                         EditorProgram.ofDir("Neovim", List.of("nvim", "."), true, Option.none()))),
-                loaded.settings().get(EditorSettings.EDITORS));
+                loaded.settings().get(Settings.EDITORS));
     }
 
     @Test
@@ -169,8 +168,7 @@ class StandardSettingsTest {
                 Option.of(new SettingsProblem.Invalid(dir.resolve("config.toml"), List.of("editors[1].dir-command"))),
                 loaded.problem());
         assertEquals(
-                List.of("Kate"),
-                loaded.settings().get(EditorSettings.EDITORS).all().map(EditorProgram::name));
+                List.of("Kate"), loaded.settings().get(Settings.EDITORS).all().map(EditorProgram::name));
     }
 
     @Test
@@ -189,8 +187,7 @@ class StandardSettingsTest {
         SettingsStore.Applied applied = file.load().appliedTo(before.settings(), before);
 
         assertEquals(
-                List.of("Kate"),
-                applied.settings().get(EditorSettings.EDITORS).all().map(EditorProgram::name));
+                List.of("Kate"), applied.settings().get(Settings.EDITORS).all().map(EditorProgram::name));
     }
 
     @Test
@@ -210,7 +207,7 @@ class StandardSettingsTest {
 
         Settings reread = file.load().settings();
         assertEquals(ThemeName.DARCULA, reread.theme());
-        assertEquals(loaded.get(EditorSettings.EDITORS), reread.get(EditorSettings.EDITORS));
+        assertEquals(loaded.get(Settings.EDITORS), reread.get(Settings.EDITORS));
     }
 
     @Test

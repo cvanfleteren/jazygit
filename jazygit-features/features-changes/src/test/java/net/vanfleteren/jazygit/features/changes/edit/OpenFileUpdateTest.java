@@ -21,9 +21,14 @@ import net.vanfleteren.jazygit.core.repo.Head;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.kernel.settings.EditorProgram;
 import net.vanfleteren.jazygit.kernel.settings.Editors;
+import net.vanfleteren.jazygit.kernel.settings.Settings;
 import net.vanfleteren.jazygit.kernel.state.AreaId;
 import net.vanfleteren.jazygit.kernel.state.Env;
+import net.vanfleteren.jazygit.kernel.state.Events;
+import net.vanfleteren.jazygit.kernel.state.KernelEvent;
 import net.vanfleteren.jazygit.kernel.state.Model;
+import net.vanfleteren.jazygit.kernel.state.Phrase;
+import net.vanfleteren.jazygit.kernel.state.Reactions;
 import net.vanfleteren.jazygit.kernel.state.Update;
 import net.vanfleteren.jazygit.kernel.state.Update.Next;
 import net.vanfleteren.jazygit.kernel.state.diff.Anchor;
@@ -37,6 +42,8 @@ import net.vanfleteren.jazygit.kernel.state.launch.ProgramFailure;
 import net.vanfleteren.jazygit.kernel.state.launch.ProgramLauncher;
 import net.vanfleteren.jazygit.kernel.state.load.LoadMsg;
 import net.vanfleteren.jazygit.kernel.state.operation.OperationMsg;
+import net.vanfleteren.jazygit.kernel.state.popup.ListCursor;
+import net.vanfleteren.jazygit.kernel.state.popup.Popup;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -68,8 +75,8 @@ class OpenFileUpdateTest {
     private static final ScrolledContent CONTENT = new ScrolledContent.StashChanges(new Sha("5555"), CHANGES);
 
     private static Model model(EditorProgram... editors) {
-        return loaded().mapPreferences(preferences -> preferences.withSettings(
-                preferences.settings().with(EditorSettings.EDITORS, new Editors(List.of(editors)))));
+        return loaded().mapPreferences(preferences ->
+                preferences.withSettings(preferences.settings().with(Settings.EDITORS, new Editors(List.of(editors)))));
     }
 
     /**
@@ -146,10 +153,83 @@ class OpenFileUpdateTest {
     }
 
     @Test
-    void aFileOpensAtTheLineItIsAskedTo() {
-        Next next = Update.update(model(NVIM), new EditMsg.RequestedAt("a.txt", 9));
+    void aFileAnotherFeatureAsksForOpensAtTheLineItAsks() {
+        Next next = asked(model(NVIM), KernelEvent.FileToOpen.at("a.txt", 9));
 
         assertEquals(List.of(new OpenFileCmd(NVIM, "a.txt", 9)), next.cmds());
+    }
+
+    @Test
+    void aFileAnotherFeatureAsksForWithoutALineOpensAsEOpensIt() {
+        Next next = asked(inConflict(model(NVIM)), KernelEvent.FileToOpen.of("a.txt"));
+
+        assertEquals(List.of(new ReadFirstConflictCmd("a.txt")), next.cmds());
+    }
+
+    @Test
+    void theMenuGoesOverACoverablePopupWithTheTitleAskedAndBackToItOnceAnEditorIsChosen() {
+        Model over = model(CODE, NVIM).openPopup(new Shown(true)).withListCursor(ListCursor.START.at(4));
+
+        Next asked = asked(over, KernelEvent.FileToOpen.at("a.txt", 9).titled(Phrase.verbatim("the log")));
+
+        assertEquals(List.empty(), asked.cmds());
+        assertEquals(
+                Option.of(new EditPopup(
+                        "a.txt",
+                        9,
+                        List.of(Tuple.of('c', CODE), Tuple.of('1', NVIM)),
+                        Option.of(Phrase.verbatim("the log")),
+                        Option.of(new Shown(true)),
+                        ListCursor.START.at(4))),
+                asked.model().popup());
+
+        Next chosen = Update.update(asked.model(), new EditMsg.Chosen(NVIM));
+
+        assertEquals(List.of(new OpenFileCmd(NVIM, "a.txt", 9)), chosen.cmds());
+        assertEquals(Option.of(new Shown(true)), chosen.model().popup());
+        assertEquals(ListCursor.START.at(4), chosen.model().listCursor());
+    }
+
+    @Test
+    void escapeOnTheMenuGoesBackToThePopupUnderIt() {
+        Model asked = asked(model(CODE, NVIM).openPopup(new Shown(true)), KernelEvent.FileToOpen.at("a.txt", 9))
+                .model();
+
+        Next cancelled = Update.update(asked, new EditMsg.Cancelled());
+
+        assertEquals(List.empty(), cancelled.cmds());
+        assertEquals(Option.of(new Shown(true)), cancelled.model().popup());
+    }
+
+    @Test
+    void escapeOnTheMenuOverNoPopupClosesIt() {
+        Model offered =
+                Update.update(model(CODE, NVIM), new EditMsg.Requested("a.txt")).model();
+
+        assertEquals(
+                Option.none(),
+                Update.update(offered, new EditMsg.Cancelled()).model().popup());
+    }
+
+    @Test
+    void overAPopupThatCannotBeCoveredTheFirstEditorOpensTheFile() {
+        Next next = asked(model(CODE, NVIM).openPopup(new Shown(false)), KernelEvent.FileToOpen.at("a.txt", 9));
+
+        assertEquals(List.of(new OpenFileCmd(CODE, "a.txt", 9)), next.cmds());
+        assertEquals(Option.of(new Shown(false)), next.model().popup());
+    }
+
+    @Test
+    void theFeatureAnswersTheFilesAskedForInTheKernel() {
+        Model answering = model(NVIM).withReactions(new Reactions(EditFeature.FEATURE.reactions()));
+
+        Next next = Events.happened(Next.of(answering), KernelEvent.FileToOpen.at("a.txt", 9));
+
+        assertEquals(List.of(new OpenFileCmd(NVIM, "a.txt", 9)), next.cmds());
+    }
+
+    private static Next asked(Model model, KernelEvent.FileToOpen event) {
+        return EditUpdate.reacting(model, event);
     }
 
     /**
@@ -310,4 +390,9 @@ class OpenFileUpdateTest {
             }
         };
     }
+
+    /**
+     * A popup of another feature, which may go under the menu when {@code coverable}.
+     */
+    private record Shown(boolean coverable) implements Popup {}
 }

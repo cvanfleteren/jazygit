@@ -20,7 +20,6 @@ import net.vanfleteren.jazygit.features.agent.settings.Agents;
 import net.vanfleteren.jazygit.features.changes.diff.DiffFilterSettings;
 import net.vanfleteren.jazygit.features.changes.diff.FilterDefinition;
 import net.vanfleteren.jazygit.features.changes.diff.FilterDefinitions;
-import net.vanfleteren.jazygit.features.changes.edit.EditorSettings;
 import net.vanfleteren.jazygit.features.github.prs.PrOverview;
 import net.vanfleteren.jazygit.features.github.settings.AccountBrowsers;
 import net.vanfleteren.jazygit.features.github.settings.GitHubSettings;
@@ -103,7 +102,7 @@ class SettingsRoundTripGitHubTest {
                     GitHubSettings.BROWSERS,
                     AccountBrowsers.NONE.with("github.com", "cvf", Option.some("firefox -P personal")))
             .with(
-                    EditorSettings.EDITORS,
+                    Settings.EDITORS,
                     new Editors(List.of(
                             EditorProgram.ofDir("IntelliJ", List.of("idea", "{dir}"), false, Option.some('i')))))
             .with(DiffFilterSettings.ENABLED, List.of("java-imports"))
@@ -171,7 +170,7 @@ class SettingsRoundTripGitHubTest {
         List<String> written = StandardSettings.keys()
                 .all()
                 .map(SettingKey::path)
-                .removeAll(List.of(EditorSettings.EDITORS.path(), DiffFilterSettings.DEFINITIONS.path()));
+                .removeAll(List.of(Settings.EDITORS.path(), DiffFilterSettings.DEFINITIONS.path()));
 
         assertEquals(written, CHANGES.keySet().toList());
     }
@@ -209,7 +208,7 @@ class SettingsRoundTripGitHubTest {
         file.save(
                 read,
                 Settings.DEFAULT
-                        .with(EditorSettings.EDITORS, read.get(EditorSettings.EDITORS))
+                        .with(Settings.EDITORS, read.get(Settings.EDITORS))
                         .with(DiffFilterSettings.DEFINITIONS, read.get(DiffFilterSettings.DEFINITIONS)));
 
         assertWritten("back-to-default");

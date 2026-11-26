@@ -21,12 +21,21 @@ import net.vanfleteren.jazygit.core.forgejo.ForgejoCheck;
 import net.vanfleteren.jazygit.core.forgejo.ForgejoError;
 import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.BranchRef;
+import net.vanfleteren.jazygit.features.changes.edit.EditFeature;
+import net.vanfleteren.jazygit.features.changes.edit.EditMsg;
+import net.vanfleteren.jazygit.features.changes.edit.EditPopup;
 import net.vanfleteren.jazygit.features.forgejo.ForgejoFailure;
 import net.vanfleteren.jazygit.features.forgejo.builds.BuildsMsg;
 import net.vanfleteren.jazygit.features.forgejo.builds.BuildsUpdateTest;
 import net.vanfleteren.jazygit.features.forgejo.builds.Tip;
 import net.vanfleteren.jazygit.features.forgejo.show.ForgejoPullRequestPopup;
+import net.vanfleteren.jazygit.kernel.settings.EditorProgram;
+import net.vanfleteren.jazygit.kernel.settings.Editors;
+import net.vanfleteren.jazygit.kernel.settings.Settings;
 import net.vanfleteren.jazygit.kernel.state.Model;
+import net.vanfleteren.jazygit.kernel.state.Phrase;
+import net.vanfleteren.jazygit.kernel.state.Reactions;
+import net.vanfleteren.jazygit.kernel.state.Update;
 import net.vanfleteren.jazygit.kernel.state.Update.Next;
 import org.junit.jupiter.api.Test;
 
@@ -237,6 +246,31 @@ class ChecksUpdateTest {
         Model model = showing(List.of(job("b", CommitStatus.State.PASSED, 12, 0, 30, Option.of(5))));
 
         assertTrue(new ChecksMsg.Closed().apply(model).model().popup().isEmpty());
+    }
+
+    @Test
+    void ofMoreEditorsOneIsChosenOverTheChecksWhichAreToldWhatIsReadMeanwhile() {
+        EditorProgram nvim = EditorProgram.ofFile("Neovim", List.of("nvim", "+{line}", "{file}"), true, Option.none());
+        EditorProgram code =
+                EditorProgram.ofFile("Code", List.of("code", "-g", "{file}:{line}"), false, Option.of('c'));
+        List<ForgejoCheck> running = List.of(job("b", CommitStatus.State.RUNNING, 12, 1, 30, Option.none()));
+        List<ForgejoCheck> failed = List.of(job("b", CommitStatus.State.FAILED, 12, 1, 30, Option.of(5)));
+        // The feature that opens files answers the log asked for (ADR 206).
+        Model model = showing(running)
+                .withReactions(new Reactions(EditFeature.FEATURE.reactions()))
+                .mapPreferences(preferences -> preferences.withSettings(
+                        preferences.settings().with(Settings.EDITORS, new Editors(List.of(nvim, code)))));
+        CheckLogCmd cmd = new CheckLogCmd(FEATURE, "b", new ForgejoCheck.ActionsJob(12, 1));
+
+        Model asking =
+                new ChecksMsg.LogRead(cmd, "/logs/12-1.log", 3).apply(model).model();
+        Model read = new ChecksMsg.Read(FEATURE, readOf(failed)).apply(asking).model();
+        Model back = Update.update(read, new EditMsg.Cancelled()).model();
+
+        EditPopup menu = asking.popup(EditPopup.class).get();
+        assertEquals(Option.of(Phrase.of("forgejo.dialog.logEditor.title", "b")), menu.title());
+        assertEquals(model.popup(), menu.under());
+        assertEquals(failed, back.popup(ForgejoChecksPopup.class).get().checksRead());
     }
 
     @Test

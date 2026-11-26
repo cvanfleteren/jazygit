@@ -26,7 +26,8 @@ public final class BranchesTabUpdate {
                     KernelEvent.RepositoryOpened _,
                     KernelEvent.ScreenShown _,
                     KernelEvent.ChangesOpened _,
-                    KernelEvent.Switched _ -> Next.of(model);
+                    KernelEvent.Switched _,
+                    KernelEvent.FileToOpen _ -> Next.of(model);
         };
     }
 

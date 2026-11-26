@@ -11,9 +11,6 @@ import net.vanfleteren.jazygit.core.repo.Branch;
 import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.BranchRef;
 import net.vanfleteren.jazygit.core.repo.RemoteBranch;
-import net.vanfleteren.jazygit.features.changes.edit.EditCmd;
-import net.vanfleteren.jazygit.features.changes.edit.EditorSettings;
-import net.vanfleteren.jazygit.features.changes.edit.OpenFileCmd;
 import net.vanfleteren.jazygit.features.github.checks.branches.BranchChecksUpdate;
 import net.vanfleteren.jazygit.features.github.checks.timings.CheckTimesUpdate;
 import net.vanfleteren.jazygit.features.github.checks.timings.PendingChecks;
@@ -21,15 +18,17 @@ import net.vanfleteren.jazygit.features.github.show.PullRequestPopup;
 import net.vanfleteren.jazygit.features.github.state.FromGitHub;
 import net.vanfleteren.jazygit.features.github.state.GitHubState;
 import net.vanfleteren.jazygit.features.github.state.Reading;
-import net.vanfleteren.jazygit.kernel.settings.EditorProgram;
-import net.vanfleteren.jazygit.kernel.settings.Editors;
 import net.vanfleteren.jazygit.kernel.state.AppError;
+import net.vanfleteren.jazygit.kernel.state.Events;
 import net.vanfleteren.jazygit.kernel.state.Failure;
+import net.vanfleteren.jazygit.kernel.state.KernelEvent;
 import net.vanfleteren.jazygit.kernel.state.Model;
+import net.vanfleteren.jazygit.kernel.state.Phrase;
 import net.vanfleteren.jazygit.kernel.state.Update.Next;
 import net.vanfleteren.jazygit.kernel.state.operation.CommandLog;
 import net.vanfleteren.jazygit.kernel.state.operation.OperationUpdate;
 import net.vanfleteren.jazygit.kernel.state.popup.CheckList;
+import net.vanfleteren.jazygit.kernel.state.popup.Covering;
 import net.vanfleteren.jazygit.kernel.state.popup.PopupUpdate;
 
 /**
@@ -98,15 +97,6 @@ public final class ChecksUpdate {
             case ChecksMsg.LogRequested() -> logRequested(model);
             case ChecksMsg.LogRead(CheckLogCmd cmd, String file, int line, var commands) ->
                 logRead(model, cmd, file, line, commands);
-            case ChecksMsg.LogEditorChosen(EditorProgram editor) ->
-                model.popup(LogEditorPopup.class)
-                        .map(asking -> OperationUpdate.start(
-                                asking.back(model), new OpenFileCmd(editor, asking.file(), asking.line())))
-                        .getOrElse(() -> Next.of(model));
-            case ChecksMsg.LogEditorCancelled() ->
-                Next.of(model.popup(LogEditorPopup.class)
-                        .map(asking -> asking.back(model))
-                        .getOrElse(model));
         };
     }
 
@@ -146,27 +136,14 @@ public final class ChecksUpdate {
     }
 
     /**
-     * Once the log of a check was read: the commands are logged, and it opens as a file does (ADR 145): in git's editor
-     * without an editor set to open files, at its start; else in the one set, or the one chosen in a menu of them, over
-     * the checks popup; in the first of them when another popup is over the checks, which the menu would take away.
+     * Once the log of a check was read: the commands are logged, and it opens as a file does, by the feature that
+     * opens files (ADR 145, 206): the menu of the editors, if it asks, goes over the checks and back to them.
      */
     private static Next logRead(Model model, CheckLogCmd cmd, String file, int line, List<ExecutedCommand> commands) {
         Model done = OperationUpdate.done(model, cmd, commands).clearError();
-        Editors editors =
-                done.preferences().settings().get(EditorSettings.EDITORS).files();
-        if (editors.isEmpty()) {
-            return OperationUpdate.start(done, new EditCmd(List.of(file)));
-        }
-        if (editors.all().size() == 1) {
-            return OperationUpdate.start(done, new OpenFileCmd(editors.all().head(), file, line));
-        }
-        Option<ChecksPopup> checks = done.popup(ChecksPopup.class);
-        if (checks.isEmpty() && done.popup().isDefined()) {
-            // Another popup is over the checks, which the menu would take away: the first editor opens it.
-            return OperationUpdate.start(done, new OpenFileCmd(editors.all().head(), file, line));
-        }
-        return Next.of(done.openPopup(
-                new LogEditorPopup(checks, done.listCursor(), cmd.name(), file, line, editors.lettered())));
+        return Events.happened(
+                Next.of(done),
+                KernelEvent.FileToOpen.at(file, line).titled(Phrase.of("github.dialog.logEditor.title", cmd.name())));
     }
 
     /**
@@ -243,8 +220,10 @@ public final class ChecksUpdate {
                                 .map(asked -> Next.of(told.openPopup(
                                         asking.over(asking.checks().withRerun(asked.answered(outcomes))))))))
                 // Under the menu of the editors to open a log in (ADR 160), likewise.
-                .orElse(() -> told.popup(LogEditorPopup.class)
-                        .flatMap(asking -> asking.checks()
+                .orElse(() -> told.popup(Covering.class)
+                        .flatMap(asking -> asking.under()
+                                .filter(ChecksPopup.class::isInstance)
+                                .map(ChecksPopup.class::cast)
                                 .filter(checks -> checks.onGitHub().equals(cmd.branch()))
                                 .flatMap(checks -> checks.asked()
                                         .map(asked -> Next.of(told.openPopup(
@@ -328,8 +307,10 @@ public final class ChecksUpdate {
                         .filter(asking -> asking.checks().onGitHub().equals(branch))
                         .map(asking ->
                                 model.openPopup(asking.over(asking.checks().with(read, model)))))
-                .orElse(() -> model.popup(LogEditorPopup.class)
-                        .flatMap(asking -> asking.checks()
+                .orElse(() -> model.popup(Covering.class)
+                        .flatMap(asking -> asking.under()
+                                .filter(ChecksPopup.class::isInstance)
+                                .map(ChecksPopup.class::cast)
                                 .filter(checks -> checks.onGitHub().equals(branch))
                                 .map(checks -> model.openPopup(asking.over(checks.with(read, model))))))
                 .getOrElse(model);
