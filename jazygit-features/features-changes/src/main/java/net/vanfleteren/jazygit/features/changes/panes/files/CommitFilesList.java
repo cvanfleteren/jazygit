@@ -122,6 +122,8 @@ final class CommitFilesList {
      * title ending in the list the pane is locked to.
      */
     Panel unlisted(Unlisted why, ListFrame frame) {
+        // Nothing is counted here, whatever the files listed before were: Enter goes to the keymap.
+        held = false;
         Loadable<List<CommitFile>> none = new Loadable.Loaded<>(List.empty());
         return frame.bordered(
                 switch (why) {
