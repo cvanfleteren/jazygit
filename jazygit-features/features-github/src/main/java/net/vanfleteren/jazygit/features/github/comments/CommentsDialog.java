@@ -301,32 +301,56 @@ public final class CommentsDialog implements PopupView {
                 .getOrElse("");
     }
 
+    /**
+     * A key sends a message, scrolls the comment, or moves the highlight, tried in that order: Page Up/Down scroll the
+     * comment before they could move the highlight.
+     */
     private EventResult keys(CommentsPopup popup, KeyEvent event) {
+        Option<Msg> msg = message(event);
+        msg.forEach(dispatch);
+        return msg.isDefined() || scrolled(event) || moved(popup, event) ? EventResult.HANDLED : EventResult.UNHANDLED;
+    }
+
+    /**
+     * What {@code event} asks of the app: Escape goes back, o opens the pull request in the browser, c comments.
+     */
+    private static Option<Msg> message(KeyEvent event) {
         if (event.isCancel()) {
-            dispatch.accept(new CommentsMsg.Closed());
-        } else if (event.isChar('J')) {
-            scroll.scrollBy(1);
-        } else if (event.isChar('K')) {
-            scroll.scrollBy(-1);
-        } else if (event.code() == KeyCode.PAGE_DOWN) {
-            scroll.scrollPages(1);
-        } else if (event.code() == KeyCode.PAGE_UP) {
-            scroll.scrollPages(-1);
-        } else if (event.isChar('j')) {
-            highlight(popup, popup.highlightedIndex().getOrElse(0) + 1);
-        } else if (event.isChar('k')) {
-            highlight(popup, popup.highlightedIndex().getOrElse(0) - 1);
-        } else if (event.isChar('o')) {
-            dispatch.accept(new CommentsMsg.OpenChosen());
-        } else if (event.isChar('c')) {
-            dispatch.accept(new CommentMsg.Requested());
-        } else {
-            Option<Integer> moved = ListKeys.move(
-                    event, popup.highlightedIndex().getOrElse(0), popup.all().size(), line -> true);
-            moved.forEach(line -> highlight(popup, line));
-            return moved.isDefined() ? EventResult.HANDLED : EventResult.UNHANDLED;
+            return Option.of(new CommentsMsg.Closed());
         }
-        return EventResult.HANDLED;
+        if (event.isChar('o')) {
+            return Option.of(new CommentsMsg.OpenChosen());
+        }
+        return Option.when(event.isChar('c'), CommentMsg.Requested::new);
+    }
+
+    /**
+     * Scrolls the comment a line on J/K, a page on Page Up/Down; whether {@code event} was one of those.
+     */
+    private boolean scrolled(KeyEvent event) {
+        if (event.isChar('J') || event.isChar('K')) {
+            scroll.scrollBy(event.isChar('J') ? 1 : -1);
+            return true;
+        }
+        if (event.code() == KeyCode.PAGE_DOWN || event.code() == KeyCode.PAGE_UP) {
+            scroll.scrollPages(event.code() == KeyCode.PAGE_DOWN ? 1 : -1);
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * Moves the highlight on j/k, and on the keys that move it in any list; whether {@code event} was one of those.
+     */
+    private boolean moved(CommentsPopup popup, KeyEvent event) {
+        int from = popup.highlightedIndex().getOrElse(0);
+        Option<Integer> to = event.isChar('j')
+                ? Option.of(from + 1)
+                : event.isChar('k')
+                        ? Option.of(from - 1)
+                        : ListKeys.move(event, from, popup.all().size(), line -> true);
+        to.forEach(line -> highlight(popup, line));
+        return to.isDefined();
     }
 
     /**
