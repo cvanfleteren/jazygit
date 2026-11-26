@@ -19,6 +19,7 @@ import net.vanfleteren.jazygit.core.repo.*;
 import net.vanfleteren.jazygit.features.branches.repos.RecentReposCmd;
 import net.vanfleteren.jazygit.features.branches.worktree.add.AddWorktreeCmd;
 import net.vanfleteren.jazygit.features.branches.worktree.add.AddWorktreeMsg;
+import net.vanfleteren.jazygit.features.branches.worktree.add.BranchKeptNotice;
 import net.vanfleteren.jazygit.features.branches.worktree.add.CatchUp;
 import net.vanfleteren.jazygit.features.branches.worktree.add.LocationAsked;
 import net.vanfleteren.jazygit.features.branches.worktree.add.NewWorktreeBranchPopup;
@@ -138,7 +139,7 @@ class RemoteWorktreeUpdateTest {
                         new AddWorktreeCmd(source, "/repos/app-mine"), "/repos/app-mine", List.empty()));
 
         Option<Notice> notice = added.model().outcome().notice();
-        assertEquals(Option.of(new Notice.BranchKept(MINE, 1, ORIGIN_FEAT)), notice);
+        assertEquals(Option.of(new BranchKeptNotice(MINE, 1, ORIGIN_FEAT)), notice);
         assertEquals("mine kept: 1 commit not on origin/feat.", NoticeText.of(notice.get()));
     }
 
@@ -200,7 +201,7 @@ class RemoteWorktreeUpdateTest {
     void aKeptBranchIsSaidInTheWorktreeSwitchedTo() {
         WorktreeSource source = new WorktreeSource.Existing(MINE, new CatchUp.Kept(ORIGIN_FEAT, 2));
         Model model = shown(idleFollower(MINE, 2, 0));
-        Notice kept = new Notice.BranchKept(MINE, 2, ORIGIN_FEAT);
+        Notice kept = new BranchKeptNotice(MINE, 2, ORIGIN_FEAT);
 
         Next added = Update.update(
                 model,

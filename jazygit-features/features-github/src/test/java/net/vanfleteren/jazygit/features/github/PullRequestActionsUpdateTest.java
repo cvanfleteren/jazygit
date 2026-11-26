@@ -35,6 +35,7 @@ import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.features.changes.fetch.FetchCmd;
 import net.vanfleteren.jazygit.features.github.create.GitHubCreatePullRequestCmd.*;
 import net.vanfleteren.jazygit.features.github.prs.LoadRepositoryPullRequests;
+import net.vanfleteren.jazygit.features.github.show.MergeNotice;
 import net.vanfleteren.jazygit.features.github.show.PullRequestCmd;
 import net.vanfleteren.jazygit.features.github.show.PullRequestCmd.*;
 import net.vanfleteren.jazygit.features.github.show.PullRequestMsg;
@@ -461,7 +462,7 @@ class PullRequestActionsUpdateTest {
                 Option.of(new MergeStatus.Enqueued()),
                 enqueued.part(GitHubState.PART).merge(new PrNumber(42)));
         assertEquals(
-                Option.of(new Notice.MergeEnqueued(FEATURE)), enqueued.outcome().notice());
+                Option.of(new MergeNotice.Enqueued(FEATURE)), enqueued.outcome().notice());
     }
 
     @Test
@@ -485,7 +486,7 @@ class PullRequestActionsUpdateTest {
         assertEquals(List.empty(), ticked.cmds());
         assertEquals(Option.none(), ticked.model().part(GitHubState.PART).merge(new PrNumber(42)));
         assertEquals(
-                Option.of(new Notice.MergeStillPending(FEATURE)),
+                Option.of(new MergeNotice.StillPending(FEATURE)),
                 ticked.model().outcome().notice());
     }
 

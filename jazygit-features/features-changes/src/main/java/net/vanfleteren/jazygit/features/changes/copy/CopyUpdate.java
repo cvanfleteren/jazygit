@@ -7,7 +7,6 @@ import net.vanfleteren.jazygit.kernel.state.Update.Next;
 import net.vanfleteren.jazygit.kernel.state.diff.Anchor;
 import net.vanfleteren.jazygit.kernel.state.diff.DiffCursorAt;
 import net.vanfleteren.jazygit.kernel.state.diff.Version;
-import net.vanfleteren.jazygit.kernel.state.operation.Notice;
 
 /**
  * Copying what the cursor of a rich diff is on (ADR 94): its line, the lines of its range, or the path of the file
@@ -21,8 +20,8 @@ public final class CopyUpdate {
         return switch (msg) {
             case CopyMsg.Asked(DiffCursorAt at) ->
                 copy(model, at).map(cmd -> Next.of(model, cmd)).getOrElse(() -> Next.of(model));
-            case CopyMsg.ShaAsked(Sha sha) -> Next.of(model, new CopyCmd(sha.value(), new ShaCopied(sha)));
-            case CopyMsg.Done(Notice notice) -> Next.of(model.inform(notice));
+            case CopyMsg.ShaAsked(Sha sha) -> Next.of(model, new CopyCmd(sha.value(), new CopyNotice.ShaCopied(sha)));
+            case CopyMsg.Done(CopyNotice notice) -> Next.of(model.inform(notice));
         };
     }
 
@@ -38,12 +37,13 @@ public final class CopyUpdate {
             return Option.none();
         }
         return switch (at.cursor()) {
-            case Anchor.File(String path) -> Option.of(new CopyCmd(path, new Notice.PathCopied(path)));
+            case Anchor.File(String path) -> Option.of(new CopyCmd(path, new CopyNotice.PathCopied(path)));
             case Anchor.OnLine cursor ->
                 model.diffLines(at, at.at().content().richDiff())
                         .between(from(at, cursor), cursor, at.split())
                         .map(range -> new CopyCmd(
-                                range.map(line -> line.line().text()).mkString("\n"), new Notice.Copied(range.size())));
+                                range.map(line -> line.line().text()).mkString("\n"),
+                                new CopyNotice.LinesCopied(range.size())));
             default -> Option.none();
         };
     }

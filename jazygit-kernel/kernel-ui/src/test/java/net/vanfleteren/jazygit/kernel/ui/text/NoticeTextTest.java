@@ -48,31 +48,20 @@ class NoticeTextTest {
 
     @Test
     void aNoticeOfAFeatureSaysItselfAsAPhrase() {
-        Notice.Phrased said = () -> Phrase.of("notice.copied", Phrase.count(3));
+        Notice.Phrased said = () -> Phrase.of("notice.stopped.uncommitted", Phrase.count(2));
 
-        assertEquals(NoticeText.of(new Notice.Copied(3)), NoticeText.of(said));
+        assertEquals(NoticeText.of(new Notice.StoppedOnConflicts(Option.none(), 2)), NoticeText.of(said));
     }
 
     @Test
-    void aStackNotAskedNamesItsStackWithoutGroupingTheNumber() {
+    void aStoppedMoveSaysHowToPutTheMovedCommitsBack() {
         assertEquals(
-                "Stack #1234 was not rebased, as another dialog was open: rebase it from the stack menu (s).",
-                NoticeText.of(new Notice.StackNotAsked(1234)));
-    }
-
-    @Test
-    void aCopySaysHowManyLinesOrWhichPath() {
-        assertEquals("Copied 1 line to the clipboard.", NoticeText.of(new Notice.Copied(1)));
-        assertEquals("Copied 3 lines to the clipboard.", NoticeText.of(new Notice.Copied(3)));
-        assertEquals("Copied src/A.java to the clipboard.", NoticeText.of(new Notice.PathCopied("src/A.java")));
-    }
-
-    @Test
-    void whenNothingWasCopiedItSaysWhy() {
-        assertEquals(
-                "Nothing was copied: jazygit has no terminal of its own to copy with.",
-                NoticeText.of(new Notice.NotCopied()));
-        assertEquals(
-                "Nothing was copied: the terminal could not be written to.", NoticeText.of(new Notice.CopyFailed()));
+                "The cherry-pick stopped on 1 conflict. Resolve it, then continue, skip or abort it (M)."
+                        + " feature still has the moved commits: once they are on main, reset feature to 0123456^.",
+                NoticeText.of(new Notice.MoveStopped(
+                        new Notice.StoppedOnConflicts(Option.of(new InProgress.CherryPicking(SHA)), 1),
+                        new BranchName("feature"),
+                        SHA,
+                        new BranchName("main"))));
     }
 }

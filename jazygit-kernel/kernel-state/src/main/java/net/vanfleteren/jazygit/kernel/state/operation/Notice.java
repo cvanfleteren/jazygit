@@ -3,7 +3,6 @@ package net.vanfleteren.jazygit.kernel.state.operation;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.InProgress;
-import net.vanfleteren.jazygit.core.repo.RemoteBranch;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.kernel.state.Phrase;
 
@@ -37,62 +36,4 @@ public sealed interface Notice {
      */
     record MoveStopped(StoppedOnConflicts stopped, BranchName branch, Sha oldest, BranchName target)
             implements Notice {}
-
-    /**
-     * GitHub added the pull request of {@code branch} to the merge queue of its base branch, which merges it later.
-     */
-    record MergeEnqueued(BranchName branch) implements Notice {}
-
-    /**
-     * GitHub was still merging the pull request of {@code branch} after so long that it is no longer asked about.
-     */
-    record MergeStillPending(BranchName branch) implements Notice {}
-
-    /**
-     * Stack {@code stack} was ready to be rebased while another dialog was open, which it does not take the place of:
-     * it was not rebased (ADR 74).
-     */
-    record StackNotAsked(int stack) implements Notice {}
-
-    /**
-     * The branches of stack {@code stack} were checked out (ADR 99): {@code made} were made, {@code fastForwarded}
-     * fast-forwarded, and {@code kept} kept as they were, though not where their branch on the remote is.
-     */
-    record StackCheckedOut(int stack, int made, int fastForwarded, int kept) implements Notice {}
-
-    /**
-     * {@code branch}, which a new worktree checked out, was kept as it was: it has {@code ahead} commits that are not
-     * on {@code upstream}, the remote branch it follows, so it was not fast-forwarded to it (ADR 109).
-     */
-    record BranchKept(BranchName branch, int ahead, RemoteBranch upstream) implements Notice {}
-
-    /**
-     * The terminal was asked to copy {@code lines} lines of a diff to the clipboard (ADR 94).
-     */
-    record Copied(int lines) implements Notice {}
-
-    /**
-     * The terminal was asked to copy the path {@code path} to the clipboard (ADR 94).
-     */
-    record PathCopied(String path) implements Notice {}
-
-    /**
-     * Nothing could be copied, as the app has no terminal of its own to ask (ADR 94).
-     */
-    record NotCopied() implements Notice {}
-
-    /**
-     * Nothing was copied, as the terminal could not be written to (ADR 94).
-     */
-    record CopyFailed() implements Notice {}
-
-    /**
-     * The highlight of the files pane was on its last file, so there was no next file to move to (ADR 117).
-     */
-    record NoNextFile() implements Notice {}
-
-    /**
-     * The highlight of the files pane was on its first file, so there was no previous file to move to (ADR 117).
-     */
-    record NoPreviousFile() implements Notice {}
 }

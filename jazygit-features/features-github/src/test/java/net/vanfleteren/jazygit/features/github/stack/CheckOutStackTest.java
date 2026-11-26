@@ -41,7 +41,6 @@ import net.vanfleteren.jazygit.features.github.state.GitHubState;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.TestModels;
 import net.vanfleteren.jazygit.kernel.state.Update;
-import net.vanfleteren.jazygit.kernel.state.operation.Notice;
 import net.vanfleteren.jazygit.kernel.ui.text.TextWidth;
 import org.junit.jupiter.api.Test;
 
@@ -402,7 +401,7 @@ class CheckOutStackTest {
                 Update.update(confirmed.model(), new StackMsg.CaughtUp(catchUp, List.<ExecutedCommand>empty()));
 
         assertEquals(
-                Option.of(new Notice.StackCheckedOut(12, 2, 1, 0)),
+                Option.of(new StackNotice.CheckedOut(12, 2, 1, 0)),
                 done.model().outcome().notice());
         assertTrue(done.cmds().contains(new CheckoutCmd.Checkout(C)));
     }

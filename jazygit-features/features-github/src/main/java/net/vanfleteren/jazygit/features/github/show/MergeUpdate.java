@@ -52,7 +52,7 @@ final class MergeUpdate {
                 (m, merge) -> m.mapPart(
                                 GitHubState.PART,
                                 gitHub -> gitHub.withMerges(gitHub.merges().remove(merge.number())))
-                        .inform(new Notice.MergeStillPending(merge.branch())));
+                        .inform(new MergeNotice.StillPending(merge.branch())));
         Model checking = toCheck.foldLeft(
                 left, (m, merge) -> m.mapPart(GitHubState.PART, gitHub -> gitHub.withMerge(merge.beingChecked())));
         return new Next(
@@ -100,7 +100,7 @@ final class MergeUpdate {
             case MergeStatus.Merged merged ->
                 PrOverviewUpdate.reloadIfShown(FetchUpdate.requested(PullRequestReads.loadAnyway(next)));
             case MergeStatus.Enqueued enqueued ->
-                next.map(model -> model.inform(new Notice.MergeEnqueued(merge.branch())));
+                next.map(model -> model.inform(new MergeNotice.Enqueued(merge.branch())));
             case MergeStatus.Failed(String message) ->
                 next.map(model -> model.fail(new GitHubError.MergeFailed(merge.branch(), message)));
         };

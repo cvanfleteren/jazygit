@@ -53,7 +53,6 @@ import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.Msg;
 import net.vanfleteren.jazygit.kernel.state.TestModels;
 import net.vanfleteren.jazygit.kernel.state.Update;
-import net.vanfleteren.jazygit.kernel.state.operation.Notice;
 import net.vanfleteren.jazygit.kernel.state.operation.OperationMsg;
 import net.vanfleteren.jazygit.kernel.state.popup.PopupMsg;
 import net.vanfleteren.jazygit.kernel.ui.text.ErrorText;
@@ -452,7 +451,7 @@ class RebaseStackTest {
 
         assertEquals(Option.of(typing), read.model().popup(CommitPopup.class));
         assertEquals(
-                Option.of(new Notice.StackNotAsked(12)), read.model().outcome().notice());
+                Option.of(new StackNotice.NotAsked(12)), read.model().outcome().notice());
         assertEquals(List.empty(), read.cmds());
     }
 
