@@ -7,6 +7,8 @@ import net.vanfleteren.jazygit.core.forgejo.ForgejoRepository;
 import net.vanfleteren.jazygit.core.repo.RemoteBranch;
 import net.vanfleteren.jazygit.core.repo.RemoteName;
 import net.vanfleteren.jazygit.core.repo.Sha;
+import net.vanfleteren.jazygit.features.forge.checks.ChecksMsg;
+import net.vanfleteren.jazygit.features.forge.checks.ChecksRead;
 import net.vanfleteren.jazygit.features.forgejo.ForgejoFailure;
 import net.vanfleteren.jazygit.features.forgejo.builds.ForgejoServices;
 import net.vanfleteren.jazygit.kernel.state.Cmd;
@@ -19,7 +21,7 @@ import net.vanfleteren.jazygit.kernel.state.Msg;
  * Reads the checks on {@code sha}, the tip of {@code branch}, from the Forgejo repository of its remote, one by one,
  * which the user is waiting for (ADR 195).
  */
-public record LoadChecks(RemoteBranch branch, Sha sha) implements Cmd {
+public record LoadChecks(RemoteBranch branch, Option<Sha> sha) implements Cmd {
 
     @Override
     public Option<Label> label() {
@@ -30,11 +32,17 @@ public record LoadChecks(RemoteBranch branch, Sha sha) implements Cmd {
     public Msg run(Env env) {
         Forgejo forgejo = ForgejoServices.of(env);
         return new ChecksMsg.Read(
+                ForgejoChecksPort.PORT,
                 branch,
-                repository(env, forgejo, branch.remote())
-                        .flatMap(repository -> forgejo.checks(repository, sha)
-                                .<Failure>mapLeft(ForgejoFailure.Asked::new)
-                                .map(checks -> new ChecksRead(repository.slug(), sha, checks))));
+                sha.<Either<Failure, Sha>>map(Either::right)
+                        .getOrElse(() -> Either.left(new ForgejoFailure.NoCommit(branch.shortName())))
+                        .flatMap(commit -> repository(env, forgejo, branch.remote())
+                                .flatMap(repository -> forgejo.checks(repository, commit)
+                                        .<Failure>mapLeft(ForgejoFailure.Asked::new)
+                                        .map(checks -> new ChecksRead(
+                                                repository.slug(),
+                                                Option.of(commit),
+                                                checks.map(ForgejoChecksPort::of))))));
     }
 
     /**
@@ -55,6 +63,6 @@ public record LoadChecks(RemoteBranch branch, Sha sha) implements Cmd {
 
     @Override
     public Msg failed(Failure failure) {
-        return new ChecksMsg.Read(branch, Either.left(failure));
+        return new ChecksMsg.Read(ForgejoChecksPort.PORT, branch, Either.left(failure));
     }
 }

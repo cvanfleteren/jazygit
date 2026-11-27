@@ -40,13 +40,19 @@ import net.vanfleteren.jazygit.core.repo.RepoSlug;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.core.repo.Tracking;
 import net.vanfleteren.jazygit.core.repo.Upstream;
+import net.vanfleteren.jazygit.features.forge.checks.CheckPick;
+import net.vanfleteren.jazygit.features.forge.checks.ChecksMsg;
+import net.vanfleteren.jazygit.features.forge.checks.ChecksPopup;
+import net.vanfleteren.jazygit.features.forge.checks.ChecksRead;
+import net.vanfleteren.jazygit.features.forge.checks.Reading;
+import net.vanfleteren.jazygit.features.forge.checks.RerunNote;
+import net.vanfleteren.jazygit.features.forge.checks.RerunPlan;
 import net.vanfleteren.jazygit.features.github.checks.timings.CheckTimes;
 import net.vanfleteren.jazygit.features.github.checks.timings.CheckTimesMsg;
 import net.vanfleteren.jazygit.features.github.checks.timings.PendingChecks;
 import net.vanfleteren.jazygit.features.github.show.PullRequestMsg;
 import net.vanfleteren.jazygit.features.github.show.PullRequestPopup;
 import net.vanfleteren.jazygit.features.github.state.GitHubState;
-import net.vanfleteren.jazygit.features.github.state.Reading;
 import net.vanfleteren.jazygit.features.github.widgets.CheckRows;
 import net.vanfleteren.jazygit.features.github.widgets.CheckTimesText;
 import net.vanfleteren.jazygit.kernel.state.Failure;
@@ -72,7 +78,7 @@ class ChecksDialogTest {
     private static final Instant NOW = Instant.parse("2026-10-25T12:00:00Z");
     private static final RemoteBranch MAIN = new RemoteBranch("origin", new BranchName("main"));
     private static final ChecksPopup LOADING =
-            ChecksPopup.loading(new BranchRef.Local(new BranchName("main")), MAIN, Instant.EPOCH);
+            GitHubChecksFixtures.loading(new BranchRef.Local(new BranchName("main")), MAIN, Instant.EPOCH);
 
     private final java.util.List<Msg> dispatched = new ArrayList<>();
     private final ChecksDialog dialog = new ChecksDialog(dispatched::add, Clock.fixed(NOW, ZoneOffset.UTC));
@@ -137,11 +143,12 @@ class ChecksDialogTest {
     }
 
     private static ChecksPopup read(List<Check> checks) {
-        return LOADING.with(readOf(checks));
+        return LOADING.showing(readOf(checks));
     }
 
-    private static Either<Failure, PendingChecks> readOf(List<Check> checks) {
-        return Either.right(new PendingChecks(new RepoSlug("owner/repo"), HashMap.of(new BranchName("main"), checks)));
+    private static Either<Failure, ChecksRead> readOf(List<Check> checks) {
+        return GitHubChecksFixtures.readOf(
+                MAIN, new PendingChecks(new RepoSlug("owner/repo"), HashMap.of(new BranchName("main"), checks)));
     }
 
     @Test
@@ -178,7 +185,7 @@ class ChecksDialogTest {
     void aReadByItselfThatFailsMarksTheChecksStale() throws Exception {
         String screen = screen(read(List.of(check("verify", Checks.PENDING, 30, Option.none())))
                 .readingAgain(Reading.BY_ITSELF, NOW)
-                .with(Either.left(refused("offline"))));
+                .showing(Either.left(refused("offline"))));
 
         assertTrue(screen.contains("Checks of main · not up to date"), screen);
     }
@@ -271,7 +278,7 @@ class ChecksDialogTest {
     @Test
     void checksThatFailedToBeReadAgainKeepWhenTheyStarted() throws Exception {
         String screen = screen(read(List.of(check("verify", Checks.PENDING, 150, Option.none())))
-                .with(Either.left(refused("offline"))));
+                .showing(Either.left(refused("offline"))));
 
         assertTrue(screen.contains("Checks of main · not up to date"), screen);
         assertTrue(screen.contains("started 11:57:28 · running 2m 32s"), screen);
@@ -395,16 +402,16 @@ class ChecksDialogTest {
         List<Check> checks = List.of(check("verify", Checks.PENDING, 150, Option.none()));
         Model before = timed(300);
         ChecksPopup popup = read(checks);
-        double shown = popup.progress(before);
+        double shown = GitHubChecksPort.progress(before, popup);
         // Read again, the checks are learned to take twice as long.
         Model after = timed(600);
-        ChecksPopup again = popup.with(readOf(checks), before);
+        ChecksPopup again = popup.showing(readOf(checks), before);
 
-        assertTrue(popup.progress(after) < shown);
-        assertEquals(shown, again.progress(after.withNow(NOW.plusSeconds(1))), 1e-9);
+        assertTrue(GitHubChecksPort.progress(after, popup) < shown);
+        assertEquals(shown, GitHubChecksPort.progress(after.withNow(NOW.plusSeconds(1)), again), 1e-9);
         // Checks run again start the bar again.
-        ChecksPopup rerun = again.with(readOf(List.of(rerun("verify", 10))), after);
-        assertTrue(rerun.progress(after) < shown);
+        ChecksPopup rerun = again.showing(readOf(List.of(rerun("verify", 10))), after);
+        assertTrue(GitHubChecksPort.progress(after, rerun) < shown);
     }
 
     @Test
@@ -414,11 +421,12 @@ class ChecksDialogTest {
         ChecksPopup done = read(List.of(lint, check("verify", Checks.PASSING, 7200, Option.of(290))));
         ChecksPopup late = read(List.of(lint, check("verify", Checks.PENDING, 3000, Option.none())));
         List<Check> again = List.of(lint, rerun("verify", 150));
-        double fresh = read(again).progress(model);
+        double fresh = GitHubChecksPort.progress(model, read(again));
 
-        assertTrue(late.progress(model) > 0.98, String.valueOf(late.progress(model)));
-        assertEquals(fresh, done.with(readOf(again), model).progress(model), 1e-9);
-        assertEquals(fresh, late.with(readOf(again), model).progress(model), 1e-9);
+        assertTrue(
+                GitHubChecksPort.progress(model, late) > 0.98, String.valueOf(GitHubChecksPort.progress(model, late)));
+        assertEquals(fresh, GitHubChecksPort.progress(model, done.showing(readOf(again), model)), 1e-9);
+        assertEquals(fresh, GitHubChecksPort.progress(model, late.showing(readOf(again), model)), 1e-9);
         // From the start of the run again, not of lint two hours before.
         assertTrue(fresh < 0.5, String.valueOf(fresh));
     }
@@ -437,8 +445,8 @@ class ChecksDialogTest {
                 new Check("ci/test", Checks.PENDING),
                 new Check("ci/deploy", Checks.PENDING));
 
-        assertEquals(0.95 * 3 / 4, old.progress(model), 1e-9);
-        assertEquals(0, old.with(readOf(next), model).progress(model), 1e-9);
+        assertEquals(0.95 * 3 / 4, GitHubChecksPort.progress(model, old), 1e-9);
+        assertEquals(0, GitHubChecksPort.progress(model, old.showing(readOf(next), model)), 1e-9);
     }
 
     @Test
@@ -451,7 +459,8 @@ class ChecksDialogTest {
                         check("lint", Checks.PASSING, 300, Option.of(60)),
                         check("build", Checks.PASSING, 300, Option.of(60)),
                         check("verify", Checks.PENDING, 10, Option.none()))));
-        double shown = model.popup(ChecksPopup.class).get().progress(model);
+        double shown =
+                GitHubChecksPort.progress(model, model.popup(ChecksPopup.class).get());
 
         Model learned = Update.update(
                         model,
@@ -460,14 +469,19 @@ class ChecksDialogTest {
                 .model();
 
         assertEquals(0.95 * 3 / 4, shown, 1e-9);
-        assertEquals(shown, learned.popup(ChecksPopup.class).get().progress(learned), 1e-9);
+        assertEquals(
+                shown,
+                GitHubChecksPort.progress(
+                        learned, learned.popup(ChecksPopup.class).get()),
+                1e-9);
     }
 
     @Test
     void thePullRequestDialogsBarDoesNotGoBackWhenItsDetailsAreReadAgain() {
         Model model = TestModels.loaded()
                 .withNow(NOW)
-                .openPopup(pullRequestDialog(threeOfFourDone()).readingAgain(Reading.BY_ITSELF, NOW, 1));
+                .openPopup(pullRequestDialog(threeOfFourDone())
+                        .readingAgain(net.vanfleteren.jazygit.features.github.state.Reading.BY_ITSELF, NOW, 1));
         double shown = model.popup(PullRequestPopup.class).get().progress(model);
         // Read again, fewer are done, which counts as further from done.
         List<Check> twoDone = List.of(
@@ -482,8 +496,9 @@ class ChecksDialogTest {
         assertEquals(0.95 * 3 / 4, shown, 1e-9);
         assertEquals(shown, again.popup(PullRequestPopup.class).get().progress(again), 1e-9);
         // Checks run again start the bar again.
-        Model rerun =
-                again.openPopup(again.popup(PullRequestPopup.class).get().readingAgain(Reading.BY_ITSELF, NOW, 2));
+        Model rerun = again.openPopup(again.popup(PullRequestPopup.class)
+                .get()
+                .readingAgain(net.vanfleteren.jazygit.features.github.state.Reading.BY_ITSELF, NOW, 2));
         Model reread = Update.update(
                         rerun,
                         new PullRequestMsg.DetailsLoaded(
@@ -512,7 +527,7 @@ class ChecksDialogTest {
         PullRequestPopup dialog = pullRequestDialog(threeOfFourDone());
         Model model = TestModels.loaded()
                 .withNow(NOW)
-                .openPopup(ChecksPopup.loading(new BranchRef.Remote(MAIN), MAIN, NOW, dialog));
+                .openPopup(GitHubChecksFixtures.loading(new BranchRef.Remote(MAIN), MAIN, NOW, dialog));
         double shown = dialog.progress(model);
 
         Model learned = Update.update(
@@ -524,7 +539,10 @@ class ChecksDialogTest {
         assertEquals(0.95 * 3 / 4, shown, 1e-9);
         assertEquals(
                 Option.of(shown),
-                learned.popup(ChecksPopup.class).flatMap(ChecksPopup::from).map(back -> back.progress(learned)));
+                learned.popup(ChecksPopup.class)
+                        .flatMap(ChecksPopup::from)
+                        .map(PullRequestPopup.class::cast)
+                        .map(back -> back.progress(learned)));
     }
 
     @Test
@@ -570,14 +588,14 @@ class ChecksDialogTest {
     @Test
     void saysWhileTheChecksAreReadOrWhyThatFailed() throws Exception {
         assertTrue(screen(LOADING).contains("Reading the checks from GitHub…"));
-        assertTrue(screen(LOADING.with(Either.left(refused("offline")))).contains("Could not read the checks"));
+        assertTrue(screen(LOADING.showing(Either.left(refused("offline")))).contains("Could not read the checks"));
         assertTrue(screen(read(List.empty())).contains("No checks"));
     }
 
     @Test
     void checksThatFailedToBeReadAgainAreMarkedStale() throws Exception {
         String screen =
-                screen(read(List.of(new Check("ci/status", Checks.PASSING))).with(Either.left(refused("offline"))));
+                screen(read(List.of(new Check("ci/status", Checks.PASSING))).showing(Either.left(refused("offline"))));
 
         assertTrue(screen.contains("Checks of main · not up to date"), screen);
         assertTrue(screen.contains("ci/status"), screen);
@@ -685,8 +703,9 @@ class ChecksDialogTest {
     @Test
     void theChecksOfARemoteBranchAreHandedOverAsOfTheLocalBranchThatFollowsItElseByTheRemoteName() {
         RemoteBranch upstreamMain = new RemoteBranch("upstream", new BranchName("main"));
-        ChecksPopup popup = ChecksPopup.loading(new BranchRef.Remote(upstreamMain), upstreamMain, Instant.EPOCH)
-                .with(readOf(List.of(check("verify", Checks.FAILING, 300, Option.of(60)))));
+        ChecksPopup popup = GitHubChecksFixtures.loading(
+                        new BranchRef.Remote(upstreamMain), upstreamMain, Instant.EPOCH)
+                .showing(readOf(List.of(check("verify", Checks.FAILING, 300, Option.of(60)))));
         Branch work = new Branch(
                 new BranchName("work"),
                 false,
@@ -715,8 +734,8 @@ class ChecksDialogTest {
     @Test
     void ofSeveralLocalBranchesThatFollowARemoteBranchTheOneNamedAsItIsTakenElseNone() {
         RemoteBranch originMain = new RemoteBranch("origin", new BranchName("main"));
-        ChecksPopup popup = ChecksPopup.loading(new BranchRef.Remote(originMain), originMain, Instant.EPOCH)
-                .with(readOf(List.of(check("verify", Checks.FAILING, 300, Option.of(60)))));
+        ChecksPopup popup = GitHubChecksFixtures.loading(new BranchRef.Remote(originMain), originMain, Instant.EPOCH)
+                .showing(readOf(List.of(check("verify", Checks.FAILING, 300, Option.of(60)))));
         // git switch -c feature origin/main makes feature follow origin/main too, until its first push -u.
         Model named = TestModels.localBranchesRead(
                         TestModels.loaded(), List.of(follower("aaa-feature", originMain), follower("main", originMain)))
@@ -749,9 +768,9 @@ class ChecksDialogTest {
     @Test
     void aKeyAnotherFeatureAddsToAFailedBuildActsOnTheFailedChecksAndIsInTheHint() throws Exception {
         java.util.List<FailedBuild> handed = new java.util.ArrayList<>();
-        Keymap keymap = ChecksAction.KEYS
+        Keymap keymap = ChecksDialog.KEYS
                 .apply(Keymap.empty())
-                .add(Scopes.FAILED_BUILD, Keymap.Binding.onSelected("I", "github.help.checks.rerun", failed -> {
+                .add(Scopes.FAILED_BUILD, Keymap.Binding.onSelected("I", "forge.help.checks.rerun", failed -> {
                     handed.add(failed);
                     return new ChecksMsg.Closed();
                 }));
@@ -783,48 +802,29 @@ class ChecksDialogTest {
     @Test
     void whileARunAskedToRunAgainIsWaitedForTheTitleSaysWhenItWasAskedAndTheLineAboveTheChecksHowItWent()
             throws Exception {
-        RerunPlan.Run build = new RerunPlan.Run(1, "Build", "push", 1);
-        RerunPlan.Run e2e = new RerunPlan.Run(2, "E2E", "push", 1);
-        ChecksPopup popup = read(List.of(check("verify", Checks.FAILING, 300, Option.of(200))))
-                .withRerun(RerunNote.Asked.at(NOW.minusSeconds(20), List.of(1L, 2L))
+        Check verify = check("verify", Checks.FAILING, 300, Option.of(200));
+        RerunPlan.Run build = new RerunPlan.Run(1, "Build", "push", List.of(GitHubChecksPort.of(verify)));
+        RerunPlan.Run e2e = new RerunPlan.Run(2, "E2E", "push", List.of(GitHubChecksPort.of(verify)));
+        ChecksPopup popup = read(List.of(verify))
+                .noting(RerunNote.Asked.at(NOW.minusSeconds(20), List.of(1L, 2L))
                         .answered(List.of(
-                                new RerunCmd.Outcome(build, Option.none()),
-                                new RerunCmd.Outcome(e2e, Option.of(refused("HTTP 403"))))));
+                                new RerunPlan.Outcome(build, Option.none()),
+                                new RerunPlan.Outcome(e2e, Option.of(refused("HTTP 403"))))));
 
         String screen = screen(popup);
 
         assertTrue(screen.contains("Checks of main · rerun asked 11:59:40"), screen);
         assertTrue(screen.contains("Rerun 1 of 2 · E2E: HTTP 403"), screen);
-        assertFalse(screen(popup.withRerun(RerunNote.Asked.at(NOW.minusSeconds(60), List.of(1L))))
+        assertFalse(screen(popup.noting(RerunNote.Asked.at(NOW.minusSeconds(60), List.of(1L))))
                 .contains("rerun asked"));
     }
 
     @Test
     void withNothingToRunAgainTheLineAboveTheChecksSaysWhy() throws Exception {
         String screen = screen(read(List.of(check("verify", Checks.PASSING, 300, Option.of(200))))
-                .withRerun(new RerunNote.Nothing(RerunPlan.Why.NONE_FAILED)));
+                .noting(new RerunNote.Nothing(RerunPlan.Why.NONE_FAILED)));
 
         assertTrue(screen.contains("Nothing to rerun: no check failed"), screen);
-    }
-
-    @Test
-    void askingNamesEachRunRunAgainAndWhatIsNotWithWhy() {
-        assertEquals(
-                """
-                Rerun the failed jobs of:
-                  ✗ Build (push): 2 failed jobs
-                  ✗ E2E (pull_request): 1 failed job
-
-                Not rerun:
-                  Markdown: still running
-                  codecov/patch: not a GitHub Actions workflow""",
-                RerunDialog.message(new RerunPlan(
-                        List.of(
-                                new RerunPlan.Run(1, "Build", "push", 2),
-                                new RerunPlan.Run(2, "E2E", "pull_request", 1)),
-                        List.of(
-                                new RerunPlan.Skipped("Markdown", RerunPlan.Why.RUNNING),
-                                new RerunPlan.Skipped("codecov/patch", RerunPlan.Why.NOT_ACTIONS)))));
     }
 
     @Test
@@ -847,7 +847,7 @@ class ChecksDialogTest {
         ChecksPopup popup = read(List.of(
                         check("lint", Checks.FAILING, 300, Option.of(90)),
                         check("package", Checks.PASSING, 300, Option.of(60))))
-                .withPicked(check("package", Checks.PASSING, 300, Option.of(60)));
+                .picking(GitHubChecksPort.of(check("package", Checks.PASSING, 300, Option.of(60))));
 
         String screen = screen(popup);
 
@@ -865,9 +865,9 @@ class ChecksDialogTest {
     @Test
     void whyTheCheckPickedHasNoLogTakesTheLineAboveTheChecks() throws Exception {
         String screen = screen(read(List.of(check("verify", Checks.PENDING, 150, Option.none())))
-                .withNoLogAsked());
+                .withNoLogAsked(true));
 
-        assertTrue(screen.contains("No log yet: GitHub has the log of a check once it is done"), screen);
+        assertTrue(screen.contains("No log yet: a check has its log once it is done"), screen);
     }
 
     @Test
@@ -886,7 +886,7 @@ class ChecksDialogTest {
             SettledPilot.of(runner).pause();
         }
 
-        assertEquals(java.util.List.of(new ChecksMsg.Clicked(CheckPick.of(pkg))), dispatched);
+        assertEquals(java.util.List.of(new ChecksMsg.Clicked(CheckPick.of(GitHubChecksPort.of(pkg)))), dispatched);
     }
 
     /**

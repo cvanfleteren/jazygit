@@ -13,6 +13,7 @@ import net.vanfleteren.jazygit.core.forgejo.Forgejo;
 import net.vanfleteren.jazygit.core.forgejo.ForgejoCheck.ActionsJob;
 import net.vanfleteren.jazygit.core.forgejo.ForgejoRepository;
 import net.vanfleteren.jazygit.core.repo.RemoteBranch;
+import net.vanfleteren.jazygit.features.forge.checks.ChecksMsg;
 import net.vanfleteren.jazygit.features.forgejo.ForgejoFailure;
 import net.vanfleteren.jazygit.features.forgejo.builds.ForgejoServices;
 import net.vanfleteren.jazygit.kernel.state.Env;
@@ -94,7 +95,7 @@ public record CheckLogCmd(RemoteBranch branch, String name, ActionsJob job) impl
                 .toEither()
                 .<Failure>mapLeft(
                         cause -> new ForgejoFailure.LogNotKept(file.toString(), String.valueOf(cause.getMessage())))
-                .map(kept -> new ChecksMsg.LogRead(this, kept.toString(), line(log)));
+                .map(kept -> new ChecksMsg.LogRead(this, name, kept.toString(), line(log), List.empty()));
     }
 
     /**

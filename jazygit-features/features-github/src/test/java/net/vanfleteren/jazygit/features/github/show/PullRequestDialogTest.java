@@ -38,7 +38,8 @@ import net.vanfleteren.jazygit.core.repo.PrNumber;
 import net.vanfleteren.jazygit.core.repo.RemoteName;
 import net.vanfleteren.jazygit.core.repo.RepoSlug;
 import net.vanfleteren.jazygit.core.repo.Sha;
-import net.vanfleteren.jazygit.features.github.checks.ChecksMsg;
+import net.vanfleteren.jazygit.features.forge.checks.ChecksMsg;
+import net.vanfleteren.jazygit.features.github.checks.GitHubChecksPort;
 import net.vanfleteren.jazygit.features.github.checks.branches.BranchChecksMsg;
 import net.vanfleteren.jazygit.features.github.checks.branches.GitHubChecks;
 import net.vanfleteren.jazygit.features.github.checks.timings.CheckTimes;
@@ -742,7 +743,7 @@ class PullRequestDialogTest {
             }
         }
 
-        assertEquals(java.util.List.of(new ChecksMsg.PullRequestChecksRequested()), dispatched);
+        assertEquals(java.util.List.of(new ChecksMsg.PullRequestChecksRequested(GitHubChecksPort.PORT)), dispatched);
     }
 
     @Test

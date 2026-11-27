@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.vavr.collection.List;
 import io.vavr.control.Either;
+import io.vavr.control.Option;
 import java.time.Instant;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest.Checks;
@@ -15,10 +16,12 @@ import net.vanfleteren.jazygit.core.repo.BranchRef;
 import net.vanfleteren.jazygit.core.repo.ForgeBranch;
 import net.vanfleteren.jazygit.core.repo.PrNumber;
 import net.vanfleteren.jazygit.core.repo.RemoteBranch;
-import net.vanfleteren.jazygit.features.github.checks.ChecksPopup;
+import net.vanfleteren.jazygit.features.forge.checks.ChecksPopup;
+import net.vanfleteren.jazygit.features.forge.checks.ChecksPort;
+import net.vanfleteren.jazygit.features.forge.checks.Reading;
+import net.vanfleteren.jazygit.features.github.checks.GitHubChecksPort;
 import net.vanfleteren.jazygit.features.github.comments.CommentsPopup;
 import net.vanfleteren.jazygit.features.github.show.PullRequestPopup;
-import net.vanfleteren.jazygit.features.github.state.Reading;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.TestModels;
 import org.junit.jupiter.api.Test;
@@ -57,9 +60,12 @@ class SpinnersGitHubTest {
 
     @Test
     void theChecksDialogShowsOneWhileItsChecksAreFirstReadAndReadAgainAsAsked() {
-        ChecksPopup loading =
-                ChecksPopup.loading(FEATURE, new RemoteBranch("origin", new BranchName("feature")), Instant.EPOCH);
-        ChecksPopup read = loading.with(Either.left(TestModels.refused("offline")));
+        ChecksPopup loading = ChecksPopup.loading(
+                GitHubChecksPort.PORT,
+                new ChecksPort.Opening(
+                        FEATURE, new RemoteBranch("origin", new BranchName("feature")), Option.none(), Option.none()),
+                Instant.EPOCH);
+        ChecksPopup read = loading.showing(Either.left(TestModels.refused("offline")));
 
         assertTrue(Spinners.shown(LOADED.openPopup(loading), NOW));
         assertFalse(Spinners.shown(LOADED.openPopup(read), NOW));

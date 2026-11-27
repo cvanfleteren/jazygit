@@ -3,14 +3,15 @@ package net.vanfleteren.jazygit.features.forgejo;
 import io.vavr.control.Option;
 import java.time.Duration;
 import net.vanfleteren.jazygit.features.branches.panes.branches.BranchBadges;
+import net.vanfleteren.jazygit.features.forge.checks.ChecksMsg;
 import net.vanfleteren.jazygit.features.forgejo.badges.BuildLegend;
 import net.vanfleteren.jazygit.features.forgejo.badges.ForgejoBadge;
 import net.vanfleteren.jazygit.features.forgejo.builds.BuildsMsg;
 import net.vanfleteren.jazygit.features.forgejo.builds.DetectForgejo;
 import net.vanfleteren.jazygit.features.forgejo.builds.ForgejoReactions;
 import net.vanfleteren.jazygit.features.forgejo.builds.ForgejoServices;
-import net.vanfleteren.jazygit.features.forgejo.checks.ChecksMsg;
 import net.vanfleteren.jazygit.features.forgejo.checks.ForgejoChecksDialog;
+import net.vanfleteren.jazygit.features.forgejo.checks.ForgejoChecksPort;
 import net.vanfleteren.jazygit.features.forgejo.checks.ShowChecksAction;
 import net.vanfleteren.jazygit.features.forgejo.create.ForgejoCreatePullRequestAction;
 import net.vanfleteren.jazygit.features.forgejo.pulls.PullRequestReactions;
@@ -46,7 +47,7 @@ public final class ForgejoFeature {
                     ShowPullRequestAction.ACTION, ForgejoCreatePullRequestAction.ACTION, ShowChecksAction.ACTION)
             .every(READ_INTERVAL, BuildsMsg.Tick::new)
             // The checks shown read again while one runs, as GitHub's are (ADR 34, 195).
-            .every(READ_INTERVAL, ChecksMsg.Tick::new)
+            .every(READ_INTERVAL, () -> new ChecksMsg.Tick(ForgejoChecksPort.PORT))
             .reacting(ForgejoReactions::to)
             .reacting(PullRequestReactions::to)
             .filling(BranchBadges.KEY, model -> Option.some(ForgejoBadge::of))

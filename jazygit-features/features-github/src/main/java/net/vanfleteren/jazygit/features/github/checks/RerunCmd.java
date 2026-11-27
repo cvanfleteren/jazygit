@@ -7,10 +7,11 @@ import net.vanfleteren.jazygit.core.gh.checks.Checks;
 import net.vanfleteren.jazygit.core.gh.process.GhFailure;
 import net.vanfleteren.jazygit.core.process.ExecutedCommand;
 import net.vanfleteren.jazygit.core.repo.RemoteBranch;
+import net.vanfleteren.jazygit.features.forge.checks.ChecksMsg;
+import net.vanfleteren.jazygit.features.forge.checks.RerunPlan;
 import net.vanfleteren.jazygit.features.github.GitHubFailure;
 import net.vanfleteren.jazygit.features.github.GitHubServices;
 import net.vanfleteren.jazygit.kernel.state.Env;
-import net.vanfleteren.jazygit.kernel.state.Failure;
 import net.vanfleteren.jazygit.kernel.state.Msg;
 import net.vanfleteren.jazygit.kernel.state.operation.Operation;
 import net.vanfleteren.jazygit.kernel.state.operation.OperationCmd;
@@ -46,18 +47,15 @@ public record RerunCmd(RemoteBranch branch, List<RerunPlan.Run> runs) implements
     @Override
     public Msg run(Env env) {
         Checks checks = GitHubServices.of(env).checks();
-        List<Either<GhFailure, List<ExecutedCommand>>> done = runs.map(run -> checks.rerunFailedJobs(run.runId()));
+        List<Either<GhFailure, List<ExecutedCommand>>> done = runs.map(run -> checks.rerunFailedJobs(run.run()));
         return new ChecksMsg.Rerun(
+                GitHubChecksPort.PORT,
+                branch,
                 this,
                 runs.zipWith(
                         done,
-                        (run, result) -> new Outcome(
+                        (run, result) -> new RerunPlan.Outcome(
                                 run, result.swap().map(GitHubFailure::of).toOption())),
                 done.flatMap(result -> result.fold(GhFailure::commands, commands -> commands)));
     }
-
-    /**
-     * How running {@code run} again went: refused, with why, or not.
-     */
-    public record Outcome(RerunPlan.Run run, Option<Failure> refused) {}
 }

@@ -19,8 +19,8 @@ import net.vanfleteren.jazygit.core.repo.PullRequestCommits;
 import net.vanfleteren.jazygit.features.changes.diff.CommitFilesMsg;
 import net.vanfleteren.jazygit.features.changes.diff.CommitFilesUpdate;
 import net.vanfleteren.jazygit.features.changes.fetch.FetchUpdate;
+import net.vanfleteren.jazygit.features.forge.checks.ChecksPopup;
 import net.vanfleteren.jazygit.features.github.browse.BrowsePullRequestCmd;
-import net.vanfleteren.jazygit.features.github.checks.ChecksPopup;
 import net.vanfleteren.jazygit.features.github.checks.timings.CheckTimesUpdate;
 import net.vanfleteren.jazygit.features.github.create.GitHubCreatePullRequestUpdate;
 import net.vanfleteren.jazygit.features.github.prs.PrOverview;
@@ -420,8 +420,10 @@ public final class PullRequestUpdate {
                 .map(popup -> model.openPopup(popup.withPullRequestPopup(change.apply(popup.pullRequestPopup()))))
                 .orElse(() -> model.popup(ChecksPopup.class)
                         .flatMap(checks -> checks.from()
+                                .filter(PullRequestPopup.class::isInstance)
+                                .map(PullRequestPopup.class::cast)
                                 .filter(dialog -> dialog.pullRequest().number().equals(number))
-                                .map(dialog -> model.openPopup(checks.withFrom(change.apply(dialog))))))
+                                .map(dialog -> model.openPopup(checks.withFrom(Option.of(change.apply(dialog)))))))
                 // A review opened from the dialog, which follows whether it is a draft (ADR 100).
                 .orElse(() -> model.popup(VerdictPopup.class)
                         .flatMap(review -> review.from()

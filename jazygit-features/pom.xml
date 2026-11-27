@@ -20,6 +20,7 @@
     <modules>
         <module>features-changes</module>
         <module>features-branches</module>
+        <module>features-forge</module>
         <module>features-github</module>
         <module>features-forgejo</module>
         <module>features-chrome</module>

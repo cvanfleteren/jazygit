@@ -58,6 +58,17 @@ public sealed interface ForgejoFailure extends Failure.Phrased {
     }
 
     /**
+     * The commit of the branch {@code branch}, whose checks were asked for, is not known (ADR 195).
+     */
+    record NoCommit(String branch) implements ForgejoFailure {
+
+        @Override
+        public Phrase phrase() {
+            return Phrase.of("forgejo.error.noCommit", branch);
+        }
+    }
+
+    /**
      * The log of a check could not be kept in {@code file}, as {@code why} says (ADR 195).
      */
     record LogNotKept(String file, String why) implements ForgejoFailure {

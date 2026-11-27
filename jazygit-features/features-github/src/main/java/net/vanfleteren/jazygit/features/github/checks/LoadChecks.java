@@ -1,8 +1,11 @@
 package net.vanfleteren.jazygit.features.github.checks;
 
 import io.vavr.collection.List;
+import io.vavr.control.Either;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.core.repo.RemoteBranch;
+import net.vanfleteren.jazygit.features.forge.checks.ChecksMsg;
+import net.vanfleteren.jazygit.features.forge.checks.ChecksRead;
 import net.vanfleteren.jazygit.features.github.GitHubFailure;
 import net.vanfleteren.jazygit.features.github.GitHubServices;
 import net.vanfleteren.jazygit.features.github.checks.timings.PendingChecks;
@@ -29,11 +32,31 @@ public record LoadChecks(RemoteBranch branch) implements Cmd {
                 .checks()
                 .runs(List.of(branch.branch().value()))
                 .mapLeft(GitHubFailure::of)
-                .fold(this::failed, runs -> new ChecksMsg.Loaded(branch, PendingChecks.of(runs)));
+                .fold(this::failed, runs -> loaded(branch, PendingChecks.of(runs)));
     }
 
     @Override
     public Msg failed(Failure failure) {
-        return new ChecksMsg.Failed(branch, failure);
+        return notLoaded(branch, failure);
+    }
+
+    /**
+     * The checks of {@code branch} among those {@code pending} tells were read, as the checks flow reads them.
+     */
+    static Msg loaded(RemoteBranch branch, PendingChecks pending) {
+        return new ChecksMsg.Read(
+                GitHubChecksPort.PORT,
+                branch,
+                Either.right(new ChecksRead(
+                        pending.repository(),
+                        Option.none(),
+                        pending.of(branch.branch()).map(GitHubChecksPort::of))));
+    }
+
+    /**
+     * Reading the checks of {@code branch} failed, as {@code failure} says.
+     */
+    static Msg notLoaded(RemoteBranch branch, Failure failure) {
+        return new ChecksMsg.Read(GitHubChecksPort.PORT, branch, Either.left(failure));
     }
 }

@@ -1,7 +1,5 @@
 package net.vanfleteren.jazygit.features.forgejo.checks;
 
-import static dev.tamboui.toolkit.Toolkit.text;
-
 import dev.tamboui.toolkit.element.Element;
 import dev.tamboui.toolkit.element.StyledElement;
 import io.vavr.collection.List;
@@ -12,12 +10,14 @@ import java.time.Instant;
 import java.time.ZoneId;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
+import java.util.function.UnaryOperator;
 import net.vanfleteren.jazygit.core.forgejo.CommitStatus;
 import net.vanfleteren.jazygit.core.forgejo.ForgejoCheck;
-import net.vanfleteren.jazygit.core.repo.Branch;
-import net.vanfleteren.jazygit.core.repo.BranchName;
-import net.vanfleteren.jazygit.core.repo.BranchRef;
-import net.vanfleteren.jazygit.core.repo.RemoteBranch;
+import net.vanfleteren.jazygit.features.forge.checks.CheckPick;
+import net.vanfleteren.jazygit.features.forge.checks.ChecksAction;
+import net.vanfleteren.jazygit.features.forge.checks.ChecksMsg;
+import net.vanfleteren.jazygit.features.forge.checks.ChecksPopup;
+import net.vanfleteren.jazygit.features.forge.widgets.ChecksTexts;
 import net.vanfleteren.jazygit.features.forgejo.pulls.ForgejoPullRequests;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.Msg;
@@ -26,7 +26,7 @@ import net.vanfleteren.jazygit.kernel.ui.checks.CheckDurations;
 import net.vanfleteren.jazygit.kernel.ui.checks.ChecksFrame;
 import net.vanfleteren.jazygit.kernel.ui.i18n.Messages;
 import net.vanfleteren.jazygit.kernel.ui.keys.Keymap;
-import net.vanfleteren.jazygit.kernel.ui.text.ErrorText;
+import net.vanfleteren.jazygit.kernel.ui.keys.Keymap.Scope;
 import net.vanfleteren.jazygit.kernel.ui.text.ShownTime;
 import net.vanfleteren.jazygit.kernel.ui.text.TextWidth;
 import net.vanfleteren.jazygit.kernel.ui.theme.Theme;
@@ -35,19 +35,29 @@ import net.vanfleteren.jazygit.kernel.ui.widgets.PopupView;
 import net.vanfleteren.jazygit.kernel.ui.widgets.Symbol;
 
 /**
- * Popup listing the checks on the tip of a branch on Forgejo one by one (ADR 195), in the frame GitHub's are listed
- * in: how many are in each state; when they started and ended, and how long they took together; a bar of how far they
- * are together, counting those done, as Forgejo does not tell how long they take; then each, the failed ones first,
- * then the running, the queued and the passed ones, with how long it took, or has been running or queued. It scrolls
- * when they do not all fit. While they are read again, they stay shown, with a spinner in the title when the user
- * asked for that (ADR 34); when that fails, the title says they are stale.
+ * Popup listing the checks on the tip of a branch on Forgejo one by one (ADR 195, 209), in the frame GitHub's are
+ * listed in: how many are in each state; when they started and ended, and how long they took together; a bar of how
+ * far they are together, counting those done, as Forgejo does not tell how long they take; then each, the failed ones
+ * first, then the running, the queued and the passed ones, with how long it took, or has been running or queued. It
+ * scrolls when they do not all fit. While they are read again, they stay shown, with a spinner in the title when the
+ * user asked for that (ADR 34); when that fails, the title says they are stale.
  */
 public final class ForgejoChecksDialog implements PopupView {
 
     public static final String ID = "forgejo-checks";
 
+    /**
+     * The checks popup on Forgejo, whose keys act on what it shows.
+     */
+    public static final Scope<ChecksPopup> SCOPE = ChecksAction.scope(ID);
+
+    /**
+     * The keys of the popup, which host those of a failed build.
+     */
+    public static final UnaryOperator<Keymap> KEYS = ChecksAction.keys(SCOPE);
+
     private final Clock clock;
-    private final ChecksFrame<ForgejoChecksPopup> frame;
+    private final ChecksFrame<ChecksPopup> frame;
 
     /**
      * @param dispatch receives the messages for the user's actions, on the render thread
@@ -63,7 +73,7 @@ public final class ForgejoChecksDialog implements PopupView {
      */
     ForgejoChecksDialog(Consumer<Msg> dispatch, Clock clock, Supplier<Keymap> keymap) {
         this.clock = clock;
-        this.frame = new ChecksFrame<>(ID, ChecksAction.SCOPE, dispatch, keymap, ChecksMsg.Closed::new);
+        this.frame = new ChecksFrame<>(ID, SCOPE, dispatch, keymap, ChecksMsg.Closed::new);
     }
 
     @Override
@@ -73,23 +83,24 @@ public final class ForgejoChecksDialog implements PopupView {
 
     @Override
     public Option<Element> render(Model model) {
-        return model.popup(ForgejoChecksPopup.class)
+        return ChecksTexts.shown(model, ForgejoChecksPort.PORT)
                 .map(popup -> frame.render(
                         model,
                         popup,
-                        title(popup, model.now()),
+                        ChecksTexts.title(popup, model.now(), clock),
                         popup.checks()
                                 .map(read -> read.map(checks -> listing(
-                                        checks,
-                                        popup.noLog()
-                                                .map(ForgejoChecksDialog::noLog)
-                                                .orElse(() -> popup.rerun().map(ForgejoChecksDialog::rerun)),
-                                        popup.pickedCheck(),
+                                        ForgejoChecksPort.checks(checks.checks()),
+                                        ForgejoChecksPort.checks(popup.ordered(model)),
+                                        ChecksTexts.note(popup, model),
+                                        popup.pickedCheck(model)
+                                                .flatMap(picked -> ForgejoChecksPort.checks(List.of(picked))
+                                                        .headOption()),
                                         model.now(),
                                         clock.getZone()))),
-                        Messages.get("forgejo.dialog.checks.loading"),
+                        ChecksTexts.loading(ForgejoChecksPort.PORT.forge()),
                         clock.instant(),
-                        Messages.get("forgejo.dialog.checks.hint"),
+                        ChecksTexts.hint(),
                         failedBuild(popup, model)));
     }
 
@@ -98,10 +109,7 @@ public final class ForgejoChecksDialog implements PopupView {
      * on.
      */
     public static List<ShownTime> shownTimes(Model model) {
-        return model.popup(ForgejoChecksPopup.class)
-                .filter(popup -> popup.checksRead().exists(check -> !check.done()))
-                .map(popup -> ShownTime.every(Duration.ofSeconds(1)))
-                .toList();
+        return ChecksTexts.shownTimes(model, ForgejoChecksPort.PORT);
     }
 
     /**
@@ -109,38 +117,20 @@ public final class ForgejoChecksDialog implements PopupView {
      * asked.
      */
     public static boolean showsSpinner(Model model) {
-        return model.popup(ForgejoChecksPopup.class)
-                .exists(popup -> popup.checks().isEmpty() || popup.reading() == Reading.ASKED);
-    }
-
-    private String title(ForgejoChecksPopup popup, Instant now) {
-        String title = Messages.get("forgejo.dialog.checks.title", name(popup.branch()))
-                + popup.asked()
-                        .filter(asked -> asked.awaited(now))
-                        .map(asked -> " · "
-                                + Messages.get(
-                                        "forgejo.dialog.checks.rerunAsked",
-                                        ChecksFrame.timeOfDay(asked.at(), now, clock.getZone())))
-                        .getOrElse("");
-        return ChecksFrame.title(
-                title, popup.reading() == Reading.ASKED, popup.refreshFailed().isDefined(), clock.instant());
-    }
-
-    private static String name(BranchRef branch) {
-        return switch (branch) {
-            case BranchRef.Local(BranchName name) -> name.value();
-            case BranchRef.Remote(var remote) -> remote.shortName();
-        };
+        return ChecksTexts.showsSpinner(model, ForgejoChecksPort.PORT);
     }
 
     /**
-     * The counts, when they started and ended, how far they are, {@code note}, and the checks, the one {@code picked}
-     * marked; a click on one picks it.
+     * The counts, when they started and ended, how far they are, {@code note}, and the checks {@code all}, listed as
+     * {@code ordered}, the one {@code picked} marked; a click on one picks it.
      */
     static ChecksFrame.Listing listing(
-            ChecksRead read, Option<StyledElement<?>> note, Option<ForgejoCheck> picked, Instant now, ZoneId zone) {
-        List<ForgejoCheck> all = read.checks();
-        List<ForgejoCheck> ordered = read.ordered();
+            List<ForgejoCheck> all,
+            List<ForgejoCheck> ordered,
+            Option<StyledElement<?>> note,
+            Option<ForgejoCheck> picked,
+            Instant now,
+            ZoneId zone) {
         // As wide as the widest, and while one runs as wide as one that runs can get, so the names do not move.
         int doingWidth = ordered.map(check -> TextWidth.of(doing(check, now)))
                 .appendAll(Option.when(all.exists(check -> !check.done()), () -> TextWidth.of(widestRunning())))
@@ -152,7 +142,7 @@ public final class ForgejoChecksDialog implements PopupView {
                         all.count(check -> !check.done()),
                         all.count(check -> check.state() == CommitStatus.State.PASSED)),
                 span(all, now, zone),
-                ChecksFrame.gauge(read.progress(), gauged(all)),
+                ChecksFrame.gauge(progress(all), gauged(all)),
                 note,
                 ordered.map(check -> {
                     List<StyledElement<?>> drawn = ChecksFrame.filling(
@@ -166,8 +156,16 @@ public final class ForgejoChecksDialog implements PopupView {
                     return new ChecksFrame.Row(
                             isPicked ? ChecksFrame.picked(1, drawn) : drawn,
                             isPicked,
-                            new ChecksMsg.Clicked(check.name()));
+                            new ChecksMsg.Clicked(CheckPick.of(ForgejoChecksPort.of(check))));
                 }));
+    }
+
+    /**
+     * How far the checks {@code all} are together, from 0 to 1: how many of them are done, as Forgejo does not tell
+     * how long they take.
+     */
+    static double progress(List<ForgejoCheck> all) {
+        return all.isEmpty() ? 1 : (double) all.count(ForgejoCheck::done) / all.size();
     }
 
     /**
@@ -227,93 +225,27 @@ public final class ForgejoChecksDialog implements PopupView {
     }
 
     /**
-     * Why the check picked has no log (ADR 160).
-     */
-    static StyledElement<?> noLog(NoLog why) {
-        return text(Messages.get(
-                        switch (why) {
-                            case NOT_DONE -> "forgejo.dialog.checks.noLogNotDone";
-                            case SKIPPED -> "forgejo.dialog.checks.noLogSkipped";
-                            case NOT_ACTIONS -> "forgejo.dialog.checks.noLogNotActions";
-                        }))
-                .addClass(Theme.Classes.DIM);
-    }
-
-    /**
-     * What running failed checks again says (ADR 135): why nothing is, that Forgejo is asked to, or how that went,
-     * {@code rerun 2 of 3 · ci: <what Forgejo said>}, as an error when it refused one.
-     */
-    static StyledElement<?> rerun(RerunNote note) {
-        return switch (note) {
-            case RerunNote.Nothing(RerunPlan.Why why) ->
-                text(Messages.get(
-                                switch (why) {
-                                    case NONE_FAILED -> "forgejo.dialog.checks.rerunNoneFailed";
-                                    case RUNNING -> "forgejo.dialog.checks.rerunRunning";
-                                    case NOT_ACTIONS -> "forgejo.dialog.checks.rerunNotActions";
-                                }))
-                        .addClass(Theme.Classes.DIM);
-            case RerunNote.Asked asked ->
-                asked.outcomes()
-                        .map(outcomes -> {
-                            List<RerunCmd.Outcome> refused = asked.refused();
-                            String text = List.of(Messages.get(
-                                            "forgejo.dialog.checks.rerunDone",
-                                            outcomes.size() - refused.size(),
-                                            outcomes.size()))
-                                    .appendAll(
-                                            refused.map(outcome -> outcome.run().workflow() + ": "
-                                                    + outcome.refused()
-                                                            .map(ErrorText::of)
-                                                            .getOrElse("")))
-                                    .mkString(" · ");
-                            return text(text).addClass(refused.isEmpty() ? Theme.Classes.DIM : Theme.Classes.ERROR);
-                        })
-                        .getOrElse(() -> text(Messages.get(
-                                        "forgejo.dialog.checks.rerunAsking",
-                                        asked.runs().size()))
-                                .addClass(Theme.Classes.DIM));
-        };
-    }
-
-    /**
      * What failed of the checks {@code popup} shows in {@code model}, once they were read, for the keys other features
      * add to a failed build (ADR 161): the logs are where each status links to, as Forgejo's API reads a job's log
      * only by an id its links do not show.
      */
-    static Option<FailedBuild> failedBuild(ForgejoChecksPopup popup, Model model) {
-        BranchName branch = switch (popup.branch()) {
-            case BranchRef.Local(BranchName name) -> name;
-            case BranchRef.Remote(var remote) -> follower(model, remote);
-        };
+    static Option<FailedBuild> failedBuild(ChecksPopup popup, Model model) {
         return popup.read().map(read -> {
-            List<ForgejoCheck> failed = read.checks().filter(check -> check.state() == CommitStatus.State.FAILED);
+            List<ForgejoCheck> all = ForgejoChecksPort.checks(read.checks());
+            List<ForgejoCheck> failed = all.filter(check -> check.state() == CommitStatus.State.FAILED);
             return new FailedBuild(
                     Option.of(read.repository()),
-                    branch,
-                    Option.of(read.sha()),
+                    ChecksTexts.local(model, popup),
+                    read.commit(),
                     model.part(ForgejoPullRequests.PART)
                             .open()
-                            .flatMap(open -> open.get(popup.onForgejo()))
+                            .flatMap(open -> open.get(popup.onForge()))
                             .map(pr -> new FailedBuild.ChangeRequest("pull request", pr.number())),
                     failed.map(check -> new FailedBuild.Job(check.name(), check.url())),
-                    read.checks().exists(check -> !check.done()),
+                    all.exists(check -> !check.done()),
                     failed.map(check -> check.name() + ": its log is on Forgejo"
                                     + check.url().map(url -> ", at " + url).getOrElse(""))
                             .mkString("\n"));
         });
-    }
-
-    /**
-     * The local branch whose build the checks of {@code remote} are: of the local branches that follow it, the one
-     * named as it is, else the only one; else its name on the remote, as GitHub's checks do.
-     */
-    private static BranchName follower(Model model, RemoteBranch remote) {
-        List<Branch> followers = model.repo().followers(remote);
-        return followers
-                .find(branch -> branch.name().equals(remote.branch()))
-                .orElse(() -> Option.when(followers.size() == 1, followers::head))
-                .map(Branch::name)
-                .getOrElse(() -> new BranchName(remote.shortName()));
     }
 }

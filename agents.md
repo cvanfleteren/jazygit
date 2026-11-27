@@ -29,6 +29,8 @@ names and Javadoc are the exact rules. Write to them from the start:
   panel; nothing outside its package names it (`FeaturesTest`, ADR 127). The native image needs this closed world.
 - It lives in a group module: `changes`, `branches`, `github`, `forgejo` or `chrome` (ADR 136). A group uses only the
   groups below it (`branches` uses `changes`); the forges never use each other, so either can be deleted (ADR 171, 174).
+- A flow both forges have is written once in `features-forge`, which names no forge; each forge gives what is its own
+  through a port, as `ChecksPort` (ADR 209). Keep there only what really is common.
 - The kernel knows git, not forges (#588, `theKernelNamesNoForge`). Forge code talks to the rest through forge-neutral
   models such as `FailedBuild`: the forge's ids, URLs and commands travel through them only as opaque values the forge
   side writes, and what only the forge needs (a GitHub workflow run) stays in its feature (`FailedBuilds`).

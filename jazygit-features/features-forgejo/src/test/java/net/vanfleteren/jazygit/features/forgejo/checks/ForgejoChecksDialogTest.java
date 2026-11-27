@@ -24,6 +24,9 @@ import java.time.ZoneOffset;
 import java.util.ArrayList;
 import net.vanfleteren.jazygit.core.forgejo.CommitStatus;
 import net.vanfleteren.jazygit.core.repo.RepoSlug;
+import net.vanfleteren.jazygit.features.forge.checks.ChecksMsg;
+import net.vanfleteren.jazygit.features.forge.checks.ChecksPopup;
+import net.vanfleteren.jazygit.features.forge.checks.Reading;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.Msg;
 import net.vanfleteren.jazygit.kernel.state.TestModels;
@@ -42,7 +45,7 @@ class ForgejoChecksDialogTest {
 
     private final java.util.List<Msg> dispatched = new ArrayList<>();
     private final ForgejoChecksDialog dialog = new ForgejoChecksDialog(
-            dispatched::add, Clock.fixed(NOW, ZoneOffset.UTC), () -> ChecksAction.KEYS.apply(Keymap.empty()));
+            dispatched::add, Clock.fixed(NOW, ZoneOffset.UTC), () -> ForgejoChecksDialog.KEYS.apply(Keymap.empty()));
 
     @Test
     void whileFirstReadItSaysSoWithASpinner() throws Exception {
@@ -99,8 +102,8 @@ class ForgejoChecksDialogTest {
     void aReadThatFailsAfterOneThatDidNotMarksTheChecksStale() throws Exception {
         String screen =
                 screen(read(List.of(job("ci / build (push)", CommitStatus.State.RUNNING, 12, 0, 30, Option.none())))
-                        .readingAgain(Reading.BY_ITSELF, ChecksFixtures.TIP, NOW)
-                        .with(Either.left(refused("offline"))));
+                        .readingAgain(Reading.BY_ITSELF, NOW)
+                        .showing(Either.left(refused("offline"))));
 
         assertTrue(screen.contains("Checks of feature · not up to date"), screen);
         assertTrue(screen.contains("ci / build"), screen);
@@ -110,7 +113,7 @@ class ForgejoChecksDialogTest {
     void readAgainAsAskedTheTitleShowsASpinner() throws Exception {
         String screen =
                 screen(read(List.of(job("ci / build (push)", CommitStatus.State.RUNNING, 12, 0, 30, Option.none())))
-                        .readingAgain(Reading.ASKED, ChecksFixtures.TIP, NOW));
+                        .readingAgain(Reading.ASKED, NOW));
 
         assertTrue(screen.contains("Checks of feature " + TimeText.spinnerFrame(NOW)), screen);
     }
@@ -160,7 +163,7 @@ class ForgejoChecksDialogTest {
                         job("ci / build (push)", CommitStatus.State.PASSED, 12, 0, 30, Option.of(10)))));
 
         FailedBuild failed = ForgejoChecksDialog.failedBuild(
-                        model.popup(ForgejoChecksPopup.class).get(), model)
+                        model.popup(ChecksPopup.class).get(), model)
                 .get();
 
         assertEquals(Option.of(new RepoSlug("cvf/nix")), failed.repository());
@@ -169,7 +172,7 @@ class ForgejoChecksDialogTest {
         assertFalse(failed.running());
     }
 
-    private String screen(ForgejoChecksPopup popup) throws Exception {
+    private String screen(ChecksPopup popup) throws Exception {
         return screen(TestModels.loaded().withNow(NOW).openPopup(popup));
     }
 

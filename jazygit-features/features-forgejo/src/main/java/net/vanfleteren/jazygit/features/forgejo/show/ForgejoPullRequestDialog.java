@@ -17,8 +17,8 @@ import net.vanfleteren.jazygit.core.forgejo.ForgejoMergeStyle;
 import net.vanfleteren.jazygit.core.forgejo.ForgejoPullRequestDetails;
 import net.vanfleteren.jazygit.core.forgejo.ForgejoReview.Verdict;
 import net.vanfleteren.jazygit.core.forgejo.ForgejoScheduledMerge;
-import net.vanfleteren.jazygit.features.forgejo.checks.ChecksMsg;
-import net.vanfleteren.jazygit.features.forgejo.checks.ChecksUpdate;
+import net.vanfleteren.jazygit.features.forge.checks.ChecksMsg;
+import net.vanfleteren.jazygit.features.forgejo.checks.ForgejoChecksPort;
 import net.vanfleteren.jazygit.features.forgejo.pulls.ForgejoPullRequests;
 import net.vanfleteren.jazygit.features.forgejo.pulls.PullRequestMsg;
 import net.vanfleteren.jazygit.features.forgejo.pulls.PullRequestUpdate;
@@ -98,8 +98,8 @@ public final class ForgejoPullRequestDialog implements PopupView {
                         new Choice<ForgejoPullRequestPopup>(
                                         'C',
                                         "forgejo.dialog.pullRequest.viewChecks",
-                                        ChecksMsg.PullRequestChecksRequested::new,
-                                        (model, popup) -> ChecksUpdate.ofPullRequest(popup))
+                                        () -> new ChecksMsg.PullRequestChecksRequested(ForgejoChecksPort.PORT),
+                                        (model, popup) -> ForgejoChecksPort.hasChecks(popup))
                                 .withDetails("forgejo.dialog.pullRequest.viewChecks.details"),
                         new Choice<ForgejoPullRequestPopup>(
                                         'R',

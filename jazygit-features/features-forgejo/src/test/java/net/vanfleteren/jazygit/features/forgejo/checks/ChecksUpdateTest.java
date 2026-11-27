@@ -24,6 +24,14 @@ import net.vanfleteren.jazygit.core.repo.BranchRef;
 import net.vanfleteren.jazygit.features.changes.edit.EditFeature;
 import net.vanfleteren.jazygit.features.changes.edit.EditMsg;
 import net.vanfleteren.jazygit.features.changes.edit.EditPopup;
+import net.vanfleteren.jazygit.features.forge.checks.CheckPick;
+import net.vanfleteren.jazygit.features.forge.checks.ChecksMsg;
+import net.vanfleteren.jazygit.features.forge.checks.ChecksPopup;
+import net.vanfleteren.jazygit.features.forge.checks.ForgeCheck;
+import net.vanfleteren.jazygit.features.forge.checks.NoLog;
+import net.vanfleteren.jazygit.features.forge.checks.RerunNote;
+import net.vanfleteren.jazygit.features.forge.checks.RerunPlan;
+import net.vanfleteren.jazygit.features.forge.checks.RerunPopup;
 import net.vanfleteren.jazygit.features.forgejo.ForgejoFailure;
 import net.vanfleteren.jazygit.features.forgejo.builds.BuildsMsg;
 import net.vanfleteren.jazygit.features.forgejo.builds.BuildsUpdateTest;
@@ -61,18 +69,20 @@ class ChecksUpdateTest {
 
     @Test
     void cOnALocalBranchReadsTheChecksOfTheTipOfTheBranchItFollows() {
-        Next next = new ChecksMsg.Requested(new BranchRef.Local(new BranchName("feature")))
+        Next next = new ChecksMsg.Requested(ForgejoChecksPort.PORT, new BranchRef.Local(new BranchName("feature")))
                 .apply(model(CommitStatus.State.RUNNING));
 
-        assertTrue(next.model().popup(ForgejoChecksPopup.class).isDefined());
-        assertEquals(List.of(new LoadChecks(FEATURE, TIP)), next.cmds().filter(LoadChecks.class::isInstance));
+        assertTrue(next.model().popup(ChecksPopup.class).isDefined());
+        assertEquals(
+                List.of(new LoadChecks(FEATURE, Option.of(TIP))), next.cmds().filter(LoadChecks.class::isInstance));
     }
 
     @Test
     void cOnABranchWithoutBuildsDoesNothing() {
-        Next next = new ChecksMsg.Requested(new BranchRef.Remote(FEATURE)).apply(model(CommitStatus.State.NONE));
+        Next next = new ChecksMsg.Requested(ForgejoChecksPort.PORT, new BranchRef.Remote(FEATURE))
+                .apply(model(CommitStatus.State.NONE));
 
-        assertTrue(next.model().popup(ForgejoChecksPopup.class).isEmpty());
+        assertTrue(next.model().popup(ChecksPopup.class).isEmpty());
         assertTrue(next.cmds().isEmpty());
     }
 
@@ -81,9 +91,13 @@ class ChecksUpdateTest {
         Model model = model(CommitStatus.State.RUNNING).openPopup(ChecksFixtures.LOADING);
         List<ForgejoCheck> checks = List.of(job("b", CommitStatus.State.RUNNING, 12, 0, 30, Option.none()));
 
-        Model shown = new ChecksMsg.Read(FEATURE, readOf(checks)).apply(model).model();
+        Model shown = new ChecksMsg.Read(ForgejoChecksPort.PORT, FEATURE, readOf(checks))
+                .apply(model)
+                .model();
 
-        assertEquals(checks, shown.popup(ForgejoChecksPopup.class).get().checksRead());
+        assertEquals(
+                checks,
+                ForgejoChecksPort.checks(shown.popup(ChecksPopup.class).get().checksRead()));
     }
 
     @Test
@@ -91,8 +105,10 @@ class ChecksUpdateTest {
         Model running = showing(List.of(job("b", CommitStatus.State.RUNNING, 12, 0, 30, Option.none())));
         Model done = showing(List.of(job("b", CommitStatus.State.PASSED, 12, 0, 30, Option.of(5))));
 
-        assertEquals(1, new ChecksMsg.Tick().apply(running).cmds().size());
-        assertTrue(new ChecksMsg.Tick().apply(done).cmds().isEmpty());
+        assertEquals(
+                1,
+                new ChecksMsg.Tick(ForgejoChecksPort.PORT).apply(running).cmds().size());
+        assertTrue(new ChecksMsg.Tick(ForgejoChecksPort.PORT).apply(done).cmds().isEmpty());
     }
 
     @Test
@@ -106,9 +122,9 @@ class ChecksUpdateTest {
         // The failed one is listed first, and picked first; n picks the passed one after it.
         assertEquals(
                 Option.of("a"),
-                stepped.popup(ForgejoChecksPopup.class)
-                        .flatMap(ForgejoChecksPopup::pickedCheck)
-                        .map(ForgejoCheck::name));
+                stepped.popup(ChecksPopup.class)
+                        .flatMap(popup -> popup.pickedCheck(stepped))
+                        .map(ForgeCheck::name));
     }
 
     @Test
@@ -131,7 +147,7 @@ class ChecksUpdateTest {
         assertTrue(next.cmds().isEmpty());
         assertEquals(
                 Option.of(NoLog.NOT_ACTIONS),
-                next.model().popup(ForgejoChecksPopup.class).flatMap(ForgejoChecksPopup::noLog));
+                next.model().popup(ChecksPopup.class).flatMap(popup -> popup.noLog(next.model())));
     }
 
     @Test
@@ -143,12 +159,17 @@ class ChecksUpdateTest {
         Model asking = new ChecksMsg.RerunRequested().apply(model).model();
         RerunPopup popup = asking.popup(RerunPopup.class).get();
         assertEquals(
-                List.of(new RerunPlan.Run(12, "ci", "push", List.of(new ForgejoCheck.ActionsJob(12, 1)))),
+                List.of(new RerunPlan.Run(
+                        12,
+                        "ci",
+                        "push",
+                        List.of(ForgejoChecksPort.of(
+                                job("ci / lint (push)", CommitStatus.State.FAILED, 12, 1, 30, Option.of(5)))))),
                 popup.plan().runs());
 
         Next confirmed = new ChecksMsg.RerunConfirmed().apply(asking);
         assertEquals(1, confirmed.cmds().filter(RerunCmd.class::isInstance).size());
-        assertTrue(confirmed.model().popup(ForgejoChecksPopup.class).get().rerunAwaited(NOW));
+        assertTrue(confirmed.model().popup(ChecksPopup.class).get().rerunAwaited(NOW));
     }
 
     @Test
@@ -161,7 +182,7 @@ class ChecksUpdateTest {
 
         assertEquals(
                 Option.of(new RerunNote.Nothing(RerunPlan.Why.RUNNING)),
-                told.popup(ForgejoChecksPopup.class).flatMap(ForgejoChecksPopup::rerun));
+                told.popup(ChecksPopup.class).flatMap(ChecksPopup::rerun));
     }
 
     @Test
@@ -170,55 +191,66 @@ class ChecksUpdateTest {
         Model asked = new ChecksMsg.RerunConfirmed()
                 .apply(new ChecksMsg.RerunRequested().apply(model).model())
                 .model();
-        RerunPlan.Run run = new RerunPlan.Run(12, "ci", "push", List.of(new ForgejoCheck.ActionsJob(12, 1)));
+        RerunPlan.Run run = new RerunPlan.Run(
+                12,
+                "ci",
+                "push",
+                List.of(ForgejoChecksPort.of(
+                        job("ci / lint (push)", CommitStatus.State.FAILED, 12, 1, 30, Option.of(5)))));
+        RerunCmd cmd = new RerunCmd(FEATURE, List.of(run));
 
         Model answered = new ChecksMsg.Rerun(
-                        new RerunCmd(FEATURE, List.of(run)),
-                        List.of(new RerunCmd.Outcome(
-                                run, Option.of(new ForgejoFailure.Asked(new ForgejoError.Refused(403, "no"))))))
+                        ForgejoChecksPort.PORT,
+                        FEATURE,
+                        cmd,
+                        List.of(new RerunPlan.Outcome(
+                                run, Option.of(new ForgejoFailure.Asked(new ForgejoError.Refused(403, "no"))))),
+                        List.empty())
                 .apply(asked)
                 .model();
 
         assertTrue(answered.outcome().error().isDefined());
-        assertFalse(answered.popup(ForgejoChecksPopup.class).get().rerunAwaited(NOW));
+        assertFalse(answered.popup(ChecksPopup.class).get().rerunAwaited(NOW));
     }
 
     @Test
     void fromThePullRequestDialogTheChecksAreOfTheCommitItMerges() {
         ForgejoPullRequestPopup dialog = ChecksFixtures.pullRequest();
 
-        Next next = new ChecksMsg.PullRequestChecksRequested()
+        Next next = new ChecksMsg.PullRequestChecksRequested(ForgejoChecksPort.PORT)
                 .apply(model(CommitStatus.State.RUNNING).openPopup(dialog));
 
+        assertEquals(Option.of(dialog), next.model().popup(ChecksPopup.class).flatMap(ChecksPopup::from));
         assertEquals(
-                Option.of(dialog), next.model().popup(ForgejoChecksPopup.class).flatMap(ForgejoChecksPopup::from));
-        assertEquals(List.of(new LoadChecks(FEATURE, PR_HEAD)), next.cmds().filter(LoadChecks.class::isInstance));
+                List.of(new LoadChecks(FEATURE, Option.of(PR_HEAD))),
+                next.cmds().filter(LoadChecks.class::isInstance));
     }
 
     @Test
     void fromThePullRequestDialogTheyAreReadAgainOnTheCommitItMergesThoughTheRemoteBranchIsBehind() {
         // origin/feature is still at TIP: what was pushed to the pull request since was not fetched.
-        Model opened = new ChecksMsg.PullRequestChecksRequested()
+        Model opened = new ChecksMsg.PullRequestChecksRequested(ForgejoChecksPort.PORT)
                 .apply(model(CommitStatus.State.RUNNING).openPopup(ChecksFixtures.pullRequest()))
                 .model();
         Model read = new ChecksMsg.Read(
+                        ForgejoChecksPort.PORT,
                         FEATURE,
                         readOf(PR_HEAD, List.of(job("b", CommitStatus.State.RUNNING, 12, 0, 30, Option.none()))))
                 .apply(opened)
                 .model();
 
         assertEquals(
-                List.of(new LoadChecks(FEATURE, PR_HEAD)),
-                new ChecksMsg.Tick().apply(read).cmds().filter(LoadChecks.class::isInstance));
+                List.of(new LoadChecks(FEATURE, Option.of(PR_HEAD))),
+                new ChecksMsg.Tick(ForgejoChecksPort.PORT).apply(read).cmds().filter(LoadChecks.class::isInstance));
         assertEquals(
-                List.of(new LoadChecks(FEATURE, PR_HEAD)),
+                List.of(new LoadChecks(FEATURE, Option.of(PR_HEAD))),
                 new ChecksMsg.RefreshChosen().apply(read).cmds().filter(LoadChecks.class::isInstance));
     }
 
     @Test
     void escapeGoesBackToThePullRequestDialogTheyWereOpenedFrom() {
         ForgejoPullRequestPopup dialog = ChecksFixtures.pullRequest();
-        Model opened = new ChecksMsg.PullRequestChecksRequested()
+        Model opened = new ChecksMsg.PullRequestChecksRequested(ForgejoChecksPort.PORT)
                 .apply(model(CommitStatus.State.RUNNING).openPopup(dialog))
                 .model();
 
@@ -232,13 +264,16 @@ class ChecksUpdateTest {
                 job("a", CommitStatus.State.PASSED, 12, 0, 30, Option.of(5)),
                 job("b", CommitStatus.State.FAILED, 12, 1, 30, Option.of(5))));
 
-        Model clicked = new ChecksMsg.Clicked("a").apply(model).model();
+        Model clicked = new ChecksMsg.Clicked(CheckPick.of(
+                        ForgejoChecksPort.of(job("a", CommitStatus.State.PASSED, 12, 0, 30, Option.of(5)))))
+                .apply(model)
+                .model();
 
         assertEquals(
                 Option.of("a"),
-                clicked.popup(ForgejoChecksPopup.class)
-                        .flatMap(ForgejoChecksPopup::pickedCheck)
-                        .map(ForgejoCheck::name));
+                clicked.popup(ChecksPopup.class)
+                        .flatMap(popup -> popup.pickedCheck(clicked))
+                        .map(ForgeCheck::name));
     }
 
     @Test
@@ -262,15 +297,20 @@ class ChecksUpdateTest {
                         preferences.settings().with(Settings.EDITORS, new Editors(List.of(nvim, code)))));
         CheckLogCmd cmd = new CheckLogCmd(FEATURE, "b", new ForgejoCheck.ActionsJob(12, 1));
 
-        Model asking =
-                new ChecksMsg.LogRead(cmd, "/logs/12-1.log", 3).apply(model).model();
-        Model read = new ChecksMsg.Read(FEATURE, readOf(failed)).apply(asking).model();
+        Model asking = new ChecksMsg.LogRead(cmd, "b", "/logs/12-1.log", 3, List.empty())
+                .apply(model)
+                .model();
+        Model read = new ChecksMsg.Read(ForgejoChecksPort.PORT, FEATURE, readOf(failed))
+                .apply(asking)
+                .model();
         Model back = Update.update(read, new EditMsg.Cancelled()).model();
 
         EditPopup menu = asking.popup(EditPopup.class).get();
-        assertEquals(Option.of(Phrase.of("forgejo.dialog.logEditor.title", "b")), menu.title());
+        assertEquals(Option.of(Phrase.of("forge.dialog.logEditor.title", "b")), menu.title());
         assertEquals(model.popup(), menu.under());
-        assertEquals(failed, back.popup(ForgejoChecksPopup.class).get().checksRead());
+        assertEquals(
+                failed,
+                ForgejoChecksPort.checks(back.popup(ChecksPopup.class).get().checksRead()));
     }
 
     @Test

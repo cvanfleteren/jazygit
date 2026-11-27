@@ -16,6 +16,11 @@
     <description>How the builds of the branches on Forgejo went (ADR 174); deleted with core-forgejo</description>
 
     <dependencies>
+        <!-- The checks flow both forges have, to which each gives its calls (ADR 209). -->
+        <dependency>
+            <groupId>net.vanfleteren</groupId>
+            <artifactId>features-forge</artifactId>
+        </dependency>
         <dependency>
             <groupId>net.vanfleteren</groupId>
             <artifactId>core-forgejo</artifactId>

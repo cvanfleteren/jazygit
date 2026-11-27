@@ -5,6 +5,7 @@ import java.time.Duration;
 import net.vanfleteren.jazygit.core.gh.timing.CheckTimings;
 import net.vanfleteren.jazygit.features.branches.panes.branches.BranchBadges;
 import net.vanfleteren.jazygit.features.branches.panes.branches.BranchGroups;
+import net.vanfleteren.jazygit.features.forge.checks.ChecksMsg;
 import net.vanfleteren.jazygit.features.github.badges.BadgeLegend;
 import net.vanfleteren.jazygit.features.github.badges.GitHubBadge;
 import net.vanfleteren.jazygit.features.github.browse.BrowseAction;
@@ -12,7 +13,7 @@ import net.vanfleteren.jazygit.features.github.builds.BuildsAction;
 import net.vanfleteren.jazygit.features.github.builds.content.BuildsSource;
 import net.vanfleteren.jazygit.features.github.checkout.CheckoutPullRequestAction;
 import net.vanfleteren.jazygit.features.github.checks.ChecksDialog;
-import net.vanfleteren.jazygit.features.github.checks.ChecksMsg;
+import net.vanfleteren.jazygit.features.github.checks.GitHubChecksPort;
 import net.vanfleteren.jazygit.features.github.checks.ShowChecksAction;
 import net.vanfleteren.jazygit.features.github.comments.CommentsDialog;
 import net.vanfleteren.jazygit.features.github.create.GitHubCreatePullRequestAction;
@@ -110,7 +111,7 @@ public final class GitHubFeature {
             .every(OVERVIEW_INTERVAL, PrOverviewMsg.Tick::new)
             // The dialogs that list checks read them only while one is not done, or once a minute (ADR 34).
             .every(CheckTimings.READ_WHILE_PENDING, PullRequestMsg.Tick::new)
-            .every(CheckTimings.READ_WHILE_PENDING, ChecksMsg.Tick::new)
+            .every(CheckTimings.READ_WHILE_PENDING, () -> new ChecksMsg.Tick(GitHubChecksPort.PORT))
             .every(MERGE_CHECK_INTERVAL, PullRequestMsg.MergeTick::new)
             .every(STACK_CHECK_INTERVAL, StackMsg.Tick::new)
             .reacting(GitHubReactions.REACTION)

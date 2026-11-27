@@ -204,6 +204,11 @@
             </dependency>
             <dependency>
                 <groupId>net.vanfleteren</groupId>
+                <artifactId>features-forge</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>net.vanfleteren</groupId>
                 <artifactId>features-github</artifactId>
                 <version>${project.version}</version>
             </dependency>
