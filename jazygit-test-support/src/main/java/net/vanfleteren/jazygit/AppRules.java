@@ -696,8 +696,9 @@ public final class AppRules {
     }
 
     /**
-     * Reading the clock, the environment, the machine's defaults (its time zone, its locale) or chance; a method
-     * reference, like {@code Instant::now}, included.
+     * Reading the clock, the environment, the machine's defaults (its time zone, its locale, its working directory, as
+     * a relative {@link java.nio.file.Path} made absolute does) or chance; a method reference, like {@code
+     * Instant::now}, included.
      */
     private static DescribedPredicate<JavaAccess<?>> tellsTheTimeOrChance() {
         return DescribedPredicate.describe("tell the time, read the environment or draw a random number", access -> {
@@ -711,6 +712,9 @@ public final class AppRules {
                     || owner.isEquivalentTo(java.time.Clock.class) && name.startsWith("system")
                     || owner.isEquivalentTo(java.util.Locale.class) && name.equals("getDefault")
                     || owner.isEquivalentTo(java.util.TimeZone.class) && name.equals("getDefault")
+                    || owner.isAssignableTo(java.nio.file.Path.class)
+                            && Stream.of("toAbsolutePath", "toRealPath", "register", "toFile")
+                                    .anyMatch(name::equals)
                     || owner.isEquivalentTo(Runtime.class)
                     || owner.isEquivalentTo(ProcessHandle.class)
                     || owner.isEquivalentTo(Math.class) && name.equals("random")
@@ -721,7 +725,9 @@ public final class AppRules {
 
     /**
      * What runs git or gh, or shows something: the views, but for the keys they declare and how a picture in Markdown
-     * is found, which are data (they were {@code keys} and {@code image} before the views had them, ADR 136).
+     * is found, which are data (they were {@code keys} and {@code image} before the views had them, ADR 136). A
+     * {@link java.nio.file.Path} is a value, which an update may hold and join; what reads the disk through it is the
+     * rest of {@code java.nio.file}, and what reads the working directory is {@link #tellsTheTimeOrChance()}.
      */
     private static DescribedPredicate<JavaClass> effects() {
         return gitOrGh()
@@ -733,6 +739,7 @@ public final class AppRules {
                                 "java.io..",
                                 "java.nio.file..")
                         .and(not(resideInAPackage("..jazygit.kernel.ui.keys..")))
+                        .and(not(JavaClass.Predicates.equivalentTo(java.nio.file.Path.class)))
                         .and(not(named(Pattern.quote(MARKDOWN_IMAGE) + "(\\$.*)?"))))
                 // What asks Forgejo over HTTP (ADR 174); what it answers is values.
                 .or(resideInAPackage("..jazygit.core.forgejo").and(simpleNameStartingWith("Http")))
