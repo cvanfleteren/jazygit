@@ -80,7 +80,7 @@ final class StackPickDialog implements PopupView {
         int line = Math.clamp(
                 cursor.line().getOrElse(choice.branch()), 0, choice.rows().size() - 1);
         List<String> lines =
-                choice.rows().zipWithIndex().map(at -> line(choice, at._1(), at._2(), behind(model, choice, at._1())));
+                choice.rows().zipWithIndex().map(at -> line(choice, at._1(), at._2(), behind(model, at._1())));
         list.elements(lines.zipWithIndex()
                         .map(at -> styled(choice, at._1(), at._2()))
                         .toJavaArray(StyledElement[]::new))
@@ -132,14 +132,12 @@ final class StackPickDialog implements PopupView {
      * How many commits of the branch under it in {@code choice} the branch of {@code row} does not have, which GitHub
      * does not merge a stack with until it is rebased (ADR 73); none for the lowest, or one that has them all.
      */
-    private static Option<String> behind(Model model, StackChoice choice, StackChoice.Row row) {
-        return row.parent()
+    private static Option<String> behind(Model model, StackChoice.Row row) {
+        return row.below()
                 .flatMap(below -> model.repo()
                         .behindParent(row.branch().name())
-                        .map(behind -> Messages.get(
-                                "github.dialog.makeStack.notOn",
-                                String.valueOf(behind),
-                                choice.rows().get(below).branch().name().value())));
+                        .map(behind ->
+                                Messages.get("github.dialog.makeStack.notOn", String.valueOf(behind), below.value())));
     }
 
     /**
