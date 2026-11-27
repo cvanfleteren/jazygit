@@ -3,6 +3,9 @@ package net.vanfleteren.jazygit.features.branches.branch.rebase;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.core.repo.Branch;
 import net.vanfleteren.jazygit.core.repo.BranchName;
+import net.vanfleteren.jazygit.core.repo.BranchRef;
+import net.vanfleteren.jazygit.core.repo.RemoteBranch;
+import net.vanfleteren.jazygit.features.branches.branch.Branches;
 import net.vanfleteren.jazygit.kernel.state.BranchBases;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.Update.Next;
@@ -18,7 +21,7 @@ public final class RebaseUpdate {
 
     public static Next update(Model model, RebaseMsg msg) {
         return switch (msg) {
-            case RebaseMsg.Requested(BranchName highlighted) -> requested(model, highlighted);
+            case RebaseMsg.Requested(BranchRef highlighted) -> requested(model, highlighted);
             case RebaseMsg.Chosen(RebaseMsg.Target target) ->
                 PopupUpdate.confirm(
                         model,
@@ -32,12 +35,12 @@ public final class RebaseUpdate {
      * {@code highlighted} can be the checked out branch itself. An option that does not apply, also while an
      * operation runs on a branch it takes, is disabled rather than keeping the popup closed (ADR 91).
      */
-    private static Next requested(Model model, BranchName highlighted) {
+    private static Next requested(Model model, BranchRef highlighted) {
         return PopupUpdate.ask(
                 model,
                 model.repo()
                         .currentBranch()
-                        .filter(current -> model.repo().branch(highlighted).isDefined())
+                        .filter(current -> Branches.known(model, highlighted))
                         .map(current -> new RebasePopup(current.name(), highlighted, base(model, current))));
     }
 
@@ -45,16 +48,18 @@ public final class RebaseUpdate {
      * Where {@code target} of {@code popup} rebases onto, when it applies: there is such a branch, and no operation
      * runs on it nor on the checked out branch.
      */
-    static Option<BranchName> onto(Model model, RebasePopup popup, RebaseMsg.Target target) {
+    static Option<BranchRef> onto(Model model, RebasePopup popup, RebaseMsg.Target target) {
         return popup.target(target)
-                .filter(onto -> model.idleBranch(onto).isDefined()
-                        && model.idleBranch(popup.branch()).isDefined());
+                .flatMap(onto -> Branches.idle(model, onto))
+                .filter(onto -> model.idleBranch(popup.branch()).isDefined());
     }
 
     /**
-     * The base branch of {@code branch} (ADR 91): its parent (ADR 72), else the main branch; none for a root.
+     * The base branch of {@code branch} (ADR 91): its parent (ADR 72), else the main branch; none for a root. The
+     * remote-tracking one on {@code origin} when there is one, as the commits ahead and behind count against it (ADR
+     * 20), for it is what the remote has, where the local branch is often stale.
      */
-    static Option<BranchName> base(Model model, Branch branch) {
+    static Option<BranchRef> base(Model model, Branch branch) {
         Option<BranchName> main = AheadUpdate.main(model);
         if (BranchBases.in(model).root(branch.name(), main)) {
             return Option.none();
@@ -64,6 +69,10 @@ public final class RebaseUpdate {
                 .get(branch.name())
                 .orElse(main)
                 .filter(base ->
-                        !base.equals(branch.name()) && model.repo().branch(base).isDefined());
+                        !base.equals(branch.name()) && model.repo().branch(base).isDefined())
+                .map(base -> Option.of(new RemoteBranch(RemoteBranch.DEFAULT_REMOTE, base))
+                        .filter(remote -> model.repo().remoteBranch(remote).isDefined())
+                        .<BranchRef>map(RemoteBranch::tracking)
+                        .getOrElse(() -> new BranchRef.Local(base)));
     }
 }

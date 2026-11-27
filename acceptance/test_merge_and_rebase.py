@@ -232,3 +232,67 @@ def test_rebase_brings_the_uncommitted_changes_back_afterwards(repo, jazygit):
     # Git brings the stash back without --index: what was staged comes back unstaged.
     assert repo.status() == {"two.txt": " M", "four.txt": " M", "notes.txt": "??"}
     assert repo.stashes() == []
+
+
+def test_a_merge_of_a_remote_branch_makes_a_merge_commit_as_git_words_it(repo, origin, jazygit):
+    repo.commit("Add one", **{"one.txt": "one\n"})
+    repo("push", "origin", "main")
+    repo("switch", "--create", "feature")
+    repo.commit("Add two", **{"two.txt": "two\n"})
+    repo("push", "origin", "feature")
+    repo("switch", "main")
+    repo("branch", "--delete", "--force", "feature")
+    repo.commit("Add three", **{"three.txt": "three\n"})
+    # A tag of the same name, on main, would make "origin/feature" mean nothing to merge.
+    repo("tag", "origin/feature", "main")
+    main = repo("rev-parse", "main")
+    ui = jazygit()
+
+    ui.branches.merge("origin/feature", mode="merge commit", remote=True)
+
+    assert repo.subjects()[0] == "Merge remote-tracking branch 'origin/feature'"
+    assert repo("rev-parse", "HEAD^1") == main
+    assert repo("rev-parse", "HEAD^2") == repo("rev-parse", "refs/remotes/origin/feature")
+    assert files(repo) == ["one.txt", "three.txt", "two.txt"]
+    assert repo.status() == {}
+
+
+def stale_main(repo, origin, clone):
+    """Feature, checked out, with a commit since it left main; main on origin has one more, fetched, that the local
+    main has not: it is stale."""
+    repo.commit("Add one", **{"one.txt": "one\n"})
+    repo("push", "--set-upstream", "origin", "main")
+    repo("switch", "--create", "feature")
+    repo.commit("Add two", **{"two.txt": "two\n"})
+    teammate = clone()
+    teammate.commit("Add three", **{"three.txt": "three\n"})
+    teammate("push")
+    repo("fetch", "origin")
+    # A tag of the same name, on the old main, would win over the remote-tracking branch if its bare name was used.
+    repo("tag", "origin/main", "main")
+
+
+def test_rebase_onto_a_remote_branch_puts_the_commits_on_top_of_it_while_the_local_one_is_stale(
+        repo, origin, clone, jazygit):
+    stale_main(repo, origin, clone)
+    local_main = repo("rev-parse", "main")
+    ui = jazygit()
+
+    ui.branches.rebase_onto("origin/main", remote=True)
+
+    assert repo.in_progress() is None
+    assert repo.subjects() == ["Add two", "Add three", "Add one"]
+    assert repo("merge-base", "feature", "refs/remotes/origin/main") == repo("rev-parse", "refs/remotes/origin/main")
+    assert repo("rev-parse", "main") == local_main
+    assert repo.status() == {}
+
+
+def test_rebase_on_the_base_branch_uses_the_remote_one_when_there_is_one(repo, origin, clone, jazygit):
+    stale_main(repo, origin, clone)
+    local_main = repo("rev-parse", "main")
+    ui = jazygit()
+
+    ui.branches.rebase_on_base("origin/main")
+
+    assert repo.subjects() == ["Add two", "Add three", "Add one"]
+    assert repo("rev-parse", "main") == local_main

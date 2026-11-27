@@ -7,7 +7,7 @@ import net.vanfleteren.jazygit.core.git.model.MergeMode;
 import net.vanfleteren.jazygit.core.git.process.GitError;
 import net.vanfleteren.jazygit.core.git.process.GitFailure;
 import net.vanfleteren.jazygit.core.process.ExecutedCommand;
-import net.vanfleteren.jazygit.core.repo.BranchName;
+import net.vanfleteren.jazygit.core.repo.BranchRef;
 import net.vanfleteren.jazygit.core.repo.Commit;
 import net.vanfleteren.jazygit.core.repo.InProgress;
 import net.vanfleteren.jazygit.core.repo.Revision;
@@ -25,7 +25,7 @@ public interface Integrate {
      * left so, for the user to resolve them, and fails with {@link GitError.StoppedOnConflicts}; a squash merge is
      * then not committed.
      */
-    Either<GitFailure, List<ExecutedCommand>> merge(BranchName branch, MergeMode mode);
+    Either<GitFailure, List<ExecutedCommand>> merge(BranchRef branch, MergeMode mode);
 
     /**
      * Commits the changes of the commit {@code sha} on top of the checked out branch. A cherry-pick that stops on
@@ -56,7 +56,7 @@ public interface Integrate {
      * conflicts is left so, and fails with {@link GitError.StoppedOnConflicts}; when it fails otherwise, it is
      * aborted again, so the repository is left as it was.
      */
-    Either<GitFailure, List<ExecutedCommand>> rebase(BranchName onto);
+    Either<GitFailure, List<ExecutedCommand>> rebase(BranchRef onto);
 
     /**
      * Rebases a stack onto {@code base} in one interactive rebase whose todo picks the own commits of each of
@@ -65,7 +65,7 @@ public interface Integrate {
      * when a branch is no longer at the {@code tip} its commits were read at
      * ({@link GitError.StackBranchMoved}), or is checked out in another worktree
      * ({@link GitError.StackBranchCheckedOutElsewhere}). One that stops on conflicts is left so, as
-     * {@link #rebase(BranchName)} is; one that fails otherwise is aborted again.
+     * {@link #rebase(BranchRef)} is; one that fails otherwise is aborted again.
      */
     Either<GitFailure, List<ExecutedCommand>> rebaseStack(Revision base, List<StackLayer.Commits> layers);
 }

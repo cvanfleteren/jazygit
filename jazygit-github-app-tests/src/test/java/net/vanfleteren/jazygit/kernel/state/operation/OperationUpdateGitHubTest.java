@@ -12,6 +12,7 @@ import net.vanfleteren.jazygit.app.keys.Features;
 import net.vanfleteren.jazygit.core.git.model.MergeMode;
 import net.vanfleteren.jazygit.core.git.model.PushMode;
 import net.vanfleteren.jazygit.core.repo.BranchName;
+import net.vanfleteren.jazygit.core.repo.BranchRef;
 import net.vanfleteren.jazygit.core.repo.InProgress;
 import net.vanfleteren.jazygit.core.repo.RemoteBranch;
 import net.vanfleteren.jazygit.core.repo.Sha;
@@ -35,7 +36,8 @@ import org.junit.jupiter.api.Test;
  */
 class OperationUpdateGitHubTest {
 
-    private static final MergeCmd MERGE = new MergeCmd(new BranchName("feature"), MergeMode.MERGE_COMMIT);
+    private static final MergeCmd MERGE =
+            new MergeCmd(new BranchRef.Local(new BranchName("feature")), MergeMode.MERGE_COMMIT);
 
     private static final InProgress MERGING =
             new InProgress.Merging(new Sha("0123456789012345678901234567890123456789"));

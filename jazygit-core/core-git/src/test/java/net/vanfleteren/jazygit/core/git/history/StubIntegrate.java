@@ -8,7 +8,7 @@ import net.vanfleteren.jazygit.core.git.model.InProgressAction;
 import net.vanfleteren.jazygit.core.git.model.MergeMode;
 import net.vanfleteren.jazygit.core.git.process.GitFailure;
 import net.vanfleteren.jazygit.core.process.ExecutedCommand;
-import net.vanfleteren.jazygit.core.repo.BranchName;
+import net.vanfleteren.jazygit.core.repo.BranchRef;
 import net.vanfleteren.jazygit.core.repo.Commit;
 import net.vanfleteren.jazygit.core.repo.InProgress;
 import net.vanfleteren.jazygit.core.repo.Revision;
@@ -22,7 +22,7 @@ import net.vanfleteren.jazygit.core.repo.StackLayer;
 public interface StubIntegrate extends Integrate {
 
     @Override
-    default Either<GitFailure, List<ExecutedCommand>> merge(BranchName branch, MergeMode mode) {
+    default Either<GitFailure, List<ExecutedCommand>> merge(BranchRef branch, MergeMode mode) {
         return ran();
     }
 
@@ -42,7 +42,7 @@ public interface StubIntegrate extends Integrate {
     }
 
     @Override
-    default Either<GitFailure, List<ExecutedCommand>> rebase(BranchName onto) {
+    default Either<GitFailure, List<ExecutedCommand>> rebase(BranchRef onto) {
         return ran();
     }
 

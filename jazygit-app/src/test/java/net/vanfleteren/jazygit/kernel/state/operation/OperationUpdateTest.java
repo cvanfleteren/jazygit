@@ -22,6 +22,7 @@ import net.vanfleteren.jazygit.core.git.process.GitError;
 import net.vanfleteren.jazygit.core.git.process.GitFailure;
 import net.vanfleteren.jazygit.core.process.ExecutedCommand;
 import net.vanfleteren.jazygit.core.repo.BranchName;
+import net.vanfleteren.jazygit.core.repo.BranchRef;
 import net.vanfleteren.jazygit.core.repo.InProgress;
 import net.vanfleteren.jazygit.core.repo.RemoteBranch;
 import net.vanfleteren.jazygit.core.repo.Sha;
@@ -47,7 +48,8 @@ import org.junit.jupiter.api.Test;
 
 class OperationUpdateTest {
 
-    private static final MergeCmd MERGE = new MergeCmd(new BranchName("feature"), MergeMode.MERGE_COMMIT);
+    private static final MergeCmd MERGE =
+            new MergeCmd(new BranchRef.Local(new BranchName("feature")), MergeMode.MERGE_COMMIT);
 
     private static final InProgress MERGING =
             new InProgress.Merging(new Sha("0123456789012345678901234567890123456789"));
@@ -96,7 +98,8 @@ class OperationUpdateTest {
                 List.of(),
                 Option.of(new GitError.CommandFailed("fatal: no rebase in progress", 128)));
 
-        Next next = Update.update(loaded(), new OperationMsg.Failed(new RebaseCmd(new BranchName("main")), failure));
+        Next next = Update.update(
+                loaded(), new OperationMsg.Failed(new RebaseCmd(new BranchRef.Local(new BranchName("main"))), failure));
 
         assertEquals(
                 Option.of("Rebasing onto main failed: CONFLICT; cleaning up afterwards failed too: "
@@ -153,7 +156,7 @@ class OperationUpdateTest {
     void anOperationThatStopsOnConflictsIsReportedAsStoppedNotAsFailed() {
         Git stopping = StubGit.of().withIntegrate(new StubIntegrate() {
             @Override
-            public Either<GitFailure, List<ExecutedCommand>> merge(BranchName branch, MergeMode mode) {
+            public Either<GitFailure, List<ExecutedCommand>> merge(BranchRef branch, MergeMode mode) {
                 return Either.left(new GitFailure(
                         new GitError.StoppedOnConflicts(Option.of(MERGING), 2), executed("git merge feature")));
             }

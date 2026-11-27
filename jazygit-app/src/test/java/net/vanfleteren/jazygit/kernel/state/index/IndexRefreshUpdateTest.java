@@ -17,6 +17,7 @@ import net.vanfleteren.jazygit.core.git.process.GitError;
 import net.vanfleteren.jazygit.core.git.process.GitFailure;
 import net.vanfleteren.jazygit.core.process.ExecutedCommand;
 import net.vanfleteren.jazygit.core.repo.BranchName;
+import net.vanfleteren.jazygit.core.repo.BranchRef;
 import net.vanfleteren.jazygit.features.branches.branch.merge.MergeCmd;
 import net.vanfleteren.jazygit.kernel.state.Env;
 import net.vanfleteren.jazygit.kernel.state.Model;
@@ -32,7 +33,8 @@ import org.junit.jupiter.api.Test;
  */
 class IndexRefreshUpdateTest {
 
-    private static final MergeCmd MERGE = new MergeCmd(new BranchName("feature"), MergeMode.MERGE_COMMIT);
+    private static final MergeCmd MERGE =
+            new MergeCmd(new BranchRef.Local(new BranchName("feature")), MergeMode.MERGE_COMMIT);
     private static final Instant NOW = Instant.parse("2026-11-09T22:00:00Z");
     private static final Option<MetadataStamp> CHECKED_OUT = stamp("checked out");
     private static final Option<MetadataStamp> REFRESHED = stamp("refreshed");

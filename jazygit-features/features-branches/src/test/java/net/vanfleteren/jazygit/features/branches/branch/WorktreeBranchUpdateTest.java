@@ -147,8 +147,10 @@ class WorktreeBranchUpdateTest {
         Model model = elsewhere();
 
         assertEquals(
-                Option.of(new MergePopup(new BranchName("main"), FEATURE)),
-                Update.update(model, new MergeMsg.Requested(FEATURE)).model().popup());
+                Option.of(new MergePopup(new BranchName("main"), new BranchRef.Local(FEATURE))),
+                Update.update(model, new MergeMsg.Requested(new BranchRef.Local(FEATURE)))
+                        .model()
+                        .popup());
         assertEquals(
                 Option.of(new RenameBranchPopup(FEATURE)),
                 Update.update(model, new RenameBranchMsg.Requested(FEATURE))

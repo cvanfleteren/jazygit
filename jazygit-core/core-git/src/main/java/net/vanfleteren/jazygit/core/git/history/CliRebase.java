@@ -71,7 +71,7 @@ public final class CliRebase {
 
     /**
      * Rebases the checked out branch onto {@code onto}:
-     * {@code git rebase --autostash --no-autosquash refs/heads/<onto>}. Like a plain {@code git rebase}: the merges of
+     * {@code git rebase --autostash --no-autosquash <onto>}. Like a plain {@code git rebase}: the merges of
      * the branch are flattened, so a branch that merged {@code onto} in ends up linear on top of it, unless the user
      * set {@code rebase.rebaseMerges}, which git then honours. Fixup commits stay where they are whatever
      * {@code rebase.autoSquash} says. The history rewrites keep {@code --rebase-merges}: they must keep the merges
@@ -79,9 +79,8 @@ public final class CliRebase {
      *
      * @return the command lines that were run
      */
-    static Either<GitFailure, List<ExecutedCommand>> onto(Path worktree, BranchName onto) {
-        return rebase(
-                worktree, git("rebase", "--autostash", "--no-autosquash", GitArgs.revision(new BranchRef.Local(onto))));
+    static Either<GitFailure, List<ExecutedCommand>> onto(Path worktree, BranchRef onto) {
+        return rebase(worktree, git("rebase", "--autostash", "--no-autosquash", GitArgs.revision(onto)));
     }
 
     /**

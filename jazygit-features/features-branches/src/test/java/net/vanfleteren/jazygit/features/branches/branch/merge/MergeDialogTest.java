@@ -12,6 +12,7 @@ import io.vavr.collection.List;
 import java.util.ArrayList;
 import net.vanfleteren.jazygit.core.git.model.MergeMode;
 import net.vanfleteren.jazygit.core.repo.BranchName;
+import net.vanfleteren.jazygit.core.repo.BranchRef;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.Msg;
 import net.vanfleteren.jazygit.kernel.state.TestModels;
@@ -30,7 +31,8 @@ class MergeDialogTest {
     private final net.vanfleteren.jazygit.kernel.ui.widgets.ChoiceDialog<MergePopup> dialog =
             new net.vanfleteren.jazygit.kernel.ui.widgets.ChoiceDialog<>(MergeDialogs.MERGE, dispatched::add);
     // In the test models, main is checked out.
-    private final Model open = Update.update(TestModels.loaded(), new MergeMsg.Requested(new BranchName("feature")))
+    private final Model open = Update.update(
+                    TestModels.loaded(), new MergeMsg.Requested(new BranchRef.Local(new BranchName("feature"))))
             .model();
 
     @Test

@@ -295,7 +295,7 @@ class ProgramTest {
         public Integrate integrate() {
             return new StubIntegrate() {
                 @Override
-                public Either<GitFailure, List<ExecutedCommand>> rebase(BranchName onto) {
+                public Either<GitFailure, List<ExecutedCommand>> rebase(BranchRef onto) {
                     return StubGit.ran("git rebase");
                 }
             };

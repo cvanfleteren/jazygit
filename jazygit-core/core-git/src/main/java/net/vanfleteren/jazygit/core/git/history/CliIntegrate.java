@@ -16,7 +16,6 @@ import net.vanfleteren.jazygit.core.git.process.GitFailure;
 import net.vanfleteren.jazygit.core.git.process.GitProcess;
 import net.vanfleteren.jazygit.core.git.process.TempFiles;
 import net.vanfleteren.jazygit.core.process.ExecutedCommand;
-import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.BranchRef;
 import net.vanfleteren.jazygit.core.repo.Commit;
 import net.vanfleteren.jazygit.core.repo.InProgress;
@@ -50,7 +49,7 @@ public final class CliIntegrate implements Integrate {
      * @return the command lines that were run
      */
     @Override
-    public Either<GitFailure, List<ExecutedCommand>> merge(BranchName branch, MergeMode mode) {
+    public Either<GitFailure, List<ExecutedCommand>> merge(BranchRef branch, MergeMode mode) {
         return switch (mode) {
             case FAST_FORWARD -> withMessage(branch, "--ff");
             case MERGE_COMMIT -> withMessage(branch, "--no-ff");
@@ -64,29 +63,22 @@ public final class CliIntegrate implements Integrate {
      * word the merge commit after the ref, so the message is given: the one {@code git fmt-merge-msg} writes for
      * the branch, as it does for {@code git merge <branch>}, so the user's {@code merge.*} config applies.
      */
-    private Either<GitFailure, List<ExecutedCommand>> withMessage(BranchName branch, String fastForward) {
+    private Either<GitFailure, List<ExecutedCommand>> withMessage(BranchRef branch, String fastForward) {
         return message(branch)
                 .flatMap(message -> Unfinished.runOrStop(
-                        worktree,
-                        git(
-                                "merge",
-                                fastForward,
-                                "--no-edit",
-                                "-m",
-                                message,
-                                GitArgs.revision(new BranchRef.Local(branch)))));
+                        worktree, git("merge", fastForward, "--no-edit", "-m", message, GitArgs.revision(branch))));
     }
 
-    private Either<GitFailure, String> message(BranchName branch) {
+    private Either<GitFailure, String> message(BranchRef branch) {
         return GitProcess.read(
                         worktree,
-                        GitCommand.reading("rev-parse", "--verify", GitArgs.revision(new BranchRef.Local(branch))),
+                        GitCommand.reading("rev-parse", "--verify", GitArgs.revision(branch)),
                         raw -> Either.right(raw.strip()))
                 .mapLeft(error -> new GitFailure(error, List.empty()))
                 .flatMap(sha -> TempFiles.using(
                         "jazygit-merge",
-                        // What git merge hands to fmt-merge-msg for a local branch, as in FETCH_HEAD.
-                        file -> Files.writeString(file, sha + "\t\tbranch '" + GitArgs.name(branch) + "' of .\n"),
+                        // What git merge hands to fmt-merge-msg, as in FETCH_HEAD.
+                        file -> Files.writeString(file, sha + "\t\t" + described(branch) + " of .\n"),
                         failed -> new GitFailure(failed, List.empty()),
                         file -> GitProcess.read(
                                         worktree,
@@ -95,8 +87,19 @@ public final class CliIntegrate implements Integrate {
                                 .mapLeft(error -> new GitFailure(error, List.empty()))));
     }
 
-    private Either<GitFailure, List<ExecutedCommand>> squash(BranchName branch) {
-        return Unfinished.runOrStop(worktree, git("merge", "--squash", GitArgs.revision(new BranchRef.Local(branch))));
+    /**
+     * How git words the branch in a merge message: a local one as {@code branch 'x'}, a remote-tracking one as
+     * {@code remote-tracking branch 'origin/x'}.
+     */
+    private static String described(BranchRef branch) {
+        return switch (branch) {
+            case BranchRef.Local local -> "branch '" + local.name() + "'";
+            case BranchRef.Remote remote -> "remote-tracking branch '" + remote.name() + "'";
+        };
+    }
+
+    private Either<GitFailure, List<ExecutedCommand>> squash(BranchRef branch) {
+        return Unfinished.runOrStop(worktree, git("merge", "--squash", GitArgs.revision(branch)));
     }
 
     /**
@@ -162,7 +165,7 @@ public final class CliIntegrate implements Integrate {
     }
 
     @Override
-    public Either<GitFailure, List<ExecutedCommand>> rebase(BranchName onto) {
+    public Either<GitFailure, List<ExecutedCommand>> rebase(BranchRef onto) {
         return CliRebase.onto(worktree, onto);
     }
 
