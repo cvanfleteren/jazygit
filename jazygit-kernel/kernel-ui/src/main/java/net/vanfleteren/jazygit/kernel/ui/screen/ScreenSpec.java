@@ -11,9 +11,10 @@ import net.vanfleteren.jazygit.kernel.ui.widgets.LoadableList;
 
 /**
  * A screen, as the UI draws it (ADR 168): what the left column shows under the status while it is shown, and what the
- * rest of the window says of it. A feature adds one with {@link net.vanfleteren.jazygit.kernel.ui.Feature#screen}; the repository screen is the
- * kernel's. The panes of either are brought by the features, each with {@code Feature.pane} (ADR 211). The content panel mirrors the highlighted item of the pane of the
- * screen in use, and the screen gets its focus back when it is shown again.
+ * rest of the window says of it. A feature adds one with
+ * {@link net.vanfleteren.jazygit.kernel.ui.Feature#screen}; the repository screen is the kernel's. The panes of either
+ * are brought by the features, each with {@code Feature.pane} (ADR 211). The content panel mirrors the highlighted item
+ * of the pane of the screen in use, and the screen gets its focus back when it is shown again.
  *
  * @param screen      the screen, with its panes and the settings of its layout
  * @param nameKey     the message key of its name in the title of the status

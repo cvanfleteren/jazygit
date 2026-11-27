@@ -41,8 +41,9 @@ import net.vanfleteren.jazygit.kernel.ui.settings.SettingsSection;
  * A feature, as the app knows it: its actions, which bring its keys and its popups, what it shows in the content
  * panel, the settings it keeps, the sections it adds to the settings panel, what it does every so often, what it
  * answers of what happens in the kernel, what it shows of the branches in the branches pane, the screens it brings,
- * the panes it brings to a screen, and what its symbols in a panel mean. Each feature package declares one, as {@code XxxFeature.FEATURE}, and
- * {@code Features.ALL} lists it; that is all a new feature changes outside its package (ADR 127).
+ * the panes it brings to a screen, and what its symbols in a panel mean. Each feature package declares one, as
+ * {@code XxxFeature.FEATURE}, and {@code Features.ALL} lists it; that is all a new feature changes outside its package
+ * (ADR 127).
  *
  * <p>Making the standard keymap makes every feature, so a feature does not ask for {@code Keymap.standard()} while its
  * class is initialised.
@@ -57,7 +58,7 @@ import net.vanfleteren.jazygit.kernel.ui.settings.SettingsSection;
  * @param reactions   what it answers of what happens in the kernel, whichever part it keeps (ADR 158)
  * @param screens     the screens it brings, which the left of the window shows after the repository's (ADR 168)
  * @param panes       the panes it brings to a screen, the repository's or its own, which the screen orders (ADR 211)
- * @param legends    what it adds to the legends of the panels it draws in, which their help lists (ADR 168)
+ * @param legends     what it adds to the legends of the panels it draws in, which their help lists (ADR 168)
  * @param fills       what it gives for the slots, as the line above a list, whether a view spins or the pictures
  *                    its views may draw (ADR 172, 202)
  */
