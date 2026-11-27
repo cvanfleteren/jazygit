@@ -29,7 +29,8 @@ Since ADR 168 and 211 a feature brings a screen and its panes, as the pull reque
   pane most used, rather than on its first: a screen can say which of its panes it starts with.
 - **The workflows pane** lists the active workflows of the repository (`actions/workflows`, as ADR 131 reads them),
   each with how its last build on the default branch ended and how long it took; `·` when none of the commits read
-  ran it, "PRs only" for one that runs only for pull requests. The order is ADR 131's: those that ran on the default
+  ran it, as for one that runs only for pull requests: GitHub does not say what a workflow runs for, and its file would
+  have to be read for each. The order is ADR 131's: those that ran on the default
   branch's newest commit with builds first, each by how many builds it has, then by name. The first time it is shown,
   the one highlighted is, of those on the default branch's newest commit, one whose last build failed, else the one
   with the most builds; after that it stays as the user leaves it for as long as jazygit runs, in the model, not in
@@ -39,8 +40,8 @@ Since ADR 168 and 211 a feature brings a screen and its panes, as the pull reque
   every branch, the default branch, or one branch, "mine": the branch `B` was pressed on, else the checked-out one,
   read through the branch it follows on GitHub. A branch that follows none on GitHub leaves "mine" visible and
   disabled, saying why. On every branch, the runs of "mine" are marked `◆`, as ADR 131 marks them. The filter starts
-  at every branch, and stays for as long as jazygit runs; `B` sets it to the branch. A filter without runs says why in
-  the pane: "Markdown runs for pull requests only".
+  at every branch, and stays for as long as jazygit runs; `B` sets it to the branch. A filter without runs says so in
+  the pane, and among how many commits: "No runs of Markdown on main among its last 25 commits".
 - **What is read for each filter.** Every branch: the runs of the workflow, from GraphQL's `Workflow.runs`, as `a` read
   them (ADR 131). The default branch and "mine": the builds on the branch's commits, as `B` read them (ADR 131), one
   read for every workflow, so that another workflow highlighted reads nothing. `m` reads more, of whatever the filter
