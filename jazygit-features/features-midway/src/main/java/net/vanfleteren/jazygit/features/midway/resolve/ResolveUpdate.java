@@ -27,6 +27,7 @@ import net.vanfleteren.jazygit.kernel.state.Events;
 import net.vanfleteren.jazygit.kernel.state.KernelEvent;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.Update.Next;
+import net.vanfleteren.jazygit.kernel.state.edit.EditedFile;
 import net.vanfleteren.jazygit.kernel.state.edit.FileEditor;
 import net.vanfleteren.jazygit.kernel.state.operation.OperationUpdate;
 import net.vanfleteren.jazygit.kernel.state.popup.PopupUpdate;
@@ -115,7 +116,7 @@ public final class ResolveUpdate {
      * read first (ADR 201), by the feature that opens files (ADR 206).
      */
     private static Next edit(Model model, RepoPath path, Option<Integer> line) {
-        return Events.happened(Next.of(model), new KernelEvent.FileToOpen(path.value(), line, Option.none()));
+        return Events.happened(Next.of(model), new KernelEvent.FileToOpen(EditedFile.of(path), line, Option.none()));
     }
 
     /**

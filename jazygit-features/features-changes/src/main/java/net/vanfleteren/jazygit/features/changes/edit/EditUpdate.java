@@ -17,6 +17,7 @@ import net.vanfleteren.jazygit.kernel.state.diff.Changes;
 import net.vanfleteren.jazygit.kernel.state.diff.DiffCursorAt;
 import net.vanfleteren.jazygit.kernel.state.diff.DiffLines;
 import net.vanfleteren.jazygit.kernel.state.diff.DiffSide;
+import net.vanfleteren.jazygit.kernel.state.edit.EditedFile;
 import net.vanfleteren.jazygit.kernel.state.edit.FileEditor;
 import net.vanfleteren.jazygit.kernel.state.operation.OperationUpdate;
 
@@ -31,27 +32,27 @@ public final class EditUpdate {
 
     public static Next update(Model model, EditMsg msg) {
         return switch (msg) {
-            case EditMsg.Requested(String path, Option<Phrase> title) ->
-                inConflict(model, path)
-                        ? Next.of(model.clearError(), new ReadFirstConflictCmd(path, title))
-                        : open(model, path, 1, title);
-            case EditMsg.ListedRequested(String path) ->
+            case EditMsg.Requested(EditedFile file, Option<Phrase> title) ->
+                inConflict(model, file)
+                        .map(path -> Next.of(model.clearError(), new ReadFirstConflictCmd(path, title)))
+                        .getOrElse(() -> open(model, file, 1, title));
+            case EditMsg.ListedRequested(RepoPath path) ->
                 model.repoView()
                         .files()
                         .commitFiles()
                         .map(view -> elsewhere(model, view.of())
                                 .map(error -> Next.of(model.fail(error)))
-                                .getOrElse(() -> open(model, path, 1)))
+                                .getOrElse(() -> open(model, EditedFile.of(path), 1)))
                         .getOrElse(() -> Next.of(model));
             case EditMsg.AtCursor(DiffCursorAt at) ->
                 file(at.cursor())
-                        .map(path -> open(model, path.value(), line(model, at, at.cursor())))
+                        .map(path -> open(model, EditedFile.of(path), line(model, at, at.cursor())))
                         .getOrElse(() -> Next.of(model));
-            case EditMsg.FirstConflictRead(String path, Option<Integer> line, Option<Phrase> title) ->
-                open(model, path, line.getOrElse(1), title);
+            case EditMsg.FirstConflictRead(RepoPath path, Option<Integer> line, Option<Phrase> title) ->
+                open(model, EditedFile.of(path), line.getOrElse(1), title);
             case EditMsg.Chosen(EditorProgram editor) ->
                 model.popup(EditPopup.class)
-                        .map(popup -> start(popup.back(model), editor, popup.path(), popup.line()))
+                        .map(popup -> start(popup.back(model), editor, popup.file(), popup.line()))
                         .getOrElse(() -> Next.of(model));
             case EditMsg.Cancelled() ->
                 Next.of(model.popup(EditPopup.class)
@@ -65,9 +66,9 @@ public final class EditUpdate {
      */
     public static Next reacting(Model model, KernelEvent event) {
         return switch (event) {
-            case KernelEvent.FileToOpen(String path, Option<Integer> line, Option<Phrase> title) ->
-                line.map(at -> open(model, path, at, title))
-                        .getOrElse(() -> update(model, new EditMsg.Requested(path, title)));
+            case KernelEvent.FileToOpen(EditedFile file, Option<Integer> line, Option<Phrase> title) ->
+                line.map(at -> open(model, file, at, title))
+                        .getOrElse(() -> update(model, new EditMsg.Requested(file, title)));
             case KernelEvent.LogRead _,
                     KernelEvent.OperationDone _,
                     KernelEvent.Fetched _,
@@ -80,38 +81,46 @@ public final class EditUpdate {
     }
 
     /**
-     * Whether the file at {@code path} is in conflict, which opens at its first conflict, read first (ADR 201).
+     * The path of {@code file} if it is in conflict, which opens at its first conflict, read first (ADR 201): only a
+     * file of the working tree can be.
      */
-    private static boolean inConflict(Model model, String path) {
-        return model.repo()
-                .status()
-                .toOption()
-                .exists(status -> status.files()
-                        .exists(file -> file.path().value().equals(path)
-                                && file.conflict().isDefined()));
+    private static Option<RepoPath> inConflict(Model model, EditedFile file) {
+        return switch (file) {
+            case EditedFile.InWorktree(RepoPath path) ->
+                Option.when(
+                        model.repo()
+                                .status()
+                                .toOption()
+                                .exists(status -> status.files()
+                                        .exists(entry -> entry.path().equals(path)
+                                                && entry.conflict().isDefined())),
+                        path);
+            case EditedFile.OnDisk _ -> Option.none();
+        };
     }
 
-    private static Next open(Model model, String path, int line) {
-        return open(model, path, line, Option.none());
+    private static Next open(Model model, EditedFile file, int line) {
+        return open(model, file, line, Option.none());
     }
 
     /**
-     * Opens the file at {@code path} at {@code line}: in git's editor without an editor set to open files, which
+     * Opens {@code file} at {@code line}: in git's editor without an editor set to open files, which
      * opens it at its start; else in the one set, or the one chosen of those in a menu titled {@code title}. The menu
      * goes over a popup that is open, which it goes back to, if that one is coverable; else the first editor opens it,
      * as the menu would take that popup away (ADR 206).
      */
-    private static Next open(Model model, String path, int line, Option<Phrase> title) {
+    private static Next open(Model model, EditedFile file, int line, Option<Phrase> title) {
         return switch (FileEditor.of(model)) {
-            case FileEditor.GitEditor _ -> OperationUpdate.start(model.clearError(), new EditCmd(List.of(path)));
-            case FileEditor.One(EditorProgram editor) -> start(model, editor, path, line);
+            case FileEditor.GitEditor _ ->
+                OperationUpdate.start(model.clearError(), new EditCmd(List.of(file.shown())));
+            case FileEditor.One(EditorProgram editor) -> start(model, editor, file, line);
             case FileEditor.Several(Editors editors)
             when model.popup().exists(popup -> !popup.coverable()) ->
-                start(model, editors.all().head(), path, line);
+                start(model, editors.all().head(), file, line);
             case FileEditor.Several(Editors editors) ->
                 Next.of(model.clearError()
                         .openPopup(new EditPopup(
-                                path, line, editors.lettered(), title, model.popup(), model.listCursor())));
+                                file, line, editors.lettered(), title, model.popup(), model.listCursor())));
         };
     }
 
@@ -140,8 +149,8 @@ public final class EditUpdate {
         return current.contains(branch) ? Option.none() : Option.of(new EditError.NotCheckedOut(branch.value()));
     }
 
-    private static Next start(Model model, EditorProgram editor, String path, int line) {
-        return OperationUpdate.start(model.clearError(), new OpenFileCmd(editor, path, line));
+    private static Next start(Model model, EditorProgram editor, EditedFile file, int line) {
+        return OperationUpdate.start(model.clearError(), new OpenFileCmd(editor, file, line));
     }
 
     /**

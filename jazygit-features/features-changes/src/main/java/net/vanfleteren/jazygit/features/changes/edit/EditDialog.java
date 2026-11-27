@@ -19,7 +19,8 @@ public final class EditDialog {
             EditPopup.class,
             popup -> popup.title()
                     .map(ErrorText::of)
-                    .getOrElse(() -> Messages.get("changes.dialog.edit.title", name(popup.path()))),
+                    .getOrElse(() -> Messages.get(
+                            "changes.dialog.edit.title", popup.file().name())),
             popup -> popup.editors()
                     .map(lettered -> new PickDialog.Row<>(lettered._2, List.of(Cell.of(lettered._2.name())))
                             .withKey(lettered._1)),
@@ -28,11 +29,4 @@ public final class EditDialog {
             Option.none());
 
     private EditDialog() {}
-
-    /**
-     * The name of the file at {@code path}, without its directories.
-     */
-    private static String name(String path) {
-        return path.substring(path.lastIndexOf('/') + 1);
-    }
 }

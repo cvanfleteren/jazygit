@@ -14,12 +14,12 @@ import net.vanfleteren.jazygit.kernel.state.Phrase;
  * Reads the file in conflict at {@code path} for where its first conflict starts, to open it there (ADR 201), in the
  * menu titled {@code title} if it asks (ADR 206).
  */
-public record ReadFirstConflictCmd(String path, Option<Phrase> title) implements Cmd {
+public record ReadFirstConflictCmd(RepoPath path, Option<Phrase> title) implements Cmd {
 
     /**
      * Reads the file in conflict at {@code path}, to open it with the menu, if it asks, titled by the file.
      */
-    public ReadFirstConflictCmd(String path) {
+    public ReadFirstConflictCmd(RepoPath path) {
         this(path, Option.none());
     }
 
@@ -27,7 +27,7 @@ public record ReadFirstConflictCmd(String path, Option<Phrase> title) implements
     public Msg run(Env env) {
         return env.git()
                 .index()
-                .markers(List.of(new RepoPath(path)))
+                .markers(List.of(path))
                 .fold(
                         error -> failed(Failure.of(error)),
                         marked -> new EditMsg.FirstConflictRead(path, first(marked), title));

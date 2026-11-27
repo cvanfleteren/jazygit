@@ -22,6 +22,7 @@ import net.vanfleteren.jazygit.kernel.state.KernelEvent;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.Phrase;
 import net.vanfleteren.jazygit.kernel.state.Update.Next;
+import net.vanfleteren.jazygit.kernel.state.edit.EditedFile;
 import net.vanfleteren.jazygit.kernel.state.operation.OperationUpdate;
 import net.vanfleteren.jazygit.kernel.state.popup.CheckList;
 import net.vanfleteren.jazygit.kernel.state.popup.Covering;
@@ -145,7 +146,8 @@ public final class ChecksUpdate {
         Model done = OperationUpdate.done(model, cmd, List.empty()).clearError();
         return Events.happened(
                 Next.of(done),
-                KernelEvent.FileToOpen.at(file, line).titled(Phrase.of("forgejo.dialog.logEditor.title", cmd.name())));
+                KernelEvent.FileToOpen.at(EditedFile.onDisk(file), line)
+                        .titled(Phrase.of("forgejo.dialog.logEditor.title", cmd.name())));
     }
 
     /**
