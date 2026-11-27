@@ -283,14 +283,17 @@ public final class CliRemotes implements Remotes {
     }
 
     /**
-     * Whether {@code pull.rebase} or {@code pull.ff} is set.
+     * Whether {@code branch.<branch>.rebase}, which {@code branch.autoSetupRebase} sets, {@code pull.rebase} or
+     * {@code pull.ff} is set.
      */
     @Override
-    public Either<GitError, Boolean> pullConfigured() {
-        return CliConfig.effective(worktree, PULL_REBASE)
-                .flatMap(rebase -> rebase.isDefined()
-                        ? Either.right(true)
-                        : CliConfig.effective(worktree, PULL_FF).map(Option::isDefined));
+    public Either<GitError, Boolean> pullConfigured(BranchName branch) {
+        return List.of("branch." + GitArgs.name(branch) + ".rebase", PULL_REBASE, PULL_FF)
+                .foldLeft(
+                        Either.<GitError, Boolean>right(false),
+                        (found, key) -> found.flatMap(set -> set
+                                ? Either.right(true)
+                                : CliConfig.effective(worktree, key).map(Option::isDefined)));
     }
 
     @Override

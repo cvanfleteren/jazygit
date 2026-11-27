@@ -23,7 +23,7 @@ class PullCheckTest {
     private static Git answering(Either<GitError, Boolean> answer) {
         return StubGit.of().withRemotes(new StubRemotes() {
             @Override
-            public Either<GitError, Boolean> pullConfigured() {
+            public Either<GitError, Boolean> pullConfigured(BranchName branch) {
                 return answer;
             }
         });

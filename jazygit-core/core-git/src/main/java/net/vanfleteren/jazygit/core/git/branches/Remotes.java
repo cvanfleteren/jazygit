@@ -75,10 +75,11 @@ public interface Remotes {
     Either<GitFailure, List<ExecutedCommand>> pull(PullMode mode);
 
     /**
-     * Whether git has been told how to pull a diverged branch: {@code pull.rebase} or {@code pull.ff} is set, in any
-     * of git's configuration files. Without either, git refuses such a pull.
+     * Whether git has been told how to pull the diverged {@code branch}: {@code branch.<name>.rebase},
+     * {@code pull.rebase} or {@code pull.ff} is set, in any of git's configuration files. Without any, git refuses such
+     * a pull.
      */
-    Either<GitError, Boolean> pullConfigured();
+    Either<GitError, Boolean> pullConfigured(BranchName branch);
 
     // Fetching from the remotes, as git fetch does.
 

@@ -170,14 +170,32 @@ class CliPullTest {
 
     @Test
     void thePullIsConfiguredWhenPullRebaseOrPullFfIsSet() throws Exception {
-        assertEquals(false, repository.remotes().pullConfigured().get());
+        assertEquals(
+                false,
+                repository.remotes().pullConfigured(new BranchName("main")).get());
 
         git("config", "pull.ff", "only");
-        assertEquals(true, repository.remotes().pullConfigured().get());
+        assertEquals(
+                true,
+                repository.remotes().pullConfigured(new BranchName("main")).get());
 
         git("config", "--unset", "pull.ff");
         git("config", "pull.rebase", "false");
-        assertEquals(true, repository.remotes().pullConfigured().get());
+        assertEquals(
+                true,
+                repository.remotes().pullConfigured(new BranchName("main")).get());
+
+        git("config", "--unset", "pull.rebase");
+        assertEquals(
+                false,
+                repository.remotes().pullConfigured(new BranchName("main")).get());
+        git("config", "branch.main.rebase", "true");
+        assertEquals(
+                true,
+                repository.remotes().pullConfigured(new BranchName("main")).get());
+        assertEquals(
+                false,
+                repository.remotes().pullConfigured(new BranchName("other")).get());
     }
 
     @Test

@@ -16,7 +16,7 @@ public record PullCheck(BranchName branch) implements Cmd {
     public Msg run(Env env) {
         return env.git()
                 .remotes()
-                .pullConfigured()
+                .pullConfigured(branch)
                 .fold(error -> failed(Failure.of(error)), configured -> new PullMsg.Checked(branch, configured));
     }
 

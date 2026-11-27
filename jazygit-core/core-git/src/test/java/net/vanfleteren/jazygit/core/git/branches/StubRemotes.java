@@ -64,7 +64,7 @@ public interface StubRemotes extends Remotes {
     }
 
     @Override
-    default Either<GitError, Boolean> pullConfigured() {
+    default Either<GitError, Boolean> pullConfigured(BranchName branch) {
         return Either.right(true);
     }
 
