@@ -74,3 +74,6 @@ It is built as stacked pull requests:
 - The repository screen's panes stay wired by the kernel and the app; if a feature ever needs to add one, that is its
   own decision.
 - ADR 158 and ADR 167 get a line "Amended by ADR 168".
+
+Amended by ADR 211: the features bring the panes of every screen, the repository's too, with `Feature.pane`, and
+`ScreenSpec` no longer makes them.
