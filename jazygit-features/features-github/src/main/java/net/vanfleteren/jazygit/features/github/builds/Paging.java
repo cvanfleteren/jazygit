@@ -10,8 +10,8 @@ import net.vanfleteren.jazygit.kernel.state.Failure;
 public sealed interface Paging {
 
     /**
-     * Reading on from {@code next}, while fewer than {@code limit} of them were read after {@code read} were;
-     * stopping there, while older ones are left; else done.
+     * After a page, with {@code read} read in all and the next page starting at {@code next}: reading on while fewer
+     * than {@code limit} were read; idle at {@code next} once {@code limit} is reached; done when no page is left.
      */
     static Paging after(int read, int limit, Option<String> next) {
         return next.<Paging>map(from -> read < limit ? new Reading(Option.of(from)) : new Idle(from))
