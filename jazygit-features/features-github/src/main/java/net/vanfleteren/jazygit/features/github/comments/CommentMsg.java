@@ -1,4 +1,4 @@
-package net.vanfleteren.jazygit.features.github.comment;
+package net.vanfleteren.jazygit.features.github.comments;
 
 import io.vavr.collection.List;
 import net.vanfleteren.jazygit.core.process.ExecutedCommand;

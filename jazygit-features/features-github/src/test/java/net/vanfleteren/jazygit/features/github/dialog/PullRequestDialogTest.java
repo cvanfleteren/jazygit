@@ -1,4 +1,4 @@
-package net.vanfleteren.jazygit.features.github.show;
+package net.vanfleteren.jazygit.features.github.dialog;
 
 import static dev.tamboui.toolkit.Toolkit.stack;
 import static dev.tamboui.toolkit.Toolkit.text;
@@ -41,11 +41,13 @@ import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.features.forge.checks.ChecksMsg;
 import net.vanfleteren.jazygit.features.github.checks.GitHubChecksPort;
 import net.vanfleteren.jazygit.features.github.checks.branches.BranchChecksMsg;
-import net.vanfleteren.jazygit.features.github.checks.branches.GitHubChecks;
-import net.vanfleteren.jazygit.features.github.checks.timings.CheckTimes;
-import net.vanfleteren.jazygit.features.github.comment.CommentMsg;
+import net.vanfleteren.jazygit.features.github.comments.CommentMsg;
 import net.vanfleteren.jazygit.features.github.comments.CommentsMsg;
 import net.vanfleteren.jazygit.features.github.edit.EditPullRequestMsg;
+import net.vanfleteren.jazygit.features.github.show.PullRequestMsg;
+import net.vanfleteren.jazygit.features.github.show.PullRequestPopup;
+import net.vanfleteren.jazygit.features.github.state.CheckTimes;
+import net.vanfleteren.jazygit.features.github.state.GitHubChecks;
 import net.vanfleteren.jazygit.features.github.state.GitHubState;
 import net.vanfleteren.jazygit.features.github.state.Reading;
 import net.vanfleteren.jazygit.features.github.widgets.CheckRows;

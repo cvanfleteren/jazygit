@@ -9,7 +9,7 @@ import net.vanfleteren.jazygit.core.gh.model.PullRequestDetails.Merging;
  * What a merge key of the pull request dialog does, by what GitHub says of the pull request (ADR 112): merge it now,
  * turn auto-merge on so GitHub merges it once it is ready, turn auto-merge off, or nothing, and why.
  */
-sealed interface MergeKey {
+public sealed interface MergeKey {
 
     /**
      * What the key of {@code method} does to {@code pr}, the first row of the table of ADR 112 that fits. A stacked

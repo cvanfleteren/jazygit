@@ -33,13 +33,13 @@ import net.vanfleteren.jazygit.features.forge.checks.ChecksMsg;
 import net.vanfleteren.jazygit.features.forge.checks.ChecksPopup;
 import net.vanfleteren.jazygit.features.forge.checks.Reading;
 import net.vanfleteren.jazygit.features.github.checks.branches.BranchChecksMsg;
-import net.vanfleteren.jazygit.features.github.checks.branches.GitHubChecks;
 import net.vanfleteren.jazygit.features.github.checks.branches.LoadBranchChecks;
 import net.vanfleteren.jazygit.features.github.checks.timings.CheckTimesCmd;
-import net.vanfleteren.jazygit.features.github.checks.timings.PendingChecks;
 import net.vanfleteren.jazygit.features.github.show.PullRequestMsg;
 import net.vanfleteren.jazygit.features.github.show.PullRequestPopup;
+import net.vanfleteren.jazygit.features.github.state.GitHubChecks;
 import net.vanfleteren.jazygit.features.github.state.GitHubState;
+import net.vanfleteren.jazygit.features.github.state.PendingChecks;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.TestModels;
 import net.vanfleteren.jazygit.kernel.state.Update;
@@ -441,7 +441,7 @@ class ChecksUpdateTest {
     void aPullRequestFromAForkShowsNoChecksThoughABranchHereHasItsName() {
         Model fork = model(Checks.PENDING).openPopup(DIALOG.ofFork());
 
-        assertEquals(Option.none(), GitHubChecksPort.pullRequestBranch(fork, DIALOG.ofFork()));
+        assertEquals(Option.none(), DIALOG.ofFork().checksBranch(fork));
         assertEquals(
                 Next.of(fork), Update.update(fork, new ChecksMsg.PullRequestChecksRequested(GitHubChecksPort.PORT)));
     }

@@ -1,4 +1,4 @@
-package net.vanfleteren.jazygit.features.github.checks.branches;
+package net.vanfleteren.jazygit.features.github.state;
 
 import io.vavr.collection.Map;
 import io.vavr.collection.Set;
@@ -7,7 +7,6 @@ import net.vanfleteren.jazygit.core.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.RemoteName;
 import net.vanfleteren.jazygit.core.repo.RemoteUrl;
-import net.vanfleteren.jazygit.features.github.state.FromGitHub;
 
 /**
  * How the CI checks are doing on the branches of the GitHub repository, and which git remotes are that

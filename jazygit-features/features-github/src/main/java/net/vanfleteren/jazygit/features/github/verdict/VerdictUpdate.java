@@ -72,7 +72,7 @@ public final class VerdictUpdate {
      * {@code model} with the review popup {@code was} as the dialog behind it changed it, {@code now}. Once the viewer
      * no longer has a pending review, the error that said they had goes, so the review can be sent.
      */
-    public static Model followed(Model model, VerdictPopup was, VerdictPopup now) {
+    static Model followed(Model model, VerdictPopup was, VerdictPopup now) {
         boolean settled = was.pending()
                 && !now.pending()
                 && model.outcome().error().contains(new GitHubError.CannotReview(Why.PENDING_REVIEW));

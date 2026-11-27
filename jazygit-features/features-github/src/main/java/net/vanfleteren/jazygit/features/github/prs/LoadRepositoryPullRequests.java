@@ -9,8 +9,8 @@ import net.vanfleteren.jazygit.core.repo.RemoteName;
 import net.vanfleteren.jazygit.core.repo.RepoSlug;
 import net.vanfleteren.jazygit.features.github.GitHubFailure;
 import net.vanfleteren.jazygit.features.github.GitHubServices;
+import net.vanfleteren.jazygit.features.github.prs.unseen.UnseenPullRequestsStore;
 import net.vanfleteren.jazygit.features.github.state.GitHubState;
-import net.vanfleteren.jazygit.features.github.state.GitHubStores;
 import net.vanfleteren.jazygit.kernel.state.Env;
 import net.vanfleteren.jazygit.kernel.state.Failure;
 import net.vanfleteren.jazygit.kernel.state.Label;
@@ -42,7 +42,9 @@ public record LoadRepositoryPullRequests() implements GitHubState.ListRead {
                 .fold(
                         this::failed,
                         read -> new PrOverviewMsg.RepositoryLoaded(
-                                read, env.service(GitHubStores.UNSEEN).load(read.repository()), remotes(env)));
+                                read,
+                                env.service(UnseenPullRequestsStore.SERVICE).load(read.repository()),
+                                remotes(env)));
     }
 
     /**

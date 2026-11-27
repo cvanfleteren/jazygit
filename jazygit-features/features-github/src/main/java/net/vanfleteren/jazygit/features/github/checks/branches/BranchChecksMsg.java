@@ -1,6 +1,7 @@
 package net.vanfleteren.jazygit.features.github.checks.branches;
 
-import net.vanfleteren.jazygit.features.github.checks.timings.PendingChecks;
+import net.vanfleteren.jazygit.features.github.state.GitHubChecks;
+import net.vanfleteren.jazygit.features.github.state.PendingChecks;
 import net.vanfleteren.jazygit.kernel.state.Failure;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.Msg;

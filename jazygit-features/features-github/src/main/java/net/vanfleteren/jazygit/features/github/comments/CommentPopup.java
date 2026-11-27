@@ -1,4 +1,4 @@
-package net.vanfleteren.jazygit.features.github.comment;
+package net.vanfleteren.jazygit.features.github.comments;
 
 import lombok.With;
 import net.vanfleteren.jazygit.features.github.compose.ComposePopup;

@@ -3,6 +3,7 @@ package net.vanfleteren.jazygit.features.github.prs.unseen;
 import io.vavr.control.Option;
 import io.vavr.control.Try;
 import net.vanfleteren.jazygit.core.repo.RepoSlug;
+import net.vanfleteren.jazygit.kernel.state.Env;
 
 /**
  * Where the unseen pull requests of each repository are kept, from one session to the next. They are state that
@@ -25,6 +26,11 @@ public interface UnseenPullRequestsStore {
             return Try.success(unseen);
         }
     };
+
+    /**
+     * Where the pull requests not seen yet are kept (ADR 29, 169): nowhere until one is given.
+     */
+    Env.Service<UnseenPullRequestsStore> SERVICE = Env.Service.of("github.unseen", NONE);
 
     /**
      * The unseen pull requests kept for {@code repository}, as {@code owner/name}; none when they were never kept or

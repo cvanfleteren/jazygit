@@ -2,7 +2,7 @@ package net.vanfleteren.jazygit.features.github.prs;
 
 import net.vanfleteren.jazygit.core.repo.RepoSlug;
 import net.vanfleteren.jazygit.features.github.prs.unseen.UnseenPullRequests;
-import net.vanfleteren.jazygit.features.github.state.GitHubStores;
+import net.vanfleteren.jazygit.features.github.prs.unseen.UnseenPullRequestsStore;
 import net.vanfleteren.jazygit.kernel.state.Cmd;
 import net.vanfleteren.jazygit.kernel.state.Env;
 import net.vanfleteren.jazygit.kernel.state.Failure;
@@ -17,7 +17,7 @@ public record SaveUnseenPullRequests(RepoSlug repository, UnseenPullRequests uns
 
     @Override
     public Msg run(Env env) {
-        env.service(GitHubStores.UNSEEN)
+        env.service(UnseenPullRequestsStore.SERVICE)
                 .save(repository, unseen)
                 .onFailure(failed -> LoggerFactory.getLogger(SaveUnseenPullRequests.class)
                         .debug("The unseen pull requests could not be kept", failed));

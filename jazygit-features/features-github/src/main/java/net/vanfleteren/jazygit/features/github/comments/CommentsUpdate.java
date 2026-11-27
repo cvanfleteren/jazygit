@@ -7,7 +7,6 @@ import java.util.function.UnaryOperator;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestComment;
 import net.vanfleteren.jazygit.core.repo.PrNumber;
 import net.vanfleteren.jazygit.features.github.browse.OpenLinkCmd;
-import net.vanfleteren.jazygit.features.github.comment.CommentPopup;
 import net.vanfleteren.jazygit.features.github.comments.CommentsCmd.LoadComments;
 import net.vanfleteren.jazygit.features.github.remarks.GitHubImages;
 import net.vanfleteren.jazygit.features.github.show.PullRequestCmd.OpenPullRequest;

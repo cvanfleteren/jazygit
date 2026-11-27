@@ -1,4 +1,4 @@
-package net.vanfleteren.jazygit.features.github.show;
+package net.vanfleteren.jazygit.features.github.dialog;
 
 import static dev.tamboui.toolkit.Toolkit.text;
 import static net.vanfleteren.jazygit.kernel.ui.widgets.LabelledLines.INDENT;
@@ -23,10 +23,14 @@ import net.vanfleteren.jazygit.core.gh.model.PullRequestDetails.ReviewThreads;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestStack;
 import net.vanfleteren.jazygit.features.forge.checks.ChecksMsg;
 import net.vanfleteren.jazygit.features.github.checks.GitHubChecksPort;
-import net.vanfleteren.jazygit.features.github.checks.timings.CheckTimes;
-import net.vanfleteren.jazygit.features.github.comment.CommentMsg;
+import net.vanfleteren.jazygit.features.github.comments.CommentMsg;
 import net.vanfleteren.jazygit.features.github.comments.CommentsMsg;
 import net.vanfleteren.jazygit.features.github.edit.EditPullRequestMsg;
+import net.vanfleteren.jazygit.features.github.show.MergeKey;
+import net.vanfleteren.jazygit.features.github.show.PullRequestMsg;
+import net.vanfleteren.jazygit.features.github.show.PullRequestPopup;
+import net.vanfleteren.jazygit.features.github.show.PullRequestUpdate;
+import net.vanfleteren.jazygit.features.github.state.CheckTimes;
 import net.vanfleteren.jazygit.features.github.state.Reading;
 import net.vanfleteren.jazygit.features.github.verdict.VerdictMsg;
 import net.vanfleteren.jazygit.features.github.verdict.VerdictUpdate;
@@ -55,7 +59,8 @@ import net.vanfleteren.jazygit.kernel.ui.widgets.WithDetails;
  * rows, and under them, in two columns, what can be done with it: open it in the browser, comment on it, edit it, read its comments or see its checks, mark it
  * ready for review or turn it into a draft, merge it or close it, or read it again. While it is read again, the
  * details stay shown, with a spinner in the title; when that fails, the title says they are stale. Whether it is
- * open lives in the {@link Model}.
+ * open lives in the {@link Model}. It sits above the flows its keys open, which know the pull request it shows through
+ * {@link PullRequestPopup}, not this dialog (#706).
  */
 public final class PullRequestDialog implements PopupView {
 
@@ -126,8 +131,8 @@ public final class PullRequestDialog implements PopupView {
                                         'C',
                                         "github.dialog.pullRequest.viewChecks",
                                         () -> new ChecksMsg.PullRequestChecksRequested(GitHubChecksPort.PORT),
-                                        (model, popup) -> GitHubChecksPort.pullRequestBranch(model, popup)
-                                                .isDefined())
+                                        (model, popup) ->
+                                                popup.checksBranch(model).isDefined())
                                 .withDetails("github.dialog.pullRequest.viewChecks.details"),
                         new Choice<PullRequestPopup>(
                                         'F',

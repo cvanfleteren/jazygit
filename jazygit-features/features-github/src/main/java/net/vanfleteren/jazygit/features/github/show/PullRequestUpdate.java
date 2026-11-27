@@ -27,8 +27,6 @@ import net.vanfleteren.jazygit.features.github.prs.PrOverviewUpdate;
 import net.vanfleteren.jazygit.features.github.prs.PullRequestReads;
 import net.vanfleteren.jazygit.features.github.show.PullRequestCmd.*;
 import net.vanfleteren.jazygit.features.github.state.*;
-import net.vanfleteren.jazygit.features.github.verdict.VerdictPopup;
-import net.vanfleteren.jazygit.features.github.verdict.VerdictUpdate;
 import net.vanfleteren.jazygit.kernel.state.*;
 import net.vanfleteren.jazygit.kernel.state.Events;
 import net.vanfleteren.jazygit.kernel.state.KernelEvent;
@@ -325,7 +323,7 @@ public final class PullRequestUpdate {
      * its auto-merge off only needs it open, as GitHub leaves auto-merge on when a conflict appears. Turning auto-merge
      * on or off waits while its branch is busy, as with doing that already.
      */
-    static boolean mergeChoosable(Model model, PullRequestPopup popup, MergeMethod method) {
+    public static boolean mergeChoosable(Model model, PullRequestPopup popup, MergeMethod method) {
         return popup.mergeKey(method).exists(key -> switch (key) {
             case MergeKey.Now() -> mergeable(model, popup);
             case MergeKey.WhenReady() -> mergeable(model, popup) && !busy(model, popup);
@@ -340,7 +338,7 @@ public final class PullRequestUpdate {
      * which would show a spinner and then not be taken. A read that started before the change is not taken once it is
      * done (ADR 34).
      */
-    static boolean draftChangeable(Model model, PullRequestPopup popup) {
+    public static boolean draftChangeable(Model model, PullRequestPopup popup) {
         return popup.open() && popup.reading() != Reading.ASKED && !busy(model, popup);
     }
 
@@ -348,7 +346,7 @@ public final class PullRequestUpdate {
      * Whether {@code R} reads the pull request {@code popup} shows again: when it can be read again, or the dialog
      * reads it by itself, which then shows as asked for.
      */
-    static boolean refreshChoosable(Model model, PullRequestPopup popup) {
+    public static boolean refreshChoosable(Model model, PullRequestPopup popup) {
         return refreshable(model, popup) || popup.reading() == Reading.BY_ITSELF && !busy(model, popup);
     }
 
@@ -426,12 +424,11 @@ public final class PullRequestUpdate {
                                 .map(PullRequestPopup.class::cast)
                                 .filter(dialog -> dialog.pullRequest().number().equals(number))
                                 .map(dialog -> model.openPopup(checks.withFrom(Option.of(change.apply(dialog)))))))
-                // A review opened from the dialog, which follows whether it is a draft (ADR 100).
-                .orElse(() -> model.popup(VerdictPopup.class)
-                        .flatMap(review -> review.from()
+                // A popup opened from the dialog that follows it, as a review follows whether it is a draft (ADR 100).
+                .orElse(() -> model.popup(FollowsPullRequest.class)
+                        .flatMap(follower -> follower.from()
                                 .filter(from -> from.number().equals(number))
-                                .map(from -> VerdictUpdate.followed(
-                                        model, review, review.following(change.apply(from.pullRequestPopup()))))))
+                                .map(from -> follower.followedIn(model, change.apply(from.pullRequestPopup())))))
                 .getOrElse(model);
     }
 

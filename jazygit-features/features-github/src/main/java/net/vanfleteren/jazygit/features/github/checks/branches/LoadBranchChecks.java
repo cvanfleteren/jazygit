@@ -3,6 +3,7 @@ package net.vanfleteren.jazygit.features.github.checks.branches;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.features.github.GitHubFailure;
 import net.vanfleteren.jazygit.features.github.GitHubServices;
+import net.vanfleteren.jazygit.features.github.state.GitHubChecks;
 import net.vanfleteren.jazygit.kernel.state.Cmd;
 import net.vanfleteren.jazygit.kernel.state.Env;
 import net.vanfleteren.jazygit.kernel.state.Failure;

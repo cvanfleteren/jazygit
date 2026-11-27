@@ -8,7 +8,7 @@ import net.vanfleteren.jazygit.features.forge.checks.ChecksMsg;
 import net.vanfleteren.jazygit.features.forge.checks.ChecksRead;
 import net.vanfleteren.jazygit.features.github.GitHubFailure;
 import net.vanfleteren.jazygit.features.github.GitHubServices;
-import net.vanfleteren.jazygit.features.github.checks.timings.PendingChecks;
+import net.vanfleteren.jazygit.features.github.state.PendingChecks;
 import net.vanfleteren.jazygit.kernel.state.Cmd;
 import net.vanfleteren.jazygit.kernel.state.Env;
 import net.vanfleteren.jazygit.kernel.state.Failure;

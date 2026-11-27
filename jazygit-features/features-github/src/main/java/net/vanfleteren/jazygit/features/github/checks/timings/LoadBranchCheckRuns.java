@@ -6,6 +6,7 @@ import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.features.github.GitHubFailure;
 import net.vanfleteren.jazygit.features.github.GitHubServices;
 import net.vanfleteren.jazygit.features.github.checks.branches.BranchChecksMsg;
+import net.vanfleteren.jazygit.features.github.state.PendingChecks;
 import net.vanfleteren.jazygit.kernel.state.Cmd;
 import net.vanfleteren.jazygit.kernel.state.Env;
 import net.vanfleteren.jazygit.kernel.state.Failure;

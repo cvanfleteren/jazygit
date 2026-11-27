@@ -30,7 +30,6 @@ import net.vanfleteren.jazygit.core.repo.ForgeBranch;
 import net.vanfleteren.jazygit.core.repo.PrNumber;
 import net.vanfleteren.jazygit.core.repo.RepoSlug;
 import net.vanfleteren.jazygit.core.repo.Sha;
-import net.vanfleteren.jazygit.features.github.comment.CommentMsg;
 import net.vanfleteren.jazygit.features.github.show.PullRequestPopup;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.Msg;

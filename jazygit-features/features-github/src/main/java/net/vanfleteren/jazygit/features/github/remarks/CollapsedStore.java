@@ -7,6 +7,7 @@ import java.time.Duration;
 import java.time.Instant;
 import net.vanfleteren.jazygit.core.repo.PrNumber;
 import net.vanfleteren.jazygit.core.repo.RepoSlug;
+import net.vanfleteren.jazygit.kernel.state.Env;
 
 /**
  * Where the review threads and comments collapsed or opened against their default are kept, per pull request, from
@@ -35,6 +36,11 @@ public interface CollapsedStore {
             return Try.success(flipped);
         }
     };
+
+    /**
+     * Where the review threads and comments collapsed or opened are kept (ADR 63, 169): nowhere until one is given.
+     */
+    Env.Service<CollapsedStore> SERVICE = Env.Service.of("github.collapsed", NONE);
 
     /**
      * The ids of the threads and the comments of pull request {@code number} of {@code repository}, as

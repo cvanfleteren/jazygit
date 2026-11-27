@@ -1,4 +1,4 @@
-package net.vanfleteren.jazygit.features.github.checks.timings;
+package net.vanfleteren.jazygit.features.github.state;
 
 import io.vavr.collection.List;
 import io.vavr.collection.Map;
@@ -7,8 +7,6 @@ import net.vanfleteren.jazygit.core.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestDetails.Check;
 import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.RepoSlug;
-import net.vanfleteren.jazygit.features.github.checks.branches.GitHubChecks;
-import net.vanfleteren.jazygit.features.github.state.FromGitHub;
 
 /**
  * The checks, one by one and with their timing, on branches on GitHub (ADR 32): those whose checks are pending, for
