@@ -11,6 +11,7 @@ import net.vanfleteren.jazygit.features.branches.branch.pull.PullCmd.Pull;
 import net.vanfleteren.jazygit.kernel.state.AppError;
 import net.vanfleteren.jazygit.kernel.state.Failure;
 import net.vanfleteren.jazygit.kernel.state.Model;
+import net.vanfleteren.jazygit.kernel.state.RereadUpdate;
 import net.vanfleteren.jazygit.kernel.state.Update.Next;
 import net.vanfleteren.jazygit.kernel.state.UpstreamError;
 import net.vanfleteren.jazygit.kernel.state.operation.OperationUpdate;
@@ -31,6 +32,10 @@ public final class PullUpdate {
             case PullMsg.Checked(BranchName branch, boolean configured) -> checked(model, branch, configured);
             case PullMsg.CheckFailed(BranchName branch, Failure failure) ->
                 Next.of(model.fail(new AppError.OperationFailed(PullCmd.PULL, Option.of(branch.value()), failure)));
+            // The pull ran and pulled nothing; how to pull is asked instead of the failure.
+            case PullMsg.NeedsStrategy(var cmd, var commands) ->
+                RereadUpdate.refresh(
+                        OperationUpdate.done(model, cmd, commands).openPopupIfFree(new PullPopup(cmd.branch())));
             case PullMsg.Chosen(PullMode mode) ->
                 PopupUpdate.confirm(model, PullPopup.class, popup -> Option.of(new Pull(popup.branch(), mode)));
         };
@@ -61,7 +66,7 @@ public final class PullUpdate {
 
     /**
      * Git said whether the pull of the diverged {@code branch} is settled: it is pulled as it says, or else the user is
-     * asked how. A refresh may have changed the branch while git was asked: one that is no longer a diverged checked
+     * asked how, unless the user has a popup open meanwhile, which stays. A refresh may have changed the branch while git was asked: one that is no longer a diverged checked
      * out one is handled again.
      */
     private static Next checked(Model model, BranchName branch, boolean configured) {
@@ -69,7 +74,7 @@ public final class PullUpdate {
                 .filter(known -> known.current() && diverged(known))
                 .map(_ -> configured
                         ? OperationUpdate.start(model.clearError(), new Pull(branch))
-                        : PopupUpdate.ask(model, new PullPopup(branch)))
+                        : Next.of(model.clearError().openPopupIfFree(new PullPopup(branch))))
                 .getOrElse(() -> requested(model, branch));
     }
 

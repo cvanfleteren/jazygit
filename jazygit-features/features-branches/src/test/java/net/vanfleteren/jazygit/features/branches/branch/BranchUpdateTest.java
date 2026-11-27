@@ -704,6 +704,44 @@ class BranchUpdateTest {
     }
 
     @Test
+    void aPullThatGitRefusesAsTheBranchDivergedAsksHowToPullAndIsLogged() {
+        PullCmd.Pull pull = new PullCmd.Pull(new BranchName("main"));
+        Model pulling = TestModels.stepped(pullable(2, 0), new PullMsg.Checked(new BranchName("main"), true))
+                .model();
+
+        Next next = TestModels.done(
+                pulling,
+                pull,
+                new PullMsg.NeedsStrategy(
+                        pull, net.vanfleteren.jazygit.core.git.StubGit.executed("git pull --no-edit")));
+
+        assertEquals(
+                Option.of(new PullPopup(new BranchName("main"))), next.model().popup());
+        assertEquals(Option.none(), next.model().outcome().error());
+        assertEquals(
+                io.vavr.collection.HashSet.empty(), next.model().jobs().busy().keySet());
+        assertEquals(
+                List.of("git pull --no-edit"),
+                next.model()
+                        .outcome()
+                        .commandLog()
+                        .flatMap(entry -> entry.commands())
+                        .map(command -> command.line()));
+    }
+
+    @Test
+    void anAnswerOfGitDoesNotTakeAwayAPopupTheUserOpenedMeanwhile() {
+        Model merging = Update.update(pullable(2, 0), new MergeMsg.Requested(new BranchName("feature")))
+                .model();
+        assertTrue(merging.popup().isDefined());
+
+        Next next = Update.update(merging, new PullMsg.Checked(new BranchName("main"), false));
+
+        assertEquals(merging.popup(), next.model().popup());
+        assertEquals(Option.none(), next.model().popup(PullPopup.class));
+    }
+
+    @Test
     void aFailedCheckIsReportedAsAFailedPull() {
         Next next = Update.update(
                 pullable(2, 0),

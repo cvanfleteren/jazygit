@@ -167,6 +167,21 @@ def test_pull_of_a_diverged_branch_without_a_setting_changes_nothing_when_cancel
     assert repo.in_progress() is None
 
 
+def test_pull_of_a_branch_that_only_looks_ahead_asks_once_the_pull_found_it_diverged(repo, origin, clone, jazygit):
+    published(repo, origin)
+    repo.commit("Add mine", **{"mine.txt": "mine\n"})
+    ui = jazygit()
+    # A teammate pushes after the app last looked: the app only knows of the commit of ours.
+    teammate = clone()
+    teammate.commit("Add theirs", **{"theirs.txt": "theirs\n"})
+    teammate("push")
+
+    ui.branches.pull("main", by="rebase")
+
+    assert repo.subjects() == ["Add mine", "Add theirs", "Add one"]
+    assert repo.in_progress() is None
+
+
 def test_pull_of_a_diverged_branch_without_a_setting_stops_on_conflicts_for_the_user(repo, origin, clone, jazygit):
     repo.commit("Add one", **{"one.txt": "one\n"})
     repo("push", "--set-upstream", "origin", "main")
