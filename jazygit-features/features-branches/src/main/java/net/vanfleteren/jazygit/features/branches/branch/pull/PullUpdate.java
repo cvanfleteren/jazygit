@@ -66,8 +66,8 @@ public final class PullUpdate {
 
     /**
      * Git said whether the pull of the diverged {@code branch} is settled: it is pulled as it says, or else the user is
-     * asked how, unless the user has a popup open meanwhile, which stays. A refresh may have changed the branch while git was asked: one that is no longer a diverged checked
-     * out one is handled again.
+     * asked how, unless the user has a popup open meanwhile, which stays. A refresh may have changed the branch while
+     * git was asked: one that is no longer a diverged checked out one is handled again.
      */
     private static Next checked(Model model, BranchName branch, boolean configured) {
         return model.idleBranch(branch)
