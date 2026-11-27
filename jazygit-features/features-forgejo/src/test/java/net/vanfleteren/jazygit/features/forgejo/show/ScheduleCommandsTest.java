@@ -20,6 +20,7 @@ import net.vanfleteren.jazygit.core.forgejo.ForgejoMergeStyle;
 import net.vanfleteren.jazygit.core.forgejo.ForgejoMerged;
 import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.PrNumber;
+import net.vanfleteren.jazygit.core.repo.RepoSlug;
 import net.vanfleteren.jazygit.features.forgejo.pulls.PullRequestFixtures.FakeForgejo;
 import net.vanfleteren.jazygit.features.forgejo.pulls.PullRequestMsg;
 import net.vanfleteren.jazygit.kernel.state.operation.OperationMsg;
@@ -118,7 +119,8 @@ class ScheduleCommandsTest {
                                 Option.of(new ForgejoError.Refused(404, "")))
                         .env()));
         assertEquals(
-                new OperationMsg.Failed(CANCEL, new MergeFailure(forbidden, "code.example.net", "cvf/nix")),
+                new OperationMsg.Failed(
+                        CANCEL, new MergeFailure(forbidden, "code.example.net", new RepoSlug("cvf/nix"))),
                 CANCEL.run(forgejo.scheduling(
                                 Either.right(ForgejoBranchRules.NONE),
                                 Either.right(Option.none()),

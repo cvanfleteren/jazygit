@@ -21,6 +21,7 @@ import net.vanfleteren.jazygit.core.forgejo.ForgejoMerged;
 import net.vanfleteren.jazygit.core.forgejo.ForgejoScheduledMerge;
 import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.PrNumber;
+import net.vanfleteren.jazygit.core.repo.RepoSlug;
 import net.vanfleteren.jazygit.features.changes.fetch.FetchCmd;
 import net.vanfleteren.jazygit.features.forgejo.pulls.ForgejoPullRequests;
 import net.vanfleteren.jazygit.features.forgejo.pulls.PullRequestMsg;
@@ -113,7 +114,7 @@ class ScheduleUpdateTest {
                         prs -> prs.mergeFailed(new FailedMerge(
                                 new PrNumber(12),
                                 ForgejoMergeStyle.MERGE,
-                                new MergeFailure(new ForgejoError.Unreachable("x"), "h", "r"),
+                                new MergeFailure(new ForgejoError.Unreachable("x"), "h", new RepoSlug("r")),
                                 STANDING)));
 
         Next next = Update.update(shown, new PullRequestMsg.Merged(WHEN_READY, new ForgejoMerged.Scheduled()));

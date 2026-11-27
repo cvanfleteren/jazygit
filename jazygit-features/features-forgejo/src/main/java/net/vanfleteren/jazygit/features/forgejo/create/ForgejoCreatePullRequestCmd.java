@@ -11,6 +11,7 @@ import net.vanfleteren.jazygit.core.repo.ForgeBranch;
 import net.vanfleteren.jazygit.core.repo.PrNumber;
 import net.vanfleteren.jazygit.core.repo.RemoteBranch;
 import net.vanfleteren.jazygit.core.repo.RemoteName;
+import net.vanfleteren.jazygit.core.repo.RepoSlug;
 import net.vanfleteren.jazygit.features.forgejo.ForgejoFailure;
 import net.vanfleteren.jazygit.features.forgejo.builds.ForgejoServices;
 import net.vanfleteren.jazygit.features.forgejo.pulls.ForgejoRemotes;
@@ -124,7 +125,7 @@ public sealed interface ForgejoCreatePullRequestCmd extends Cmd {
             String head =
                     ForgejoNewPullRequest.head(home, repository, target.branch().value());
             // A head with the owner before it is in a fork, which a 404 then says must be one of the home's.
-            Option<String> fork = Option.when(!head.equals(target.branch().value()), () -> named(repository));
+            Option<RepoSlug> fork = Option.when(!head.equals(target.branch().value()), repository::slug);
             return forgejo.createPullRequest(
                             home, new ForgejoNewPullRequest(head, new ForgeBranch(base.value()), title, body, draft))
                     .fold(
@@ -132,15 +133,11 @@ public sealed interface ForgejoCreatePullRequestCmd extends Cmd {
                             created -> new ForgejoCreatePullRequestMsg.Created(this, created));
         }
 
-        private Msg refused(ForgejoError error, ForgejoRepository home, Option<String> fork) {
+        private Msg refused(ForgejoError error, ForgejoRepository home, Option<RepoSlug> fork) {
             Option<PrNumber> existing =
                     error instanceof ForgejoError.Refused refused ? refused.existing() : Option.none();
             return existing.<Msg>map(number -> new ForgejoCreatePullRequestMsg.AlreadyOpen(this, number))
-                    .getOrElse(() -> failed(new CreateFailure.Refused(error, home.host(), named(home), fork)));
-        }
-
-        private static String named(ForgejoRepository repository) {
-            return repository.owner() + "/" + repository.name();
+                    .getOrElse(() -> failed(new CreateFailure.Refused(error, home.host(), home.slug(), fork)));
         }
     }
 }

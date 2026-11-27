@@ -55,8 +55,7 @@ public record CancelScheduledMergeCmd(RemoteName home, BranchName branch, PrNumb
                         .<Msg>map(
                                 error -> error instanceof ForgejoError.Refused refused && refused.status() == NOT_FOUND
                                         ? new PullRequestMsg.NoLongerScheduled(this)
-                                        : failed(new MergeFailure(
-                                                error, repository.host(), MergePullRequestCmd.named(repository))))
+                                        : failed(new MergeFailure(error, repository.host(), repository.slug())))
                         .getOrElse(() -> new PullRequestMsg.MergeCancelled(this)))
                 .getOrElse(() -> failed(new ForgejoFailure.NoHome()));
     }

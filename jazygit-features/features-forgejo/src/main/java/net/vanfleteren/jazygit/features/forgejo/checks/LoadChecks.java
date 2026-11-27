@@ -6,7 +6,6 @@ import net.vanfleteren.jazygit.core.forgejo.Forgejo;
 import net.vanfleteren.jazygit.core.forgejo.ForgejoRepository;
 import net.vanfleteren.jazygit.core.repo.RemoteBranch;
 import net.vanfleteren.jazygit.core.repo.RemoteName;
-import net.vanfleteren.jazygit.core.repo.RepoSlug;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.features.forgejo.ForgejoFailure;
 import net.vanfleteren.jazygit.features.forgejo.builds.ForgejoServices;
@@ -35,8 +34,7 @@ public record LoadChecks(RemoteBranch branch, Sha sha) implements Cmd {
                 repository(env, forgejo, branch.remote())
                         .flatMap(repository -> forgejo.checks(repository, sha)
                                 .<Failure>mapLeft(ForgejoFailure.Asked::new)
-                                .map(checks -> new ChecksRead(
-                                        new RepoSlug(repository.owner() + "/" + repository.name()), sha, checks))));
+                                .map(checks -> new ChecksRead(repository.slug(), sha, checks))));
     }
 
     /**

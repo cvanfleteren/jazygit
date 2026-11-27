@@ -6,6 +6,7 @@ import net.vanfleteren.jazygit.core.forgejo.ForgejoError;
 import net.vanfleteren.jazygit.core.process.ExecutedCommand;
 import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.PrNumber;
+import net.vanfleteren.jazygit.core.repo.RepoSlug;
 import net.vanfleteren.jazygit.kernel.state.Failure;
 import net.vanfleteren.jazygit.kernel.state.Phrase;
 
@@ -59,10 +60,11 @@ public sealed interface CreateFailure extends Failure.Phrased {
      * Forgejo did not create it, as {@code error} says.
      *
      * @param host       the host of the home, which fj keeps the token under
-     * @param repository the home's repository, as {@code owner/name}
+     * @param repository the home's repository
      * @param fork       the repository the branch is in, when that is not the home's
      */
-    record Refused(ForgejoError error, String host, String repository, Option<String> fork) implements CreateFailure {
+    record Refused(ForgejoError error, String host, RepoSlug repository, Option<RepoSlug> fork)
+            implements CreateFailure {
 
         private static final int UNAUTHORIZED = 401;
         private static final int FORBIDDEN = 403;
@@ -75,10 +77,10 @@ public sealed interface CreateFailure extends Failure.Phrased {
                 when refused.status() == UNAUTHORIZED -> Phrase.of("forgejo.error.create.token", host);
                 case ForgejoError.Refused refused
                 when refused.status() == FORBIDDEN ->
-                    Phrase.of("forgejo.error.create.forbidden", repository, refused.message());
+                    Phrase.of("forgejo.error.create.forbidden", repository.value(), refused.message());
                 case ForgejoError.Refused refused
                 when refused.status() == NOT_FOUND && fork.isDefined() ->
-                    Phrase.of("forgejo.error.create.notFork", fork.get(), repository);
+                    Phrase.of("forgejo.error.create.notFork", fork.get().value(), repository.value());
                 case ForgejoError.Refused refused ->
                     Phrase.of("forgejo.error.create.refused", String.valueOf(refused.status()), refused.message());
                 case ForgejoError.Unreachable(String why) -> Phrase.of("forgejo.error.unreachable", why);
