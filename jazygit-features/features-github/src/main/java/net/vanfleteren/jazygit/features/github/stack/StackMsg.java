@@ -23,48 +23,68 @@ public sealed interface StackMsg extends Msg {
     }
 
     /**
+     * The stacks shown in the branches pane, and the menu of one (ADR 72, 73, 99).
+     */
+    sealed interface Showing extends StackMsg {}
+
+    /**
+     * Making a stack, adding to one, stacking a pull request on another, and taking a stack apart (ADR 73, 148).
+     */
+    sealed interface Editing extends StackMsg {}
+
+    /**
+     * Rebasing a stack and pushing it (ADR 74).
+     */
+    sealed interface Rebasing extends StackMsg {}
+
+    /**
+     * Checking out a stack, or updating its branches (ADR 99).
+     */
+    sealed interface CheckingOut extends StackMsg {}
+
+    /**
      * The user opened or closed the stack numbered {@code stack} in the branches pane (ADR 72).
      */
-    record Toggled(StackId stack) implements StackMsg {}
+    record Toggled(StackId stack) implements Showing {}
 
     /**
      * The user switched the branches pane between showing the stacks and listing their branches as any other (ADR 72).
      */
-    record ViewToggled() implements StackMsg {}
+    record ViewToggled() implements Showing {}
 
     /**
      * The user asked what can be done with the stack of the highlighted branch, or of the highlighted stack
      * {@code stack} (ADR 73).
      */
-    record MenuRequested(Option<BranchName> branch, Option<StackId> stack) implements StackMsg {}
+    record MenuRequested(Option<BranchName> branch, Option<StackId> stack) implements Showing {}
 
     /**
      * The user asked what can be done with the stack of {@code pullRequest}, highlighted on the pull requests screen
      * (ADR 99).
      */
-    record PullRequestMenuRequested(PullRequestSummary pullRequest) implements StackMsg {}
+    record PullRequestMenuRequested(PullRequestSummary pullRequest) implements Showing {}
 
     /**
      * The user chose to check out the stack of the menu, or to update its branches (ADR 99).
      */
-    record CheckoutChosen() implements StackMsg {}
+    record CheckoutChosen() implements CheckingOut {}
 
     /**
      * {@code cmd} fetched the branches of its stack, running {@code commands}; {@code checkout} says what checking it
      * out does to each.
      */
     record StackFetched(StackCheckoutCmd.Fetch cmd, List<ExecutedCommand> commands, StackCheckout checkout)
-            implements StackMsg {}
+            implements CheckingOut {}
 
     /**
      * The user confirmed checking out the stack asked about, landing where {@code landing} says.
      */
-    record CheckoutConfirmed(StackCheckout.Landing landing) implements StackMsg {}
+    record CheckoutConfirmed(StackCheckout.Landing landing) implements CheckingOut {}
 
     /**
      * {@code cmd} made and fast-forwarded the branches of its stack, running {@code commands}.
      */
-    record CaughtUp(StackCheckoutCmd.CatchUp cmd, List<ExecutedCommand> commands) implements StackMsg {}
+    record CaughtUp(StackCheckoutCmd.CatchUp cmd, List<ExecutedCommand> commands) implements CheckingOut {}
 
     /**
      * {@code cmd} changed the stacks on GitHub, running {@code commands} (ADR 73).
@@ -85,12 +105,12 @@ public sealed interface StackMsg extends Msg {
     /**
      * The user chose to make a stack from the branch of the menu.
      */
-    record MakeChosen() implements StackMsg {}
+    record MakeChosen() implements Editing {}
 
     /**
      * The user chose to put branches on the top of the stack of the menu.
      */
-    record AddChosen() implements StackMsg {}
+    record AddChosen() implements Editing {}
 
     /**
      * Which of {@code eligible} are built on {@code top}, the top of stack {@code stack}, by their history, was read
@@ -99,71 +119,71 @@ public sealed interface StackMsg extends Msg {
      */
     record BuiltOnRead(
             StackId stack, BranchName top, Set<BranchName> eligible, Map<BranchName, List<BranchName>> containing)
-            implements StackMsg {}
+            implements Editing {}
 
     /**
      * The user chose to stack the branch of the menu on another one: its pull request, or one created for it.
      */
-    record StackOnChosen() implements StackMsg {}
+    record StackOnChosen() implements Editing {}
 
     /**
      * The user chose {@code target} to stack the pull request of the branch on.
      */
-    record TargetChosen(StackPopups.Target target) implements StackMsg {}
+    record TargetChosen(StackPopups.Target target) implements Editing {}
 
     /**
      * The user chose to link the branches asked about, and to rebase their stack once GitHub lists it (ADR 74).
      */
-    record LinkAndRebaseChosen() implements StackMsg {}
+    record LinkAndRebaseChosen() implements Rebasing {}
 
     /**
      * The user chose to rebase the stack of the menu (ADR 74).
      */
-    record RebaseChosen() implements StackMsg {}
+    record RebaseChosen() implements Rebasing {}
 
     /**
      * The user chose to push the stack of the menu (ADR 74).
      */
-    record PushChosen() implements StackMsg {}
+    record PushChosen() implements Rebasing {}
 
     /**
      * The own commits of the branches of {@code rebase} were read, to ask about rebasing them.
      */
-    record StackRead(StackRebase rebase, List<StackLayer.Commits> commits) implements StackMsg {}
+    record StackRead(StackRebase rebase, List<StackLayer.Commits> commits) implements Rebasing {}
 
     /**
      * The own commits of the branches of stack {@code stack} could not be read.
      */
-    record StackReadFailed(StackId stack, Failure failure) implements StackMsg {}
+    record StackReadFailed(StackId stack, Failure failure) implements Rebasing {}
 
     /**
      * {@code branch} of stack {@code stack} lacks commits that {@code remote}, its branch on the remote, has: it is
      * not rebased, as it would be pushed over them (ADR 74).
      */
-    record StackBehindRemote(StackId stack, BranchName branch, RemoteBranch remote) implements StackMsg {}
+    record StackBehindRemote(StackId stack, BranchName branch, RemoteBranch remote) implements Rebasing {}
 
     /**
      * The user chose to rebase the stack asked about without pushing it (ADR 74).
      */
-    record RebaseLocallyChosen() implements StackMsg {}
+    record RebaseLocallyChosen() implements Rebasing {}
 
     /**
      * The user chose to take the stack of the menu apart.
      */
-    record UnstackChosen() implements StackMsg {}
+    record UnstackChosen() implements Editing {}
 
     /**
      * The user made the highlighted branch of the stack being made its bottom.
      */
-    record BottomChosen(int row) implements StackMsg {}
+    record BottomChosen(int row) implements Editing {}
 
     /**
      * The user made the highlighted branch of the stack being made its top.
      */
-    record TopChosen(int row) implements StackMsg {}
+    record TopChosen(int row) implements Editing {}
 
     /**
      * The user asked to make the stack of the branches chosen.
      */
-    record PickConfirmed() implements StackMsg {}
+    record PickConfirmed() implements Editing {}
 }
