@@ -88,7 +88,8 @@ class BuildsPanesTest {
                         .read(Option.of(new net.vanfleteren.jazygit.core.gh.model.WorkflowRunsPage(
                                 List.empty(), 100, Option.of("cursor"))))));
         BuildsScreen screen = every.withWorkflows(new Loadable.Loaded<>(
-                List.of(new RepoWorkflow("W_build", "Build", ".github/workflows/build.yml", true))));
+                        List.of(new RepoWorkflow("W_build", "Build", ".github/workflows/build.yml", true))))
+                .withOnDefault(BuildPages.asked(25).readCommits(Option.none()));
 
         assertEquals("Runs of Build · every branch · m for more", BuildsRunsPanel.title(screen, "Build"));
         assertEquals(

@@ -22,6 +22,7 @@ import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.core.repo.Upstream;
 import net.vanfleteren.jazygit.features.github.PullRequestFixtures;
 import net.vanfleteren.jazygit.kernel.state.Cmd;
+import net.vanfleteren.jazygit.kernel.state.Loadable;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.TestModels;
 import net.vanfleteren.jazygit.kernel.state.Update;
@@ -157,10 +158,20 @@ class BuildsScreenUpdateTest {
 
         assertEquals(Option.of(BUILD), screen(read).shown());
         assertTrue(screen(read).failingOnDefault());
-        // Asked for once the workflows were read, the first of them by name then highlighted.
+        // Asked for once the default branch was read, which says which workflow the screen starts on.
         assertTrue(
-                screen(read).runs().containsKey("W_build"),
-                screen(read).runs().keySet().mkString());
+                read.cmds().contains(new LoadScreenRuns("W_build", Option.none(), false)),
+                read.cmds().mkString());
+    }
+
+    @Test
+    void untilTheDefaultBranchIsReadNoWorkflowIsChosenNorAreRunsRead() {
+        Next workflows =
+                Update.update(shown(model()).model(), new BuildsScreenMsg.WorkflowsRead(List.of(PUBLISH, BUILD)));
+
+        assertEquals(Option.none(), screen(workflows).shown());
+        assertTrue(screen(workflows).runs().isEmpty());
+        assertTrue(screen(workflows).filtered() instanceof Loadable.Loading<?>);
     }
 
     @Test

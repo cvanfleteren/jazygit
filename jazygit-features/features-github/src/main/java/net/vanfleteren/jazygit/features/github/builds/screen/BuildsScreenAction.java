@@ -9,7 +9,8 @@ import net.vanfleteren.jazygit.kernel.ui.keys.Keymap.Scope;
 import net.vanfleteren.jazygit.kernel.ui.keys.Scopes;
 
 /**
- * The builds screen (ADR 212): {@code ctrl+b} switches to it, and its keys choose which runs show and act on one.
+ * The builds screen (ADR 212): {@code ctrl+b} switches to it, {@code B} on a branch shows it filtered to that
+ * branch, and its keys choose which runs show and act on one.
  */
 public final class BuildsScreenAction {
 
@@ -18,7 +19,10 @@ public final class BuildsScreenAction {
     private BuildsScreenAction() {}
 
     private static Keymap keys(Keymap keymap) {
-        Keymap global = keymap.global(Keymap.Global.Dispatching.ofCtrl(
+        // B on a local branch shows the screen, its runs those of the branch (ADR 212).
+        Keymap opened = keymap.add(
+                Scopes.BRANCHES, Binding.onSelected("B", "github.help.branches.builds", BuildsScreenMsg.Opened::new));
+        Keymap global = opened.global(Keymap.Global.Dispatching.ofCtrl(
                 'b', "github.help.global.buildsScreen", () -> new ScreenMsg.Toggled(BuildsScreen.SCREEN)));
         Keymap chosen =
                 choosing(choosing(choosing(global, BuildsScopes.WORKFLOWS), BuildsScopes.RUNS), BuildsScopes.CONTENT);

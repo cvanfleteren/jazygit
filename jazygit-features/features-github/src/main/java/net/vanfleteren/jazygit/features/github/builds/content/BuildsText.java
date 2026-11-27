@@ -20,8 +20,6 @@ import net.vanfleteren.jazygit.core.gh.model.Build;
 import net.vanfleteren.jazygit.core.gh.model.Build.Outcome;
 import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.Sha;
-import net.vanfleteren.jazygit.features.github.builds.BuildsShown;
-import net.vanfleteren.jazygit.features.github.builds.BuildsView.Pipeline;
 import net.vanfleteren.jazygit.features.github.builds.RunsDrawn;
 import net.vanfleteren.jazygit.kernel.state.Loadable;
 import net.vanfleteren.jazygit.kernel.ui.i18n.Messages;
@@ -72,15 +70,6 @@ final class BuildsText {
     private BuildsText() {}
 
     /**
-     * The lines that draw what the builds of a branch show, {@code shown}, in {@code zone}, the chart as wide as
-     * {@code width} allows: the tabs of their workflows, and the builds of the tab shown (ADR 131).
-     */
-    static List<Line> lines(BuildsShown shown, ZoneId zone, Theme.SpanStyles styles, int width) {
-        return List.of(TabStrip.line(tabs(shown), shown.index(), width, styles), Line.from(""))
-                .appendAll(lines(shown.drawn(), zone, styles, width));
-    }
-
-    /**
      * The lines that draw {@code runs} in {@code zone}, the chart as wide as {@code width} allows: their title and
      * summary, the chart, the jobs, the time line of one run, then the runs one by one (ADR 131, 133).
      */
@@ -127,23 +116,6 @@ final class BuildsText {
     }
 
     /**
-     * The workflow of the tab at {@code column} of the first line {@link #lines} draws of {@code shown},
-     * {@code width} columns wide; none between the tabs.
-     */
-    static Option<Pipeline> tabAt(BuildsShown shown, int width, int column) {
-        return TabStrip.at(tabs(shown), shown.index(), width, column).map(shown.tabs()::get);
-    }
-
-    /**
-     * The run of the build at {@code row} and {@code column} of the lines {@link #lines} draws of {@code shown},
-     * {@code width} columns wide: one in the list, or the column of one in the chart, or the marks under it; none
-     * elsewhere (ADR 133). The tabs and a blank line come first.
-     */
-    static Option<Long> buildAt(BuildsShown shown, int width, int row, int column) {
-        return buildAt(shown.drawn(), width, row - 2, column, true);
-    }
-
-    /**
      * The run at {@code row} and {@code column} of the lines that draw {@code runs}, {@code width} columns wide, with
      * the runs one by one when {@code listed}, else as {@link #overview} draws them: one in the list, or the column of
      * one in the chart, or the marks under it; none elsewhere (ADR 133, 212).
@@ -183,12 +155,6 @@ final class BuildsText {
      */
     private static List<Build> charted(List<Build> builds, int chart, Option<Integer> window) {
         return builds.take(window.map(most -> Math.min(most, chart)).getOrElse(chart));
-    }
-
-    private static List<TabStrip.Tab> tabs(BuildsShown shown) {
-        return shown.tabs()
-                .zip(shown.lasts())
-                .map(tab -> new TabStrip.Tab(tab._1().label(shown.tabs()), tab._2()));
     }
 
     /**

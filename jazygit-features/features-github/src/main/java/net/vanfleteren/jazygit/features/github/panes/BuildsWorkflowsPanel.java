@@ -75,7 +75,7 @@ public final class BuildsWorkflowsPanel implements LeftPane {
                 focus.contains(pane()),
                 inUse.contains(pane()),
                 Pane.title(Messages.get(BuildsScopes.WORKFLOWS.titleKey())));
-        if (!placed) {
+        if (!placed && screen.settled()) {
             listed.toOption().forEach(read -> {
                 placed = true;
                 screen.shown().map(read::indexOf).filter(index -> index >= 0).forEach(list::select);

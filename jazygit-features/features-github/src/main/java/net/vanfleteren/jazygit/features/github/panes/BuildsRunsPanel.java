@@ -7,7 +7,6 @@ import java.util.function.Consumer;
 import net.vanfleteren.jazygit.core.gh.model.Build;
 import net.vanfleteren.jazygit.core.gh.model.RepoWorkflow;
 import net.vanfleteren.jazygit.features.github.builds.BuildPages;
-import net.vanfleteren.jazygit.features.github.builds.BuildsView;
 import net.vanfleteren.jazygit.features.github.builds.Paging;
 import net.vanfleteren.jazygit.features.github.builds.RunsDrawn;
 import net.vanfleteren.jazygit.features.github.builds.screen.BuildsScopes;
@@ -80,7 +79,7 @@ public final class BuildsRunsPanel implements LeftPane {
             listed = now;
         }
         RunsDrawn drawn = screen.drawn(model);
-        Option<java.time.Duration> median = BuildsView.median(screen.filtered()
+        Option<java.time.Duration> median = RunsDrawn.median(screen.filtered()
                 .getOrElse(List.empty())
                 .filter(build -> build.outcome() == Build.Outcome.PASSED)
                 .flatMap(Build::duration));

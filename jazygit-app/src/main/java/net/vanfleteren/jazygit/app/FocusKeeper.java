@@ -122,8 +122,8 @@ final class FocusKeeper {
     }
 
     /**
-     * Moves the focus from the pane of {@code area} into it once it shows what was opened in it, as the builds of a
-     * branch after {@code B} (ADR 131), and back to the pane once that is closed while the area has it (ADR 155).
+     * Moves the focus from the pane of {@code area} into it once it shows what was opened in it, and back to the pane
+     * once that is closed while the area has it (ADR 155).
      */
     private void followOpened(Model model, ContentArea area) {
         Option<?> now = area.opened(model);

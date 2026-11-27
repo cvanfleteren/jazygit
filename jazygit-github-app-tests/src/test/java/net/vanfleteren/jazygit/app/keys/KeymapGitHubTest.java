@@ -11,7 +11,7 @@ import net.vanfleteren.jazygit.core.repo.RemoteBranch;
 import net.vanfleteren.jazygit.core.repo.RepoSlug;
 import net.vanfleteren.jazygit.features.agent.investigate.InvestigateMsg;
 import net.vanfleteren.jazygit.features.github.browse.BrowseMsg;
-import net.vanfleteren.jazygit.features.github.builds.BuildsAction;
+import net.vanfleteren.jazygit.features.github.builds.screen.BuildsScopes;
 import net.vanfleteren.jazygit.features.github.checks.ChecksDialog;
 import net.vanfleteren.jazygit.features.github.prs.PrOverview;
 import net.vanfleteren.jazygit.kernel.state.build.FailedBuild;
@@ -115,7 +115,7 @@ class KeymapGitHubTest {
     }
 
     @Test
-    void iHandsTheFailedBuildTheBuildsAndTheChecksShowToAnAgent() {
+    void iHandsTheFailedRunOfTheBuildsScreenAndTheChecksToAnAgent() {
         FailedBuild failed = new FailedBuild(
                 Option.of(new RepoSlug("o/r")),
                 new BranchName("feat"),
@@ -125,7 +125,7 @@ class KeymapGitHubTest {
                 false,
                 "gh run view 401 --log-failed --repo o/r");
 
-        for (Keymap.Scope<?> host : List.of(BuildsAction.SCOPE, ChecksDialog.SCOPE)) {
+        for (Keymap.Scope<?> host : List.of(BuildsScopes.RUNS, BuildsScopes.CONTENT, ChecksDialog.SCOPE)) {
             assertTrue(
                     keymap.bindings(host.id()).exists(binding -> binding.key().equals("I")), host.id());
         }
@@ -140,7 +140,7 @@ class KeymapGitHubTest {
         assertEquals(
                 Option.of(new InvestigateMsg.Unavailable()),
                 keymap.handle(
-                        BuildsAction.SCOPE,
+                        BuildsScopes.RUNS,
                         KeyEvent.ofChar('I'),
                         Option.none(),
                         new Keymap.Hosted<>(Scopes.FAILED_BUILD, Option.none())));

@@ -27,6 +27,7 @@ import net.vanfleteren.jazygit.kernel.state.Loadable;
  * @param chart       how many of the newest runs the chart shows, at most; none for as many as fit. The median line
  *                    and the scale stay those of every run (ADR 212)
  */
+@With
 public record RunsDrawn(
         String workflow,
         Loadable<List<Build>> builds,
@@ -36,7 +37,7 @@ public record RunsDrawn(
         Option<RunsDrawn.Baseline> baseline,
         Map<Long, Map<String, Set<String>>> needs,
         Option<Long> picked,
-        @With Option<Integer> chart) {
+        Option<Integer> chart) {
 
     /**
      * The run whose jobs show on one time line: the one picked, else the last that is done (ADR 131, 133); none while
@@ -45,7 +46,28 @@ public record RunsDrawn(
     public Option<Build> onTimeLine() {
         return builds.toOption()
                 .flatMap(read -> picked.flatMap(run -> read.find(build -> build.runId() == run))
-                        .orElse(() -> BuildsView.lastDoneOf(read)));
+                        .orElse(() -> lastDoneOf(read)));
+    }
+
+    /**
+     * The last of {@code builds}, the newest first, that is done and ran a job: the one whose jobs show on one time
+     * line when none is picked (ADR 131).
+     */
+    public static Option<Build> lastDoneOf(List<Build> builds) {
+        return builds.find(build -> build.duration().isDefined() && !build.ran().isEmpty());
+    }
+
+    /**
+     * The middle of {@code durations}; none without any.
+     */
+    public static Option<Duration> median(List<Duration> durations) {
+        List<Duration> sorted = durations.sorted();
+        int size = sorted.size();
+        return Option.when(
+                size > 0,
+                () -> size % 2 == 1
+                        ? sorted.get(size / 2)
+                        : sorted.get(size / 2 - 1).plus(sorted.get(size / 2)).dividedBy(2));
     }
 
     /**

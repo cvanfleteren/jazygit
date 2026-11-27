@@ -18,8 +18,7 @@ import net.vanfleteren.jazygit.core.repo.RemoteBranch;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.features.github.GitHubId;
 import net.vanfleteren.jazygit.features.github.builds.BuildPages;
-import net.vanfleteren.jazygit.features.github.builds.BuildsView;
-import net.vanfleteren.jazygit.features.github.builds.BuildsView.FileAt;
+import net.vanfleteren.jazygit.features.github.builds.FileAt;
 import net.vanfleteren.jazygit.features.github.builds.RunsDrawn;
 import net.vanfleteren.jazygit.features.github.builds.Workflow;
 import net.vanfleteren.jazygit.features.github.state.GitHubState;
@@ -153,13 +152,24 @@ public record BuildsScreen(
         List<RepoWorkflow> all = listed();
         List<Build> builds = defaultBuilds();
         Option<Sha> tip = builds.headOption().map(Build::sha);
-        return highlighted
-                .flatMap(name -> all.find(workflow -> workflow.name().equals(name)))
-                .orElse(() -> all.filter(workflow -> builds.exists(build ->
+        Option<RepoWorkflow> chosen =
+                highlighted.flatMap(name -> all.find(workflow -> workflow.name().equals(name)));
+        // Until the default branch is read, none is chosen for the user: the one the screen starts on depends on it.
+        return chosen.isDefined() || !settled()
+                ? chosen
+                : all.filter(workflow -> builds.exists(build ->
                                 tip.contains(build.sha()) && build.workflow().equals(workflow.name())))
                         .find(workflow ->
-                                lastOnDefault(workflow.name()).exists(last -> last.outcome() == Build.Outcome.FAILED)))
-                .orElse(all::headOption);
+                                lastOnDefault(workflow.name()).exists(last -> last.outcome() == Build.Outcome.FAILED))
+                        .orElse(all::headOption);
+    }
+
+    /**
+     * Whether what the screen starts on is known: the workflows are read, and the builds of the default branch are
+     * read or could not be.
+     */
+    public boolean settled() {
+        return workflows.toOption().isDefined() && !(onDefault.builds() instanceof Loadable.Loading<?>);
     }
 
     /**
@@ -192,7 +202,8 @@ public record BuildsScreen(
                         mine.map(branch -> branch.pages().builds().map(read -> ofWorkflow(read, workflow.name())))
                                 .getOrElse(() -> new Loadable.Loaded<>(List.empty()));
                 })
-                .getOrElse(() -> workflows.map(read -> List.<Build>empty()));
+                .getOrElse(
+                        () -> settled() ? new Loadable.Loaded<>(List.<Build>empty()) : Loadable.<List<Build>>loading());
     }
 
     /**
@@ -216,7 +227,7 @@ public record BuildsScreen(
         return run.filter(
                         any -> model.paneInUse(SCREEN).getOrElse(SCREEN.first()).equals(RUNS_PANE))
                 .flatMap(picked -> shownRuns.find(build -> build.runId() == picked))
-                .orElse(() -> BuildsView.lastDoneOf(shownRuns));
+                .orElse(() -> RunsDrawn.lastDoneOf(shownRuns));
     }
 
     /**
@@ -305,7 +316,7 @@ public record BuildsScreen(
                 .map(read -> read.filter(build -> build.outcome() == Build.Outcome.PASSED)
                         .flatMap(Build::duration))
                 .flatMap(passed ->
-                        BuildsView.median(passed).map(middle -> new RunsDrawn.Baseline(middle, passed.size())));
+                        RunsDrawn.median(passed).map(middle -> new RunsDrawn.Baseline(middle, passed.size())));
     }
 
     /**

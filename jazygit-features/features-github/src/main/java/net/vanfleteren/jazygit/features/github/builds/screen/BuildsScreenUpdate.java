@@ -12,7 +12,7 @@ import net.vanfleteren.jazygit.core.gh.model.RepoWorkflow;
 import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.RemoteBranch;
 import net.vanfleteren.jazygit.features.github.builds.BuildPages;
-import net.vanfleteren.jazygit.features.github.builds.BuildsView.FileAt;
+import net.vanfleteren.jazygit.features.github.builds.FileAt;
 import net.vanfleteren.jazygit.features.github.builds.Paging;
 import net.vanfleteren.jazygit.features.github.builds.Workflow;
 import net.vanfleteren.jazygit.kernel.state.Cmd;

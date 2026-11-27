@@ -28,7 +28,14 @@ public record BuildPages(Loadable<List<Build>> builds, int count, int limit, Pag
      * The runs of a workflow before any is read.
      */
     public static BuildPages asked() {
-        return new BuildPages(Loadable.loading(), 0, RUNS, new Paging.Reading(Option.none()));
+        return asked(RUNS);
+    }
+
+    /**
+     * The builds of a branch or a workflow before any is read, which stop once {@code limit} runs or commits are.
+     */
+    public static BuildPages asked(int limit) {
+        return new BuildPages(Loadable.loading(), 0, limit, new Paging.Reading(Option.none()));
     }
 
     /**
@@ -50,7 +57,7 @@ public record BuildPages(Loadable<List<Build>> builds, int count, int limit, Pag
      * older ones are left. None read means it is no workflow.
      */
     public BuildPages read(Option<WorkflowRunsPage> page) {
-        return read(
+        return appended(
                 page.map(WorkflowRunsPage::builds).getOrElse(List.empty()),
                 page.map(WorkflowRunsPage::runs).getOrElse(0),
                 page.flatMap(WorkflowRunsPage::next));
@@ -61,17 +68,10 @@ public record BuildPages(Loadable<List<Build>> builds, int count, int limit, Pag
      * where {@code count} counts commits (ADR 212).
      */
     public BuildPages readCommits(Option<BuildsPage> page) {
-        return read(
+        return appended(
                 page.map(BuildsPage::builds).getOrElse(List.empty()),
                 page.map(BuildsPage::commits).getOrElse(0),
                 page.flatMap(BuildsPage::next));
-    }
-
-    /**
-     * The builds of a branch or a workflow before any is read, which stop once {@code limit} runs or commits are.
-     */
-    public static BuildPages asked(int limit) {
-        return new BuildPages(Loadable.loading(), 0, limit, new Paging.Reading(Option.none()));
     }
 
     /**
@@ -89,7 +89,7 @@ public record BuildPages(Loadable<List<Build>> builds, int count, int limit, Pag
                 paging);
     }
 
-    private BuildPages read(List<Build> page, int read, Option<String> next) {
+    private BuildPages appended(List<Build> page, int read, Option<String> next) {
         int now = count + read;
         return new BuildPages(
                 new Loadable.Loaded<>(builds.getOrElse(List.empty()).appendAll(page)),

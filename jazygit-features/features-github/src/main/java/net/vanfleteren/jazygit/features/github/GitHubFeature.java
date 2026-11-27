@@ -7,9 +7,7 @@ import net.vanfleteren.jazygit.features.forge.checks.ChecksMsg;
 import net.vanfleteren.jazygit.features.github.badges.BadgeLegend;
 import net.vanfleteren.jazygit.features.github.badges.GitHubBadge;
 import net.vanfleteren.jazygit.features.github.browse.BrowseAction;
-import net.vanfleteren.jazygit.features.github.builds.BuildsAction;
 import net.vanfleteren.jazygit.features.github.builds.content.BuildsScreenSource;
-import net.vanfleteren.jazygit.features.github.builds.content.BuildsSource;
 import net.vanfleteren.jazygit.features.github.builds.screen.BuildsScreen;
 import net.vanfleteren.jazygit.features.github.builds.screen.BuildsScreenAction;
 import net.vanfleteren.jazygit.features.github.builds.screen.BuildsScreenMsg;
@@ -96,15 +94,14 @@ public final class GitHubFeature {
                     'p', "github.help.global.screen", () -> new ScreenMsg.Toggled(PrOverview.SCREEN))));
 
     /**
-     * The operations, in the order their keys are listed in a panel, the builds of a branch in the content panel
-     * (ADR 131), and how gh runs in the settings panel (ADR 163). It reads from GitHub as the timers say, and as what
+     * The operations, in the order their keys are listed in a panel, and how gh runs in the settings panel (ADR
+     * 163). It reads from GitHub as the timers say, and as what
      * happens in the kernel makes it do, shows how each branch is doing on GitHub in the branches pane (ADR 167), with
      * what that means in its help, and brings the screens of the pull requests (ADR 168) and of the builds (ADR 212).
      */
     public static final Feature FEATURE = Feature.of(
                     ShowPullRequestAction.ACTION,
                     ShowChecksAction.ACTION,
-                    BuildsAction.ACTION,
                     BuildsScreenAction.ACTION,
                     CheckoutPullRequestAction.ACTION,
                     REFRESH,
@@ -115,7 +112,7 @@ public final class GitHubFeature {
                     ReviewAction.ACTION,
                     VerdictAction.ACTION,
                     FeatureAction.ofPopups(GitHubSettingsDialogs::popups))
-            .showing(new BuildsSource(), new PullRequestSource(), new BuildsScreenSource())
+            .showing(new PullRequestSource(), new BuildsScreenSource())
             .keeping(
                     GitHubSettings.GH_EXECUTABLE,
                     GitHubSettings.BROWSERS,

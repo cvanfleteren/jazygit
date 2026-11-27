@@ -6,6 +6,8 @@ import dev.tamboui.style.Color;
 import dev.tamboui.style.Style;
 import dev.tamboui.text.Line;
 import dev.tamboui.text.Span;
+import io.vavr.collection.HashMap;
+import io.vavr.collection.HashSet;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.time.Duration;
@@ -13,20 +15,16 @@ import java.time.Instant;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
 import net.vanfleteren.jazygit.core.gh.model.Build;
-import net.vanfleteren.jazygit.core.gh.model.BuildsPage;
 import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.PrNumber;
-import net.vanfleteren.jazygit.core.repo.RemoteBranch;
 import net.vanfleteren.jazygit.core.repo.Sha;
-import net.vanfleteren.jazygit.features.github.builds.BuildsMsg;
-import net.vanfleteren.jazygit.features.github.builds.BuildsShown;
-import net.vanfleteren.jazygit.features.github.builds.BuildsView;
 import net.vanfleteren.jazygit.features.github.builds.RunsDrawn;
+import net.vanfleteren.jazygit.kernel.state.Loadable;
 import net.vanfleteren.jazygit.kernel.ui.theme.Theme;
 import org.junit.jupiter.api.Test;
 
 /**
- * The builds of a branch as the content panel draws them (ADR 131).
+ * The runs of a workflow as the content panel draws them (ADR 131, 212).
  */
 class BuildsTextTest {
 
@@ -63,17 +61,31 @@ class BuildsTextTest {
     }
 
     /**
-     * What the builds of a branch with {@code builds} show, {@code chosen} the tab chosen.
+     * The runs of one workflow, {@code builds}, the newest first, as the content panel draws them, of one branch.
      */
-    static BuildsShown shown(List<Build> builds, Option<BuildsView.Pipeline> chosen) {
-        BuildsView view = BuildsView.reading(new BranchName("main"), new RemoteBranch("origin", new BranchName("main")))
-                .read(Option.of(new BuildsPage(builds, 1, Option.none())));
-        return chosen.map(view::withSelected).getOrElse(view).shownOf().get();
+    static RunsDrawn shown(List<Build> builds) {
+        return new RunsDrawn(
+                builds.head().workflow(),
+                new Loadable.Loaded<>(builds),
+                builds.size(),
+                false,
+                HashSet.empty(),
+                Option.none(),
+                HashMap.empty(),
+                Option.none(),
+                Option.none());
     }
 
     private static List<String> drawn(List<Build> builds) {
-        return BuildsText.lines(shown(builds, Option.none()), ZoneOffset.UTC, Theme.SpanStyles.NONE, 80)
+        return BuildsText.lines(shown(builds), ZoneOffset.UTC, Theme.SpanStyles.NONE, 80)
                 .map(BuildsTextTest::text);
+    }
+
+    /**
+     * Builds of Publish, the newest first, for the tests of what draws them.
+     */
+    static List<Build> someRuns() {
+        return PUBLISH;
     }
 
     // 30 builds of Publish, the newest first, which took 4 minutes, but #20 that failed in 5 and #25 in 20.
@@ -86,26 +98,8 @@ class BuildsTextTest {
             .reverse();
 
     @Test
-    void theTabsNameEachWorkflowAndOnlyTheOneShownHasItsBuilds() {
-        List<Build> builds = PUBLISH.prepend(build("Nix", 40, "FAILURE", 100));
-
-        List<String> lines = drawn(builds);
-        assertEquals("✗ Nix │ ✓ Publish", lines.head());
-        assertEquals("Nix · push · 1 builds · 14 Nov – 14 Nov", lines.get(2));
-        assertFalse(lines.exists(line -> line.startsWith("Publish · push")), lines.mkString("\n"));
-
-        List<String> publish = BuildsText.lines(
-                        shown(builds, Option.of(new BuildsView.Pipeline("Publish", "push"))),
-                        ZoneOffset.UTC,
-                        Theme.SpanStyles.NONE,
-                        80)
-                .map(BuildsTextTest::text);
-        assertEquals("Publish · push · 30 builds · 13 Nov – 14 Nov", publish.get(2));
-    }
-
-    @Test
     void theSummaryCountsHowTheBuildsEndedAndHowLongTheyTook() {
-        String summary = drawn(PUBLISH).get(3);
+        String summary = drawn(PUBLISH).get(1);
 
         assertTrue(summary.startsWith("✓ 29  ✗ 1  ⊘ 0"), summary);
         assertTrue(summary.contains("passed 97%   median 4m00   p90 4m00"), summary);
@@ -115,7 +109,7 @@ class BuildsTextTest {
     @Test
     void theChartIsScaledBelowTheSlowestBuildWhichItMarks() {
         List<String> lines = drawn(PUBLISH);
-        List<String> chart = lines.drop(5).take(8);
+        List<String> chart = lines.drop(3).take(8);
 
         assertTrue(chart.head().startsWith("   8m┤"), chart.mkString("\n"));
         assertTrue(chart.head().contains("▲"), chart.mkString("\n"));
@@ -151,12 +145,8 @@ class BuildsTextTest {
     /**
      * What the builds of {@code builds} show with the build of the run {@code run} picked.
      */
-    private static BuildsShown picked(List<Build> builds, long run) {
-        return BuildsView.reading(new BranchName("main"), new RemoteBranch("origin", new BranchName("main")))
-                .read(Option.of(new BuildsPage(builds, 1, Option.none())))
-                .withPicked(Option.of(run))
-                .shownOf()
-                .get();
+    private static RunsDrawn picked(List<Build> builds, long run) {
+        return shown(builds).withPicked(Option.of(run));
     }
 
     @Test
@@ -219,40 +209,22 @@ class BuildsTextTest {
     }
 
     @Test
-    void theBuildsOfABranchAreDrawnToTheWidthOfTheirArea() {
-        assertTrue(new BuildsBody(shown(PUBLISH, Option.none())).drawnToWidth());
-    }
-
-    @Test
-    void aClickOnATabOfTheFirstLineShowsItsWorkflowAndOneOnABuildItsJobs() {
-        BuildsBody body = new BuildsBody(shown(PUBLISH.prepend(build("Nix", 40, "FAILURE", 100)), Option.none()));
-        // "✗ Nix │ ✓ Publish": the tab of Publish starts at column 8.
-        int publish = 10;
-        int list = drawn(PUBLISH.prepend(build("Nix", 40, "FAILURE", 100)))
-                .indexWhere(line -> line.contains("commit   when"));
-
-        assertEquals(
-                Option.of(new BuildsMsg.TabClicked(new BuildsView.Pipeline("Publish", "push"))),
-                body.clicked(80, 0, publish));
-        assertFalse(body.clicked(80, 1, publish).exists(BuildsMsg.TabClicked.class::isInstance));
-        assertEquals(Option.of(new BuildsMsg.BuildClicked(40L)), body.clicked(80, list + 1, 3));
-    }
-
-    @Test
     void aBuildIsFoundByARowOfTheListOrAColumnOfTheChart() {
-        BuildsShown shown = shown(PUBLISH, Option.none());
+        RunsDrawn shown = shown(PUBLISH);
         List<String> lines = drawn(PUBLISH);
         int list = lines.indexWhere(line -> line.contains("commit   when"));
 
-        assertEquals(Option.of(29L), BuildsText.buildAt(shown, 80, list + 1, 3));
-        assertEquals(Option.of(0L), BuildsText.buildAt(shown, 80, lines.size() - 1, 3));
-        assertEquals(Option.none(), BuildsText.buildAt(shown, 80, list, 3));
+        assertEquals(Option.of(29L), BuildsText.buildAt(shown, 80, list + 1, 3, true));
+        assertEquals(Option.of(0L), BuildsText.buildAt(shown, 80, lines.size() - 1, 3, true));
+        assertEquals(Option.none(), BuildsText.buildAt(shown, 80, list, 3, true));
+        // Without the list, as the overview draws them, a row of it is no build.
+        assertEquals(Option.none(), BuildsText.buildAt(shown, 80, list + 1, 3, false));
         // The chart has 30 builds of two columns each in its 73, the oldest first, after its scale.
-        assertEquals(Option.of(0L), BuildsText.buildAt(shown, 80, 12, 6));
-        assertEquals(Option.of(1L), BuildsText.buildAt(shown, 80, 12, 8));
-        assertEquals(Option.of(29L), BuildsText.buildAt(shown, 80, 5, 6 + 2 * 29 + 1));
-        assertEquals(Option.none(), BuildsText.buildAt(shown, 80, 12, 3));
-        assertEquals(Option.none(), BuildsText.buildAt(shown, 80, 3, 10));
+        assertEquals(Option.of(0L), BuildsText.buildAt(shown, 80, 10, 6, true));
+        assertEquals(Option.of(1L), BuildsText.buildAt(shown, 80, 10, 8, true));
+        assertEquals(Option.of(29L), BuildsText.buildAt(shown, 80, 3, 6 + 2 * 29 + 1, true));
+        assertEquals(Option.none(), BuildsText.buildAt(shown, 80, 10, 3, true));
+        assertEquals(Option.none(), BuildsText.buildAt(shown, 80, 1, 10, true));
     }
 
     @Test
@@ -345,9 +317,7 @@ class BuildsTextTest {
         // Only builds on the 3rd in Auckland, at UTC+13: the column is as wide as with a build on the 13th, so it
         // stays put when older builds are read.
         List<String> lines = BuildsText.lines(
-                        shown(
-                                List.of(build("Publish", -240, "SUCCESS", 240), build("Publish", -250, "SUCCESS", 300)),
-                                Option.none()),
+                        shown(List.of(build("Publish", -240, "SUCCESS", 240), build("Publish", -250, "SUCCESS", 300))),
                         ZoneId.of("Pacific/Auckland"),
                         Theme.SpanStyles.NONE,
                         80)
@@ -392,18 +362,7 @@ class BuildsTextTest {
                         head.jobs(),
                         head.file(),
                         first));
-        BuildsShown shown = shown(ran, Option.none());
-        BuildsShown everyBranch = new BuildsShown(
-                shown.tabs(),
-                shown.lasts(),
-                shown.index(),
-                true,
-                shown.builds(),
-                shown.of(),
-                shown.mine(),
-                shown.baseline(),
-                shown.needs(),
-                shown.picked());
+        RunsDrawn everyBranch = shown(ran).withEveryBranch(true);
         return BuildsText.lines(everyBranch, ZoneOffset.UTC, Theme.SpanStyles.NONE, 120)
                 .map(BuildsTextTest::text);
     }
@@ -471,7 +430,7 @@ class BuildsTextTest {
 
     @Test
     void theJobsSpreadOverAWidePanel() {
-        List<String> lines = BuildsText.lines(shown(PUBLISH, Option.none()), ZoneOffset.UTC, Theme.SpanStyles.NONE, 200)
+        List<String> lines = BuildsText.lines(shown(PUBLISH), ZoneOffset.UTC, Theme.SpanStyles.NONE, 200)
                 .map(BuildsTextTest::text);
         int header = lines.indexWhere(line -> line.startsWith("job"));
         List<String> jobs = lines.drop(header + 1).takeWhile(line -> !line.isEmpty());
@@ -485,7 +444,7 @@ class BuildsTextTest {
 
     @Test
     void theHeadersOfTheJobsStayOverTheirColumnsInAWidePanel() {
-        List<String> lines = BuildsText.lines(shown(PUBLISH, Option.none()), ZoneOffset.UTC, Theme.SpanStyles.NONE, 200)
+        List<String> lines = BuildsText.lines(shown(PUBLISH), ZoneOffset.UTC, Theme.SpanStyles.NONE, 200)
                 .map(BuildsTextTest::text);
         String header = lines.find(line -> line.startsWith("job")).get();
         String row = lines.find(line -> line.startsWith("package ")).get();
@@ -527,24 +486,22 @@ class BuildsTextTest {
 
     @Test
     void theNewestTwentyShowWithWiderBarsAndTheTitleSaysOfHowMany() {
-        BuildsShown twenty = shown(PUBLISH, Option.none())
-                .withBuilds(new net.vanfleteren.jazygit.kernel.state.Loadable.Loaded<>(PUBLISH.take(20)));
+        RunsDrawn twenty = shown(PUBLISH).withBuilds(new Loadable.Loaded<>(PUBLISH.take(20)));
         List<String> lines = BuildsText.lines(twenty, ZoneOffset.UTC, Theme.SpanStyles.NONE, 80)
                 .map(BuildsTextTest::text);
 
-        assertEquals("Publish · push · last 20 of 30 builds · 13 Nov – 14 Nov", lines.get(2));
+        assertEquals("Publish · push · last 20 of 30 builds · 13 Nov – 14 Nov", lines.get(0));
         // 73 columns for 20 builds: three each, a bar of two and a column between them.
-        String bottom = lines.drop(5).take(8).last();
+        String bottom = lines.drop(3).take(8).last();
         assertTrue(bottom.startsWith("     │" + "██ ".repeat(20)), bottom);
     }
 
     @Test
     void tenBuildsGetBarsWithAColumnBetweenThem() {
-        BuildsShown ten = shown(PUBLISH, Option.none())
-                .withBuilds(new net.vanfleteren.jazygit.kernel.state.Loadable.Loaded<>(PUBLISH.take(10)));
+        RunsDrawn ten = shown(PUBLISH).withBuilds(new Loadable.Loaded<>(PUBLISH.take(10)));
         String bottom = BuildsText.lines(ten, ZoneOffset.UTC, Theme.SpanStyles.NONE, 80)
                 .map(BuildsTextTest::text)
-                .drop(5)
+                .drop(3)
                 .take(8)
                 .last();
 
@@ -553,7 +510,7 @@ class BuildsTextTest {
 
     @Test
     void theOverviewIsTheLinesWithoutTheRunsOneByOne() {
-        RunsDrawn runs = shown(PUBLISH, Option.none()).drawn();
+        RunsDrawn runs = shown(PUBLISH);
         List<String> all = BuildsText.lines(runs, ZoneOffset.UTC, Theme.SpanStyles.NONE, 80)
                 .map(BuildsTextTest::text);
         List<String> overview = BuildsText.overview(runs, ZoneOffset.UTC, Theme.SpanStyles.NONE, 80)
@@ -567,7 +524,7 @@ class BuildsTextTest {
 
     @Test
     void theChartWindowShowsTheNewestWithWiderBarsOnTheSameScale() {
-        RunsDrawn runs = shown(PUBLISH, Option.none()).drawn();
+        RunsDrawn runs = shown(PUBLISH);
         List<String> every = BuildsText.overview(runs, ZoneOffset.UTC, Theme.SpanStyles.NONE, 80)
                 .map(BuildsTextTest::text);
         List<String> ten = BuildsText.overview(runs.withChart(Option.of(10)), ZoneOffset.UTC, Theme.SpanStyles.NONE, 80)
