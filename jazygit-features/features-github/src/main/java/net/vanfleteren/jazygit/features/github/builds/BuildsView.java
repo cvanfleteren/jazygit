@@ -504,13 +504,13 @@ public record BuildsView(
     /**
      * How long the runs of {@code tab}'s workflow and event that passed took on every branch, once they are read.
      */
-    private Option<BuildsShown.Baseline> baseline(Pipeline tab) {
+    private Option<RunsDrawn.Baseline> baseline(Pipeline tab) {
         return runsOf(tab.workflow())
                 .flatMap(read -> read.builds().toOption())
                 .map(read -> read.filter(tab::ran)
                         .filter(build -> build.outcome() == Build.Outcome.PASSED)
                         .flatMap(Build::duration))
-                .flatMap(passed -> median(passed).map(middle -> new BuildsShown.Baseline(middle, passed.size())));
+                .flatMap(passed -> median(passed).map(middle -> new RunsDrawn.Baseline(middle, passed.size())));
     }
 
     /**

@@ -21,6 +21,7 @@ import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.features.github.builds.BuildsMsg;
 import net.vanfleteren.jazygit.features.github.builds.BuildsShown;
 import net.vanfleteren.jazygit.features.github.builds.BuildsView;
+import net.vanfleteren.jazygit.features.github.builds.RunsDrawn;
 import net.vanfleteren.jazygit.kernel.ui.theme.Theme;
 import org.junit.jupiter.api.Test;
 
@@ -548,5 +549,37 @@ class BuildsTextTest {
                 .last();
 
         assertTrue(bottom.startsWith("     │████ ████ ████ "), bottom);
+    }
+
+    @Test
+    void theOverviewIsTheLinesWithoutTheRunsOneByOne() {
+        RunsDrawn runs = shown(PUBLISH, Option.none()).drawn();
+        List<String> all = BuildsText.lines(runs, ZoneOffset.UTC, Theme.SpanStyles.NONE, 80)
+                .map(BuildsTextTest::text);
+        List<String> overview = BuildsText.overview(runs, ZoneOffset.UTC, Theme.SpanStyles.NONE, 80)
+                .map(BuildsTextTest::text);
+
+        assertEquals("Publish · push · 30 builds · 13 Nov – 14 Nov", overview.head());
+        assertEquals(all.take(overview.size()), overview);
+        // The header of the list and a row for each build.
+        assertEquals(PUBLISH.size() + 1, all.size() - overview.size());
+    }
+
+    @Test
+    void theChartWindowShowsTheNewestWithWiderBarsOnTheSameScale() {
+        RunsDrawn runs = shown(PUBLISH, Option.none()).drawn();
+        List<String> every = BuildsText.overview(runs, ZoneOffset.UTC, Theme.SpanStyles.NONE, 80)
+                .map(BuildsTextTest::text);
+        List<String> ten = BuildsText.overview(runs.withChart(Option.of(10)), ZoneOffset.UTC, Theme.SpanStyles.NONE, 80)
+                .map(BuildsTextTest::text);
+
+        // The title, the summary and the scale are those of every build; only the bars are fewer and wider.
+        assertEquals(every.take(2), ten.take(2));
+        assertEquals("   8m┤", ten.get(3).substring(0, 6), ten.mkString("\n"));
+        assertEquals(every.get(3).substring(0, 6), ten.get(3).substring(0, 6));
+        assertTrue(ten.get(10).startsWith("     │████ ████ ████ "), ten.mkString("\n"));
+        // The oldest bar is that of the tenth newest build, a click on it picks it.
+        assertEquals(
+                Option.of(PUBLISH.get(9).runId()), BuildsText.buildAt(runs.withChart(Option.of(10)), 80, 3, 6, false));
     }
 }

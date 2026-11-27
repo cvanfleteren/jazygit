@@ -4,7 +4,6 @@ import io.vavr.collection.List;
 import io.vavr.collection.Map;
 import io.vavr.collection.Set;
 import io.vavr.control.Option;
-import java.time.Duration;
 import lombok.With;
 import net.vanfleteren.jazygit.core.gh.model.Build;
 import net.vanfleteren.jazygit.core.repo.Sha;
@@ -35,7 +34,7 @@ public record BuildsShown(
         @With Loadable<List<Build>> builds,
         int of,
         Set<Sha> mine,
-        Option<Baseline> baseline,
+        Option<RunsDrawn.Baseline> baseline,
         Map<Long, Map<String, Set<String>>> needs,
         Option<Long> picked) {
 
@@ -57,10 +56,9 @@ public record BuildsShown(
     }
 
     /**
-     * How long the runs of a workflow that passed took on every branch.
-     *
-     * @param median in the middle
-     * @param runs   how many runs that passed there are
+     * What the content panel draws of the tab shown: its builds, with what goes with them, without the tabs.
      */
-    public record Baseline(Duration median, int runs) {}
+    public RunsDrawn drawn() {
+        return new RunsDrawn(shown().workflow(), builds, of, allBranches, mine, baseline, needs, picked, Option.none());
+    }
 }

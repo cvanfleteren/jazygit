@@ -33,6 +33,7 @@ import net.vanfleteren.jazygit.features.github.builds.BuildsView.Pipeline;
 import net.vanfleteren.jazygit.features.github.builds.LoadRepoWorkflows;
 import net.vanfleteren.jazygit.features.github.builds.LoadWorkflowRuns;
 import net.vanfleteren.jazygit.features.github.builds.Paging;
+import net.vanfleteren.jazygit.features.github.builds.RunsDrawn;
 import net.vanfleteren.jazygit.features.github.builds.WorkflowRuns;
 import net.vanfleteren.jazygit.kernel.content.ContentViews;
 import net.vanfleteren.jazygit.kernel.state.Env;
@@ -135,7 +136,7 @@ class BuildsEveryBranchTest {
                                         Option.none()))))
                 .model();
         assertEquals(
-                Option.of(new BuildsShown.Baseline(java.time.Duration.ofSeconds(300), 3)),
+                Option.of(new RunsDrawn.Baseline(java.time.Duration.ofSeconds(300), 3)),
                 shown(runs).baseline());
     }
 
