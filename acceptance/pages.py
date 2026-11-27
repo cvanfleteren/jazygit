@@ -12,6 +12,7 @@ operation starts from there. The tests assert what the operation should have don
 
 import re
 import subprocess
+import time
 from pathlib import Path
 
 from harness import App, AppExited, Git
@@ -712,8 +713,14 @@ class BranchesPane:
     def _back_to_local(self):
         """Shows the local branches again after an action of a remote branch, as the app is only caught up with them
         shown: the log of the remote branch is shown in place of the commits of the checked out one."""
-        if self.tab() == "Remotes":
-            self.show_tab("Branches")
+        # A key pressed while the dialog is closing or the operation starts is lost: so it is pressed again until the
+        # list changes.
+        for _ in range(10):
+            if self.tab() == "Branches":
+                return
+            self.app.press("]")
+            time.sleep(0.5)
+        self.show_tab("Branches")
 
     def rebase_onto(self, branch: str, remote: bool = False):
         """Rebases the checked out branch onto the branch; with remote, one of the remote ones, such as
