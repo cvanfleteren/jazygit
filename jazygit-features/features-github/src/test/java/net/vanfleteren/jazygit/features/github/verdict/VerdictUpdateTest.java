@@ -40,7 +40,9 @@ import net.vanfleteren.jazygit.features.github.compose.EditorFile;
 import net.vanfleteren.jazygit.features.github.remarks.RemarksCmd.LoadReviewRemarks;
 import net.vanfleteren.jazygit.features.github.remarks.RemarksMsg;
 import net.vanfleteren.jazygit.features.github.show.PullRequestCmd.LoadPullRequestDetails;
+import net.vanfleteren.jazygit.features.github.show.PullRequestMsg;
 import net.vanfleteren.jazygit.features.github.show.PullRequestPopup;
+import net.vanfleteren.jazygit.features.github.show.ShowsPullRequest;
 import net.vanfleteren.jazygit.features.github.state.Reading;
 import net.vanfleteren.jazygit.features.github.verdict.VerdictCmd.SubmitReview;
 import net.vanfleteren.jazygit.kernel.state.AppError;
@@ -303,6 +305,56 @@ class VerdictUpdateTest {
         Model followed = VerdictUpdate.followed(failed, was, was.following(SHOWN));
 
         assertEquals(Option.of(new GitHubError.CannotReview(Why.NO_REASON)), error(followed));
+    }
+
+    @Test
+    void aReviewFromTheDialogFollowsTheDialogReadAgain() {
+        Model asked = Update.update(loaded().openPopup(SHOWN), new VerdictMsg.DialogAsked())
+                .model();
+        Reviewing pending = new Reviewing("PR_42", false, true);
+
+        Model read = Update.update(
+                        asked,
+                        new PullRequestMsg.DetailsLoaded(new PrNumber(42), 0, details(OPEN.withDraft(true), pending)))
+                .model();
+
+        VerdictPopup review = read.popup(VerdictPopup.class).get();
+        assertTrue(review.draft());
+        assertTrue(review.pending());
+        assertEquals(
+                Option.of(dialog(OPEN.withDraft(true), pending)),
+                review.from().map(ShowsPullRequest::pullRequestPopup));
+    }
+
+    @Test
+    void aReviewFromTheDialogLosesTheErrorOnceTheDialogReadsThePendingReviewGone() {
+        Model pending = Update.update(
+                        loaded().openPopup(dialog(OPEN, new Reviewing("PR_42", false, true))),
+                        new VerdictMsg.DialogAsked())
+                .model();
+
+        Model read = Update.update(
+                        pending, new PullRequestMsg.DetailsLoaded(new PrNumber(42), 0, details(OPEN, BY_A_REVIEWER)))
+                .model();
+
+        assertFalse(read.popup(VerdictPopup.class).get().pending());
+        assertEquals(Option.none(), error(read));
+    }
+
+    @Test
+    void aReviewFromTheDiffStaysAsItIsWhenAPullRequestIsRead() {
+        Model asked = Update.update(
+                        diff(remarks(State.OPEN, false, new Reviewing("PR_7", false, false))),
+                        new VerdictMsg.DiffAsked())
+                .model();
+
+        Model read = Update.update(
+                        asked,
+                        new PullRequestMsg.DetailsLoaded(
+                                new PrNumber(7), 0, details(OPEN.withDraft(true), new Reviewing("PR_7", false, true))))
+                .model();
+
+        assertEquals(asked.popup(), read.popup());
     }
 
     @Test
