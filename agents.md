@@ -49,6 +49,8 @@ The updates, messages, popups and the model are pure. Pure code:
 - Commands, and the public methods of the core, declare no exceptions, checked or unchecked, of any type: failures are
   values (`Either`, `Failure`).
 
+
+
 ### Small rules
 - Records keep their default `toString()`. Where a wrapper record (`Branch.Name`, `Sha`) must become a `String`, call
   `.value()`: in concatenation, `formatted`, git arguments and `Messages.get(...)`, whose `Object...` arguments compile
@@ -140,6 +142,17 @@ case, and enforce the boundary through module dependencies, not just tests.
 - The ADR's are a historical record of the decisions made, and the reasons for them. They are not a design document, and
   they are not a specification. They are a record of the decisions made, and the reasons for them.
 
+
+## Code Analysis Preferences
+
+For Java code analysis, prefer JavaLens MCP tools over text search:
+- Use `find_references` instead of grep for finding usages
+- Use `find_implementations` instead of text search for implementations
+- Use `analyze_type` to understand a class before modifying it
+- Use refactoring tools (rename_symbol, extract_method) for safe changes
+
+Semantic analysis from JDT is more accurate than text-based search,
+especially for overloaded methods, inheritance, and generic types.
 
 ## Testing
 

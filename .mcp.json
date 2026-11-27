@@ -1,0 +1,8 @@
+{
+    "mcpServers": {
+      "javalens": {
+        "command": "javalens",
+        "env": { "JAVA_PROJECT_PATH": "/home/cvf/repos/jazygit" }
+      }
+    }
+ }
