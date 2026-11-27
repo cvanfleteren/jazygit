@@ -20,6 +20,7 @@ import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.BranchRef;
 import net.vanfleteren.jazygit.core.repo.PrNumber;
 import net.vanfleteren.jazygit.core.repo.PullRequestCommits;
+import net.vanfleteren.jazygit.core.repo.RepoPath;
 import net.vanfleteren.jazygit.core.repo.RepoSlug;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.kernel.settings.RecentRepositories;
@@ -50,7 +51,7 @@ class EditUpdateTest {
 
     @Test
     void aFileIsOpenedInTheEditor() {
-        Next next = Update.update(loaded(), new EditMsg.Requested("src/A.java"));
+        Next next = Update.update(loaded(), new EditMsg.Requested(new RepoPath("src/A.java")));
 
         assertEquals(List.of(new EditCmd(List.of("src/A.java"))), next.cmds());
     }
@@ -103,7 +104,7 @@ class EditUpdateTest {
     void aFileOfThePullRequestOfTheBranchCheckedOutIsOpened() {
         Next next = Update.update(
                 listing(new Changes.OfPullRequest(PULL_REQUEST, Option.of(new BranchName("main")))),
-                new EditMsg.ListedRequested("src/A.java"));
+                new EditMsg.ListedRequested(new RepoPath("src/A.java")));
 
         assertEquals(List.of(new EditCmd(List.of("src/A.java"))), next.cmds());
     }
@@ -112,7 +113,7 @@ class EditUpdateTest {
     void aFileOfAPullRequestWhoseBranchIsNotCheckedOutIsNotOpened() {
         Next next = Update.update(
                 listing(new Changes.OfPullRequest(PULL_REQUEST, Option.of(new BranchName("feature")))),
-                new EditMsg.ListedRequested("src/A.java"));
+                new EditMsg.ListedRequested(new RepoPath("src/A.java")));
 
         assertEquals(List.empty(), next.cmds());
         assertEquals(
@@ -123,7 +124,8 @@ class EditUpdateTest {
     @Test
     void aFileOfAPullRequestOfNoBranchKnownIsNotOpened() {
         Next next = Update.update(
-                listing(new Changes.OfPullRequest(PULL_REQUEST)), new EditMsg.ListedRequested("src/A.java"));
+                listing(new Changes.OfPullRequest(PULL_REQUEST)),
+                new EditMsg.ListedRequested(new RepoPath("src/A.java")));
 
         assertEquals(List.empty(), next.cmds());
         assertEquals(
@@ -137,10 +139,10 @@ class EditUpdateTest {
 
         Next checkedOut = Update.update(
                 listing(new Changes.OfTip(new BranchName("main"), new Sha("aaaa"))),
-                new EditMsg.ListedRequested("src/A.java"));
+                new EditMsg.ListedRequested(new RepoPath("src/A.java")));
         Next elsewhere = Update.update(
                 listing(new Changes.OfBranch(new BranchName("feature"), base, new Sha("ffff"))),
-                new EditMsg.ListedRequested("src/A.java"));
+                new EditMsg.ListedRequested(new RepoPath("src/A.java")));
 
         assertEquals(List.of(new EditCmd(List.of("src/A.java"))), checkedOut.cmds());
         assertEquals(List.empty(), elsewhere.cmds());
@@ -152,9 +154,10 @@ class EditUpdateTest {
     @Test
     void aFileOfACommitOrAStashOpensTheFileOfTheWorkingTree() {
         Next commit = Update.update(
-                listing(new Changes.OfCommit(new Sha("aaaa"))), new EditMsg.ListedRequested("src/A.java"));
-        Next stash =
-                Update.update(listing(new Changes.OfStash(new Sha("cccc"))), new EditMsg.ListedRequested("src/A.java"));
+                listing(new Changes.OfCommit(new Sha("aaaa"))),
+                new EditMsg.ListedRequested(new RepoPath("src/A.java")));
+        Next stash = Update.update(
+                listing(new Changes.OfStash(new Sha("cccc"))), new EditMsg.ListedRequested(new RepoPath("src/A.java")));
 
         assertEquals(List.of(new EditCmd(List.of("src/A.java"))), commit.cmds());
         assertEquals(List.of(new EditCmd(List.of("src/A.java"))), stash.cmds());
@@ -162,7 +165,7 @@ class EditUpdateTest {
 
     @Test
     void aFileListedWithoutFilesOfAChangeListedOpensNothing() {
-        Next next = Update.update(loaded(), new EditMsg.ListedRequested("src/A.java"));
+        Next next = Update.update(loaded(), new EditMsg.ListedRequested(new RepoPath("src/A.java")));
 
         assertEquals(List.empty(), next.cmds());
     }

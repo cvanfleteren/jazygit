@@ -22,6 +22,7 @@ import net.vanfleteren.jazygit.core.forgejo.ForgejoPullRequestDetails;
 import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.PrNumber;
 import net.vanfleteren.jazygit.core.repo.RemoteName;
+import net.vanfleteren.jazygit.core.repo.RepoSlug;
 import net.vanfleteren.jazygit.features.changes.fetch.FetchCmd;
 import net.vanfleteren.jazygit.features.forgejo.pulls.ForgejoPullRequests;
 import net.vanfleteren.jazygit.features.forgejo.pulls.PullRequestFixtures;
@@ -137,7 +138,7 @@ class MergeUpdateTest {
                         prs -> prs.mergeFailed(new FailedMerge(
                                 new PrNumber(12),
                                 ForgejoMergeStyle.SQUASH,
-                                new MergeFailure(new ForgejoError.Unreachable("x"), "h", "r"),
+                                new MergeFailure(new ForgejoError.Unreachable("x"), "h", new RepoSlug("r")),
                                 STANDING)));
 
         Next next = Update.update(failedBefore, new PullRequestMsg.Merged(SQUASH, new ForgejoMerged.Merged()));
@@ -166,7 +167,7 @@ class MergeUpdateTest {
                 new ForgejoError.Refused(
                         405, "{\"message\":\"not allowed to merge [reason: Does not have enough approvals]\"}"),
                 "code.example.net",
-                "cvf/nix");
+                new RepoSlug("cvf/nix"));
 
         Next next = Update.update(listed(), new PullRequestMsg.MergeFailed(SQUASH, refused));
 
@@ -184,10 +185,12 @@ class MergeUpdateTest {
     void anyMergeThatFailedReadsThePullRequestsAgainAsItMayBeMergedAllTheSame() {
         // Forgejo merges before it deletes the branch: a deletion that fails otherwise than the 403s known still
         // merged.
-        MergeFailure deleting =
-                new MergeFailure(new ForgejoError.Refused(500, "{\"message\":\"\"}"), "code.example.net", "cvf/nix");
+        MergeFailure deleting = new MergeFailure(
+                new ForgejoError.Refused(500, "{\"message\":\"\"}"), "code.example.net", new RepoSlug("cvf/nix"));
         MergeFailure moved = new MergeFailure(
-                new ForgejoError.Refused(409, "{\"message\":\"head out of date\"}"), "code.example.net", "cvf/nix");
+                new ForgejoError.Refused(409, "{\"message\":\"head out of date\"}"),
+                "code.example.net",
+                new RepoSlug("cvf/nix"));
 
         List.of(deleting, moved).forEach(failure -> {
             Next next = Update.update(listed(), new PullRequestMsg.MergeFailed(SQUASH, failure));
@@ -204,7 +207,7 @@ class MergeUpdateTest {
         FailedMerge failed = new FailedMerge(
                 new PrNumber(12),
                 ForgejoMergeStyle.SQUASH,
-                new MergeFailure(new ForgejoError.Unreachable("x"), "h", "r"),
+                new MergeFailure(new ForgejoError.Unreachable("x"), "h", new RepoSlug("r")),
                 STANDING);
         ForgejoPullRequests kept = prs(listed()).mergeFailed(failed);
 
@@ -219,7 +222,7 @@ class MergeUpdateTest {
         FailedMerge failed = new FailedMerge(
                 new PrNumber(12),
                 ForgejoMergeStyle.SQUASH,
-                new MergeFailure(new ForgejoError.Unreachable("x"), "h", "r"),
+                new MergeFailure(new ForgejoError.Unreachable("x"), "h", new RepoSlug("r")),
                 STANDING);
         Model kept = listed().mapPart(ForgejoPullRequests.PART, prs -> prs.mergeFailed(failed));
 

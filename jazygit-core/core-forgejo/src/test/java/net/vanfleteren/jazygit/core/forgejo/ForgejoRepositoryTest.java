@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import io.vavr.collection.HashMap;
 import io.vavr.collection.Map;
 import io.vavr.control.Option;
+import net.vanfleteren.jazygit.core.repo.RepoSlug;
 import org.junit.jupiter.api.Test;
 
 class ForgejoRepositoryTest {
@@ -57,6 +58,11 @@ class ForgejoRepositoryTest {
     void theHostIsWhatFjKeepsTheTokenUnder() {
         assertEquals(
                 "code.example.net:3000", new ForgejoRepository("https://code.example.net:3000", "cvf", "nix").host());
+    }
+
+    @Test
+    void itsSlugIsItsOwnerAndName() {
+        assertEquals(new RepoSlug("cvf/nix"), new ForgejoRepository("https://code.example.net", "cvf", "nix").slug());
     }
 
     @Test

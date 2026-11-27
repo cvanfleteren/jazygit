@@ -10,6 +10,7 @@ import java.net.URI;
 import java.util.Locale;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import net.vanfleteren.jazygit.core.repo.RepoSlug;
 
 /**
  * A repository on a host that may be Forgejo, as a git remote names it (ADR 174).
@@ -67,6 +68,13 @@ public record ForgejoRepository(String base, String owner, String name) {
      */
     public boolean secure() {
         return base.startsWith("https://");
+    }
+
+    /**
+     * The repository as Forgejo names it, {@code owner/name}.
+     */
+    public RepoSlug slug() {
+        return new RepoSlug(owner + "/" + name);
     }
 
     /**

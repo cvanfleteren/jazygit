@@ -123,15 +123,11 @@ public record MergePullRequestCmd(
                         && refused.status() == ForgejoError.Refused.CONFLICT
                         && refused.stated().exists(message -> message.contains(ALREADY))
                 ? new PullRequestMsg.AlreadyScheduled(this)
-                : failed(new MergeFailure(error, repository.host(), named(repository)));
+                : failed(new MergeFailure(error, repository.host(), repository.slug()));
     }
 
     @Override
     public Msg failed(Failure failure) {
         return new PullRequestMsg.MergeFailed(this, failure);
-    }
-
-    static String named(ForgejoRepository repository) {
-        return repository.owner() + "/" + repository.name();
     }
 }

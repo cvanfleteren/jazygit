@@ -39,6 +39,7 @@ import net.vanfleteren.jazygit.kernel.state.diff.Remark;
 import net.vanfleteren.jazygit.kernel.state.diff.RemarkThread;
 import net.vanfleteren.jazygit.kernel.state.diff.Scrolled;
 import net.vanfleteren.jazygit.kernel.state.diff.ScrolledContent;
+import net.vanfleteren.jazygit.kernel.state.edit.EditedFile;
 import net.vanfleteren.jazygit.kernel.state.launch.ProgramFailure;
 import net.vanfleteren.jazygit.kernel.state.launch.ProgramLauncher;
 import net.vanfleteren.jazygit.kernel.state.load.LoadMsg;
@@ -103,73 +104,78 @@ class OpenFileUpdateTest {
 
     @Test
     void withoutAnEditorSetToOpenFilesTheFileOpensInGitsEditor() {
-        Next next = Update.update(model(IDEA), new EditMsg.Requested("src/A.java"));
+        Next next = Update.update(model(IDEA), new EditMsg.Requested(new RepoPath("src/A.java")));
 
         assertEquals(List.of(new EditCmd(List.of("src/A.java"))), next.cmds());
     }
 
     @Test
     void withOneEditorSetToOpenFilesTheFileOpensInItAtItsStart() {
-        Next next = Update.update(model(IDEA, NVIM), new EditMsg.Requested("src/A.java"));
+        Next next = Update.update(model(IDEA, NVIM), new EditMsg.Requested(new RepoPath("src/A.java")));
 
-        assertEquals(List.of(new OpenFileCmd(NVIM, "src/A.java", 1)), next.cmds());
+        assertEquals(List.of(new OpenFileCmd(NVIM, EditedFile.of(new RepoPath("src/A.java")), 1)), next.cmds());
     }
 
     @Test
     void withMoreTheEditorsThatOpenFilesAreOfferedWithTheirLetters() {
-        Next next = Update.update(model(IDEA, CODE, NVIM), new EditMsg.Requested("src/A.java"));
+        Next next = Update.update(model(IDEA, CODE, NVIM), new EditMsg.Requested(new RepoPath("src/A.java")));
 
         assertEquals(List.empty(), next.cmds());
         assertEquals(
-                Option.of(new EditPopup("src/A.java", 1, List.of(Tuple.of('c', CODE), Tuple.of('1', NVIM)))),
+                Option.of(new EditPopup(
+                        EditedFile.of(new RepoPath("src/A.java")),
+                        1,
+                        List.of(Tuple.of('c', CODE), Tuple.of('1', NVIM)))),
                 next.model().popup());
     }
 
     @Test
     void aFileInConflictIsReadForItsFirstConflictBeforeItOpens() {
-        Next next = Update.update(inConflict(model(NVIM)), new EditMsg.Requested("a.txt"));
+        Next next = Update.update(inConflict(model(NVIM)), new EditMsg.Requested(new RepoPath("a.txt")));
 
-        assertEquals(List.of(new ReadFirstConflictCmd("a.txt")), next.cmds());
+        assertEquals(List.of(new ReadFirstConflictCmd(new RepoPath("a.txt"))), next.cmds());
     }
 
     @Test
     void aFileInConflictOpensAtItsFirstConflict() {
-        Next next = Update.update(model(NVIM), new EditMsg.FirstConflictRead("a.txt", Option.of(7)));
+        Next next = Update.update(model(NVIM), new EditMsg.FirstConflictRead(new RepoPath("a.txt"), Option.of(7)));
 
-        assertEquals(List.of(new OpenFileCmd(NVIM, "a.txt", 7)), next.cmds());
+        assertEquals(List.of(new OpenFileCmd(NVIM, EditedFile.of(new RepoPath("a.txt")), 7)), next.cmds());
     }
 
     @Test
     void aFileInConflictWithoutMarkersLeftOpensAtItsStart() {
-        Next next = Update.update(model(NVIM), new EditMsg.FirstConflictRead("a.txt", Option.none()));
+        Next next = Update.update(model(NVIM), new EditMsg.FirstConflictRead(new RepoPath("a.txt"), Option.none()));
 
-        assertEquals(List.of(new OpenFileCmd(NVIM, "a.txt", 1)), next.cmds());
+        assertEquals(List.of(new OpenFileCmd(NVIM, EditedFile.of(new RepoPath("a.txt")), 1)), next.cmds());
     }
 
     @Test
     void gitsEditorOpensAFileInConflictAtItsStartAsItTakesNoLine() {
-        Next next = Update.update(model(), new EditMsg.FirstConflictRead("a.txt", Option.of(7)));
+        Next next = Update.update(model(), new EditMsg.FirstConflictRead(new RepoPath("a.txt"), Option.of(7)));
 
         assertEquals(List.of(new EditCmd(List.of("a.txt"))), next.cmds());
     }
 
     @Test
     void aFileAnotherFeatureAsksForOpensAtTheLineItAsks() {
-        Next next = asked(model(NVIM), KernelEvent.FileToOpen.at("a.txt", 9));
+        Next next = asked(model(NVIM), KernelEvent.FileToOpen.at(new RepoPath("a.txt"), 9));
 
-        assertEquals(List.of(new OpenFileCmd(NVIM, "a.txt", 9)), next.cmds());
+        assertEquals(List.of(new OpenFileCmd(NVIM, EditedFile.of(new RepoPath("a.txt")), 9)), next.cmds());
     }
 
     @Test
     void aFileAnotherFeatureAsksForWithoutALineOpensAsEOpensIt() {
-        Next next = asked(inConflict(model(NVIM)), KernelEvent.FileToOpen.of("a.txt"));
+        Next next = asked(inConflict(model(NVIM)), KernelEvent.FileToOpen.of(new RepoPath("a.txt")));
 
-        assertEquals(List.of(new ReadFirstConflictCmd("a.txt")), next.cmds());
+        assertEquals(List.of(new ReadFirstConflictCmd(new RepoPath("a.txt"))), next.cmds());
     }
 
     @Test
     void aFileAskedForWithoutALineKeepsTheTitleOfTheMenu() {
-        Next next = asked(model(CODE, NVIM), KernelEvent.FileToOpen.of("a.txt").titled(Phrase.verbatim("the log")));
+        Next next = asked(
+                model(CODE, NVIM),
+                KernelEvent.FileToOpen.of(new RepoPath("a.txt")).titled(Phrase.verbatim("the log")));
 
         assertEquals(
                 Option.of(Phrase.verbatim("the log")),
@@ -179,13 +185,14 @@ class OpenFileUpdateTest {
     @Test
     void aFileInConflictAskedForWithoutALineKeepsTheTitleOfTheMenuOnceItsFirstConflictIsRead() {
         Model model = inConflict(model(CODE, NVIM));
-        Next reading = asked(model, KernelEvent.FileToOpen.of("a.txt").titled(Phrase.verbatim("the log")));
+        Next reading =
+                asked(model, KernelEvent.FileToOpen.of(new RepoPath("a.txt")).titled(Phrase.verbatim("the log")));
         ReadFirstConflictCmd read = (ReadFirstConflictCmd) reading.cmds().head();
 
         Next read7 =
                 Update.update(reading.model(), new EditMsg.FirstConflictRead(read.path(), Option.of(7), read.title()));
 
-        assertEquals(new ReadFirstConflictCmd("a.txt", Option.of(Phrase.verbatim("the log"))), read);
+        assertEquals(new ReadFirstConflictCmd(new RepoPath("a.txt"), Option.of(Phrase.verbatim("the log"))), read);
         assertEquals(
                 Option.of(Phrase.verbatim("the log")),
                 read7.model().popup(EditPopup.class).flatMap(EditPopup::title));
@@ -196,12 +203,13 @@ class OpenFileUpdateTest {
     void theMenuGoesOverACoverablePopupWithTheTitleAskedAndBackToItOnceAnEditorIsChosen() {
         Model over = model(CODE, NVIM).openPopup(new Shown(true)).withListCursor(ListCursor.START.at(4));
 
-        Next asked = asked(over, KernelEvent.FileToOpen.at("a.txt", 9).titled(Phrase.verbatim("the log")));
+        Next asked =
+                asked(over, KernelEvent.FileToOpen.at(new RepoPath("a.txt"), 9).titled(Phrase.verbatim("the log")));
 
         assertEquals(List.empty(), asked.cmds());
         assertEquals(
                 Option.of(new EditPopup(
-                        "a.txt",
+                        EditedFile.of(new RepoPath("a.txt")),
                         9,
                         List.of(Tuple.of('c', CODE), Tuple.of('1', NVIM)),
                         Option.of(Phrase.verbatim("the log")),
@@ -211,14 +219,16 @@ class OpenFileUpdateTest {
 
         Next chosen = Update.update(asked.model(), new EditMsg.Chosen(NVIM));
 
-        assertEquals(List.of(new OpenFileCmd(NVIM, "a.txt", 9)), chosen.cmds());
+        assertEquals(List.of(new OpenFileCmd(NVIM, EditedFile.of(new RepoPath("a.txt")), 9)), chosen.cmds());
         assertEquals(Option.of(new Shown(true)), chosen.model().popup());
         assertEquals(ListCursor.START.at(4), chosen.model().listCursor());
     }
 
     @Test
     void escapeOnTheMenuGoesBackToThePopupUnderIt() {
-        Model asked = asked(model(CODE, NVIM).openPopup(new Shown(true)), KernelEvent.FileToOpen.at("a.txt", 9))
+        Model asked = asked(
+                        model(CODE, NVIM).openPopup(new Shown(true)),
+                        KernelEvent.FileToOpen.at(new RepoPath("a.txt"), 9))
                 .model();
 
         Next cancelled = Update.update(asked, new EditMsg.Cancelled());
@@ -229,8 +239,8 @@ class OpenFileUpdateTest {
 
     @Test
     void escapeOnTheMenuOverNoPopupClosesIt() {
-        Model offered =
-                Update.update(model(CODE, NVIM), new EditMsg.Requested("a.txt")).model();
+        Model offered = Update.update(model(CODE, NVIM), new EditMsg.Requested(new RepoPath("a.txt")))
+                .model();
 
         assertEquals(
                 Option.none(),
@@ -239,9 +249,10 @@ class OpenFileUpdateTest {
 
     @Test
     void overAPopupThatCannotBeCoveredTheFirstEditorOpensTheFile() {
-        Next next = asked(model(CODE, NVIM).openPopup(new Shown(false)), KernelEvent.FileToOpen.at("a.txt", 9));
+        Next next = asked(
+                model(CODE, NVIM).openPopup(new Shown(false)), KernelEvent.FileToOpen.at(new RepoPath("a.txt"), 9));
 
-        assertEquals(List.of(new OpenFileCmd(CODE, "a.txt", 9)), next.cmds());
+        assertEquals(List.of(new OpenFileCmd(CODE, EditedFile.of(new RepoPath("a.txt")), 9)), next.cmds());
         assertEquals(Option.of(new Shown(false)), next.model().popup());
     }
 
@@ -249,9 +260,9 @@ class OpenFileUpdateTest {
     void theFeatureAnswersTheFilesAskedForInTheKernel() {
         Model answering = model(NVIM).withReactions(new Reactions(EditFeature.FEATURE.reactions()));
 
-        Next next = Events.happened(Next.of(answering), KernelEvent.FileToOpen.at("a.txt", 9));
+        Next next = Events.happened(Next.of(answering), KernelEvent.FileToOpen.at(new RepoPath("a.txt"), 9));
 
-        assertEquals(List.of(new OpenFileCmd(NVIM, "a.txt", 9)), next.cmds());
+        assertEquals(List.of(new OpenFileCmd(NVIM, EditedFile.of(new RepoPath("a.txt")), 9)), next.cmds());
     }
 
     private static Next asked(Model model, KernelEvent.FileToOpen event) {
@@ -276,14 +287,14 @@ class OpenFileUpdateTest {
 
         Next chosen = Update.update(offered, new EditMsg.Chosen(CODE));
 
-        assertEquals(List.of(new OpenFileCmd(CODE, "a.txt", 12)), chosen.cmds());
+        assertEquals(List.of(new OpenFileCmd(CODE, EditedFile.of(new RepoPath("a.txt")), 12)), chosen.cmds());
         assertEquals(Option.none(), chosen.model().popup());
     }
 
     @Test
     void fromTheDiffTheFileOpensAtTheLineOfTheCursor() {
         assertEquals(
-                List.of(new OpenFileCmd(NVIM, "a.txt", 12)),
+                List.of(new OpenFileCmd(NVIM, EditedFile.of(new RepoPath("a.txt")), 12)),
                 Update.update(model(NVIM), new EditMsg.AtCursor(at(right(12)))).cmds());
     }
 
@@ -292,7 +303,7 @@ class OpenFileUpdateTest {
         Anchor.OnLine removed = new Anchor.OnLine(new RepoPath("a.txt"), DiffSide.OLD, 10);
 
         assertEquals(
-                List.of(new OpenFileCmd(NVIM, "a.txt", 10)),
+                List.of(new OpenFileCmd(NVIM, EditedFile.of(new RepoPath("a.txt")), 10)),
                 Update.update(model(NVIM), new EditMsg.AtCursor(at(removed))).cmds());
     }
 
@@ -300,7 +311,7 @@ class OpenFileUpdateTest {
     void aContextLineOnTheLeftOfTheSplitViewOpensAtItsOwnLineOfTheNewFile() {
         // A context line is a stop on the left by its number in the old file (ADR 139); here the same as in the new.
         assertEquals(
-                List.of(new OpenFileCmd(NVIM, "a.txt", 9)),
+                List.of(new OpenFileCmd(NVIM, EditedFile.of(new RepoPath("a.txt")), 9)),
                 opened(new Anchor.OnLine(new RepoPath("a.txt"), DiffSide.OLD, 9)));
     }
 
@@ -311,7 +322,7 @@ class OpenFileUpdateTest {
         Anchor.OnLine three = new Anchor.OnLine(new RepoPath("a.txt"), DiffSide.OLD, 3);
 
         assertEquals(
-                List.of(new OpenFileCmd(NVIM, "a.txt", 2)),
+                List.of(new OpenFileCmd(NVIM, EditedFile.of(new RepoPath("a.txt")), 2)),
                 Update.update(
                                 model(NVIM),
                                 new EditMsg.AtCursor(
@@ -324,14 +335,14 @@ class OpenFileUpdateTest {
         Anchor.Filtered filtered = new Anchor.Filtered(
                 new RepoPath("a.txt"), List.of(new Ranges(20, 2, 21, 3), new Ranges(40, 1, 42, 1)), false);
 
-        assertEquals(List.of(new OpenFileCmd(NVIM, "a.txt", 21)), opened(filtered));
+        assertEquals(List.of(new OpenFileCmd(NVIM, EditedFile.of(new RepoPath("a.txt")), 21)), opened(filtered));
     }
 
     @Test
     void onARowOfJsonRenderedItOpensAtTheLineItWasDrawnFrom() {
         Anchor.Node node = new Anchor.Node(new RepoPath("a.txt"), "/name", right(11));
 
-        assertEquals(List.of(new OpenFileCmd(NVIM, "a.txt", 11)), opened(node));
+        assertEquals(List.of(new OpenFileCmd(NVIM, EditedFile.of(new RepoPath("a.txt")), 11)), opened(node));
     }
 
     @Test
@@ -339,8 +350,8 @@ class OpenFileUpdateTest {
         Anchor.Thread thread = new Anchor.Thread(new RemarkThread.Id("t1"), Option.of(right(12)));
         Anchor.Remark comment = new Anchor.Remark(new Remark.Id("c2"), thread);
 
-        assertEquals(List.of(new OpenFileCmd(NVIM, "a.txt", 12)), opened(thread));
-        assertEquals(List.of(new OpenFileCmd(NVIM, "a.txt", 12)), opened(comment));
+        assertEquals(List.of(new OpenFileCmd(NVIM, EditedFile.of(new RepoPath("a.txt")), 12)), opened(thread));
+        assertEquals(List.of(new OpenFileCmd(NVIM, EditedFile.of(new RepoPath("a.txt")), 12)), opened(comment));
     }
 
     @Test
@@ -356,10 +367,10 @@ class OpenFileUpdateTest {
         Anchor.Gap below = new Anchor.Gap(new RepoPath("a.txt"), 14, Option.none());
 
         assertEquals(
-                List.of(new OpenFileCmd(NVIM, "a.txt", 14)),
+                List.of(new OpenFileCmd(NVIM, EditedFile.of(new RepoPath("a.txt")), 14)),
                 Update.update(model(NVIM), new EditMsg.AtCursor(at(below))).cmds());
         assertEquals(
-                List.of(new OpenFileCmd(NVIM, "a.txt", 1)),
+                List.of(new OpenFileCmd(NVIM, EditedFile.of(new RepoPath("a.txt")), 1)),
                 Update.update(model(NVIM), new EditMsg.AtCursor(at(new Anchor.File(new RepoPath("a.txt")))))
                         .cmds());
     }
@@ -376,7 +387,7 @@ class OpenFileUpdateTest {
     @Test
     void theEditorRunsOnTheTerminalInTheWorktreeOnTheFileByItsWholePath() {
         java.util.List<String> events = new ArrayList<>();
-        OpenFileCmd cmd = new OpenFileCmd(NVIM, "src/A.java", 3);
+        OpenFileCmd cmd = new OpenFileCmd(NVIM, EditedFile.of(new RepoPath("src/A.java")), 3);
 
         assertEquals(
                 new OperationMsg.Succeeded(cmd, List.of(ExecutedCommand.of("nvim", "+3", "/repos/app/src/A.java"))),
@@ -388,7 +399,7 @@ class OpenFileUpdateTest {
     void aGuiEditorIsStartedAndLeftRunning() {
         java.util.List<String> events = new ArrayList<>();
 
-        new OpenFileCmd(CODE, "src/A.java", 7).run(env(recording(events)));
+        new OpenFileCmd(CODE, EditedFile.of(new RepoPath("src/A.java")), 7).run(env(recording(events)));
 
         assertEquals(java.util.List.of("start in /repos/app: code -g /repos/app/src/A.java:7"), events);
     }

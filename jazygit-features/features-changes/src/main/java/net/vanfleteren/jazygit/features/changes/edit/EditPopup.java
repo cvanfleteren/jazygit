@@ -6,15 +6,16 @@ import io.vavr.control.Option;
 import net.vanfleteren.jazygit.kernel.settings.EditorProgram;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.Phrase;
+import net.vanfleteren.jazygit.kernel.state.edit.EditedFile;
 import net.vanfleteren.jazygit.kernel.state.popup.Covering;
 import net.vanfleteren.jazygit.kernel.state.popup.ListCursor;
 import net.vanfleteren.jazygit.kernel.state.popup.Popup;
 
 /**
- * Asking which of the editors the user set to open files opens {@code path} (ADR 145), over the popup that was open,
+ * Asking which of the editors the user set to open files opens {@code file} (ADR 145), over the popup that was open,
  * which it goes back to (ADR 206).
  *
- * @param path        the file, relative to the working tree, or absolute
+ * @param file        the file, of the working tree or elsewhere on disk
  * @param line        the line it opens at, counted from 1
  * @param editors     each editor that opens files with the letter that chooses it, in the order of the settings file
  * @param title       what the menu is titled, when it is not named by the file
@@ -22,7 +23,7 @@ import net.vanfleteren.jazygit.kernel.state.popup.Popup;
  * @param underCursor where the user was in the list of that popup
  */
 public record EditPopup(
-        String path,
+        EditedFile file,
         int line,
         List<Tuple2<Character, EditorProgram>> editors,
         Option<Phrase> title,
@@ -31,15 +32,15 @@ public record EditPopup(
         implements Covering {
 
     /**
-     * Asking which of {@code editors} opens {@code path} at {@code line}, over no popup, titled by the file.
+     * Asking which of {@code editors} opens {@code file} at {@code line}, over no popup, titled by the file.
      */
-    public EditPopup(String path, int line, List<Tuple2<Character, EditorProgram>> editors) {
-        this(path, line, editors, Option.none(), Option.none(), ListCursor.START);
+    public EditPopup(EditedFile file, int line, List<Tuple2<Character, EditorProgram>> editors) {
+        this(file, line, editors, Option.none(), Option.none(), ListCursor.START);
     }
 
     @Override
     public EditPopup over(Popup popup) {
-        return new EditPopup(path, line, editors, title, Option.of(popup), underCursor);
+        return new EditPopup(file, line, editors, title, Option.of(popup), underCursor);
     }
 
     /**

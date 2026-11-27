@@ -3,6 +3,7 @@ package net.vanfleteren.jazygit.features.forgejo.show;
 import io.vavr.collection.List;
 import net.vanfleteren.jazygit.core.forgejo.ForgejoError;
 import net.vanfleteren.jazygit.core.process.ExecutedCommand;
+import net.vanfleteren.jazygit.core.repo.RepoSlug;
 import net.vanfleteren.jazygit.kernel.state.Failure;
 import net.vanfleteren.jazygit.kernel.state.Phrase;
 
@@ -11,9 +12,9 @@ import net.vanfleteren.jazygit.kernel.state.Phrase;
  *
  * @param error      what Forgejo answered
  * @param host       the host of the home, which fj keeps the token under
- * @param repository the home's repository, as {@code owner/name}
+ * @param repository the home's repository
  */
-public record MergeFailure(ForgejoError error, String host, String repository) implements Failure.Phrased {
+public record MergeFailure(ForgejoError error, String host, RepoSlug repository) implements Failure.Phrased {
 
     private static final int UNAUTHORIZED = 401;
     private static final int FORBIDDEN = 403;
@@ -46,7 +47,7 @@ public record MergeFailure(ForgejoError error, String host, String repository) i
             when refused.status() == UNAUTHORIZED -> Phrase.of("forgejo.error.merge.token", host);
             case ForgejoError.Refused refused
             when refused.status() == FORBIDDEN ->
-                Phrase.of("forgejo.error.merge.forbidden", repository, refused.message());
+                Phrase.of("forgejo.error.merge.forbidden", repository.value(), refused.message());
             case ForgejoError.Refused refused
             when refused.status() == NOT_ALLOWED -> Phrase.of("forgejo.error.merge.notAllowed", refused.message());
             case ForgejoError.Refused _ when moved() -> Phrase.of("forgejo.error.merge.moved");

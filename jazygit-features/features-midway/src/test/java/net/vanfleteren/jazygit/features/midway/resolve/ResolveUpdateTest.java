@@ -175,7 +175,7 @@ class ResolveUpdateTest {
         Next next = Update.update(asked(), new ResolveMsg.EditChosen());
 
         assertEquals(
-                EditUpdate.reacting(rebasing(), KernelEvent.FileToOpen.at("a.txt", 4))
+                EditUpdate.reacting(rebasing(), KernelEvent.FileToOpen.at(new RepoPath("a.txt"), 4))
                         .cmds(),
                 next.cmds());
     }
@@ -379,7 +379,7 @@ class ResolveUpdateTest {
         Next next = Update.update(asked, new ResolveMsg.EditChosen());
 
         assertEquals(Option.none(), next.model().popup(ResolvePopup.class));
-        assertEquals(List.of(new ReadFirstConflictCmd("a.txt")), next.cmds());
+        assertEquals(List.of(new ReadFirstConflictCmd(new RepoPath("a.txt"))), next.cmds());
     }
 
     @Test
@@ -430,7 +430,7 @@ class ResolveUpdateTest {
 
         assertEquals(Option.none(), next.model().popup(MarkersLeftPopup.class));
         assertEquals(
-                EditUpdate.reacting(rebasing(), KernelEvent.FileToOpen.at("a.txt", 4))
+                EditUpdate.reacting(rebasing(), KernelEvent.FileToOpen.at(new RepoPath("a.txt"), 4))
                         .cmds(),
                 next.cmds());
     }

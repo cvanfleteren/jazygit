@@ -49,6 +49,7 @@ import net.vanfleteren.jazygit.kernel.state.Reactions;
 import net.vanfleteren.jazygit.kernel.state.TestModels;
 import net.vanfleteren.jazygit.kernel.state.Update;
 import net.vanfleteren.jazygit.kernel.state.Update.Next;
+import net.vanfleteren.jazygit.kernel.state.edit.EditedFile;
 import net.vanfleteren.jazygit.kernel.state.operation.OperationMsg;
 import net.vanfleteren.jazygit.kernel.state.popup.ListCursor;
 import org.junit.jupiter.api.Test;
@@ -269,7 +270,7 @@ class CheckLogUpdateTest {
 
         Next next = Update.update(model, new ChecksMsg.LogRead(cmd, FILE.toString(), 3, List.empty()));
 
-        assertEquals(List.of(new OpenFileCmd(NVIM, FILE.toString(), 3)), next.cmds());
+        assertEquals(List.of(new OpenFileCmd(NVIM, EditedFile.onDisk(FILE.toString()), 3)), next.cmds());
         assertTrue(next.model().popup(ChecksPopup.class).isDefined());
     }
 
@@ -287,7 +288,7 @@ class CheckLogUpdateTest {
         EditPopup menu = asking.popup(EditPopup.class).get();
         assertEquals(Option.of(Phrase.of("github.dialog.logEditor.title", "verify")), menu.title());
         assertEquals(List.of(NVIM, CODE), menu.editors().map(lettered -> lettered._2));
-        assertEquals(List.of(new OpenFileCmd(CODE, FILE.toString(), 7)), chosen.cmds());
+        assertEquals(List.of(new OpenFileCmd(CODE, EditedFile.onDisk(FILE.toString()), 7)), chosen.cmds());
         assertEquals(Option.of(checks(model)), chosen.model().popup(ChecksPopup.class));
         assertEquals(Option.of(checks(model)), cancelled.popup(ChecksPopup.class));
         assertEquals(Option.of("verify"), picked(cancelled));
@@ -351,7 +352,7 @@ class CheckLogUpdateTest {
 
         Next next = Update.update(asking, new ChecksMsg.LogRead(cmd, FILE.toString(), 3, List.empty()));
 
-        assertEquals(List.of(new OpenFileCmd(NVIM, FILE.toString(), 3)), next.cmds());
+        assertEquals(List.of(new OpenFileCmd(NVIM, EditedFile.onDisk(FILE.toString()), 3)), next.cmds());
         assertTrue(next.model().popup(RerunPopup.class).isDefined());
     }
 }

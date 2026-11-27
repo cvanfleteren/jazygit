@@ -27,7 +27,7 @@ public final class EditKeys {
                                         .filter(FileTree.File.class::isInstance)
                                         .map(FileTree.File.class::cast)
                                         .<Msg>map(file -> new EditMsg.Requested(
-                                                file.entry().path().value()))))
+                                                file.entry().path()))))
                 // The file on disk, listed with the files of a commit, a stash, a branch or a pull request: those of a
                 // branch or a pull request only while it is checked out (ADR 192).
                 .add(
@@ -39,7 +39,7 @@ public final class EditKeys {
                                         .filter(FileTree.File.class::isInstance)
                                         .map(FileTree.File.class::cast)
                                         .<Msg>map(file -> new EditMsg.ListedRequested(
-                                                file.entry().path().value()))))
+                                                file.entry().path()))))
                 .add(
                         Scopes.DIFF,
                         new Binding<DiffCursorAt>(

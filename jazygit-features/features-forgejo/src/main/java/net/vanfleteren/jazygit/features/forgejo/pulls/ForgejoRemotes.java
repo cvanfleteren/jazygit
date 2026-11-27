@@ -53,6 +53,6 @@ public record ForgejoRemotes(ForgejoRepository home, Map<RemoteName, ForgejoRepo
     }
 
     private static String named(ForgejoRepository repository) {
-        return (repository.owner() + "/" + repository.name()).toLowerCase(Locale.ROOT);
+        return repository.slug().value().toLowerCase(Locale.ROOT);
     }
 }

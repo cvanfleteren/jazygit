@@ -19,6 +19,7 @@ import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.BranchRef;
 import net.vanfleteren.jazygit.core.repo.PrNumber;
 import net.vanfleteren.jazygit.core.repo.RemoteUrl;
+import net.vanfleteren.jazygit.core.repo.RepoSlug;
 import net.vanfleteren.jazygit.features.forgejo.ForgejoFailure;
 import net.vanfleteren.jazygit.features.forgejo.pulls.PullRequestFixtures.FakeForgejo;
 import net.vanfleteren.jazygit.features.forgejo.pulls.PullRequestMsg;
@@ -39,7 +40,8 @@ class MergeCommandsTest {
             true);
 
     private static Phrase phrase(int status, String body) {
-        return new MergeFailure(new ForgejoError.Refused(status, body), "code.example.net", "cvf/nix").phrase();
+        return new MergeFailure(new ForgejoError.Refused(status, body), "code.example.net", new RepoSlug("cvf/nix"))
+                .phrase();
     }
 
     @Test
@@ -60,7 +62,8 @@ class MergeCommandsTest {
         FakeForgejo forgejo = FakeForgejo.of(details("Merge it")).merging(merge -> Either.left(refused));
 
         assertEquals(
-                new PullRequestMsg.MergeFailed(REBASE, new MergeFailure(refused, "code.example.net", "cvf/nix")),
+                new PullRequestMsg.MergeFailed(
+                        REBASE, new MergeFailure(refused, "code.example.net", new RepoSlug("cvf/nix"))),
                 REBASE.run(forgejo.env()));
         assertEquals(
                 new PullRequestMsg.MergeFailed(REBASE, new ForgejoFailure.NoHome()),
@@ -99,9 +102,11 @@ class MergeCommandsTest {
 
     @Test
     void onlyAHeadThatMovedOnIsTold() {
-        assertTrue(new MergeFailure(new ForgejoError.Refused(409, "{\"message\":\"head out of date\"}"), "h", "r")
+        assertTrue(new MergeFailure(
+                        new ForgejoError.Refused(409, "{\"message\":\"head out of date\"}"), "h", new RepoSlug("r"))
                 .moved());
-        assertFalse(new MergeFailure(new ForgejoError.Refused(409, "{\"Style\":\"merge\"}"), "h", "r").moved());
-        assertFalse(new MergeFailure(new ForgejoError.Unreachable("head out of date"), "h", "r").moved());
+        assertFalse(new MergeFailure(new ForgejoError.Refused(409, "{\"Style\":\"merge\"}"), "h", new RepoSlug("r"))
+                .moved());
+        assertFalse(new MergeFailure(new ForgejoError.Unreachable("head out of date"), "h", new RepoSlug("r")).moved());
     }
 }
