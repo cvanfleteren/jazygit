@@ -3,11 +3,13 @@ package net.vanfleteren.jazygit.features.forgejo.checks;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.core.forgejo.Forgejo;
+import net.vanfleteren.jazygit.core.forgejo.ForgejoCheck;
 import net.vanfleteren.jazygit.core.repo.RemoteBranch;
+import net.vanfleteren.jazygit.features.forge.checks.ChecksMsg;
+import net.vanfleteren.jazygit.features.forge.checks.RerunPlan;
 import net.vanfleteren.jazygit.features.forgejo.ForgejoFailure;
 import net.vanfleteren.jazygit.features.forgejo.builds.ForgejoServices;
 import net.vanfleteren.jazygit.kernel.state.Env;
-import net.vanfleteren.jazygit.kernel.state.Failure;
 import net.vanfleteren.jazygit.kernel.state.Msg;
 import net.vanfleteren.jazygit.kernel.state.operation.Operation;
 import net.vanfleteren.jazygit.kernel.state.operation.OperationCmd;
@@ -45,19 +47,17 @@ public record RerunCmd(RemoteBranch branch, List<RerunPlan.Run> runs) implements
         Forgejo forgejo = ForgejoServices.of(env);
         return LoadChecks.repository(env, forgejo, branch.remote())
                 .fold(
-                        failure -> new ChecksMsg.Rerun(this, runs.map(run -> new Outcome(run, Option.of(failure)))),
-                        repository -> new ChecksMsg.Rerun(
-                                this,
-                                runs.map(run -> new Outcome(
-                                        run,
-                                        run.failed()
-                                                .flatMap(job -> forgejo.rerunJob(repository, job))
-                                                .headOption()
-                                                .map(ForgejoFailure.Asked::new)))));
+                        failure -> rerun(runs.map(run -> new RerunPlan.Outcome(run, Option.of(failure)))),
+                        repository -> rerun(runs.map(run -> new RerunPlan.Outcome(
+                                run,
+                                ForgejoChecksPort.checks(run.failed())
+                                        .flatMap(ForgejoCheck::job)
+                                        .flatMap(job -> forgejo.rerunJob(repository, job))
+                                        .headOption()
+                                        .map(ForgejoFailure.Asked::new)))));
     }
 
-    /**
-     * How running the failed jobs of {@code run} again went: refused, with why, or not.
-     */
-    public record Outcome(RerunPlan.Run run, Option<Failure> refused) {}
+    private Msg rerun(List<RerunPlan.Outcome> outcomes) {
+        return new ChecksMsg.Rerun(ForgejoChecksPort.PORT, branch, this, outcomes, List.empty());
+    }
 }

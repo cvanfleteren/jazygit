@@ -29,6 +29,9 @@ import net.vanfleteren.jazygit.core.repo.RemoteName;
 import net.vanfleteren.jazygit.core.repo.RepoSlug;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.core.repo.Upstream;
+import net.vanfleteren.jazygit.features.forge.checks.ChecksMsg;
+import net.vanfleteren.jazygit.features.forge.checks.ChecksPopup;
+import net.vanfleteren.jazygit.features.forge.checks.Reading;
 import net.vanfleteren.jazygit.features.github.checks.branches.BranchChecksMsg;
 import net.vanfleteren.jazygit.features.github.checks.branches.GitHubChecks;
 import net.vanfleteren.jazygit.features.github.checks.branches.LoadBranchChecks;
@@ -37,7 +40,6 @@ import net.vanfleteren.jazygit.features.github.checks.timings.PendingChecks;
 import net.vanfleteren.jazygit.features.github.show.PullRequestMsg;
 import net.vanfleteren.jazygit.features.github.show.PullRequestPopup;
 import net.vanfleteren.jazygit.features.github.state.GitHubState;
-import net.vanfleteren.jazygit.features.github.state.Reading;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.TestModels;
 import net.vanfleteren.jazygit.kernel.state.Update;
@@ -110,25 +112,27 @@ class ChecksUpdateTest {
      * The checks popup on {@code mine}, whose branch on GitHub shows its checks as {@code checks}.
      */
     private static Model shown(Checks checks) {
-        return Update.update(model(checks), new ChecksMsg.Requested(MINE)).model();
+        return Update.update(model(checks), new ChecksMsg.Requested(GitHubChecksPort.PORT, MINE))
+                .model();
     }
 
     @Test
     void theChecksOfALocalBranchAreThoseOfTheBranchItFollowsOnGitHub() {
-        Next next = Update.update(model(Checks.PENDING), new ChecksMsg.Requested(MINE));
+        Next next = Update.update(model(Checks.PENDING), new ChecksMsg.Requested(GitHubChecksPort.PORT, MINE));
 
         assertEquals(
-                Option.of(ChecksPopup.loading(MINE, FEATURE, Instant.EPOCH)),
+                Option.of(GitHubChecksFixtures.loading(MINE, FEATURE, Instant.EPOCH)),
                 next.model().popup(ChecksPopup.class));
         assertTrue(next.cmds().contains(new LoadChecks(FEATURE)), next.cmds().toString());
     }
 
     @Test
     void aRemoteBranchShowsItsOwnChecks() {
-        Next next = Update.update(model(Checks.FAILING), new ChecksMsg.Requested(new BranchRef.Remote(FEATURE)));
+        Next next = Update.update(
+                model(Checks.FAILING), new ChecksMsg.Requested(GitHubChecksPort.PORT, new BranchRef.Remote(FEATURE)));
 
         assertEquals(
-                Option.of(ChecksPopup.loading(new BranchRef.Remote(FEATURE), FEATURE, Instant.EPOCH)),
+                Option.of(GitHubChecksFixtures.loading(new BranchRef.Remote(FEATURE), FEATURE, Instant.EPOCH)),
                 next.model().popup(ChecksPopup.class));
         assertEquals(List.of(new LoadChecks(FEATURE)), next.cmds());
     }
@@ -137,7 +141,7 @@ class ChecksUpdateTest {
     void aBranchWithoutChecksShowsNothing() {
         assertEquals(
                 Option.none(),
-                Update.update(model(Checks.NONE), new ChecksMsg.Requested(MINE))
+                Update.update(model(Checks.NONE), new ChecksMsg.Requested(GitHubChecksPort.PORT, MINE))
                         .model()
                         .popup(ChecksPopup.class));
         assertEquals(
@@ -145,6 +149,7 @@ class ChecksUpdateTest {
                 Update.update(
                                 model(Checks.PENDING),
                                 new ChecksMsg.Requested(
+                                        GitHubChecksPort.PORT,
                                         new BranchRef.Remote(new RemoteBranch("fork", new BranchName("feature")))))
                         .model()
                         .popup(ChecksPopup.class));
@@ -152,10 +157,11 @@ class ChecksUpdateTest {
 
     @Test
     void whatWasReadIsShownAndLearnedFrom() {
-        Next next = Update.update(shown(Checks.PASSING), new ChecksMsg.Loaded(FEATURE, READ));
+        Next next = Update.update(shown(Checks.PASSING), LoadChecks.loaded(FEATURE, READ));
 
         assertEquals(
-                Option.of(ChecksPopup.loading(MINE, FEATURE, Instant.EPOCH).with(Either.right(READ))),
+                Option.of(GitHubChecksFixtures.loading(MINE, FEATURE, Instant.EPOCH)
+                        .showing(GitHubChecksFixtures.readOf(FEATURE, READ))),
                 next.model().popup(ChecksPopup.class));
         assertEquals(
                 List.of(new CheckTimesCmd.RecordCheckTimes(
@@ -168,7 +174,7 @@ class ChecksUpdateTest {
 
     @Test
     void theBranchesAreReadAgainWhenTheChecksReadDoOtherwiseThanTheBranchShows() {
-        Next next = Update.update(shown(), new ChecksMsg.Loaded(FEATURE, READ));
+        Next next = Update.update(shown(), LoadChecks.loaded(FEATURE, READ));
 
         assertTrue(next.cmds().contains(new LoadBranchChecks()), next.cmds().toString());
         assertEquals(
@@ -177,8 +183,8 @@ class ChecksUpdateTest {
 
     @Test
     void theBranchesAreNotReadAgainWhenTheBranchShowsTheChecksAsRead() {
-        Next passed = Update.update(shown(Checks.PASSING), new ChecksMsg.Loaded(FEATURE, READ));
-        Next running = Update.update(shown(), new ChecksMsg.Loaded(FEATURE, RUNNING));
+        Next passed = Update.update(shown(Checks.PASSING), LoadChecks.loaded(FEATURE, READ));
+        Next running = Update.update(shown(), LoadChecks.loaded(FEATURE, RUNNING));
 
         assertFalse(
                 passed.cmds().contains(new LoadBranchChecks()), passed.cmds().toString());
@@ -196,7 +202,7 @@ class ChecksUpdateTest {
                                 HashMap.of(new BranchName("feature"), Checks.PENDING))))
                 .model();
 
-        Next next = Update.update(pushed, new ChecksMsg.Loaded(FEATURE, READ));
+        Next next = Update.update(pushed, LoadChecks.loaded(FEATURE, READ));
 
         assertEquals(
                 Option.of(Checks.PENDING), next.model().part(GitHubState.PART).checks(FEATURE));
@@ -206,7 +212,7 @@ class ChecksUpdateTest {
     @Test
     void noChecksReadLeaveTheBranchesAsTheyAre() {
         Next next = Update.update(
-                shown(), new ChecksMsg.Loaded(FEATURE, new PendingChecks(new RepoSlug("owner/repo"), HashMap.empty())));
+                shown(), LoadChecks.loaded(FEATURE, new PendingChecks(new RepoSlug("owner/repo"), HashMap.empty())));
 
         assertFalse(next.cmds().contains(new LoadBranchChecks()), next.cmds().toString());
         assertEquals(shown().part(GitHubState.PART), next.model().part(GitHubState.PART));
@@ -216,7 +222,7 @@ class ChecksUpdateTest {
     void checksReadOfABranchNotOnGitHubLeaveTheBranchesAsTheyAre() {
         RemoteBranch fork = new RemoteBranch("fork", new BranchName("feature"));
 
-        Next next = Update.update(shown(), new ChecksMsg.Loaded(fork, READ));
+        Next next = Update.update(shown(), LoadChecks.loaded(fork, READ));
 
         assertFalse(next.cmds().contains(new LoadBranchChecks()), next.cmds().toString());
         assertEquals(shown().part(GitHubState.PART), next.model().part(GitHubState.PART));
@@ -228,7 +234,7 @@ class ChecksUpdateTest {
         Model closed = Update.update(shown(), new PopupMsg.Dismissed(ChecksPopup.class))
                 .model();
 
-        Next next = Update.update(closed, new ChecksMsg.Loaded(FEATURE, READ));
+        Next next = Update.update(closed, LoadChecks.loaded(FEATURE, READ));
 
         assertTrue(next.cmds().contains(new LoadBranchChecks()), next.cmds().toString());
     }
@@ -238,11 +244,10 @@ class ChecksUpdateTest {
         RemoteBranch other = new RemoteBranch("origin", new BranchName("other"));
 
         assertEquals(
-                shown(),
-                Update.update(shown(), new ChecksMsg.Loaded(other, READ)).model());
+                shown(), Update.update(shown(), LoadChecks.loaded(other, READ)).model());
         assertEquals(
                 shown(),
-                Update.update(shown(), new ChecksMsg.Failed(other, refused("offline")))
+                Update.update(shown(), LoadChecks.notLoaded(other, refused("offline")))
                         .model());
     }
 
@@ -251,7 +256,7 @@ class ChecksUpdateTest {
         Model closed = Update.update(shown(Checks.PASSING), new PopupMsg.Dismissed(ChecksPopup.class))
                 .model();
 
-        Next next = Update.update(closed, new ChecksMsg.Loaded(FEATURE, READ));
+        Next next = Update.update(closed, LoadChecks.loaded(FEATURE, READ));
 
         assertEquals(Option.none(), next.model().popup(ChecksPopup.class));
         assertEquals(
@@ -266,21 +271,20 @@ class ChecksUpdateTest {
     @Test
     void theChecksKeepWhereTheyAreScrolledToWhenReadAgainAndStartAtTheTopWhenShownAgain() {
         Model scrolled = Update.update(
-                        Update.update(shown(), new ChecksMsg.Loaded(FEATURE, READ))
-                                .model(),
+                        Update.update(shown(), LoadChecks.loaded(FEATURE, READ)).model(),
                         new PopupMsg.ListCursorChanged(ListCursor.START.at(3)))
                 .model();
 
         Model readAgain = Update.update(
                         Update.update(scrolled, new ChecksMsg.RefreshChosen()).model(),
-                        new ChecksMsg.Loaded(FEATURE, READ))
+                        LoadChecks.loaded(FEATURE, READ))
                 .model();
         assertEquals(ListCursor.START.at(3), readAgain.listCursor());
 
         Model shownAgain = Update.update(
                         Update.update(readAgain, new PopupMsg.Dismissed(ChecksPopup.class))
                                 .model(),
-                        new ChecksMsg.Requested(MINE))
+                        new ChecksMsg.Requested(GitHubChecksPort.PORT, MINE))
                 .model();
         assertEquals(ListCursor.START, shownAgain.listCursor());
     }
@@ -288,13 +292,13 @@ class ChecksUpdateTest {
     @Test
     void theChecksAreReadAgainByHandOnceRead() {
         Model none = model(Checks.PENDING);
-        assertEquals(Next.of(none), Update.update(none, new ChecksMsg.Tick()));
+        assertEquals(Next.of(none), Update.update(none, new ChecksMsg.Tick(GitHubChecksPort.PORT)));
 
         assertEquals(
                 List.empty(),
                 Update.update(shown(), new ChecksMsg.RefreshChosen()).cmds());
 
-        Model read = Update.update(shown(), new ChecksMsg.Loaded(FEATURE, READ)).model();
+        Model read = Update.update(shown(), LoadChecks.loaded(FEATURE, READ)).model();
         Next again = Update.update(read.withNow(Instant.EPOCH.plusSeconds(5)), new ChecksMsg.RefreshChosen());
 
         assertEquals(List.of(new LoadChecks(FEATURE)), again.cmds());
@@ -303,17 +307,22 @@ class ChecksUpdateTest {
         assertEquals(Instant.EPOCH.plusSeconds(5), reading.readAt());
         assertEquals(
                 List.empty(),
-                Update.update(again.model().withNow(Instant.EPOCH.plusSeconds(3600)), new ChecksMsg.Tick())
+                Update.update(
+                                again.model().withNow(Instant.EPOCH.plusSeconds(3600)),
+                                new ChecksMsg.Tick(GitHubChecksPort.PORT))
                         .cmds());
     }
 
     @Test
     void whileACheckIsNotDoneEveryTickReadsThemAgainByItself() {
-        assertEquals(List.empty(), Update.update(shown(), new ChecksMsg.Tick()).cmds());
+        assertEquals(
+                List.empty(),
+                Update.update(shown(), new ChecksMsg.Tick(GitHubChecksPort.PORT))
+                        .cmds());
 
-        Model read =
-                Update.update(shown(), new ChecksMsg.Loaded(FEATURE, RUNNING)).model();
-        Next again = Update.update(read.withNow(Instant.EPOCH.plusSeconds(10)), new ChecksMsg.Tick());
+        Model read = Update.update(shown(), LoadChecks.loaded(FEATURE, RUNNING)).model();
+        Next again =
+                Update.update(read.withNow(Instant.EPOCH.plusSeconds(10)), new ChecksMsg.Tick(GitHubChecksPort.PORT));
 
         assertEquals(List.of(new LoadChecks(FEATURE)), again.cmds());
         ChecksPopup reading = again.model().popup(ChecksPopup.class).get();
@@ -323,43 +332,45 @@ class ChecksUpdateTest {
 
     @Test
     void onceAllAreDoneATickReadsThemAgainAMinuteAfterTheLastRead() {
-        Model read = Update.update(shown(), new ChecksMsg.Loaded(FEATURE, READ)).model();
+        Model read = Update.update(shown(), LoadChecks.loaded(FEATURE, READ)).model();
 
         assertEquals(
                 List.empty(),
-                Update.update(read.withNow(Instant.EPOCH.plusSeconds(54)), new ChecksMsg.Tick())
+                Update.update(read.withNow(Instant.EPOCH.plusSeconds(54)), new ChecksMsg.Tick(GitHubChecksPort.PORT))
                         .cmds());
         // The tick a minute on can come a few ms short of it.
         assertEquals(
                 List.of(new LoadChecks(FEATURE)),
-                Update.update(read.withNow(Instant.EPOCH.plusSeconds(60).minusMillis(3)), new ChecksMsg.Tick())
+                Update.update(
+                                read.withNow(Instant.EPOCH.plusSeconds(60).minusMillis(3)),
+                                new ChecksMsg.Tick(GitHubChecksPort.PORT))
                         .cmds());
     }
 
     @Test
     void afterAReadFailedTheyAreReadAgainEveryMinuteOnly() {
-        Model read =
-                Update.update(shown(), new ChecksMsg.Loaded(FEATURE, RUNNING)).model();
-        Model reading = Update.update(read.withNow(Instant.EPOCH.plusSeconds(10)), new ChecksMsg.Tick())
+        Model read = Update.update(shown(), LoadChecks.loaded(FEATURE, RUNNING)).model();
+        Model reading = Update.update(
+                        read.withNow(Instant.EPOCH.plusSeconds(10)), new ChecksMsg.Tick(GitHubChecksPort.PORT))
                 .model();
-        Model failed = Update.update(reading, new ChecksMsg.Failed(FEATURE, refused("offline")))
+        Model failed = Update.update(reading, LoadChecks.notLoaded(FEATURE, refused("offline")))
                 .model();
 
         assertEquals(
                 List.empty(),
-                Update.update(failed.withNow(Instant.EPOCH.plusSeconds(20)), new ChecksMsg.Tick())
+                Update.update(failed.withNow(Instant.EPOCH.plusSeconds(20)), new ChecksMsg.Tick(GitHubChecksPort.PORT))
                         .cmds());
         assertEquals(
                 List.of(new LoadChecks(FEATURE)),
-                Update.update(failed.withNow(Instant.EPOCH.plusSeconds(70)), new ChecksMsg.Tick())
+                Update.update(failed.withNow(Instant.EPOCH.plusSeconds(70)), new ChecksMsg.Tick(GitHubChecksPort.PORT))
                         .cmds());
     }
 
     @Test
     void refreshingWhileTheyAreReadByThemselvesShowsThatReadAsAsked() {
-        Model read =
-                Update.update(shown(), new ChecksMsg.Loaded(FEATURE, RUNNING)).model();
-        Model quiet = Update.update(read.withNow(Instant.EPOCH.plusSeconds(10)), new ChecksMsg.Tick())
+        Model read = Update.update(shown(), LoadChecks.loaded(FEATURE, RUNNING)).model();
+        Model quiet = Update.update(
+                        read.withNow(Instant.EPOCH.plusSeconds(10)), new ChecksMsg.Tick(GitHubChecksPort.PORT))
                 .model();
 
         Next asked = Update.update(quiet, new ChecksMsg.RefreshChosen());
@@ -370,14 +381,14 @@ class ChecksUpdateTest {
 
     @Test
     void failingToReadThemAgainKeepsTheChecksMarkedStale() {
-        Model read = Update.update(shown(), new ChecksMsg.Loaded(FEATURE, READ)).model();
+        Model read = Update.update(shown(), LoadChecks.loaded(FEATURE, READ)).model();
 
-        ChecksPopup failed = Update.update(read, new ChecksMsg.Failed(FEATURE, refused("offline")))
+        ChecksPopup failed = Update.update(read, LoadChecks.notLoaded(FEATURE, refused("offline")))
                 .model()
                 .popup(ChecksPopup.class)
                 .get();
 
-        assertEquals(Option.of(Either.right(READ)), failed.checks());
+        assertEquals(Option.of(GitHubChecksFixtures.readOf(FEATURE, READ)), failed.checks());
         assertTrue(failed.refreshFailed().isDefined());
     }
 
@@ -399,10 +410,12 @@ class ChecksUpdateTest {
 
     @Test
     void thePullRequestDialogShowsTheChecksOfItsBranchOnGitHubAndClosingThemGoesBackToIt() {
-        Next next = Update.update(model(Checks.PENDING).openPopup(DIALOG), new ChecksMsg.PullRequestChecksRequested());
+        Next next = Update.update(
+                model(Checks.PENDING).openPopup(DIALOG),
+                new ChecksMsg.PullRequestChecksRequested(GitHubChecksPort.PORT));
 
         assertEquals(
-                Option.of(ChecksPopup.loading(new BranchRef.Remote(FEATURE), FEATURE, Instant.EPOCH, DIALOG)),
+                Option.of(GitHubChecksFixtures.loading(new BranchRef.Remote(FEATURE), FEATURE, Instant.EPOCH, DIALOG)),
                 next.model().popup(ChecksPopup.class));
         assertEquals(List.of(new LoadChecks(FEATURE)), next.cmds());
         assertEquals(
@@ -416,29 +429,38 @@ class ChecksUpdateTest {
         Model loading = model(Checks.PENDING)
                 .openPopup(PullRequestPopup.loading(new BranchName("mine"), FEATURE_PR, Instant.EPOCH, 0));
 
-        assertEquals(Next.of(noChecks), Update.update(noChecks, new ChecksMsg.PullRequestChecksRequested()));
-        assertEquals(Next.of(loading), Update.update(loading, new ChecksMsg.PullRequestChecksRequested()));
+        assertEquals(
+                Next.of(noChecks),
+                Update.update(noChecks, new ChecksMsg.PullRequestChecksRequested(GitHubChecksPort.PORT)));
+        assertEquals(
+                Next.of(loading),
+                Update.update(loading, new ChecksMsg.PullRequestChecksRequested(GitHubChecksPort.PORT)));
     }
 
     @Test
     void aPullRequestFromAForkShowsNoChecksThoughABranchHereHasItsName() {
         Model fork = model(Checks.PENDING).openPopup(DIALOG.ofFork());
 
-        assertEquals(Option.none(), ChecksUpdate.ofPullRequest(fork, DIALOG.ofFork()));
-        assertEquals(Next.of(fork), Update.update(fork, new ChecksMsg.PullRequestChecksRequested()));
+        assertEquals(Option.none(), GitHubChecksPort.pullRequestBranch(fork, DIALOG.ofFork()));
+        assertEquals(
+                Next.of(fork), Update.update(fork, new ChecksMsg.PullRequestChecksRequested(GitHubChecksPort.PORT)));
     }
 
     @Test
     void whatIsReadOfThePullRequestChangesTheDialogTheChecksGoBackTo() {
         PullRequestPopup loading = PullRequestPopup.loading(new BranchName("mine"), FEATURE_PR, Instant.EPOCH, 0);
         Model checks = model(Checks.PENDING)
-                .openPopup(ChecksPopup.loading(new BranchRef.Remote(FEATURE), FEATURE, Instant.EPOCH, loading));
+                .openPopup(
+                        GitHubChecksFixtures.loading(new BranchRef.Remote(FEATURE), FEATURE, Instant.EPOCH, loading));
 
         Model read = Update.update(checks, new PullRequestMsg.DetailsLoaded(new PrNumber(42), 0, DETAILS))
                 .model();
 
         assertEquals(
                 Option.of(DETAILS),
-                read.popup(ChecksPopup.class).flatMap(ChecksPopup::from).flatMap(PullRequestPopup::readDetails));
+                read.popup(ChecksPopup.class)
+                        .flatMap(ChecksPopup::from)
+                        .map(PullRequestPopup.class::cast)
+                        .flatMap(PullRequestPopup::readDetails));
     }
 }

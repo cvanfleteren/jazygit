@@ -50,8 +50,9 @@ named from under their group's: `state.*` is `net.vanfleteren.jazygit.kernel.sta
 | `jazygit-features` | The groups of features, a module each, with this pom as their parent (ADR 136): | kernel |
 | ↳ `features-changes` | `changes.*`: stage, files, discard, commit, ahead, cherrypick, stash, edit, copy, diff, fetch; `changes.panes.commits`, `changes.panes.stash` and `changes.panes.files`, the commits, stash and files panes (ADR 158). | ui |
 | ↳ `features-branches` | `branches.*`: branch, worktree, forcedelete, repos, start; `branches.panes.branches`, the branches pane (ADR 158). | changes |
-| ↳ `features-github` | `github.*`: pull requests, reviews, checks, builds, and how gh runs in the settings panel; the only module of the application that names gh. Deleting it, with `core-gh`, leaves jazygit working, without GitHub (ADR 171). | branches, changes, gh |
-| ↳ `features-forgejo` | `forgejo.*`: how the last build of each branch on Forgejo went, as a badge in the branches pane (ADR 174), and the pull request of a branch, read from the home of the pull requests (ADR 177) and matched by its head, in a dialog of its own (`pulls`, ADR 176); the only module of the application that names `core-forgejo`. Deleting it, with `core-forgejo`, leaves jazygit working, without Forgejo. | forgejo |
+| ↳ `features-forge` | `forge.*`: the flows every forge has, which name no forge: each forge gives what is its own through a port (`ChecksPort`), as the checks popup of a branch and running its failed jobs again (`forge.checks`, ADR 209). | — |
+| ↳ `features-github` | `github.*`: pull requests, reviews, checks, builds, and how gh runs in the settings panel; the only module of the application that names gh. Deleting it, with `core-gh`, leaves jazygit working, without GitHub (ADR 171). | forge, branches, changes, gh |
+| ↳ `features-forgejo` | `forgejo.*`: how the last build of each branch on Forgejo went, as a badge in the branches pane (ADR 174), and the pull request of a branch, read from the home of the pull requests (ADR 177) and matched by its head, in a dialog of its own (`pulls`, ADR 176); the only module of the application that names `core-forgejo`. Deleting it, with `core-forgejo`, leaves jazygit working, without Forgejo. | forge, branches, forgejo |
 | ↳ `features-chrome` | `chrome.*`: help, error, theme, layout, the settings panel. | changes |
 | ↳ `features-agent` | `agent.*`: handing a failed build to a coding agent (ADR 161); it knows no forge, and reaches the build only through the keys a forge's views host. | — |
 | ↳ `features-midway` | `midway.*`: an operation the repository is in the middle of: `inprogress`, continuing, skipping or aborting it (`M`), and `resolve`, resolving its conflicts a file at a time (ADR 198). | changes |
@@ -190,6 +191,12 @@ it reaches through them. `lens` and `image` are below `settings` and `state`, an
 - **Each forge has its own pull-request dialogs, and binds the keys the other does** (ADR 175): features that are on
   or off may bind one key in a scope, once each; it sends a `FeatureMsg.FirstOn`, which runs what the first of them
   that is on sends, and the help lists it once.
+- **What every forge has is `features-forge`'s** (ADR 209): a flow both forges have, as the checks popup, is written
+  once there over forge-neutral values (`ForgeCheck`, `ChecksRead`), and each forge gives what is its own through a
+  port, an enum of one that travels in the messages and the popup of the flow (`ChecksPort`): where its checks are,
+  the commands that read them, and what else it does with them. The forge's own values travel through the neutral
+  ones only as what the forge wrote (`ForgeCheck.Source`). `AppRules.theForgeFlowsNameNoForge` keeps
+  `features.forge..` from either forge, so either can still be deleted.
 - **The views find the app's keymap without naming it**: `Keymap.standard()` is the `Keymap.Source` the app gives as a
   service (`META-INF/services`); without the app, as in the tests of `ui`, it is empty.
 - **Views use `ui` only to draw.** Nothing in `ui`, `app.keys`, a dialog or a feature's content runs git or gh.

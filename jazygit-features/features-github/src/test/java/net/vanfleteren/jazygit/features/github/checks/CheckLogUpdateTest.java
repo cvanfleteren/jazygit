@@ -1,6 +1,6 @@
 package net.vanfleteren.jazygit.features.github.checks;
 
-import static net.vanfleteren.jazygit.features.github.checks.RerunPlanTest.check;
+import static net.vanfleteren.jazygit.features.github.checks.GitHubChecksPortTest.check;
 import static net.vanfleteren.jazygit.kernel.state.TestModels.loaded;
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -34,6 +34,13 @@ import net.vanfleteren.jazygit.features.changes.edit.EditFeature;
 import net.vanfleteren.jazygit.features.changes.edit.EditMsg;
 import net.vanfleteren.jazygit.features.changes.edit.EditPopup;
 import net.vanfleteren.jazygit.features.changes.edit.OpenFileCmd;
+import net.vanfleteren.jazygit.features.forge.checks.CheckPick;
+import net.vanfleteren.jazygit.features.forge.checks.ChecksMsg;
+import net.vanfleteren.jazygit.features.forge.checks.ChecksPopup;
+import net.vanfleteren.jazygit.features.forge.checks.ForgeCheck;
+import net.vanfleteren.jazygit.features.forge.checks.NoLog;
+import net.vanfleteren.jazygit.features.forge.checks.RerunPlan;
+import net.vanfleteren.jazygit.features.forge.checks.RerunPopup;
 import net.vanfleteren.jazygit.features.github.GitHubServices;
 import net.vanfleteren.jazygit.features.github.checks.branches.BranchChecksMsg;
 import net.vanfleteren.jazygit.features.github.checks.branches.GitHubChecks;
@@ -98,8 +105,9 @@ class CheckLogUpdateTest {
                                 HashSet.of(new RemoteName("origin")),
                                 HashMap.of(new BranchName("feature"), Checks.FAILING))))
                 .model();
-        Model asked = Update.update(model, new ChecksMsg.Requested(MINE)).model();
-        return Update.update(asked, new ChecksMsg.Loaded(FEATURE, read(checks))).model();
+        Model asked = Update.update(model, new ChecksMsg.Requested(GitHubChecksPort.PORT, MINE))
+                .model();
+        return Update.update(asked, LoadChecks.loaded(FEATURE, read(checks))).model();
     }
 
     private static PendingChecks read(List<Check> checks) {
@@ -111,7 +119,7 @@ class CheckLogUpdateTest {
     }
 
     private static Option<String> picked(Model model) {
-        return checks(model).pickedCheck(model).map(Check::name);
+        return checks(model).pickedCheck(model).map(ForgeCheck::name);
     }
 
     private static Model update(Model model, Msg... msgs) {
@@ -154,12 +162,15 @@ class CheckLogUpdateTest {
     void aClickPicksTheCheckClicked() {
         Model model = shown(List.of(TEST, LINT, VERIFY));
 
-        assertEquals(Option.of("verify"), picked(update(model, new ChecksMsg.Clicked(CheckPick.of(VERIFY)))));
+        assertEquals(
+                Option.of("verify"),
+                picked(update(model, new ChecksMsg.Clicked(CheckPick.of(GitHubChecksPort.of(VERIFY))))));
     }
 
     @Test
     void theCheckPickedStaysPickedWhileTheChecksAreReadAgainUntilItsJobIsGone() {
-        Model model = update(shown(List.of(TEST, LINT, VERIFY)), new ChecksMsg.Clicked(CheckPick.of(VERIFY)));
+        Model model = update(
+                shown(List.of(TEST, LINT, VERIFY)), new ChecksMsg.Clicked(CheckPick.of(GitHubChecksPort.of(VERIFY))));
         Check verifyAgain = check("verify", 2, "Build", Checks.PASSING, "SUCCESS");
         Check rerun = new Check(
                 "verify",
@@ -177,8 +188,8 @@ class CheckLogUpdateTest {
                                 2,
                                 run.event())));
 
-        Model same = update(model, new ChecksMsg.Loaded(FEATURE, read(List.of(VERIFY, LINT, TEST))));
-        Model again = update(model, new ChecksMsg.Loaded(FEATURE, read(List.of(rerun, LINT, TEST))));
+        Model same = update(model, LoadChecks.loaded(FEATURE, read(List.of(VERIFY, LINT, TEST))));
+        Model again = update(model, LoadChecks.loaded(FEATURE, read(List.of(rerun, LINT, TEST))));
 
         assertEquals(Option.of("verify"), picked(same));
         assertEquals(Option.of("lint"), picked(again));
@@ -234,7 +245,7 @@ class CheckLogUpdateTest {
         CheckLogCmd cmd =
                 new CheckLogCmd(new RepoSlug("owner/repo"), "lint", LINT.run().get());
 
-        assertEquals(new ChecksMsg.LogRead(cmd, FILE.toString(), 3, List.of(READ)), cmd.run(env));
+        assertEquals(new ChecksMsg.LogRead(cmd, cmd.name(), FILE.toString(), 3, List.of(READ)), cmd.run(env));
         assertEquals(
                 java.util.List.of(java.util.List.of(new RepoSlug("owner/repo"), 1L, 1, (long) "lint".hashCode())),
                 asked);
@@ -255,7 +266,7 @@ class CheckLogUpdateTest {
         CheckLogCmd cmd =
                 new CheckLogCmd(new RepoSlug("owner/repo"), "lint", LINT.run().get());
 
-        Next next = Update.update(model, new ChecksMsg.LogRead(cmd, FILE.toString(), 3, List.of(READ)));
+        Next next = Update.update(model, new ChecksMsg.LogRead(cmd, cmd.name(), FILE.toString(), 3, List.of(READ)));
 
         assertEquals(List.of(new EditCmd(List.of(FILE.toString()))), next.cmds());
         assertEquals(List.of(READ), next.model().outcome().commandLog().last().commands());
@@ -268,7 +279,7 @@ class CheckLogUpdateTest {
         CheckLogCmd cmd =
                 new CheckLogCmd(new RepoSlug("owner/repo"), "lint", LINT.run().get());
 
-        Next next = Update.update(model, new ChecksMsg.LogRead(cmd, FILE.toString(), 3, List.empty()));
+        Next next = Update.update(model, new ChecksMsg.LogRead(cmd, cmd.name(), FILE.toString(), 3, List.empty()));
 
         assertEquals(List.of(new OpenFileCmd(NVIM, EditedFile.onDisk(FILE.toString()), 3)), next.cmds());
         assertTrue(next.model().popup(ChecksPopup.class).isDefined());
@@ -281,12 +292,12 @@ class CheckLogUpdateTest {
         CheckLogCmd cmd = new CheckLogCmd(
                 new RepoSlug("owner/repo"), "verify", VERIFY.run().get());
 
-        Model asking = update(model, new ChecksMsg.LogRead(cmd, FILE.toString(), 7, List.empty()));
+        Model asking = update(model, new ChecksMsg.LogRead(cmd, cmd.name(), FILE.toString(), 7, List.empty()));
         Next chosen = Update.update(asking, new EditMsg.Chosen(CODE));
         Model cancelled = update(asking, new EditMsg.Cancelled());
 
         EditPopup menu = asking.popup(EditPopup.class).get();
-        assertEquals(Option.of(Phrase.of("github.dialog.logEditor.title", "verify")), menu.title());
+        assertEquals(Option.of(Phrase.of("forge.dialog.logEditor.title", "verify")), menu.title());
         assertEquals(List.of(NVIM, CODE), menu.editors().map(lettered -> lettered._2));
         assertEquals(List.of(new OpenFileCmd(CODE, EditedFile.onDisk(FILE.toString()), 7)), chosen.cmds());
         assertEquals(Option.of(checks(model)), chosen.model().popup(ChecksPopup.class));
@@ -300,7 +311,7 @@ class CheckLogUpdateTest {
         Model model = shown(List.of(e2e, LINT), NVIM, CODE);
         CheckLogCmd cmd =
                 new CheckLogCmd(new RepoSlug("owner/repo"), "lint", LINT.run().get());
-        Model asking = update(model, new ChecksMsg.LogRead(cmd, FILE.toString(), 3, List.empty()));
+        Model asking = update(model, new ChecksMsg.LogRead(cmd, cmd.name(), FILE.toString(), 3, List.empty()));
         ChecksPopup kept = checks(model).checkTimesChanging(asking);
 
         Model back = update(asking.checkTimesChanged(asking), new EditMsg.Cancelled());
@@ -317,8 +328,8 @@ class CheckLogUpdateTest {
         Model asked = update(shown(List.of(e2e, VERIFY)), new ChecksMsg.LogRequested());
 
         // lint fails meanwhile, and is listed first.
-        Model failed = update(asked, new ChecksMsg.Loaded(FEATURE, read(List.of(e2e, VERIFY, LINT))));
-        Model done = update(failed, new ChecksMsg.Loaded(FEATURE, read(List.of(e2eDone, VERIFY, LINT))));
+        Model failed = update(asked, LoadChecks.loaded(FEATURE, read(List.of(e2e, VERIFY, LINT))));
+        Model done = update(failed, LoadChecks.loaded(FEATURE, read(List.of(e2eDone, VERIFY, LINT))));
 
         assertEquals(Option.of("e2e"), picked(failed));
         assertEquals(Option.of(NoLog.NOT_DONE), checks(failed).noLog(failed));
@@ -336,9 +347,13 @@ class CheckLogUpdateTest {
 
         Model back = update(
                 confirmed.model(),
-                new ChecksMsg.LogRead(cmd, FILE.toString(), 3, List.empty()),
+                new ChecksMsg.LogRead(cmd, cmd.name(), FILE.toString(), 3, List.empty()),
                 new ChecksMsg.Rerun(
-                        rerun, rerun.runs().map(run -> new RerunCmd.Outcome(run, Option.none())), List.empty()),
+                        GitHubChecksPort.PORT,
+                        rerun.branch(),
+                        rerun,
+                        rerun.runs().map(run -> new RerunPlan.Outcome(run, Option.none())),
+                        List.empty()),
                 new EditMsg.Cancelled());
 
         assertTrue(checks(back).asked().get().outcomes().isDefined());
@@ -350,7 +365,7 @@ class CheckLogUpdateTest {
         CheckLogCmd cmd =
                 new CheckLogCmd(new RepoSlug("owner/repo"), "lint", LINT.run().get());
 
-        Next next = Update.update(asking, new ChecksMsg.LogRead(cmd, FILE.toString(), 3, List.empty()));
+        Next next = Update.update(asking, new ChecksMsg.LogRead(cmd, cmd.name(), FILE.toString(), 3, List.empty()));
 
         assertEquals(List.of(new OpenFileCmd(NVIM, EditedFile.onDisk(FILE.toString()), 3)), next.cmds());
         assertTrue(next.model().popup(RerunPopup.class).isDefined());

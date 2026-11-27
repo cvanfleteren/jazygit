@@ -21,8 +21,8 @@ import net.vanfleteren.jazygit.core.gh.model.PullRequestDetails.AutoMerge;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestDetails.Check;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestDetails.ReviewThreads;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestStack;
-import net.vanfleteren.jazygit.features.github.checks.ChecksMsg;
-import net.vanfleteren.jazygit.features.github.checks.ChecksUpdate;
+import net.vanfleteren.jazygit.features.forge.checks.ChecksMsg;
+import net.vanfleteren.jazygit.features.github.checks.GitHubChecksPort;
 import net.vanfleteren.jazygit.features.github.checks.timings.CheckTimes;
 import net.vanfleteren.jazygit.features.github.comment.CommentMsg;
 import net.vanfleteren.jazygit.features.github.comments.CommentsMsg;
@@ -125,8 +125,8 @@ public final class PullRequestDialog implements PopupView {
                         new Choice<PullRequestPopup>(
                                         'C',
                                         "github.dialog.pullRequest.viewChecks",
-                                        ChecksMsg.PullRequestChecksRequested::new,
-                                        (model, popup) -> ChecksUpdate.ofPullRequest(model, popup)
+                                        () -> new ChecksMsg.PullRequestChecksRequested(GitHubChecksPort.PORT),
+                                        (model, popup) -> GitHubChecksPort.pullRequestBranch(model, popup)
                                                 .isDefined())
                                 .withDetails("github.dialog.pullRequest.viewChecks.details"),
                         new Choice<PullRequestPopup>(

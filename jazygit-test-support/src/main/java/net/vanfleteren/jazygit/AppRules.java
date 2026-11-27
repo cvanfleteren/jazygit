@@ -66,6 +66,7 @@ public final class AppRules {
         "..jazygit.features.changes.widgets..",
         "..jazygit.features.branches.widgets..",
         "..jazygit.features.github.widgets..",
+        "..jazygit.features.forge.widgets..",
         "..jazygit.features.chrome.widgets.."
     };
 
@@ -75,6 +76,7 @@ public final class AppRules {
     static final String[] FEATURES = {
         "..jazygit.features.changes..",
         "..jazygit.features.branches..",
+        "..jazygit.features.forge..",
         "..jazygit.features.github..",
         "..jazygit.features.forgejo..",
         "..jazygit.features.chrome.."
@@ -87,6 +89,7 @@ public final class AppRules {
         "..jazygit.kernel.state..",
         "..jazygit.features.changes..",
         "..jazygit.features.branches..",
+        "..jazygit.features.forge..",
         "..jazygit.features.github..",
         "..jazygit.features.forgejo..",
         "..jazygit.features.chrome..",
@@ -102,6 +105,7 @@ public final class AppRules {
         "..jazygit.kernel.state..",
         "..jazygit.features.changes..",
         "..jazygit.features.branches..",
+        "..jazygit.features.forge..",
         "..jazygit.features.github..",
         "..jazygit.features.forgejo..",
         "..jazygit.features.chrome..",
@@ -192,6 +196,21 @@ public final class AppRules {
     static final ArchRule theKernelNamesNoForge = noClasses()
             .that()
             .resideInAPackage("..jazygit.kernel..")
+            .should()
+            .dependOnClassesThat(resideInAnyPackage(
+                    "..jazygit.core.gh..",
+                    "..jazygit.features.github..",
+                    "..jazygit.core.forgejo..",
+                    "..jazygit.features.forgejo.."))
+            .allowEmptyShould(true);
+    /**
+     * The flows every forge has name no forge (ADR 209): each forge gives them what is its own through a port, so that
+     * either forge can be deleted while they stay.
+     */
+    @ArchTest
+    static final ArchRule theForgeFlowsNameNoForge = noClasses()
+            .that()
+            .resideInAPackage("..jazygit.features.forge..")
             .should()
             .dependOnClassesThat(resideInAnyPackage(
                     "..jazygit.core.gh..",

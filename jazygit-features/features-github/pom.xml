@@ -16,6 +16,11 @@
     <description>What is done on GitHub: pull requests, reviews, checks and builds</description>
 
     <dependencies>
+        <!-- The checks flow both forges have, to which each gives its calls (ADR 209). -->
+        <dependency>
+            <groupId>net.vanfleteren</groupId>
+            <artifactId>features-forge</artifactId>
+        </dependency>
         <dependency>
             <groupId>net.vanfleteren</groupId>
             <artifactId>features-branches</artifactId>

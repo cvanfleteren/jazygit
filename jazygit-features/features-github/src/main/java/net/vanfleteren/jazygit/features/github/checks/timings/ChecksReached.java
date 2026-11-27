@@ -8,6 +8,7 @@ import io.vavr.control.Option;
 import java.time.Instant;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestDetails.Check;
 import net.vanfleteren.jazygit.core.gh.timing.CheckProgress;
+import net.vanfleteren.jazygit.features.forge.checks.ChecksPopup;
 
 /**
  * How far the checks of the attempts {@code runs} of workflow runs were shown to be, so a bar of how far they are
@@ -16,7 +17,7 @@ import net.vanfleteren.jazygit.core.gh.timing.CheckProgress;
  * @param runs     the id of each workflow run, and its attempt
  * @param progress how far they were shown to be
  */
-public record ChecksReached(Set<Tuple2<Long, Integer>> runs, double progress) {
+public record ChecksReached(Set<Tuple2<Long, Integer>> runs, double progress) implements ChecksPopup.Reached {
 
     /**
      * How far the checks {@code all} are together at {@code now}: at least as far as they were {@code reached} to be,

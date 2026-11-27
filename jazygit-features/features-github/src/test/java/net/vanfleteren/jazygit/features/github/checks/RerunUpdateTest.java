@@ -1,6 +1,6 @@
 package net.vanfleteren.jazygit.features.github.checks;
 
-import static net.vanfleteren.jazygit.features.github.checks.RerunPlanTest.check;
+import static net.vanfleteren.jazygit.features.github.checks.GitHubChecksPortTest.check;
 import static net.vanfleteren.jazygit.kernel.state.TestModels.loaded;
 import static net.vanfleteren.jazygit.kernel.state.TestModels.refused;
 import static org.junit.jupiter.api.Assertions.*;
@@ -28,13 +28,18 @@ import net.vanfleteren.jazygit.core.repo.RemoteName;
 import net.vanfleteren.jazygit.core.repo.RepoSlug;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.core.repo.Upstream;
+import net.vanfleteren.jazygit.features.forge.checks.ChecksMsg;
+import net.vanfleteren.jazygit.features.forge.checks.ChecksPopup;
+import net.vanfleteren.jazygit.features.forge.checks.Reading;
+import net.vanfleteren.jazygit.features.forge.checks.RerunNote;
+import net.vanfleteren.jazygit.features.forge.checks.RerunPlan;
+import net.vanfleteren.jazygit.features.forge.checks.RerunPopup;
 import net.vanfleteren.jazygit.features.github.GitHubFailure;
 import net.vanfleteren.jazygit.features.github.GitHubServices;
 import net.vanfleteren.jazygit.features.github.checks.branches.BranchChecksMsg;
 import net.vanfleteren.jazygit.features.github.checks.branches.GitHubChecks;
 import net.vanfleteren.jazygit.features.github.checks.branches.LoadBranchChecks;
 import net.vanfleteren.jazygit.features.github.checks.timings.PendingChecks;
-import net.vanfleteren.jazygit.features.github.state.Reading;
 import net.vanfleteren.jazygit.kernel.state.AppError;
 import net.vanfleteren.jazygit.kernel.state.Env;
 import net.vanfleteren.jazygit.kernel.state.Failure;
@@ -54,8 +59,10 @@ class RerunUpdateTest {
     private static final BranchRef MINE = new BranchRef.Local(new BranchName("mine"));
     private static final Check BUILD_FAILED = check("verify", 1, "Build", Checks.FAILING, "FAILURE");
     private static final Check E2E_FAILED = check("e2e", 2, "E2E", Checks.FAILING, "FAILURE");
-    private static final RerunPlan.Run BUILD = new RerunPlan.Run(1, "Build", "pull_request", 1);
-    private static final RerunPlan.Run E2E = new RerunPlan.Run(2, "E2E", "pull_request", 1);
+    private static final RerunPlan.Run BUILD =
+            new RerunPlan.Run(1, "Build", "pull_request", List.of(GitHubChecksPort.of(BUILD_FAILED)));
+    private static final RerunPlan.Run E2E =
+            new RerunPlan.Run(2, "E2E", "pull_request", List.of(GitHubChecksPort.of(E2E_FAILED)));
     private static final Instant ASKED = Instant.EPOCH.plusSeconds(100);
 
     /**
@@ -76,8 +83,9 @@ class RerunUpdateTest {
                                 HashSet.of(new RemoteName("origin")),
                                 HashMap.of(new BranchName("feature"), Checks.FAILING))))
                 .model();
-        Model asked = Update.update(model, new ChecksMsg.Requested(MINE)).model();
-        return Update.update(asked, new ChecksMsg.Loaded(FEATURE, read(checks)))
+        Model asked = Update.update(model, new ChecksMsg.Requested(GitHubChecksPort.PORT, MINE))
+                .model();
+        return Update.update(asked, LoadChecks.loaded(FEATURE, read(checks)))
                 .model()
                 .withNow(ASKED);
     }
@@ -151,21 +159,23 @@ class RerunUpdateTest {
                 .model();
         Check passed = check("verify", 1, "Build", Checks.PASSING, "SUCCESS");
 
-        Model read = Update.update(asking, new ChecksMsg.Loaded(FEATURE, read(List.of(passed))))
+        Model read = Update.update(asking, LoadChecks.loaded(FEATURE, read(List.of(passed))))
                 .model();
         Model back = Update.update(read, new ChecksMsg.RerunCancelled()).model();
 
-        assertEquals(List.of(passed), checks(back).checksRead());
+        assertEquals(List.of(passed), GitHubChecksPort.checks(checks(back).checksRead()));
     }
 
     @Test
     void onceGitHubRanThemAgainTheChecksSaySoAndAreReadAgainAsAskedAndTheBranchesToo() {
         Next asked = confirmed();
         RerunCmd cmd = new RerunCmd(FEATURE, List.of(BUILD, E2E));
-        List<RerunCmd.Outcome> outcomes =
-                List.of(new RerunCmd.Outcome(BUILD, Option.none()), new RerunCmd.Outcome(E2E, Option.none()));
+        List<RerunPlan.Outcome> outcomes =
+                List.of(new RerunPlan.Outcome(BUILD, Option.none()), new RerunPlan.Outcome(E2E, Option.none()));
 
-        Next next = Update.update(asked.model(), new ChecksMsg.Rerun(cmd, outcomes, List.of(POSTED, POSTED)));
+        Next next = Update.update(
+                asked.model(),
+                new ChecksMsg.Rerun(GitHubChecksPort.PORT, cmd.branch(), cmd, outcomes, List.of(POSTED, POSTED)));
 
         ChecksPopup popup = checks(next.model());
         assertEquals(Option.of(RerunNote.Asked.at(ASKED, List.of(1L, 2L)).answered(outcomes)), popup.rerun());
@@ -184,16 +194,18 @@ class RerunUpdateTest {
     void aRunGitHubRefusedIsAnErrorTheOthersStayRunAgain() {
         Failure forbidden = refused("Must have admin rights to Repository. (HTTP 403)");
         RerunCmd cmd = new RerunCmd(FEATURE, List.of(BUILD, E2E));
-        List<RerunCmd.Outcome> outcomes =
-                List.of(new RerunCmd.Outcome(BUILD, Option.none()), new RerunCmd.Outcome(E2E, Option.of(forbidden)));
+        List<RerunPlan.Outcome> outcomes =
+                List.of(new RerunPlan.Outcome(BUILD, Option.none()), new RerunPlan.Outcome(E2E, Option.of(forbidden)));
 
-        Next next = Update.update(confirmed().model(), new ChecksMsg.Rerun(cmd, outcomes, List.of(POSTED)));
+        Next next = Update.update(
+                confirmed().model(),
+                new ChecksMsg.Rerun(GitHubChecksPort.PORT, cmd.branch(), cmd, outcomes, List.of(POSTED)));
 
         assertEquals(
                 Option.of(new AppError.OperationFailed(RerunCmd.RERUN, Option.of("E2E"), forbidden)),
                 next.model().outcome().error());
         assertEquals(
-                List.of(new RerunCmd.Outcome(E2E, Option.of(forbidden))),
+                List.of(new RerunPlan.Outcome(E2E, Option.of(forbidden))),
                 checks(next.model()).asked().get().refused());
     }
 
@@ -206,7 +218,12 @@ class RerunUpdateTest {
 
         Next next = Update.update(
                 closed,
-                new ChecksMsg.Rerun(cmd, List.of(new RerunCmd.Outcome(BUILD, Option.of(forbidden))), List.empty()));
+                new ChecksMsg.Rerun(
+                        GitHubChecksPort.PORT,
+                        cmd.branch(),
+                        cmd,
+                        List.of(new RerunPlan.Outcome(BUILD, Option.of(forbidden))),
+                        List.empty()));
 
         assertEquals(
                 Option.of(new ErrorPopup(new AppError.OperationFailed(RerunCmd.RERUN, Option.of("Build"), forbidden))),
@@ -222,15 +239,20 @@ class RerunUpdateTest {
         Model confirmed = Update.update(asking, new ChecksMsg.RerunConfirmed()).model();
         Model answered = Update.update(
                         confirmed,
-                        new ChecksMsg.Rerun(cmd, List.of(new RerunCmd.Outcome(BUILD, Option.none())), List.empty()))
+                        new ChecksMsg.Rerun(
+                                GitHubChecksPort.PORT,
+                                cmd.branch(),
+                                cmd,
+                                List.of(new RerunPlan.Outcome(BUILD, Option.none())),
+                                List.empty()))
                 .model();
         // GitHub does not show the run run again yet.
-        Model stillFailed = Update.update(answered, new ChecksMsg.Loaded(FEATURE, read(List.of(BUILD_FAILED))))
+        Model stillFailed = Update.update(answered, LoadChecks.loaded(FEATURE, read(List.of(BUILD_FAILED))))
                 .model();
 
         assertEquals(
                 List.of(new LoadChecks(FEATURE)),
-                Update.update(stillFailed.withNow(ASKED.plusSeconds(10)), new ChecksMsg.Tick())
+                Update.update(stillFailed.withNow(ASKED.plusSeconds(10)), new ChecksMsg.Tick(GitHubChecksPort.PORT))
                         .cmds());
         // A minute on, the checks are done and were read a minute ago, which reads them anyway (ADR 34).
         assertTrue(checks(stillFailed).rerunAwaited(ASKED.plusSeconds(59)));
@@ -238,7 +260,7 @@ class RerunUpdateTest {
 
         Model running = Update.update(
                         stillFailed,
-                        new ChecksMsg.Loaded(FEATURE, read(List.of(check("verify", 1, "Build", Checks.PENDING, "")))))
+                        LoadChecks.loaded(FEATURE, read(List.of(check("verify", 1, "Build", Checks.PENDING, "")))))
                 .model();
         assertTrue(checks(running).asked().get().seen());
     }
@@ -246,14 +268,16 @@ class RerunUpdateTest {
     @Test
     void rDoesNothingWhileTheRunsAskedToRunAgainAreStillBeingRunAgainAndTheAnswerShows() {
         RerunCmd cmd = new RerunCmd(FEATURE, List.of(BUILD, E2E));
-        List<RerunCmd.Outcome> outcomes =
-                List.of(new RerunCmd.Outcome(BUILD, Option.none()), new RerunCmd.Outcome(E2E, Option.none()));
+        List<RerunPlan.Outcome> outcomes =
+                List.of(new RerunPlan.Outcome(BUILD, Option.none()), new RerunPlan.Outcome(E2E, Option.none()));
         Model asked = confirmed().model();
 
         Next again = Update.update(asked, new ChecksMsg.RerunRequested());
         assertEquals(Next.of(asked), again);
 
-        Model answered = Update.update(again.model(), new ChecksMsg.Rerun(cmd, outcomes, List.empty()))
+        Model answered = Update.update(
+                        again.model(),
+                        new ChecksMsg.Rerun(GitHubChecksPort.PORT, cmd.branch(), cmd, outcomes, List.empty()))
                 .model();
         assertEquals(Option.none(), answered.popup(RerunPopup.class));
         assertEquals(
@@ -268,12 +292,13 @@ class RerunUpdateTest {
     @Test
     void anAnswerThatComesWhileAskingToRunAgainShowsOnceBackToTheChecks() {
         RerunCmd cmd = new RerunCmd(FEATURE, List.of(BUILD));
-        List<RerunCmd.Outcome> outcomes = List.of(new RerunCmd.Outcome(BUILD, Option.none()));
+        List<RerunPlan.Outcome> outcomes = List.of(new RerunPlan.Outcome(BUILD, Option.none()));
         ChecksPopup checks = checks(confirmed().model());
         Model asking =
                 confirmed().model().openPopup(new RerunPopup(checks, new RerunPlan(List.of(BUILD), List.empty())));
 
-        Model answered = Update.update(asking, new ChecksMsg.Rerun(cmd, outcomes, List.empty()))
+        Model answered = Update.update(
+                        asking, new ChecksMsg.Rerun(GitHubChecksPort.PORT, cmd.branch(), cmd, outcomes, List.empty()))
                 .model();
         Model back = Update.update(answered, new ChecksMsg.RerunCancelled()).model();
 
@@ -287,7 +312,7 @@ class RerunUpdateTest {
         Model model = shown(List.of(check("verify", 1, "Build", Checks.PASSING, "SUCCESS")));
         Model nothing = Update.update(model, new ChecksMsg.RerunRequested()).model();
 
-        Model read = Update.update(nothing, new ChecksMsg.Loaded(FEATURE, read(List.of(BUILD_FAILED))))
+        Model read = Update.update(nothing, LoadChecks.loaded(FEATURE, read(List.of(BUILD_FAILED))))
                 .model();
 
         assertEquals(Option.none(), checks(read).rerun());
@@ -297,10 +322,12 @@ class RerunUpdateTest {
     void onceGitHubRefusedEveryRunNoneIsWaitedForAndRCanAskAgain() {
         Failure forbidden = refused("Must have admin rights to Repository. (HTTP 403)");
         RerunCmd cmd = new RerunCmd(FEATURE, List.of(BUILD, E2E));
-        List<RerunCmd.Outcome> outcomes = List.of(
-                new RerunCmd.Outcome(BUILD, Option.of(forbidden)), new RerunCmd.Outcome(E2E, Option.of(forbidden)));
+        List<RerunPlan.Outcome> outcomes = List.of(
+                new RerunPlan.Outcome(BUILD, Option.of(forbidden)), new RerunPlan.Outcome(E2E, Option.of(forbidden)));
 
-        Model answered = Update.update(confirmed().model(), new ChecksMsg.Rerun(cmd, outcomes, List.empty()))
+        Model answered = Update.update(
+                        confirmed().model(),
+                        new ChecksMsg.Rerun(GitHubChecksPort.PORT, cmd.branch(), cmd, outcomes, List.empty()))
                 .model();
 
         assertFalse(checks(answered).rerunAwaited(ASKED.plusSeconds(10)));
@@ -325,10 +352,12 @@ class RerunUpdateTest {
 
         assertEquals(
                 new ChecksMsg.Rerun(
+                        GitHubChecksPort.PORT,
+                        FEATURE,
                         cmd,
                         List.of(
-                                new RerunCmd.Outcome(BUILD, Option.of(GitHubFailure.of(forbidden))),
-                                new RerunCmd.Outcome(E2E, Option.none())),
+                                new RerunPlan.Outcome(BUILD, Option.of(GitHubFailure.of(forbidden))),
+                                new RerunPlan.Outcome(E2E, Option.none())),
                         List.of(POSTED, POSTED)),
                 cmd.run(env));
         assertEquals(java.util.List.of(1L, 2L), asked);

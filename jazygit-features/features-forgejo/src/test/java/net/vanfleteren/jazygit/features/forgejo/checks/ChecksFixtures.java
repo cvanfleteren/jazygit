@@ -15,6 +15,9 @@ import net.vanfleteren.jazygit.core.repo.PrNumber;
 import net.vanfleteren.jazygit.core.repo.RemoteBranch;
 import net.vanfleteren.jazygit.core.repo.RepoSlug;
 import net.vanfleteren.jazygit.core.repo.Sha;
+import net.vanfleteren.jazygit.features.forge.checks.ChecksPopup;
+import net.vanfleteren.jazygit.features.forge.checks.ChecksPort;
+import net.vanfleteren.jazygit.features.forge.checks.ChecksRead;
 import net.vanfleteren.jazygit.features.forgejo.show.ForgejoPullRequestPopup;
 import net.vanfleteren.jazygit.features.forgejo.show.ShownPullRequest;
 import net.vanfleteren.jazygit.kernel.state.Failure;
@@ -27,8 +30,11 @@ final class ChecksFixtures {
     static final Instant NOW = Instant.parse("2026-11-25T12:00:00Z");
     static final Sha TIP = new Sha("2".repeat(40));
     static final RemoteBranch FEATURE = new RemoteBranch("origin", new BranchName("feature"));
-    static final ForgejoChecksPopup LOADING = ForgejoChecksPopup.loading(
-            new BranchRef.Local(new BranchName("feature")), FEATURE, TIP, NOW, Option.none());
+    static final ChecksPopup LOADING = ChecksPopup.loading(
+            ForgejoChecksPort.PORT,
+            new ChecksPort.Opening(
+                    new BranchRef.Local(new BranchName("feature")), FEATURE, Option.of(TIP), Option.none()),
+            NOW);
 
     private ChecksFixtures() {}
 
@@ -84,7 +90,7 @@ final class ChecksFixtures {
     }
 
     static Either<Failure, ChecksRead> readOf(Sha sha, List<ForgejoCheck> checks) {
-        return Either.right(new ChecksRead(new RepoSlug("cvf/nix"), sha, checks));
+        return Either.right(new ChecksRead(new RepoSlug("cvf/nix"), Option.of(sha), checks.map(ForgejoChecksPort::of)));
     }
 
     /**
@@ -128,7 +134,7 @@ final class ChecksFixtures {
                         1);
     }
 
-    static ForgejoChecksPopup read(List<ForgejoCheck> checks) {
-        return LOADING.with(readOf(checks));
+    static ChecksPopup read(List<ForgejoCheck> checks) {
+        return LOADING.showing(readOf(checks));
     }
 }
