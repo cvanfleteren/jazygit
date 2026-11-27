@@ -81,19 +81,24 @@ public record BuildsScreenSource() implements ContentSource {
     }
 
     /**
-     * How the default branch did with the workflow, whatever the filter: since when its last builds failed, and how
-     * many of those done passed (ADR 212).
+     * How the default branch did with the workflow, whatever the filter: how its newest build that is done ended,
+     * since when its last builds failed, and how many of those done passed; or why they could not be read (ADR 212).
      */
     static BuildsScreenBody.DefaultLine defaultLine(Model model, BuildsScreen screen, RepoWorkflow workflow) {
         List<Build> done = screen.defaultBuilds()
                 .filter(build -> build.workflow().equals(workflow.name()))
                 .filter(build -> build.outcome() != Build.Outcome.RUNNING);
         List<Build> failing = done.takeWhile(build -> build.outcome() == Build.Outcome.FAILED);
+        Option<String> unread = screen.onDefault().builds() instanceof Loadable.Failed<List<Build>>(var failure)
+                ? Option.of(Placeholders.error(failure))
+                : Option.none();
         return new BuildsScreenBody.DefaultLine(
                 screen.defaultName().map(name -> name.value()).getOrElse(""),
                 done.count(build -> build.outcome() == Build.Outcome.PASSED),
                 done.size(),
-                failing.lastOption().map(oldest -> Duration.between(oldest.createdAt(), model.now())));
+                done.headOption().map(Build::outcome),
+                failing.lastOption().map(oldest -> Duration.between(oldest.createdAt(), model.now())),
+                unread);
     }
 
     /**

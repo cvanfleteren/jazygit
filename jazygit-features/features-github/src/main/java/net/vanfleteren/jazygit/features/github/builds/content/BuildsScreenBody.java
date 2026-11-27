@@ -66,6 +66,13 @@ record BuildsScreenBody(DefaultLine onDefault, RunsDrawn runs, Option<Build> onT
      * The line of the default branch: since when it fails, and how many of its builds of the workflow passed.
      */
     Line line(Theme.SpanStyles styles) {
+        if (onDefault.unread().isDefined()) {
+            return Line.from(Span.styled(
+                    Messages.get(
+                            "github.buildsScreen.default.unread",
+                            onDefault.unread().get()),
+                    styles.of(Theme.Classes.ERROR)));
+        }
         if (onDefault.done() == 0) {
             return Line.from(Span.styled(
                     Messages.get("github.buildsScreen.default.none", onDefault.branch()),
@@ -75,18 +82,27 @@ record BuildsScreenBody(DefaultLine onDefault, RunsDrawn runs, Option<Build> onT
                 "github.buildsScreen.default.passed",
                 String.valueOf(onDefault.passed()),
                 String.valueOf(onDefault.done()));
+        Span branch = Span.styled(onDefault.branch() + " ", styles.of(Theme.Classes.BOLD));
         return onDefault
                 .failingFor()
                 .map(failing -> Line.from(
-                        Span.styled(onDefault.branch() + " ", styles.of(Theme.Classes.BOLD)),
+                        branch,
                         Span.styled(
                                 Messages.get("github.buildsScreen.default.failing", TimeText.age(failing)),
                                 styles.of(Theme.Classes.CHECKS_FAILED)),
                         Span.styled(" · " + passed, styles.of(Theme.Classes.DIM))))
                 .getOrElse(() -> Line.from(
-                        Span.styled(onDefault.branch() + " ", styles.of(Theme.Classes.BOLD)),
-                        Span.styled("✓ ", styles.of(Theme.Classes.CHECKS_PASSED)),
-                        Span.styled(passed, styles.of(Theme.Classes.DIM))));
+                        branch, last(onDefault.last(), styles), Span.styled(passed, styles.of(Theme.Classes.DIM))));
+    }
+
+    /**
+     * How the newest build that is done ended, when it did not fail: passed, or cancelled, which is not taken for a
+     * build that passed.
+     */
+    private static Span last(Option<Build.Outcome> last, Theme.SpanStyles styles) {
+        return last.contains(Build.Outcome.CANCELLED)
+                ? Span.styled("⊘ ", styles.of(Theme.Classes.DIM))
+                : Span.styled("✓ ", styles.of(Theme.Classes.CHECKS_PASSED));
     }
 
     /**
@@ -95,8 +111,16 @@ record BuildsScreenBody(DefaultLine onDefault, RunsDrawn runs, Option<Build> onT
      * @param branch     its name
      * @param passed     how many of its builds that are done passed
      * @param done       how many of its builds among the commits read are done
-     * @param failingFor how long its builds have failed, since the oldest of the last that failed; none when the last
-     *                   passed
+     * @param last       how the newest of those ended, if there is one
+     * @param failingFor how long its builds have failed, since the oldest of the last that failed; none when the
+     *                   newest did not fail
+     * @param unread     why its builds could not be read, when they could not
      */
-    record DefaultLine(String branch, int passed, int done, Option<Duration> failingFor) {}
+    record DefaultLine(
+            String branch,
+            int passed,
+            int done,
+            Option<Build.Outcome> last,
+            Option<Duration> failingFor,
+            Option<String> unread) {}
 }
