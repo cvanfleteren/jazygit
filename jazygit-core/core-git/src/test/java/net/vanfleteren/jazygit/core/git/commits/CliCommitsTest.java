@@ -21,7 +21,8 @@ import org.zeroturnaround.exec.ProcessExecutor;
 /**
  * The {@link CliCommits} that move the newest commits of the checked out branch to a new or an existing branch, and
  * reading which commits that would move, through {@link CliHistory#commitRange}. The other operations of the role
- * are still tested in {@code CliGitTest}.
+ * have tests of their own: {@link CliRewordTest}, {@link CliSquashTest}, {@link CliAmendTest}, {@link CliDropTest}
+ * and {@link CliResetTest}.
  */
 class CliCommitsTest {
 
