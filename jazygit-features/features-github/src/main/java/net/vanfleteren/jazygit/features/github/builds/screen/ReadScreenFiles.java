@@ -1,0 +1,60 @@
+package net.vanfleteren.jazygit.features.github.builds.screen;
+
+import io.vavr.Tuple;
+import io.vavr.collection.HashMap;
+import io.vavr.collection.Map;
+import io.vavr.control.Option;
+import net.vanfleteren.jazygit.core.repo.RepoPath;
+import net.vanfleteren.jazygit.features.github.GitHubServices;
+import net.vanfleteren.jazygit.features.github.builds.FileAt;
+import net.vanfleteren.jazygit.features.github.builds.Workflow;
+import net.vanfleteren.jazygit.kernel.state.Cmd;
+import net.vanfleteren.jazygit.kernel.state.Env;
+import net.vanfleteren.jazygit.kernel.state.Failure;
+import net.vanfleteren.jazygit.kernel.state.Msg;
+
+/**
+ * Reads the file of the workflow of the run on the time line at its commit, and those of the workflows of this
+ * repository it calls, to learn which job needs which (ADR 131, 138, 212). It runs in the background, as nobody waits
+ * for it.
+ */
+public record ReadScreenFiles(FileAt file) implements Cmd {
+
+    @Override
+    public boolean background() {
+        return true;
+    }
+
+    @Override
+    public Msg run(Env env) {
+        Option<Workflow> workflow = read(env, file);
+        Map<FileAt, Option<Workflow>> called = HashMap.ofEntries(workflow.toList()
+                .flatMap(Workflow::called)
+                .map(path -> new FileAt(file.sha(), path))
+                .map(at -> Tuple.of(at, read(env, at))));
+        return new BuildsScreenMsg.FilesRead(called.put(file, workflow));
+    }
+
+    @Override
+    public Msg failed(Failure failure) {
+        return new BuildsScreenMsg.FilesRead(HashMap.of(file, Option.none()));
+    }
+
+    /**
+     * The workflow of the file {@code at}, from git, else from GitHub: the commit of a build of a pull request is not
+     * fetched once the pull request is merged and its branch deleted, and GitHub still has it (ADR 138). A file neither
+     * has, or that is no workflow, is none: its run then shows its jobs without what they wait for.
+     */
+    private static Option<Workflow> read(Env env, FileAt at) {
+        return env.git()
+                .diffs()
+                .treeText(at.sha(), new RepoPath(at.path()))
+                .mapLeft(error -> "")
+                .orElse(() -> GitHubServices.of(env)
+                        .checks()
+                        .workflowFile(at.sha(), at.path())
+                        .mapLeft(error -> ""))
+                .toOption()
+                .flatMap(Workflow::parse);
+    }
+}

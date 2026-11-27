@@ -59,6 +59,14 @@ public interface StubAccount extends Account {
         return Either.right(List.of(ExecutedCommand.of(Browser.XDG_OPEN, url)));
     }
 
+    /**
+     * Opens nothing, and says it did.
+     */
+    @Override
+    default Either<GhFailure, List<ExecutedCommand>> openRun(long runId) {
+        return Either.right(List.empty());
+    }
+
     @Override
     default Either<GhFailure, List<ExecutedCommand>> browse(ForgeBranch branch) {
         return Either.right(List.of(ExecutedCommand.of("gh", "browse", "--branch", branch.name())));

@@ -20,8 +20,7 @@ import net.vanfleteren.jazygit.core.gh.model.Build;
 import net.vanfleteren.jazygit.core.gh.model.Build.Outcome;
 import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.Sha;
-import net.vanfleteren.jazygit.features.github.builds.BuildsShown;
-import net.vanfleteren.jazygit.features.github.builds.BuildsView.Pipeline;
+import net.vanfleteren.jazygit.features.github.builds.RunsDrawn;
 import net.vanfleteren.jazygit.kernel.state.Loadable;
 import net.vanfleteren.jazygit.kernel.ui.i18n.Messages;
 import net.vanfleteren.jazygit.kernel.ui.text.Placeholders;
@@ -71,27 +70,40 @@ final class BuildsText {
     private BuildsText() {}
 
     /**
-     * The lines that draw what the builds of a branch show, {@code shown}, in {@code zone}, the chart as wide as
-     * {@code width} allows: the tabs of their workflows, and the builds of the tab shown (ADR 131).
+     * The lines that draw {@code runs} in {@code zone}, the chart as wide as {@code width} allows: their title and
+     * summary, the chart, the jobs, the time line of one run, then the runs one by one (ADR 131, 133).
      */
-    static List<Line> lines(BuildsShown shown, ZoneId zone, Theme.SpanStyles styles, int width) {
+    static List<Line> lines(RunsDrawn runs, ZoneId zone, Theme.SpanStyles styles, int width) {
+        return drawn(runs, zone, styles, width, true);
+    }
+
+    /**
+     * The lines that draw {@code runs} as {@link #lines(RunsDrawn, ZoneId, Theme.SpanStyles, int)} does, without the
+     * runs one by one, which a pane of their own lists (ADR 212).
+     */
+    static List<Line> overview(RunsDrawn runs, ZoneId zone, Theme.SpanStyles styles, int width) {
+        return drawn(runs, zone, styles, width, false);
+    }
+
+    private static List<Line> drawn(RunsDrawn runs, ZoneId zone, Theme.SpanStyles styles, int width, boolean listed) {
         Drawing drawing = new Drawing(
                 styles,
-                shown.needs(),
-                shown.mine(),
-                shown.allBranches(),
-                shown.baseline(),
-                shown.of(),
-                shown.picked(),
-                shown.onTimeLine(),
+                runs.needs(),
+                runs.mine(),
+                runs.everyBranch(),
+                runs.baseline(),
+                runs.of(),
+                runs.picked(),
+                runs.onTimeLine(),
+                runs.chart(),
                 DateTimeFormatter.ofPattern(Messages.get("github.builds.dayPattern"))
                         .withZone(zone),
                 DateTimeFormatter.ofPattern(Messages.get("github.builds.whenPattern"))
                         .withZone(zone),
                 width,
-                Math.max(10, width - SCALE - 1));
-        String workflow = shown.shown().workflow();
-        List<Line> builds = switch (shown.builds()) {
+                chartWidth(width));
+        String workflow = runs.workflow();
+        return switch (runs.builds()) {
             case Loadable.Loading<List<Build>>() ->
                 List.of(Line.from(drawing.dim(Messages.get("github.builds.readingRuns", workflow))));
             case Loadable.Failed<List<Build>>(var failure) ->
@@ -99,39 +111,29 @@ final class BuildsText {
             case Loadable.Loaded<List<Build>>(var read) ->
                 read.isEmpty()
                         ? List.of(Line.from(drawing.dim(Messages.get("github.builds.noRuns", workflow))))
-                        : drawing.workflow(read);
+                        : drawing.workflow(read, listed);
         };
-        return List.of(TabStrip.line(tabs(shown), shown.index(), width, styles), Line.from(""))
-                .appendAll(builds);
     }
 
     /**
-     * The workflow of the tab at {@code column} of the first line {@link #lines} draws of {@code shown},
-     * {@code width} columns wide; none between the tabs.
+     * The run at {@code row} and {@code column} of the lines that draw {@code runs}, {@code width} columns wide, with
+     * the runs one by one when {@code listed}, else as {@link #overview} draws them: one in the list, or the column of
+     * one in the chart, or the marks under it; none elsewhere (ADR 133, 212).
      */
-    static Option<Pipeline> tabAt(BuildsShown shown, int width, int column) {
-        return TabStrip.at(tabs(shown), shown.index(), width, column).map(shown.tabs()::get);
-    }
-
-    /**
-     * The run of the build at {@code row} and {@code column} of the lines {@link #lines} draws of {@code shown},
-     * {@code width} columns wide: one in the list, or the column of one in the chart, or the marks under it; none
-     * elsewhere (ADR 133).
-     */
-    static Option<Long> buildAt(BuildsShown shown, int width, int row, int column) {
-        return shown.builds().toOption().filter(builds -> !builds.isEmpty()).flatMap(builds -> {
-            List<Line> lines = lines(shown, ZoneOffset.UTC, Theme.SpanStyles.NONE, width);
+    static Option<Long> buildAt(RunsDrawn runs, int width, int row, int column, boolean listed) {
+        return runs.builds().toOption().filter(builds -> !builds.isEmpty()).flatMap(builds -> {
+            List<Line> lines = drawn(runs, ZoneOffset.UTC, Theme.SpanStyles.NONE, width, listed);
             // The list of the builds ends the lines, a row each.
             int list = lines.size() - builds.size();
-            if (row >= list && row < lines.size()) {
+            if (listed && row >= list && row < lines.size()) {
                 return Option.of(builds.get(row - list).runId());
             }
-            // The chart comes after the tabs, a blank line, the title, the summary and a blank line, with the axis,
-            // the days and the marks under it.
-            int chart = Math.max(10, width - SCALE - 1);
-            List<Build> charted = builds.take(chart).reverse();
+            // The chart comes after the title, the summary and a blank line, with the axis, the days and the marks
+            // under it.
+            int chart = chartWidth(width);
+            List<Build> charted = charted(builds, chart, runs.chart()).reverse();
             int each = Math.max(1, Math.min(WIDEST, chart / charted.size()));
-            int top = 5;
+            int top = 3;
             boolean drawn = charted.exists(build -> build.duration().isDefined()
                     && (build.outcome() == Outcome.PASSED || build.outcome() == Outcome.FAILED));
             int at = (column - SCALE) / each;
@@ -140,10 +142,19 @@ final class BuildsText {
         });
     }
 
-    private static List<TabStrip.Tab> tabs(BuildsShown shown) {
-        return shown.tabs()
-                .zip(shown.lasts())
-                .map(tab -> new TabStrip.Tab(tab._1().label(shown.tabs()), tab._2()));
+    /**
+     * The columns the chart has for its builds in a panel {@code width} columns wide, after its scale.
+     */
+    private static int chartWidth(int width) {
+        return Math.max(10, width - SCALE - 1);
+    }
+
+    /**
+     * The newest of {@code builds} the chart shows: as many as its {@code chart} columns have room for, and no more
+     * than {@code window} (ADR 212).
+     */
+    private static List<Build> charted(List<Build> builds, int chart, Option<Integer> window) {
+        return builds.take(window.map(most -> Math.min(most, chart)).getOrElse(chart));
     }
 
     /**
@@ -310,7 +321,8 @@ final class BuildsText {
      * @param baseline how long the runs of the workflow that passed took on every branch
      * @param of     how many builds of the tab are read, of which some show
      * @param picked the run of the build whose jobs show on one time line; none for the last that is done
-     * @param onTimeLine the build whose jobs show on one time line, as {@link BuildsShown#onTimeLine()} says
+     * @param onTimeLine the build whose jobs show on one time line, as {@link RunsDrawn#onTimeLine()} says
+     * @param window how many of the newest builds the chart shows at most; none for as many as fit
      * @param day    how a day is written
      * @param when   how a day and a time are written
      * @param width  the columns of the panel
@@ -321,26 +333,31 @@ final class BuildsText {
             Map<Long, Map<String, Set<String>>> needs,
             Set<Sha> mine,
             boolean allBranches,
-            Option<BuildsShown.Baseline> baseline,
+            Option<RunsDrawn.Baseline> baseline,
             int of,
             Option<Long> picked,
             Option<Build> onTimeLine,
+            Option<Integer> window,
             DateTimeFormatter day,
             DateTimeFormatter when,
             int width,
             int chart) {
 
         /**
-         * The lines that draw the builds of one workflow, the newest first.
+         * The lines that draw the builds of one workflow, the newest first, with the builds one by one when
+         * {@code listed}.
          */
-        List<Line> workflow(List<Build> builds) {
+        List<Line> workflow(List<Build> builds, boolean listed) {
             Option<Duration> median = median(passed(builds));
             List<Line> above = List.of(title(builds), summary(builds, median), Line.from(""))
-                    .appendAll(chart(builds.take(chart).reverse(), median))
+                    .appendAll(chart(charted(builds, chart, window).reverse(), builds.take(chart), median))
                     .append(Line.from(""))
                     .appendAll(jobs(builds.take(JOB_BUILDS).reverse()))
                     .appendAll(timeLine(builds))
                     .append(Line.from(""));
+            if (!listed) {
+                return above;
+            }
             List<Line> all = above.appendAll(list(builds, median));
             // The row of the build picked is in the tint of the cursor of a diff, so it stands out among the others:
             // as far as the edge of the panel, or of the widest line when a long one lets the area scroll sideways.
@@ -435,16 +452,16 @@ final class BuildsText {
         /**
          * The chart of how long {@code shown} took, the oldest first, one column each: a bar for a build that is
          * done and did not get cancelled, in the colour of how it ended; the median as a dotted line; under it, the
-         * days and a mark for each build that did not pass.
+         * days and a mark for each build that did not pass. Its scale is that of {@code scaled}, the builds it has
+         * room for, so that showing fewer of them does not change it (ADR 212).
          */
-        private List<Line> chart(List<Build> shown, Option<Duration> median) {
-            List<Option<Duration>> bars = shown.map(build -> build.duration()
-                    .filter(took -> build.outcome() == Outcome.PASSED || build.outcome() == Outcome.FAILED));
+        private List<Line> chart(List<Build> shown, List<Build> scaled, Option<Duration> median) {
+            List<Option<Duration>> bars = shown.map(Drawing::bar);
             List<Duration> drawn = bars.flatMap(bar -> bar);
             if (drawn.isEmpty()) {
                 return List.of(Line.from(dim(Messages.get("github.builds.noneDone"))));
             }
-            long top = top(drawn);
+            long top = top(scaled.flatMap(Drawing::bar));
             int medianRow = median.map(middle -> (int) (middle.toSeconds() * CHART_ROWS / top))
                     .getOrElse(-1);
             int each = Math.max(1, Math.min(WIDEST, chart / shown.size()));
@@ -455,6 +472,14 @@ final class BuildsText {
                                     .flatMap(bar -> cell(bar._1(), bar._2(), row, top, row == medianRow, each)))
                             .toJavaList()));
             return rows.appendAll(axis(shown, each));
+        }
+
+        /**
+         * How long {@code build} took, as its bar in the chart shows it: when it is done and passed or failed.
+         */
+        private static Option<Duration> bar(Build build) {
+            return build.duration()
+                    .filter(took -> build.outcome() == Outcome.PASSED || build.outcome() == Outcome.FAILED);
         }
 
         /**

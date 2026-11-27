@@ -77,4 +77,10 @@ public interface Account {
      * Opens {@code branch}, as it is named on the remote, in the browser.
      */
     Either<GhFailure, List<ExecutedCommand>> browse(ForgeBranch branch);
+
+    /**
+     * Opens the workflow run {@code runId} of the repository in the browser set for the account it uses, as a pull
+     * request opens (ADR 88, 212): the browser gh would choose may not be logged in to that account.
+     */
+    Either<GhFailure, List<ExecutedCommand>> openRun(long runId);
 }

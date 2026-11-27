@@ -34,6 +34,7 @@ import net.vanfleteren.jazygit.features.changes.reflog.ReflogMsg;
 import net.vanfleteren.jazygit.features.chrome.help.HelpPopup;
 import net.vanfleteren.jazygit.features.forge.checks.ChecksMsg;
 import net.vanfleteren.jazygit.features.github.GitHubServices;
+import net.vanfleteren.jazygit.features.github.builds.screen.BuildsScreenMsg;
 import net.vanfleteren.jazygit.features.github.prs.PrOverview;
 import net.vanfleteren.jazygit.features.github.prs.PrOverviewMsg;
 import net.vanfleteren.jazygit.features.github.show.PullRequestMsg;
@@ -293,6 +294,8 @@ class JazygitAppWiringTest {
                         Tuple.of(Timers.REFRESH_INTERVAL, TimerMsg.Tick.class),
                         Tuple.of(Timers.REFRESH_INTERVAL, ReflogMsg.Tick.class),
                         Tuple.of(Duration.ofMinutes(1), PrOverviewMsg.Tick.class),
+                        Tuple.of(Duration.ofMinutes(1), BuildsScreenMsg.Tick.class),
+                        Tuple.of(Duration.ofSeconds(10), BuildsScreenMsg.RunningTick.class),
                         Tuple.of(Duration.ofSeconds(10), PullRequestMsg.Tick.class),
                         Tuple.of(Duration.ofSeconds(10), ChecksMsg.Tick.class),
                         Tuple.of(Duration.ofSeconds(2), PullRequestMsg.MergeTick.class),
@@ -304,7 +307,7 @@ class JazygitAppWiringTest {
         org.junit.jupiter.api.Assertions.assertTrue(Timers.ALL
                         .filter(timer -> timer.msg().get() instanceof FeatureMsg.Owned)
                         .size()
-                == 5);
+                == 7);
     }
 
     private static Object owned(Msg msg) {

@@ -53,3 +53,6 @@ ended, and the run when it was created; what each job waits for comes from the f
   for.
 - The time line is narrower by the two columns of numbers.
 - Picking a build reads one more workflow file from git, in the background, once a view.
+
+Amended by ADR 212: the run highlighted in the runs pane of the builds screen is the one on the time line; `p`, `n`
+and `N` are gone.

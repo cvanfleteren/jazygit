@@ -132,6 +132,15 @@ class AccountBrowserTest {
     }
 
     @Test
+    void aWorkflowRunOpensInTheAccountsBrowser() throws Exception {
+        Account github =
+                github(GhToken.NONE, HashMap.of("GH_BROWSER", "elsewhere"), browserOf(ACTIVE, "firefox -P work"));
+
+        assertTrue(github.openRun(401).isRight());
+        assertEquals("firefox -P work\n", Files.readString(dir.resolve("browser")));
+    }
+
+    @Test
     void withoutABrowserForTheAccountGhChoosesAsBefore() throws Exception {
         assertTrue(github(GhToken.NONE, HashMap.empty(), account -> Option.none())
                 .openPullRequest(new PrNumber(7))

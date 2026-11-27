@@ -13,6 +13,8 @@ diff-words = false
 diff-pairs = false
 pull-requests-width = 50
 pull-requests-heights = [40, 30]
+builds-width = 50
+builds-heights = [40]
 
 [git]
 auto-refresh = false

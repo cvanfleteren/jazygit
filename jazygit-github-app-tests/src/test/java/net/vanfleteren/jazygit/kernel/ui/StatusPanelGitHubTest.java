@@ -58,11 +58,12 @@ class StatusPanelGitHubTest {
         int start = Messages.get("screen.repository").length() + 3;
 
         assertEquals(
-                Messages.get("screen.repository") + " │ " + pullRequests + " ●2",
+                Messages.get("screen.repository") + " │ " + pullRequests + " ●2 │ "
+                        + Messages.get("github.screen.builds"),
                 StatusPanel.title(Screen.REPOSITORY, names(2), Theme.SpanStyles.NONE)
                         .rawContent());
         assertEquals(
-                Messages.get("screen.repository") + " │ " + pullRequests,
+                Messages.get("screen.repository") + " │ " + pullRequests + " │ " + Messages.get("github.screen.builds"),
                 StatusPanel.title(Screen.REPOSITORY, names(0), Theme.SpanStyles.NONE)
                         .rawContent());
         assertEquals(Option.of(PrOverview.SCREEN), StatusPanel.screenAt(start + pullRequests.length() + 2, names(2)));

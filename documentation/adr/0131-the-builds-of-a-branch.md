@@ -128,6 +128,9 @@ commit.
 
 Amended by ADR 142: `b` is gone; the builds of the commits on the base always show.
 
+Amended by ADR 212: the builds have a screen of their own, the workflow first and the branch a filter; they no
+longer show in the content panel next to a branch.
+
 ## Folded in: ADR 132 (2026-11-22)
 
 `m` in the builds reads 100 more: of the branch, 100 more commits; with every branch shown (`a`), 100 more runs of the

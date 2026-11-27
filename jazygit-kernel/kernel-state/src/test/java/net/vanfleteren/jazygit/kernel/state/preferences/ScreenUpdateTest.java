@@ -81,6 +81,12 @@ class ScreenUpdateTest {
     }
 
     @Test
+    void aScreenOpensOnThePaneItSaysIfItIsOneOfItsOwn() {
+        assertEquals(BOTTOM, OTHER.opensOn(BOTTOM).first());
+        assertEquals(TOP, OTHER.opensOn(new PaneId("elsewhere")).first());
+    }
+
+    @Test
     void theLayoutOfAScreenIsKeptUnderItsOwnSettings() {
         Preferences wide = Preferences.DEFAULT.withSettings(Preferences.DEFAULT.keepingWidth(OTHER, 50));
 

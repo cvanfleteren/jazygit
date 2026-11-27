@@ -19,13 +19,16 @@ import net.vanfleteren.jazygit.kernel.state.PaneId;
  * @param heights the setting its panes but the last are kept as tall as under, as many as it has panes but one
  * @param feature the id of the feature that brings it, when it is on or off for a repository: the screen is not shown
  *                while it is off (ADR 171)
+ * @param opens   the pane it starts with, before any of its panes had the focus, when that is not the first: the one
+ *                most used, as the runs of the builds screen under its workflows (ADR 212)
  */
 public record Screen(
         String id,
         List<PaneId> panes,
         SettingKey<Integer> width,
         SettingKey<List<Integer>> heights,
-        Option<FeatureId> feature) {
+        Option<FeatureId> feature,
+        Option<PaneId> opens) {
 
     /**
      * The files, branches, commits and stashes of the repository, which the app shows first.
@@ -35,6 +38,18 @@ public record Screen(
             List.of(PaneId.FILES, PaneId.BRANCHES, PaneId.COMMITS, PaneId.STASH),
             Settings.REPOSITORY_WIDTH,
             Settings.REPOSITORY_HEIGHTS);
+
+    /**
+     * A screen that starts with its first pane.
+     */
+    public Screen(
+            String id,
+            List<PaneId> panes,
+            SettingKey<Integer> width,
+            SettingKey<List<Integer>> heights,
+            Option<FeatureId> feature) {
+        this(id, panes, width, heights, feature, Option.none());
+    }
 
     /**
      * A screen of a feature that is always on, or the kernel's.
@@ -51,9 +66,16 @@ public record Screen(
     }
 
     /**
-     * The pane the screen starts with, before any of its panes had the focus.
+     * This screen, starting with {@code pane}, one of its panes, rather than its first.
+     */
+    public Screen opensOn(PaneId pane) {
+        return new Screen(id, panes, width, heights, feature, Option.of(pane).filter(panes::contains));
+    }
+
+    /**
+     * The pane the screen starts with, before any of its panes had the focus: the one it opens on, else its first.
      */
     public PaneId first() {
-        return panes.head();
+        return opens.getOrElse(panes::head);
     }
 }

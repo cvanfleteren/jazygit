@@ -18,7 +18,8 @@ import net.vanfleteren.jazygit.core.repo.RepoPath;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.core.repo.Upstream;
 import net.vanfleteren.jazygit.features.branches.branch.commits.BranchCommitsMsg;
-import net.vanfleteren.jazygit.features.github.builds.BuildsMsg;
+import net.vanfleteren.jazygit.features.github.builds.screen.BuildsScreen;
+import net.vanfleteren.jazygit.features.github.builds.screen.BuildsScreenMsg;
 import net.vanfleteren.jazygit.features.github.prs.PrOverview;
 import net.vanfleteren.jazygit.kernel.state.Loadable;
 import net.vanfleteren.jazygit.kernel.state.Model;
@@ -64,8 +65,8 @@ class StandardContentGitHubTest {
         assertEquals(
                 List.of(
                         "ReflogSource",
-                        "BuildsSource",
                         "PullRequestSource",
+                        "BuildsScreenSource",
                         "CommitFilesSource",
                         "UnchangedSource",
                         "FileDiffsSource",
@@ -86,34 +87,23 @@ class StandardContentGitHubTest {
         assertEquals(List.of("CommitSource"), answering(model, Mirrored.COMMITS));
         assertEquals(List.of("StashSource"), answering(model, Mirrored.STASH));
         assertEquals(List.of("PullRequestSource"), answering(model, Mirrored.of(PrOverview.SCREEN)));
+        assertEquals(List.of("BuildsScreenSource"), answering(model, Mirrored.of(BuildsScreen.SCREEN)));
     }
 
     @Test
-    void theBuildsOfABranchComeBeforeItsLog() {
-        assertEquals(List.of("BuildsSource", "BranchLogSource"), answering(buildsOpen(), Mirrored.BRANCHES));
-    }
-
-    /**
-     * The builds are the GitHub feature's, asked before the content panel's own sources, yet a divergence or the
-     * commits of a branch opened over them still show in their place, as before the builds left the content panel.
-     */
-    @Test
-    void whatIsOpenedOverTheBuildsComesBeforeThem() {
+    void bOnABranchShowsTheBuildsScreenAndLeavesTheBranchesToTheirLog() {
         Model builds = buildsOpen();
-        Model diverged = builds.mapRepoView(repoView -> repoView.mapBranches(branches ->
-                branches.withDivergence(diverged().repoView().branches().divergence())));
-        Model commits = builds.mapRepoView(repoView -> repoView.mapBranches(branches -> branches.withBranchCommits(
-                branchCommitsOpen().repoView().branches().branchCommits())));
 
-        assertEquals("DivergenceSource", answering(diverged, Mirrored.BRANCHES).head());
-        assertEquals(
-                "BranchCommitsSource", answering(commits, Mirrored.BRANCHES).head());
+        assertEquals(BuildsScreen.SCREEN, builds.screen());
+        assertEquals(List.of("BranchLogSource"), answering(builds, Mirrored.BRANCHES));
+        assertEquals(List.of("BuildsScreenSource"), answering(builds, Mirrored.of(BuildsScreen.SCREEN)));
     }
 
     @Test
     void noSourceOfAPaneAnswersForAnother() {
         List<Model> models = List.of(TestModels.loaded(), unchanged(), buildsOpen(), diverged(), branchCommitsOpen());
-        List<Mirrored> panes = Mirrored.REPOSITORY.append(Mirrored.of(PrOverview.SCREEN));
+        List<Mirrored> panes =
+                Mirrored.REPOSITORY.append(Mirrored.of(PrOverview.SCREEN)).append(Mirrored.of(BuildsScreen.SCREEN));
 
         models.forEach(model -> panes.forEach(pane -> assertEquals(
                 List.empty(),
@@ -129,13 +119,15 @@ class StandardContentGitHubTest {
                         Mirrored.FILES,
                         List.of("CommitFilesSource", "UnchangedSource", "FileDiffsSource"),
                         Mirrored.BRANCHES,
-                        List.of("DivergenceSource", "BranchCommitsSource", "BuildsSource", "BranchLogSource"),
+                        List.of("DivergenceSource", "BranchCommitsSource", "BranchLogSource"),
                         Mirrored.COMMITS,
                         List.of("CommitSource"),
                         Mirrored.STASH,
                         List.of("StashSource"),
                         Mirrored.of(PrOverview.SCREEN),
-                        List.of("PullRequestSource"))
+                        List.of("PullRequestSource"),
+                        Mirrored.of(BuildsScreen.SCREEN),
+                        List.of("BuildsScreenSource"))
                 .getOrElse(pane, List.empty());
     }
 
@@ -151,8 +143,8 @@ class StandardContentGitHubTest {
     }
 
     /**
-     * The branch {@code main}, which follows {@code origin/main}, highlighted with its log read, and its builds
-     * opened with {@code B} (ADR 131).
+     * The branch {@code main}, which follows {@code origin/main}, highlighted with its log read, and the builds
+     * screen opened from it with {@code B} (ADR 212).
      */
     private static Model buildsOpen() {
         RemoteBranch originMain = new RemoteBranch("origin", MAIN);
@@ -172,7 +164,7 @@ class StandardContentGitHubTest {
                                 .model(),
                         TestModels.branchLogLoaded(ref, List.empty()))
                 .model();
-        return Update.update(logRead, new BuildsMsg.Toggled(MAIN)).model();
+        return Update.update(logRead, new BuildsScreenMsg.Opened(MAIN)).model();
     }
 
     /**

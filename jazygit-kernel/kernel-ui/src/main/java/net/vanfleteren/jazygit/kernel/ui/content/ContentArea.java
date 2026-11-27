@@ -13,8 +13,8 @@ import net.vanfleteren.jazygit.kernel.state.PaneId;
  * @param id     the id of the area, which is also the id of the element that draws it
  * @param pane   the pane whose highlighted row the area shows in a model
  * @param opened what is opened to show in the area in a model, which it takes the focus from its pane for once it
- *               shows it, as the builds of a branch after {@code B} (ADR 131, 155); none while nothing is, as for most
- *               areas, which take the focus only when it is moved into them
+ *               shows it (ADR 155); none while nothing is, as for most areas, which take the focus only when it is
+ *               moved into them
  */
 public record ContentArea(AreaId id, Function<Model, PaneId> pane, Function<Model, Option<?>> opened) {
 

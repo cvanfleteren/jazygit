@@ -20,6 +20,7 @@ import net.vanfleteren.jazygit.features.agent.settings.Agents;
 import net.vanfleteren.jazygit.features.changes.diff.DiffFilterSettings;
 import net.vanfleteren.jazygit.features.changes.diff.FilterDefinition;
 import net.vanfleteren.jazygit.features.changes.diff.FilterDefinitions;
+import net.vanfleteren.jazygit.features.github.builds.screen.BuildsScreen;
 import net.vanfleteren.jazygit.features.github.prs.PrOverview;
 import net.vanfleteren.jazygit.features.github.settings.AccountBrowsers;
 import net.vanfleteren.jazygit.features.github.settings.GitHubSettings;
@@ -144,6 +145,8 @@ class SettingsRoundTripGitHubTest {
             // The layout of GitHub's screen, at the paths the kernel kept it at (ADR 168).
             change(PrOverview.WIDTH.path(), settings -> settings.with(PrOverview.WIDTH, 50)),
             change(PrOverview.HEIGHTS.path(), settings -> settings.with(PrOverview.HEIGHTS, List.of(40, 30))),
+            change(BuildsScreen.WIDTH.path(), settings -> settings.with(BuildsScreen.WIDTH, 50)),
+            change(BuildsScreen.HEIGHTS.path(), settings -> settings.with(BuildsScreen.HEIGHTS, List.of(40))),
             change(
                     Agents.SETTING.path(),
                     settings -> settings.with(

@@ -1,6 +1,5 @@
 package net.vanfleteren.jazygit.kernel.content;
 
-import static net.vanfleteren.jazygit.app.GitHubKeys.github;
 import static org.junit.jupiter.api.Assertions.*;
 
 import dev.tamboui.toolkit.app.ToolkitTestRunner;
@@ -14,10 +13,6 @@ import net.vanfleteren.jazygit.core.repo.RepoPath;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.features.changes.panes.commits.CommitsPanel;
 import net.vanfleteren.jazygit.features.changes.panes.files.FilesPanel;
-import net.vanfleteren.jazygit.features.github.builds.BuildsAction;
-import net.vanfleteren.jazygit.features.github.builds.BuildsMsg;
-import net.vanfleteren.jazygit.features.github.builds.BuildsView;
-import net.vanfleteren.jazygit.features.github.builds.content.BuildsPickTest;
 import net.vanfleteren.jazygit.kernel.settings.DiffStyle;
 import net.vanfleteren.jazygit.kernel.state.AreaId;
 import net.vanfleteren.jazygit.kernel.state.FeatureMsg;
@@ -121,44 +116,6 @@ class ContentSearchGitHubTest {
             assertTrue(after.contains("Three."), after);
             assertTrue(after.contains("/zed 1/1"), after);
         }
-    }
-
-    @Test
-    void inTheBuildsNAndShiftNGoToTheMatchesWhileASearchIsKeptElseToAnotherBuild() throws Exception {
-        List<String> keys = net.vanfleteren.jazygit.kernel.ui.keys.Keymap.standard()
-                .bindings(BuildsAction.SCOPE.id())
-                .map(net.vanfleteren.jazygit.kernel.ui.keys.Keymap.Binding::key);
-        Driven driven = new Driven(
-                BuildsPickTest.steppable(),
-                net.vanfleteren.jazygit.kernel.ui.keys.Scopes.BRANCHES.pane(),
-                BuildsView.AREA);
-        try (ToolkitTestRunner testRunner = ToolkitTestRunner.runTest(driven::render)) {
-            SettledPilot.focus(testRunner, driven.area().id());
-            driven.screen(testRunner);
-            driven.type(testRunner, "?");
-            List<Option<Msg>> before = driven.help().actions();
-            assertEquals(Option.of(github(new BuildsMsg.BuildStepped(1))), before.get(keys.indexOf("n")));
-            driven.type(testRunner, "n");
-            assertEquals(1, stepped(driven));
-
-            driven.type(testRunner, "/Older");
-            driven.press(testRunner, KeyCode.ENTER);
-            driven.type(testRunner, "nN");
-            assertEquals(1, stepped(driven));
-            assertTrue(driven.screen(testRunner).contains("/Older"), driven.screen(testRunner));
-
-            // The help says n and N do not step the builds then.
-            driven.type(testRunner, "?");
-            List<Option<Msg>> searching = driven.help().actions();
-            assertTrue(searching.get(keys.indexOf("n")).isEmpty());
-            assertTrue(searching.get(keys.indexOf("N")).isEmpty());
-        }
-    }
-
-    private static long stepped(Driven driven) {
-        return driven.dispatched.stream()
-                .filter(BuildsMsg.BuildStepped.class::isInstance)
-                .count();
     }
 
     private static final Anchor THREAD = new Anchor.Thread(
