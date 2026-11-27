@@ -55,21 +55,20 @@ def test_a_rebase_that_stopped_lists_the_steps_to_come_above_the_one_it_stopped_
     # The commit rebased already is done; main's is not.
     assert f"{repo.short('HEAD')} Ac ✓ Add two" in commits, commits
     assert "○ Change one on main" in commits, commits
-    # The app rebases with --rebase-merges: git counts its label and reset lines as steps too.
-    assert "rebasing feature · 1 ahead of main · 4/5" in commits, commits
+    assert "rebasing feature · 1 ahead of main · 2/3" in commits, commits
 
 
 def test_the_repository_panel_says_what_is_in_progress_on_a_line_of_its_own(repo, jazygit):
     ui = stopped_rebase(repo, jazygit)
 
-    ui.app.wait_in("Repo", "REBASING 4/5 onto main · 1 conflict")
+    ui.app.wait_in("Repo", "REBASING 2/3 onto main · 1 conflict")
     lines = repo_lines(ui)
     assert lines[0].endswith("→ (rebasing) feature"), lines
-    assert lines[1] == "REBASING 4/5 onto main · 1 conflict", lines
+    assert lines[1] == "REBASING 2/3 onto main · 1 conflict", lines
 
     repo.resolve("one.txt", "both\n")
 
-    ui.app.wait_in("Repo", "REBASING 4/5 onto main · ready to continue")
+    ui.app.wait_in("Repo", "REBASING 2/3 onto main · ready to continue")
     ui.app.eventually(lambda: shows_steps(
         ui,
         (f"{short(repo, 'Add three')}    ○ Add three", ""),
@@ -94,7 +93,7 @@ def test_m_says_where_the_rebase_stopped_and_what_it_goes_on_with(repo, jazygit)
 
     ui.app.press("M")
 
-    ui.app.wait_for(f"Stopped at 4 of 5: {short(repo, 'Change one on feature')}")
+    ui.app.wait_for(f"Stopped at 2 of 3: {short(repo, 'Change one on feature')}")
     ui.app.wait_for(f"Next: {short(repo, 'Add three')}")
 
 

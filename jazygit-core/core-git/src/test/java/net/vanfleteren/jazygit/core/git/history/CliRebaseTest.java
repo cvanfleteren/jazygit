@@ -50,9 +50,7 @@ class CliRebaseTest {
         List<String> executed =
                 repository.integrate().rebase(new BranchName("main")).get().map(ExecutedCommand::line);
 
-        assertEquals(
-                List.of("git rebase --autostash --keep-empty --rebase-merges --no-autosquash refs/heads/main"),
-                executed);
+        assertEquals(List.of("git rebase --autostash --no-autosquash refs/heads/main"), executed);
         assertEquals(
                 List.of("Feature work", "Main work", "Initial commit"),
                 commits().get().map(c -> c.message().summary()).toList());
@@ -80,7 +78,7 @@ class CliRebaseTest {
     }
 
     @Test
-    void rebaseKeepsMergesAndFixupCommitsInPlace() throws Exception {
+    void rebaseFlattensAMergeOfATopicBranchAndKeepsFixupCommitsInPlace() throws Exception {
         git("config", "rebase.autoSquash", "true");
         git("checkout", "-q", "-b", "feature");
         Files.writeString(repo.resolve("f.txt"), "f\n");
@@ -108,10 +106,56 @@ class CliRebaseTest {
 
         List<Commit> after = commits().get();
         assertEquals(
-                List.of("fixup! Feature work", "Merge side"),
-                after.take(2).map(c -> c.message().summary()));
-        assertTrue(after.get(1).isMerge());
-        assertTrue(after.exists(c -> c.message().summary().equals("Main work")));
+                List.of("fixup! Feature work", "Side work", "More feature work", "Feature work", "Main work"),
+                after.take(5).map(c -> c.message().summary()));
+        assertTrue(after.forAll(c -> !c.isMerge()));
+    }
+
+    @Test
+    void rebaseOfABranchThatMergedTheBaseInPutsItsCommitsOnTopOfTheBase() throws Exception {
+        git("checkout", "-q", "-b", "feat");
+        commitFile("f1.txt", "f1");
+        git("checkout", "-q", "main");
+        commitFile("m2.txt", "m2");
+        git("checkout", "-q", "feat");
+        git("merge", "-q", "--no-ff", "-m", "Merge main", "main");
+        commitFile("f2.txt", "f2");
+        git("checkout", "-q", "main");
+        commitFile("m3.txt", "m3");
+        git("checkout", "-q", "feat");
+
+        repository.integrate().rebase(new BranchName("main")).get();
+
+        List<Commit> after = commits().get();
+        assertEquals(
+                List.of("f2", "f1", "m3", "m2", "Initial commit"),
+                after.map(c -> c.message().summary()).toList());
+        assertTrue(after.forAll(c -> !c.isMerge()));
+    }
+
+    @Test
+    void rebaseKeepsTheMergesWhenTheUserSetRebaseMerges() throws Exception {
+        git("config", "rebase.rebaseMerges", "true");
+        git("checkout", "-q", "-b", "feat");
+        commitFile("f1.txt", "f1");
+        git("checkout", "-q", "-b", "side");
+        commitFile("s.txt", "s");
+        git("checkout", "-q", "feat");
+        commitFile("f2.txt", "f2");
+        git("merge", "-q", "--no-ff", "-m", "Merge side", "side");
+        git("checkout", "-q", "main");
+        commitFile("m2.txt", "m2");
+        git("checkout", "-q", "feat");
+
+        repository.integrate().rebase(new BranchName("main")).get();
+
+        assertTrue(commits().get().exists(Commit::isMerge));
+    }
+
+    private void commitFile(String name, String summary) throws Exception {
+        Files.writeString(repo.resolve(name), summary + "\n");
+        git("add", name);
+        git("commit", "-q", "-m", summary);
     }
 
     @Test

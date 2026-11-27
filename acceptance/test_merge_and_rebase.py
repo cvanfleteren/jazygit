@@ -139,6 +139,46 @@ def test_rebase_onto_a_branch_puts_the_commits_of_the_checked_out_one_on_top_of_
     assert repo.status() == {}
 
 
+def test_rebase_onto_a_branch_the_checked_out_one_merged_in_leaves_no_merge_and_puts_it_on_top(repo, jazygit):
+    repo.commit("Add one", **{"one.txt": "one\n"})
+    repo("switch", "--create", "feature")
+    repo.commit("Add two", **{"two.txt": "two\n"})
+    repo("switch", "main")
+    repo.commit("Add three", **{"three.txt": "three\n"})
+    repo("switch", "feature")
+    repo("merge", "--no-ff", "--message", "Merge main", "main")
+    repo.commit("Add four", **{"four.txt": "four\n"})
+    repo("switch", "main")
+    repo.commit("Add five", **{"five.txt": "five\n"})
+    repo("switch", "feature")
+    main = repo("rev-parse", "main")
+    ui = jazygit()
+
+    ui.branches.rebase_onto("main")
+
+    assert repo.in_progress() is None
+    assert repo.subjects() == ["Add four", "Add two", "Add five", "Add three", "Add one"]
+    assert repo("merge-base", "feature", "main") == main
+    assert repo("rev-list", "--merges", "feature") == ""
+
+
+def test_rebase_onto_a_branch_flattens_a_merge_of_another_topic_branch(repo, jazygit):
+    rebase_ready(repo)
+    repo("switch", "--create", "topic")
+    repo.commit("Add six", **{"six.txt": "six\n"})
+    repo("switch", "feature")
+    repo("merge", "--no-ff", "--message", "Merge topic", "topic")
+    main = repo("rev-parse", "main")
+    ui = jazygit()
+
+    ui.branches.rebase_onto("main")
+
+    assert repo.in_progress() is None
+    assert repo("merge-base", "feature", "main") == main
+    assert repo("rev-list", "--merges", "feature") == ""
+    assert "Add six" in repo.subjects()
+
+
 def test_rebase_on_the_base_branch_from_the_checked_out_row_puts_it_on_the_main_branch(repo, jazygit):
     rebase_ready(repo)
     main = repo("rev-parse", "main")
