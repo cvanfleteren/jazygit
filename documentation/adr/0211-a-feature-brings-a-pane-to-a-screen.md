@@ -25,10 +25,12 @@ filler is given only the model, so the branches could not fill `CLOCKING` with t
   shown in the order `Screen.panes()` lists their ids, as it did for a feature's screen. No pane carries an order of
   its own. `ScreenSpec` loses its `panes`: the pull requests screen brings its three lists with `Feature.pane` too, so
   there is one way to bring a pane.
-- **A pane is gated with its feature** (ADR 171): a feature that is on or off for a repository brings panes that
-  show only while it is on (`ScreenPane.shown`, which `Feature.gated` sets), whichever screen they are on. A forge's
-  pane on the repository screen is not drawn, does not tell its selection and cannot be focused while the forge is
-  off; a forge's own screen hid itself already.
+- **A feature that is on or off for a repository brings panes only to its own screen** (ADR 171), the one whose
+  `Screen.feature` names it and which hides with it; `FeaturesTest` checks it. A screen lays out its panes by its
+  whole list (the heights kept, the one maximized, the borders dragged), so a pane gone from the middle of a shown
+  screen would shift the panes below it. A gated feature's panes are gated too (`ScreenPane.shown`, which
+  `Feature.gated` sets), so nothing of it shows while it is off should that ever change; letting a forge add a pane to
+  the repository screen needs the layout to follow the panes shown first, as a fifth pane does.
 - **`LeftColumn` treats every screen alike.** A pane that the content panel mirrors on its own (`Mirrored.of(PaneId)`,
   those of the repository) always says when its highlight changed; on a screen whose panes the content panel mirrors
   as one, only the pane in use does, as before (ADR 168). The files pane is found among the panes made as the one that

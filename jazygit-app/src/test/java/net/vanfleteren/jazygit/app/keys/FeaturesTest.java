@@ -16,6 +16,8 @@ import io.vavr.collection.Set;
 import io.vavr.control.Option;
 import io.vavr.control.Try;
 import java.lang.reflect.Field;
+import net.vanfleteren.jazygit.kernel.state.FeatureId;
+import net.vanfleteren.jazygit.kernel.state.preferences.Screen;
 import net.vanfleteren.jazygit.kernel.ui.Feature;
 import org.junit.jupiter.api.Test;
 
@@ -104,5 +106,37 @@ class FeaturesTest {
                 .filter(name -> name.contains(".") || WHOLE.contains(name));
         Set<String> withFeature = HashSet.ofAll(declared().map(Tuple2::_1));
         assertEquals(NO_FEATURE, all.diff(withFeature));
+    }
+
+    @Test
+    void aFeatureThatIsOnOrOffBringsPanesOnlyToItsOwnScreen() {
+        // A screen lays its panes out by its whole list: one gone from the middle would shift the heights of those
+        // below it, so a gated pane goes only where its screen goes with it (ADR 211).
+        assertEquals(List.empty(), strayPanes(Features.running(Option.none())));
+    }
+
+    @Test
+    void aGatedFeatureBringingAPaneToAnotherScreenIsCaught() {
+        Feature forge = Feature.of()
+                .pane(Screen.REPOSITORY, context -> {
+                    throw new AssertionError("not made here");
+                })
+                .applying(new FeatureId("forge"), model -> {
+                    throw new AssertionError("not detected here");
+                });
+
+        assertEquals(List.of("forge brings a pane to repository"), strayPanes(List.of(forge)));
+    }
+
+    /**
+     * The panes of the features that are on or off for a repository brought to a screen that is not theirs.
+     */
+    private static List<String> strayPanes(List<Feature> features) {
+        return features.flatMap(feature -> feature.applying()
+                .toList()
+                .flatMap(applying -> feature.panes()
+                        .filter(pane -> !pane.screen().feature().contains(applying.id()))
+                        .map(pane -> applying.id().value() + " brings a pane to "
+                                + pane.screen().id())));
     }
 }

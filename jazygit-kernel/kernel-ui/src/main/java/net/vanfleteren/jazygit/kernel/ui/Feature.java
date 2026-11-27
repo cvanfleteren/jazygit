@@ -239,7 +239,8 @@ public record Feature(
     /**
      * This feature, also bringing the pane {@code pane} makes to {@code screen} (ADR 211), which shows it where its
      * {@link Screen#panes()} lists its id. The repository's screen is given its panes this way, as is a feature's own.
-     * A feature that is on or off for a repository shows the pane only while it is on ({@link #gated}).
+     * A feature that is on or off for a repository brings panes only to its own screen, which hides with it, as the
+     * layout of a screen counts all its panes; it shows them only while it is on ({@link #gated}).
      */
     public Feature pane(Screen screen, ScreenPane.Factory pane) {
         return new Feature(
