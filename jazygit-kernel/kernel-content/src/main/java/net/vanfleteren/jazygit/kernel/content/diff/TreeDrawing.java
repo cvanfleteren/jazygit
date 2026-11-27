@@ -36,7 +36,7 @@ record TreeDrawing(int width, Map<String, Boolean> chose, Theme.SpanStyles style
         if (root instanceof Tree.Markup markup) {
             return new XmlDrawing(chose, styles).nodes(markup.nodes());
         }
-        if (TreeFolds.leaf(root)) {
+        if (root instanceof Tree.Leaf) {
             return List.of(new TreeRow(line(leaf(root)), Option.of(""), List.of(root.line())));
         }
         if (root instanceof Tree.Block block) {
@@ -60,7 +60,7 @@ record TreeDrawing(int width, Map<String, Boolean> chose, Theme.SpanStyles style
         Tree root = document.root();
         Span label = dim("--- " + (index + 1));
         if (!TreeFolds.foldsApart(document)) {
-            List<Span> value = TreeFolds.leaf(root)
+            List<Span> value = root instanceof Tree.Leaf
                     ? leaf(root)
                     : root instanceof Tree.Block block
                             ? List.of(dim(block.properties().text() + count(block)))
@@ -123,7 +123,7 @@ record TreeDrawing(int width, Map<String, Boolean> chose, Theme.SpanStyles style
                         + Messages.get(
                                 ignored.size() == 1 ? "content.json.duplicate" : "content.json.duplicates",
                                 ignored.mkString(", ")));
-        if (TreeFolds.leaf(value)) {
+        if (value instanceof Tree.Leaf) {
             return List.of(new TreeRow(
                     line(head.append(Span.raw(GAP)).appendAll(leaf(value)).append(note)),
                     Option.of(entry.pointer()),

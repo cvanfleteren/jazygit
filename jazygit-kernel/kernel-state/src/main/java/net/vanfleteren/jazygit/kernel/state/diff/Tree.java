@@ -144,22 +144,32 @@ public sealed interface Tree {
     }
 
     /**
+     * A tree of JSON or YAML that holds others: a mapping or a sequence.
+     */
+    sealed interface Container extends Tree {}
+
+    /**
+     * A tree of JSON or YAML drawn as one value: a scalar or an alias.
+     */
+    sealed interface Leaf extends Tree {}
+
+    /**
      * An object of JSON, a mapping of YAML: its fields in the order they are written, the last of two with the same
      * key holding.
      */
-    record Mapping(int line, int end, Properties properties, List<Field> fields) implements Tree {}
+    record Mapping(int line, int end, Properties properties, List<Field> fields) implements Container {}
 
     /**
      * An array of JSON, a sequence of YAML.
      */
-    record Sequence(int line, int end, Properties properties, List<Tree> elements) implements Tree {}
+    record Sequence(int line, int end, Properties properties, List<Tree> elements) implements Container {}
 
     /**
      * A string, a number, a boolean or null.
      *
      * @param text its value, its escapes undone, a number as it is written
      */
-    record Scalar(int line, int end, Properties properties, Kind kind, Quote quote, String text) implements Tree {}
+    record Scalar(int line, int end, Properties properties, Kind kind, Quote quote, String text) implements Leaf {}
 
     /**
      * A block of YAML, {@code |} or {@code >}: its {@code n}th line is on line {@code line + n}.
@@ -173,7 +183,7 @@ public sealed interface Tree {
     /**
      * An alias of YAML, {@code *anchor}, never what it names.
      */
-    record Alias(int line, String anchor) implements Tree {
+    record Alias(int line, String anchor) implements Leaf {
         @Override
         public int end() {
             return line;

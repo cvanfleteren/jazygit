@@ -1,5 +1,6 @@
 package net.vanfleteren.jazygit.features.changes.panes.files;
 
+import net.vanfleteren.jazygit.kernel.state.Phrase;
 import net.vanfleteren.jazygit.kernel.ui.Slot;
 
 /**
@@ -15,9 +16,10 @@ public final class FilesPane {
     public static final Slot<FileMark> MARK = Slot.of("changes.panes.files.mark");
 
     /**
-     * What the title of the files of the working tree says after what it is, as {@code · 2 of 4 resolved} (ADR 198).
+     * What the title of the files of the working tree says after what it is, as {@code 2 of 4 resolved} (ADR 198): the
+     * pane puts each after a separator.
      */
-    public static final Slot<String> TITLE = Slot.of("changes.panes.files.title");
+    public static final Slot<Phrase> TITLE = Slot.of("changes.panes.files.title");
 
     private FilesPane() {}
 }

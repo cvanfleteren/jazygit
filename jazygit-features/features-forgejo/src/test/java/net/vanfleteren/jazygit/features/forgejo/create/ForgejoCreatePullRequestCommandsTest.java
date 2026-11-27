@@ -102,7 +102,13 @@ class ForgejoCreatePullRequestCommandsTest {
         assertEquals(new ForgejoCreatePullRequestMsg.Created(cmd, CREATED), created);
         ForgejoNewPullRequest pullRequest = List.ofAll(sent).single();
         assertEquals(
-                new ForgejoNewPullRequest("feature", new ForgeBranch("main"), "Create it", "Why", true), pullRequest);
+                new ForgejoNewPullRequest(
+                        new ForgejoNewPullRequest.Head(Option.none(), new ForgeBranch("feature")),
+                        new ForgeBranch("main"),
+                        "Create it",
+                        "Why",
+                        true),
+                pullRequest);
         assertEquals("WIP: Create it", pullRequest.sentTitle());
     }
 
@@ -110,7 +116,7 @@ class ForgejoCreatePullRequestCommandsTest {
     void aBranchInAForkIsSentWithItsOwner() {
         create(UPSTREAM, false).run(answering(Either.right(CREATED)).ahead(FORKED, 2));
 
-        assertEquals("anna:feature", List.ofAll(sent).single().head());
+        assertEquals("anna:feature", List.ofAll(sent).single().head().wire());
     }
 
     @Test

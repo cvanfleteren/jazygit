@@ -17,6 +17,7 @@ import net.vanfleteren.jazygit.features.github.builds.BuildsMsg;
 import net.vanfleteren.jazygit.features.github.builds.BuildsShown;
 import net.vanfleteren.jazygit.features.github.builds.BuildsView;
 import net.vanfleteren.jazygit.features.github.builds.LoadBuilds;
+import net.vanfleteren.jazygit.features.github.builds.Paging;
 import net.vanfleteren.jazygit.features.github.checks.branches.BranchChecksMsg;
 import net.vanfleteren.jazygit.features.github.state.GitHubChecks;
 import net.vanfleteren.jazygit.kernel.state.AreaId;
@@ -200,8 +201,7 @@ class BuildsContentTest {
                 ((Shown.Area) BuildsFixtures.content(stopped)).title());
         assertEquals(List.of(new LoadBuilds(BuildsFixtures.ORIGIN_MAIN, Option.of("c25"))), again.cmds());
         BuildsView view = again.model().part(BuildsView.PART).get();
-        assertTrue(view.reading());
-        assertEquals(Option.none(), view.stopped());
+        assertEquals(new Paging.Reading(Option.of("c25")), view.paging());
         assertEquals(125, view.limit());
     }
 

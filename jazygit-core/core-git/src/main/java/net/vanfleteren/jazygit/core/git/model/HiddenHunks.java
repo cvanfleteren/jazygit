@@ -62,25 +62,27 @@ public final class HiddenHunks {
                 })
                 ._1
                 .reverse();
-        List<Tuple2<Option<Hidden>, List<ParsedLine>>> runs = runs(owned.zip(hunk.lines()));
-        return runs.zipWithIndex()
-                .map(run -> new Piece(
-                        piece(run._1()._2(), ranges.get(), runs.take(run._2()).flatMap(Tuple2::_2)),
-                        run._1()._1()));
+        List<Run> runs = runs(owned.zip(hunk.lines()));
+        // The lines before each run, in no order: a piece only counts them.
+        List<List<ParsedLine>> befores =
+                runs.scanLeft(List.<ParsedLine>empty(), (before, run) -> before.prependAll(run.lines()));
+        return runs.zipWith(
+                befores, (run, before) -> new Piece(piece(run.lines(), ranges.get(), before), run.hidden()));
     }
 
     /**
      * {@code lines} cut where who they are of changes, in order.
      */
-    private static List<Tuple2<Option<Hidden>, List<ParsedLine>>> runs(List<Tuple2<Option<Hidden>, ParsedLine>> lines) {
+    private static List<Run> runs(List<Tuple2<Option<Hidden>, ParsedLine>> lines) {
         return lines.foldLeft(
-                        List.<Tuple2<Option<Hidden>, List<ParsedLine>>>empty(),
+                        List.<Run>empty(),
                         (done, line) -> done.headOption()
-                                .filter(last -> last._1().equals(line._1()))
+                                .filter(last -> last.hidden().equals(line._1()))
                                 .map(last -> done.tail()
-                                        .prepend(Tuple.of(last._1(), last._2().prepend(line._2()))))
-                                .getOrElse(() -> done.prepend(Tuple.of(line._1(), List.of(line._2())))))
-                .map(run -> Tuple.of(run._1(), run._2().reverse()))
+                                        .prepend(new Run(
+                                                last.hidden(), last.lines().prepend(line._2()))))
+                                .getOrElse(() -> done.prepend(new Run(line._1(), List.of(line._2())))))
+                .map(run -> new Run(run.hidden(), run.lines().reverse()))
                 .reverse();
     }
 
@@ -167,4 +169,9 @@ public final class HiddenHunks {
      * A piece of a hunk as it is drawn, and the hunk of git's that hides it, if one does.
      */
     public record Piece(ParsedHunk hunk, Option<Hidden> hidden) {}
+
+    /**
+     * Lines of a hunk next to each other that are of the same hunk of git's that hides them, or of none.
+     */
+    private record Run(Option<Hidden> hidden, List<ParsedLine> lines) {}
 }

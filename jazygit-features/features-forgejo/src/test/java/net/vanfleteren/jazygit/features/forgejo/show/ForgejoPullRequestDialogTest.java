@@ -20,6 +20,7 @@ import io.vavr.control.Option;
 import java.time.Clock;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
+import net.vanfleteren.jazygit.Bundles;
 import net.vanfleteren.jazygit.core.forgejo.CommitStatus;
 import net.vanfleteren.jazygit.core.forgejo.ForgejoBranchRules;
 import net.vanfleteren.jazygit.core.forgejo.ForgejoError;
@@ -247,6 +248,21 @@ class ForgejoPullRequestDialogTest {
             SettledPilot.focus(runner, ForgejoPullRequestDialog.ID);
             return RenderedText.ofSize(runner, () -> view(model), 120, 50);
         }
+    }
+
+    // The keys are made of the name of the style, which the bundle's own test cannot see.
+    @Test
+    void everyMergeStyleHasItsTexts() {
+        assertEquals(
+                List.empty(),
+                List.of(ForgejoMergeStyle.values())
+                        .map(ForgejoPullRequestDialog::named)
+                        .flatMap(named -> List.of(
+                                "forgejo.dialog.pullRequest.merge." + named,
+                                "forgejo.dialog.pullRequest.merge." + named + ".details",
+                                "forgejo.dialog.pullRequest.merge." + named + ".whenChecks",
+                                "forgejo.dialog.pullRequest.autoMerge." + named))
+                        .filter(key -> !Bundles.keys("forgejo").contains(key)));
     }
 
     private Element view(Model model) {

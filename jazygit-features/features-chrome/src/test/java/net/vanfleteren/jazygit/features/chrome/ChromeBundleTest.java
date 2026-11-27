@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import io.vavr.collection.List;
 import net.vanfleteren.jazygit.Bundles;
+import net.vanfleteren.jazygit.kernel.settings.ThemeName;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -25,5 +26,15 @@ class ChromeBundleTest {
     @Test
     void everyKeyTheCodeNamesIsInTheBundle() {
         assertEquals(List.empty(), Bundles.missing("chrome"));
+    }
+
+    // The theme dialog and the settings name a theme by a key made of its id, which the test above cannot see.
+    @Test
+    void everyThemeHasAName() {
+        assertEquals(
+                List.empty(),
+                List.of(ThemeName.values())
+                        .map(theme -> "chrome.dialog.theme." + theme.id())
+                        .filter(key -> !Bundles.keys("chrome").contains(key)));
     }
 }

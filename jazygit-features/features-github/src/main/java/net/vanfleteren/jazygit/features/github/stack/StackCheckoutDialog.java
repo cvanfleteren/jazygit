@@ -6,11 +6,12 @@ import dev.tamboui.tui.event.KeyEvent;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.util.function.Consumer;
-import net.vanfleteren.jazygit.features.github.stack.StackCheckout.Landing;
+import java.util.function.Supplier;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.Msg;
 import net.vanfleteren.jazygit.kernel.state.popup.PopupMsg;
 import net.vanfleteren.jazygit.kernel.ui.i18n.Messages;
+import net.vanfleteren.jazygit.kernel.ui.keys.Keymap;
 import net.vanfleteren.jazygit.kernel.ui.widgets.DialogFrame;
 import net.vanfleteren.jazygit.kernel.ui.widgets.PopupView;
 
@@ -29,8 +30,18 @@ final class StackCheckoutDialog implements PopupView {
 
     private final Consumer<Msg> dispatch;
 
+    private final Supplier<Keymap> keymap;
+
     StackCheckoutDialog(Consumer<Msg> dispatch) {
+        this(dispatch, Keymap::standard);
+    }
+
+    /**
+     * @param keymap the keys, asked for when a key is pressed, as the app makes it of every feature
+     */
+    StackCheckoutDialog(Consumer<Msg> dispatch, Supplier<Keymap> keymap) {
         this.dispatch = dispatch;
+        this.keymap = keymap;
     }
 
     @Override
@@ -58,31 +69,23 @@ final class StackCheckoutDialog implements PopupView {
     }
 
     private EventResult keys(KeyEvent event, StackCheckout checkout) {
-        if (event.isCancel() || (!checkout.startable() && event.isConfirm())) {
-            dispatch.accept(new PopupMsg.Dismissed(StackPopups.Checkout.class));
-            return EventResult.HANDLED;
-        }
-        Option<Landing> landing = landing(event, checkout);
-        if (landing.isEmpty()) {
-            return EventResult.UNHANDLED;
-        }
-        dispatch.accept(new StackMsg.CheckoutConfirmed(landing.get()));
-        return EventResult.HANDLED;
+        Option<Msg> msg = message(event, checkout);
+        msg.forEach(dispatch);
+        return msg.isDefined() ? EventResult.HANDLED : EventResult.UNHANDLED;
     }
 
-    private static Option<Landing> landing(KeyEvent event, StackCheckout checkout) {
-        if (!checkout.startable()) {
-            return Option.none();
+    /**
+     * What {@code event} asks of the app: Escape cancels, Enter checks out the stack and the first of what is offered
+     * after it, or closes the popup when it cannot be checked out, and the keys of {@link StackAction#CHECKOUT}
+     * choose what else is checked out after it.
+     */
+    private Option<Msg> message(KeyEvent event, StackCheckout checkout) {
+        if (event.isCancel() || (!checkout.startable() && event.isConfirm())) {
+            return Option.of(new PopupMsg.Dismissed(StackPopups.Checkout.class));
         }
         if (event.isConfirm()) {
-            return Option.of(checkout.preferred());
+            return Option.of(new StackMsg.CheckoutConfirmed(checkout.preferred()));
         }
-        if (event.isChar('t')) {
-            return Option.of(Landing.TOP).filter(top -> checkout.top().isDefined());
-        }
-        if (event.isChar('h')) {
-            return Option.of(Landing.ASKED).filter(asked -> checkout.asked().isDefined());
-        }
-        return Option.when(event.isChar('n'), Landing.STAY);
+        return keymap.get().handle(StackAction.CHECKOUT, event, Option.of(checkout));
     }
 }

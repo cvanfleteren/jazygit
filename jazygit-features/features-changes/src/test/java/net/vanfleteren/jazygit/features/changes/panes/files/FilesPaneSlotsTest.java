@@ -16,6 +16,7 @@ import net.vanfleteren.jazygit.core.git.model.ChangeType;
 import net.vanfleteren.jazygit.core.git.model.FileEntry;
 import net.vanfleteren.jazygit.core.repo.RepoPath;
 import net.vanfleteren.jazygit.kernel.state.Model;
+import net.vanfleteren.jazygit.kernel.state.Phrase;
 import net.vanfleteren.jazygit.kernel.state.TestModels;
 import net.vanfleteren.jazygit.kernel.ui.Fills;
 import net.vanfleteren.jazygit.kernel.ui.RenderedText;
@@ -77,8 +78,8 @@ class FilesPaneSlotsTest {
     @Test
     void theTitleSaysWhatEachFeatureGivesForItAfterWhatThePaneIs() throws Exception {
         Fills fills = Fills.NONE
-                .with(FilesPane.TITLE, model -> Option.of(" · one"))
-                .with(FilesPane.TITLE, model -> List.of(" · two"));
+                .with(FilesPane.TITLE, model -> Option.of(Phrase.verbatim("one")))
+                .with(FilesPane.TITLE, model -> List.of(Phrase.verbatim("two")));
 
         assertTrue(render(fills).contains("Files · one · two"));
     }

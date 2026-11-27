@@ -143,7 +143,10 @@ public final class ForgejoPullRequestDialog implements PopupView {
                         .getOrElse(() -> Messages.get(labelKey + ".details")));
     }
 
-    private static String named(ForgejoMergeStyle style) {
+    /**
+     * What the keys of the texts of {@code style} end in, as {@code forgejo.dialog.pullRequest.merge.squash}.
+     */
+    static String named(ForgejoMergeStyle style) {
         return switch (style) {
             case MERGE -> "merge";
             case SQUASH -> "squash";

@@ -8,6 +8,7 @@ import net.vanfleteren.jazygit.core.repo.BranchRef;
 import net.vanfleteren.jazygit.core.repo.RemoteBranch;
 import net.vanfleteren.jazygit.features.github.builds.BuildsShown;
 import net.vanfleteren.jazygit.features.github.builds.BuildsView;
+import net.vanfleteren.jazygit.features.github.builds.Paging;
 import net.vanfleteren.jazygit.features.github.builds.WorkflowRuns;
 import net.vanfleteren.jazygit.features.github.failed.FailedBuilds;
 import net.vanfleteren.jazygit.features.github.state.GitHubState;
@@ -129,13 +130,12 @@ public record BuildsSource() implements ContentSource {
     private static String ofBranch(BuildsView view) {
         String branch = view.branch().value();
         String commits = String.valueOf(view.commits());
-        if (view.reading()) {
-            return Messages.get("github.builds.panel.reading", branch, commits);
-        }
-        if (view.stopped().isDefined()) {
-            return Messages.get("github.builds.panel.stopped", branch, commits);
-        }
-        return Messages.get("github.builds.panel.title", branch, commits);
+        String key = switch (view.paging()) {
+            case Paging.Reading _ -> "github.builds.panel.reading";
+            case Paging.Stopped _ -> "github.builds.panel.stopped";
+            case Paging.Idle _, Paging.Done _ -> "github.builds.panel.title";
+        };
+        return Messages.get(key, branch, commits);
     }
 
     /**

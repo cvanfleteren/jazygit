@@ -13,6 +13,7 @@ import dev.tamboui.tui.event.KeyEvent;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.features.github.stack.StackChoice.Refusal;
 import net.vanfleteren.jazygit.kernel.state.Model;
@@ -20,6 +21,7 @@ import net.vanfleteren.jazygit.kernel.state.Msg;
 import net.vanfleteren.jazygit.kernel.state.popup.ListCursor;
 import net.vanfleteren.jazygit.kernel.state.popup.PopupMsg;
 import net.vanfleteren.jazygit.kernel.ui.i18n.Messages;
+import net.vanfleteren.jazygit.kernel.ui.keys.Keymap;
 import net.vanfleteren.jazygit.kernel.ui.text.TextWidth;
 import net.vanfleteren.jazygit.kernel.ui.theme.Theme;
 import net.vanfleteren.jazygit.kernel.ui.widgets.DialogFrame;
@@ -42,10 +44,20 @@ final class StackPickDialog implements PopupView {
 
     private final Consumer<Msg> dispatch;
 
+    private final Supplier<Keymap> keymap;
+
     private final ListElement<?> list = list().id(ID).focusable().highlightSymbol("");
 
     StackPickDialog(Consumer<Msg> dispatch) {
+        this(dispatch, Keymap::standard);
+    }
+
+    /**
+     * @param keymap the keys, asked for when a key is pressed, as the app makes it of every feature
+     */
+    StackPickDialog(Consumer<Msg> dispatch, Supplier<Keymap> keymap) {
         this.dispatch = dispatch;
+        this.keymap = keymap;
     }
 
     @Override
@@ -178,21 +190,28 @@ final class StackPickDialog implements PopupView {
     }
 
     private EventResult keys(KeyEvent event, ListCursor cursor, int line, int rows) {
+        Option<Msg> msg = message(event, cursor, line, rows);
+        msg.forEach(dispatch);
+        return msg.isDefined() ? EventResult.HANDLED : EventResult.UNHANDLED;
+    }
+
+    /**
+     * What {@code event} asks of the app on the row {@code line} of {@code rows}: Escape cancels, Enter makes the
+     * stack, j/k and the arrows move, and the keys of {@link StackAction#PICK} act on the row.
+     */
+    private Option<Msg> message(KeyEvent event, ListCursor cursor, int line, int rows) {
         if (event.isCancel()) {
-            dispatch.accept(new PopupMsg.Dismissed(StackPopups.Pick.class));
-        } else if (event.isConfirm()) {
-            dispatch.accept(new StackMsg.PickConfirmed());
-        } else if (event.isChar('b')) {
-            dispatch.accept(new StackMsg.BottomChosen(line));
-        } else if (event.isChar('t')) {
-            dispatch.accept(new StackMsg.TopChosen(line));
-        } else if (event.isChar('j') || event.code() == KeyCode.DOWN) {
-            dispatch.accept(new PopupMsg.ListCursorChanged(cursor.at(Math.min(rows - 1, line + 1))));
-        } else if (event.isChar('k') || event.code() == KeyCode.UP) {
-            dispatch.accept(new PopupMsg.ListCursorChanged(cursor.at(Math.max(0, line - 1))));
-        } else {
-            return EventResult.UNHANDLED;
+            return Option.of(new PopupMsg.Dismissed(StackPopups.Pick.class));
         }
-        return EventResult.HANDLED;
+        if (event.isConfirm()) {
+            return Option.of(new StackMsg.PickConfirmed());
+        }
+        if (event.isChar('j') || event.code() == KeyCode.DOWN) {
+            return Option.of(new PopupMsg.ListCursorChanged(cursor.at(Math.min(rows - 1, line + 1))));
+        }
+        if (event.isChar('k') || event.code() == KeyCode.UP) {
+            return Option.of(new PopupMsg.ListCursorChanged(cursor.at(Math.max(0, line - 1))));
+        }
+        return keymap.get().handle(StackAction.PICK, event, Option.of(line));
     }
 }
