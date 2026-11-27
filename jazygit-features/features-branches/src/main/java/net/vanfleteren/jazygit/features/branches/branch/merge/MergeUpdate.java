@@ -24,7 +24,8 @@ public final class MergeUpdate {
     }
 
     /**
-     * Only a known branch, local or remote-tracking, other than the checked out one can be merged, and only into a checked out branch.
+     * Only a known branch, local or remote-tracking, other than the checked out one can be merged, and only into a
+     * checked out branch.
      */
     private static Next requested(Model model, BranchRef branch) {
         return PopupUpdate.ask(

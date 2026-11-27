@@ -51,13 +51,19 @@ public final class RebaseUpdate {
     static Option<BranchRef> onto(Model model, RebasePopup popup, RebaseMsg.Target target) {
         return popup.target(target)
                 .flatMap(onto -> Branches.idle(model, onto))
-                .filter(onto -> model.idleBranch(popup.branch()).isDefined());
+                .filter(onto -> model.idleBranch(popup.branch()).isDefined())
+                // A remote base is what a push or a pull of its local branch moves: that keeps it busy.
+                .filter(onto -> target != RebaseMsg.Target.BASE
+                        || onto instanceof BranchRef.Remote remote
+                                && model.idleBranch(remote.branch().branch()).isDefined()
+                        || onto instanceof BranchRef.Local);
     }
 
     /**
      * The base branch of {@code branch} (ADR 91): its parent (ADR 72), else the main branch; none for a root. The
-     * remote-tracking one on {@code origin} when there is one, as the commits ahead and behind count against it (ADR
-     * 20), for it is what the remote has, where the local branch is often stale.
+     * remote-tracking one on {@code origin} when the local one follows it and has no commits of its own (ADR 214): that
+     * is what the remote has, where the local branch is often stale. Else the local one, which may be rewritten here
+     * and not pushed.
      */
     static Option<BranchRef> base(Model model, Branch branch) {
         Option<BranchName> main = AheadUpdate.main(model);
@@ -70,9 +76,24 @@ public final class RebaseUpdate {
                 .orElse(main)
                 .filter(base ->
                         !base.equals(branch.name()) && model.repo().branch(base).isDefined())
-                .map(base -> Option.of(new RemoteBranch(RemoteBranch.DEFAULT_REMOTE, base))
-                        .filter(remote -> model.repo().remoteBranch(remote).isDefined())
+                .map(base -> remoteWhenBehind(model, base)
                         .<BranchRef>map(RemoteBranch::tracking)
                         .getOrElse(() -> new BranchRef.Local(base)));
+    }
+
+    /**
+     * The branch of {@code base} on {@code origin}, when it is known, the local {@code base} follows it and has nothing
+     * that is not on it.
+     */
+    private static Option<RemoteBranch> remoteWhenBehind(Model model, BranchName base) {
+        RemoteBranch remote = new RemoteBranch(RemoteBranch.DEFAULT_REMOTE, base);
+        return Option.when(
+                model.repo().remoteBranch(remote).isDefined()
+                        && model.repo()
+                                .branch(base)
+                                .flatMap(Branch::upstream)
+                                .exists(upstream ->
+                                        upstream.branch().equals(remote.tracking()) && upstream.ahead() == 0),
+                remote);
     }
 }

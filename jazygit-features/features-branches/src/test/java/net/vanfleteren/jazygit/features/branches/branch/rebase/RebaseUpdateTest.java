@@ -15,6 +15,7 @@ import net.vanfleteren.jazygit.core.repo.BranchRef;
 import net.vanfleteren.jazygit.core.repo.RemoteBranch;
 import net.vanfleteren.jazygit.core.repo.RemoteRef;
 import net.vanfleteren.jazygit.core.repo.Sha;
+import net.vanfleteren.jazygit.core.repo.Upstream;
 import net.vanfleteren.jazygit.features.branches.branch.push.PushCmd;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.Part;
@@ -61,14 +62,50 @@ class RebaseUpdateTest {
 
     @Test
     void theBaseIsTheRemoteTrackingBranchWhenThereIsOne() {
-        Model model = withRemote(withParents(checkedOut(CHILD), HashMap.of(CHILD, PARENT)), "feat/a", "main");
+        Model model = withRemote(withParents(following(CHILD), HashMap.of(CHILD, PARENT)), "feat/a", "main");
 
         assertEquals(
                 Option.of(new RemoteBranch(RemoteBranch.DEFAULT_REMOTE, PARENT).tracking()),
                 popup(model, OTHER).base());
         assertEquals(
                 Option.of(new RemoteBranch(RemoteBranch.DEFAULT_REMOTE, MAIN).tracking()),
+                popup(withRemote(following(CHILD), "main"), OTHER).base());
+    }
+
+    @Test
+    void aBaseWithCommitsOfItsOwnStaysTheLocalBranchWhateverTheRemoteHas() {
+        // feat/a was amended here and is not pushed: the remote one is stale, and a rebase onto it replays the commits
+        // of feat/a on top of their old versions (ADR 91).
+        Model model =
+                withRemote(withParents(following(CHILD, PARENT, MAIN), HashMap.of(CHILD, PARENT)), "feat/a", "main");
+
+        assertEquals(Option.of(new BranchRef.Local(PARENT)), popup(model, OTHER).base());
+        assertEquals(
+                Option.of(new BranchRef.Local(MAIN)),
+                popup(withRemote(following(CHILD, MAIN), "main"), OTHER).base());
+    }
+
+    @Test
+    void aBaseThatFollowsNothingOnTheRemoteStaysTheLocalBranch() {
+        assertEquals(
+                Option.of(new BranchRef.Local(MAIN)),
                 popup(withRemote(checkedOut(CHILD), "main"), OTHER).base());
+    }
+
+    @Test
+    void aRemoteBaseIsNotRebasedOnWhileItsLocalBranchIsBusy() {
+        Model open = Update.update(
+                        withRemote(following(CHILD), "main"), new RebaseMsg.Requested(new BranchRef.Local(CHILD)))
+                .model();
+        Model pulling = TestModels.busy(open, new BranchRef.Local(MAIN), PushCmd.PUSH);
+
+        assertEquals(
+                List.of(),
+                Update.update(pulling, new RebaseMsg.Chosen(RebaseMsg.Target.BASE))
+                        .cmds());
+        assertEquals(
+                List.of(new RebaseCmd(new RemoteBranch(RemoteBranch.DEFAULT_REMOTE, MAIN).tracking())),
+                Update.update(open, new RebaseMsg.Chosen(RebaseMsg.Target.BASE)).cmds());
     }
 
     @Test
@@ -215,6 +252,18 @@ class RebaseUpdateTest {
      * {@code current} is checked out.
      */
     private static Model checkedOut(BranchName current) {
+        return model(current, false, HashSet.empty());
+    }
+
+    /**
+     * As {@link #checkedOut(BranchName)}, with each branch following its branch on {@code origin}, {@code ahead} of
+     * which are one commit ahead of it.
+     */
+    private static Model following(BranchName current, BranchName... ahead) {
+        return model(current, true, HashSet.of(ahead));
+    }
+
+    private static Model model(BranchName current, boolean following, io.vavr.collection.Set<BranchName> ahead) {
         return localBranchesRead(
                         loaded(),
                         List.of(MAIN, DEVELOP, PARENT, CHILD, OTHER)
@@ -224,7 +273,13 @@ class RebaseUpdateTest {
                                         new Sha("1"),
                                         Instant.EPOCH,
                                         false,
-                                        name.equals(MAIN))))
+                                        name.equals(MAIN),
+                                        Option.when(
+                                                following,
+                                                new Upstream(
+                                                        new RemoteBranch(RemoteBranch.DEFAULT_REMOTE, name).tracking(),
+                                                        ahead.contains(name) ? 1 : 0,
+                                                        1)))))
                 .model();
     }
 
