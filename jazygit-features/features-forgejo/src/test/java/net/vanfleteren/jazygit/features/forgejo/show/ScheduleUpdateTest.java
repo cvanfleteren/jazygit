@@ -7,6 +7,7 @@ import static net.vanfleteren.jazygit.features.forgejo.pulls.PullRequestFixtures
 import static net.vanfleteren.jazygit.features.forgejo.pulls.PullRequestFixtures.details;
 import static net.vanfleteren.jazygit.features.forgejo.pulls.PullRequestFixtures.listed;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.vavr.collection.HashMap;
@@ -128,8 +129,8 @@ class ScheduleUpdateTest {
                 next.cmds().contains(new LoadPullRequest(ORIGIN, new PrNumber(12), 2)),
                 next.cmds().toString());
         assertTrue(popup(next.model()).asked());
-        assertTrue(
-                !next.cmds().contains(new Heard(new KernelEvent.RemoteChanged())),
+        assertFalse(
+                next.cmds().contains(new Heard(new KernelEvent.RemoteChanged())),
                 next.cmds().toString());
     }
 
