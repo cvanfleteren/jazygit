@@ -3,12 +3,12 @@ package net.vanfleteren.jazygit.app.keys;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import net.vanfleteren.jazygit.features.branches.panes.branches.BranchBadges;
-import net.vanfleteren.jazygit.features.branches.panes.branches.BranchGroups;
 import net.vanfleteren.jazygit.features.github.GitHubFeature;
 import net.vanfleteren.jazygit.kernel.state.FeatureUpdate;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.TestModels;
+import net.vanfleteren.jazygit.kernel.ui.BranchBadges;
+import net.vanfleteren.jazygit.kernel.ui.BranchGroups;
 import org.junit.jupiter.api.Test;
 
 /**

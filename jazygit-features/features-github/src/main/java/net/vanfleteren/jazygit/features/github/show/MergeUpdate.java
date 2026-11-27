@@ -5,7 +5,6 @@ import io.vavr.control.Option;
 import net.vanfleteren.jazygit.core.gh.model.MergeStatus;
 import net.vanfleteren.jazygit.core.process.ExecutedCommand;
 import net.vanfleteren.jazygit.core.repo.PrNumber;
-import net.vanfleteren.jazygit.features.changes.fetch.FetchUpdate;
 import net.vanfleteren.jazygit.features.github.GitHubError;
 import net.vanfleteren.jazygit.features.github.prs.PrOverviewUpdate;
 import net.vanfleteren.jazygit.features.github.prs.PullRequestReads;
@@ -13,6 +12,8 @@ import net.vanfleteren.jazygit.features.github.show.PullRequestCmd.CheckMerge;
 import net.vanfleteren.jazygit.features.github.show.PullRequestCmd.MergePullRequest;
 import net.vanfleteren.jazygit.features.github.state.*;
 import net.vanfleteren.jazygit.kernel.state.*;
+import net.vanfleteren.jazygit.kernel.state.Events;
+import net.vanfleteren.jazygit.kernel.state.KernelEvent;
 import net.vanfleteren.jazygit.kernel.state.Update.Next;
 import net.vanfleteren.jazygit.kernel.state.operation.*;
 
@@ -97,7 +98,8 @@ final class MergeUpdate {
             case MergeStatus.Pending pending -> next;
             // A read that is still running may have missed it, and would show it open again.
             case MergeStatus.Merged merged ->
-                PrOverviewUpdate.reloadIfShown(FetchUpdate.requested(PullRequestReads.loadAnyway(next)));
+                PrOverviewUpdate.reloadIfShown(
+                        Events.happened(PullRequestReads.loadAnyway(next), new KernelEvent.RemoteChanged()));
             case MergeStatus.Enqueued enqueued ->
                 next.map(model -> model.inform(new MergeNotice.Enqueued(merge.branch())));
             case MergeStatus.Failed(String message) ->

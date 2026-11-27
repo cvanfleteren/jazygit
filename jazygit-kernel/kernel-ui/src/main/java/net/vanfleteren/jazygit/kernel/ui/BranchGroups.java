@@ -1,4 +1,4 @@
-package net.vanfleteren.jazygit.features.branches.panes.branches;
+package net.vanfleteren.jazygit.kernel.ui;
 
 import dev.tamboui.tui.event.KeyEvent;
 import io.vavr.collection.List;
@@ -8,8 +8,6 @@ import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.RemoteBranch;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.Msg;
-import net.vanfleteren.jazygit.kernel.ui.Fills;
-import net.vanfleteren.jazygit.kernel.ui.Slot;
 import net.vanfleteren.jazygit.kernel.ui.keys.Keymap;
 import net.vanfleteren.jazygit.kernel.ui.widgets.LoadableList;
 
@@ -17,7 +15,8 @@ import net.vanfleteren.jazygit.kernel.ui.widgets.LoadableList;
  * The groups the features make of the local branches in the branches pane (ADR 167): a header, the branches of the
  * group under it, indented, with rows of what belongs to the group but is no local branch among them; and the keys of
  * the header. The pane knows no feature, nor what a group is: a feature fills its {@link #KEY} (ADR 172), and the pane
- * groups the branches as all that do, in the order of the features.
+ * groups the branches as all that do, in the order of the features. The pane lives in {@code features-branches}, but this
+ * is declared in the kernel, the lowest module the pane and the forges that fill it all see (ADR 210).
  *
  * @param groupings how each feature groups the branches, in the order of the features; a branch is in the group of the
  *                  first that groups it
@@ -132,7 +131,7 @@ public record BranchGroups(List<Grouping> groupings) {
         /**
          * What {@code event} does on the header, as {@code keymap} has the keys of its scope.
          */
-        Option<Msg> handle(Keymap keymap, KeyEvent event) {
+        public Option<Msg> handle(Keymap keymap, KeyEvent event) {
             return keymap.handle(scope, event, Option.of(subject));
         }
     }

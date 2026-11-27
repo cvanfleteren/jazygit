@@ -46,6 +46,25 @@ public final class FetchUpdate {
     }
 
     /**
+     * A feature changed what a remote has (ADR 210): it is fetched from as soon as possible, as {@link #requested}
+     * says.
+     */
+    public static Next reacting(Model model, KernelEvent event) {
+        return switch (event) {
+            case KernelEvent.RemoteChanged() -> requested(Next.of(model));
+            case KernelEvent.LogRead _,
+                    KernelEvent.OperationDone _,
+                    KernelEvent.Fetched _,
+                    KernelEvent.RepositoryOpened _,
+                    KernelEvent.ScreenShown _,
+                    KernelEvent.ChangesOpened _,
+                    KernelEvent.Switched _,
+                    KernelEvent.TabShown _,
+                    KernelEvent.FileToOpen _ -> Next.of(model);
+        };
+    }
+
+    /**
      * {@code next}, also fetching as soon as possible, as something changed on a remote: now, or, when a fetch is
      * running, which may have missed it, once that one is done.
      */

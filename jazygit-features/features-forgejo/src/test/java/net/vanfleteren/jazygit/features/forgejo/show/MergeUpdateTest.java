@@ -23,12 +23,14 @@ import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.PrNumber;
 import net.vanfleteren.jazygit.core.repo.RemoteName;
 import net.vanfleteren.jazygit.core.repo.RepoSlug;
-import net.vanfleteren.jazygit.features.changes.fetch.FetchCmd;
 import net.vanfleteren.jazygit.features.forgejo.pulls.ForgejoPullRequests;
 import net.vanfleteren.jazygit.features.forgejo.pulls.PullRequestFixtures;
 import net.vanfleteren.jazygit.features.forgejo.pulls.PullRequestMsg;
 import net.vanfleteren.jazygit.features.forgejo.pulls.ReadPullRequests;
 import net.vanfleteren.jazygit.kernel.state.AppError;
+import net.vanfleteren.jazygit.kernel.state.HeardEvents;
+import net.vanfleteren.jazygit.kernel.state.HeardEvents.Heard;
+import net.vanfleteren.jazygit.kernel.state.KernelEvent;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.Update;
 import net.vanfleteren.jazygit.kernel.state.Update.Next;
@@ -141,11 +143,14 @@ class MergeUpdateTest {
                                 new MergeFailure(new ForgejoError.Unreachable("x"), "h", new RepoSlug("r")),
                                 STANDING)));
 
-        Next next = Update.update(failedBefore, new PullRequestMsg.Merged(SQUASH, new ForgejoMerged.Merged()));
+        Next next = Update.update(
+                HeardEvents.hearing(failedBefore), new PullRequestMsg.Merged(SQUASH, new ForgejoMerged.Merged()));
 
         assertEquals(HashMap.empty(), prs(next.model()).failedMerges());
         // The pull requests are read again as Forgejo's reactions answer the operation, which changed the forge.
-        assertTrue(next.cmds().contains(new FetchCmd.ListRemotes()), next.cmds().toString());
+        assertTrue(
+                next.cmds().contains(new Heard(new KernelEvent.RemoteChanged())),
+                next.cmds().toString());
         assertEquals(Option.none(), next.model().outcome().error());
     }
 

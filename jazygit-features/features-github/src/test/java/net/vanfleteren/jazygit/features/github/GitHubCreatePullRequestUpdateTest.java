@@ -27,7 +27,6 @@ import net.vanfleteren.jazygit.features.branches.branch.pullrequest.CreatePullRe
 import net.vanfleteren.jazygit.features.branches.branch.pullrequest.CreatePullRequestCmd.RereadTitle;
 import net.vanfleteren.jazygit.features.branches.branch.pullrequest.CreatePullRequestMsg;
 import net.vanfleteren.jazygit.features.branches.branch.pullrequest.CreatePullRequestMsg.BaseMoved;
-import net.vanfleteren.jazygit.features.changes.fetch.FetchCmd;
 import net.vanfleteren.jazygit.features.github.create.GitHubCreatePullRequestCmd;
 import net.vanfleteren.jazygit.features.github.create.GitHubCreatePullRequestCmd.*;
 import net.vanfleteren.jazygit.features.github.create.GitHubCreatePullRequestMsg;
@@ -37,6 +36,9 @@ import net.vanfleteren.jazygit.features.github.show.PullRequestCmd.*;
 import net.vanfleteren.jazygit.features.github.show.PullRequestMsg;
 import net.vanfleteren.jazygit.features.github.state.*;
 import net.vanfleteren.jazygit.kernel.state.*;
+import net.vanfleteren.jazygit.kernel.state.HeardEvents;
+import net.vanfleteren.jazygit.kernel.state.HeardEvents.Heard;
+import net.vanfleteren.jazygit.kernel.state.KernelEvent;
 import net.vanfleteren.jazygit.kernel.state.TestModels;
 import net.vanfleteren.jazygit.kernel.state.Update.Next;
 import net.vanfleteren.jazygit.kernel.state.load.*;
@@ -483,7 +485,7 @@ class GitHubCreatePullRequestUpdateTest {
                 new RemoteBranch("origin", FEATURE),
                 new RemoteBranch("origin", MAIN.name()),
                 new NewPullRequest("Login", "", true));
-        Model creating = confirmed(cmd.pullRequest()).model();
+        Model creating = HeardEvents.hearing(confirmed(cmd.pullRequest()).model());
 
         Next done =
                 TestModels.done(creating, cmd, cmd.run(new Env(StubGit.of()).with(GitHubServices.GH, StubGitHub.of())));
@@ -492,7 +494,9 @@ class GitHubCreatePullRequestUpdateTest {
                 done.cmds().contains(new LoadRepositoryPullRequests()),
                 done.cmds().toString());
         assertEquals(Option.none(), done.model().jobs().busy().get(new BranchRef.Local(new BranchName("feature"))));
-        assertTrue(done.cmds().contains(new FetchCmd.ListRemotes()), done.cmds().toString());
+        assertTrue(
+                done.cmds().contains(new Heard(new KernelEvent.RemoteChanged())),
+                done.cmds().toString());
         assertEquals(
                 "gh pr create --head feature --base main --title Login --body '' --draft",
                 done.model().outcome().commandLog().last().commands().last().line());

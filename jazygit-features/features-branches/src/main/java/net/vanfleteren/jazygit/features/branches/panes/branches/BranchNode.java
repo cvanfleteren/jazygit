@@ -6,8 +6,8 @@ import io.vavr.control.Option;
 import net.vanfleteren.jazygit.core.repo.Branch;
 import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.Sha;
-import net.vanfleteren.jazygit.features.branches.panes.branches.BranchGroups.Entry;
-import net.vanfleteren.jazygit.features.branches.panes.branches.BranchGroups.Group;
+import net.vanfleteren.jazygit.kernel.ui.BranchGroups.Entry;
+import net.vanfleteren.jazygit.kernel.ui.BranchGroups.Group;
 
 /**
  * A row of the local branches (ADR 72): a branch, the header of a group the features make of branches (ADR 167), what

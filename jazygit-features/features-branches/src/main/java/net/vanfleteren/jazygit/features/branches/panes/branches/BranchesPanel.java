@@ -18,6 +18,8 @@ import net.vanfleteren.jazygit.kernel.state.load.SelectionMsg;
 import net.vanfleteren.jazygit.kernel.state.preferences.*;
 import net.vanfleteren.jazygit.kernel.state.view.*;
 import net.vanfleteren.jazygit.kernel.state.view.Followed;
+import net.vanfleteren.jazygit.kernel.ui.BranchBadges;
+import net.vanfleteren.jazygit.kernel.ui.BranchGroups;
 import net.vanfleteren.jazygit.kernel.ui.Fills;
 import net.vanfleteren.jazygit.kernel.ui.i18n.Messages;
 import net.vanfleteren.jazygit.kernel.ui.keys.Keymap;

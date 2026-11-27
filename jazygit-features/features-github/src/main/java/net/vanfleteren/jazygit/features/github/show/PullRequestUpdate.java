@@ -18,7 +18,6 @@ import net.vanfleteren.jazygit.core.repo.PrNumber;
 import net.vanfleteren.jazygit.core.repo.PullRequestCommits;
 import net.vanfleteren.jazygit.features.changes.diff.CommitFilesMsg;
 import net.vanfleteren.jazygit.features.changes.diff.CommitFilesUpdate;
-import net.vanfleteren.jazygit.features.changes.fetch.FetchUpdate;
 import net.vanfleteren.jazygit.features.forge.checks.ChecksPopup;
 import net.vanfleteren.jazygit.features.github.browse.BrowsePullRequestCmd;
 import net.vanfleteren.jazygit.features.github.checks.timings.CheckTimesUpdate;
@@ -31,6 +30,8 @@ import net.vanfleteren.jazygit.features.github.state.*;
 import net.vanfleteren.jazygit.features.github.verdict.VerdictPopup;
 import net.vanfleteren.jazygit.features.github.verdict.VerdictUpdate;
 import net.vanfleteren.jazygit.kernel.state.*;
+import net.vanfleteren.jazygit.kernel.state.Events;
+import net.vanfleteren.jazygit.kernel.state.KernelEvent;
 import net.vanfleteren.jazygit.kernel.state.Update.Next;
 import net.vanfleteren.jazygit.kernel.state.diff.Changes;
 import net.vanfleteren.jazygit.kernel.state.operation.*;
@@ -293,7 +294,8 @@ public final class PullRequestUpdate {
                                 .map(open ->
                                         open.filterValues(pr -> !pr.number().equals(cmd.number()))))));
         // A read that is still running may have missed it, and would show it open again.
-        return PrOverviewUpdate.reloadIfShown(FetchUpdate.requested(PullRequestReads.loadAnyway(ended)));
+        return PrOverviewUpdate.reloadIfShown(
+                Events.happened(PullRequestReads.loadAnyway(ended), new KernelEvent.RemoteChanged()));
     }
 
     /**

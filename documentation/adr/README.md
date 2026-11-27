@@ -236,3 +236,4 @@ another tool adds it there too.
 | 207 | [An update asks the app to move the focus, and to step the files](0207-an-update-asks-the-app-to-move-the-focus.md) |  |
 | 208 | [The files pane leaves the kernel, and the resolving marks its files through slots](0208-the-files-pane-leaves-the-kernel.md) |  |
 | 209 | [The flows every forge has are written once, in features-forge, and each forge gives a port](0209-the-flows-every-forge-has-are-written-once.md) |  |
+| 210 | [The forges reach the branches pane and the fetch through the kernel](0210-the-forges-reach-the-branches-pane-and-the-fetch-through-the-kernel.md) |  |

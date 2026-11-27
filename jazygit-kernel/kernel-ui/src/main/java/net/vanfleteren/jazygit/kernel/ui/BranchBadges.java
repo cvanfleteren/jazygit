@@ -1,19 +1,18 @@
-package net.vanfleteren.jazygit.features.branches.panes.branches;
+package net.vanfleteren.jazygit.kernel.ui;
 
 import io.vavr.collection.List;
 import java.time.Instant;
 import java.util.function.Function;
 import net.vanfleteren.jazygit.core.repo.BranchRef;
 import net.vanfleteren.jazygit.kernel.state.Model;
-import net.vanfleteren.jazygit.kernel.ui.Fills;
-import net.vanfleteren.jazygit.kernel.ui.Slot;
 import net.vanfleteren.jazygit.kernel.ui.widgets.LoadableList;
 
 /**
  * What the features show of a branch in the branches pane, beside what git says of it (ADR 167): the badges of a row,
  * after its parent and before whether it is checked out in another worktree. The local and the remote branches share
  * them. The pane knows no feature: a feature fills its {@link #KEY} (ADR 172), and the pane shows the badges of all that
- * do, in the order of the features.
+ * do, in the order of the features. The pane lives in {@code features-branches}, but this is declared in the kernel, the
+ * lowest module the pane and the forges that fill it all see (ADR 210).
  *
  * @param badges what each feature shows of a branch, in the order of the features
  */

@@ -45,7 +45,7 @@ named from under their group's: `state.*` is `net.vanfleteren.jazygit.kernel.sta
 | `jazygit-kernel` | The kernel: what every feature builds on. | lib, core |
 | ↳ `kernel-settings` | `settings`: `config.toml` and `state.toml`, the only part that reads or writes TOML. | lens, night-config |
 | ↳ `kernel-state` | `state.*`: the `Model`, `Msg`, `Update`, `Cmd`, `Program`, a subpackage per part of the model, and `Part`, a part a feature keeps itself. | lens, image, settings, git, json, yaml, xml |
-| ↳ `kernel-ui` | `ui.*`: the panels and widgets that draw a `Model`; `ui.keys` (`Keymap`, `Scopes`), `ui.i18n` (`Messages`), `ui.content` (`Body`, what a kind of content is; `ContentSource`, what shows it), `ui.settings` (`SettingsSection`, a section of the settings panel), and `Feature`, `FeatureAction` in the shell. | base, state, TamboUI, commonmark |
+| ↳ `kernel-ui` | `ui.*`: the panels and widgets that draw a `Model`; `ui.keys` (`Keymap`, `Scopes`), `ui.i18n` (`Messages`), `ui.content` (`Body`, what a kind of content is; `ContentSource`, what shows it), `ui.settings` (`SettingsSection`, a section of the settings panel), and `Feature`, `FeatureAction` in the shell, with the slots of the branches pane the forges fill (`BranchBadges`, `BranchGroups`, ADR 210). | base, state, TamboUI, commonmark |
 | ↳ `kernel-content` | `content.*`: the content panel and, in `content.diff`, the rich diff; only the app uses them. | ui, syntax |
 | `jazygit-features` | The groups of features, a module each, with this pom as their parent (ADR 136): | kernel |
 | ↳ `features-changes` | `changes.*`: stage, files, discard, commit, ahead, cherrypick, stash, edit, copy, diff, fetch; `changes.panes.commits`, `changes.panes.stash` and `changes.panes.files`, the commits, stash and files panes (ADR 158). | ui |
@@ -154,19 +154,23 @@ it reaches through them. `lens` and `image` are below `settings` and `state`, an
   an extension point the feature fills, once it moves. A `Part` declares what the kernel asks of it: queries
   (`rereading`, `knowingCommits`, `stating` what the branches are built on, `naming` the repository on the host of
   the remotes) and one `reacting` to a `KernelEvent`, asked only of the parts that are kept, in the order of their
-  names. `Targeted` and `LoadMsg.Read` are open, and `Target.inPart` keeps what a feature's load
-  reads in its part. A pane lives in the group that owns most of what it shows, in its `panes` package, as
-  `changes.panes.commits`; the app gives it to `LeftColumn` as a `LeftPane` (the files pane as a `FilesLeftPane`,
-  which also steps to another file and follows the pane in use), and its id is a `PaneId` constant. The search of the
-  commits is the first that moved; the kernel builds no pane.
+  names. A feature asks another for work through an event the other answers, so neither names the other: a file to
+  open (`FileToOpen`, ADR 206), a remote a forge changed, to fetch (`RemoteChanged`, ADR 210). `Targeted` and
+  `LoadMsg.Read` are open, and `Target.inPart` keeps what a feature's load reads in its part. A pane lives in the
+  group that owns most of what it shows, in its `panes` package, as `changes.panes.commits`; the app gives it to
+  `LeftColumn` as a `LeftPane` (the files pane as a `FilesLeftPane`, which also steps to another file and follows the
+  pane in use), and its id is a `PaneId` constant. The search of the commits is the first that moved; the kernel
+  builds no pane.
 - **A pane declares slots the features fill** (ADR 172, 202): a pane in a group names no feature; it declares `Slot`s
-  beside itself, as `CommitsPane.LINE` and `CommitsPane.LISTING`, `FilesPane.MARK` (ADR 208), or `BranchBadges.KEY`
-  and `BranchGroups.KEY` of the branches pane, which a `Feature` fills with `filling`, and the app gives it the
-  `Fills` of its features (`Features.FILLS`). A pane asks for the first feature that gives anything (`Fills.of`), or
-  for all of them in their order (`Fills.all`), as the branches pane joins the badges and the groups of every
-  feature. A filler gives an `Iterable`, an `Option` or a `List`. The kernel declares its own slots in
-  `KernelSlots`: whether a view spins, the times a popup shows and the pictures a view may draw, which the app asks
-  of `Features.FILLS`. A slot is its name, as a part is, and no two share one (`SlotNamesTest`, ADR 203).
+  beside itself, as `CommitsPane.LINE` and `CommitsPane.LISTING` or `FilesPane.MARK` (ADR 208), which a `Feature`
+  fills with `filling`, and the app gives it the `Fills` of its features (`Features.FILLS`). A slot that features of
+  several groups fill is declared in the lowest module they and the pane all see (ADR 210), as `BranchBadges.KEY` and
+  `BranchGroups.KEY` of the branches pane, which the forges fill, are in `kernel-ui`, beside `Slot`. A pane asks
+  for the first feature that gives anything (`Fills.of`), or for all of them in their order (`Fills.all`), as the
+  branches pane joins the badges and the groups of every feature. A filler gives an `Iterable`, an `Option` or a
+  `List`. The kernel declares its own slots in `KernelSlots`: whether a view spins, the times a popup shows and the
+  pictures a view may draw, which the app asks of `Features.FILLS`. A slot is its name, as a part is, and no two
+  share one (`SlotNamesTest`, ADR 203).
 - **The kernel names no forge** (ADR 167, 169, 171): GitHub's state, its stores, its screen, its stack and its
   review threads are `features-github`'s. The kernel composes what the features state the branches are built on
   (`BranchBases`, from each part's `StatedBases`), tells the reactions which commands started (`Reaction.started`, as

@@ -14,9 +14,12 @@ public final class FetchFeature {
     private static final Duration FETCH_INTERVAL = Duration.ofMinutes(1);
 
     /**
-     * What the app knows of it: its keys, its popups and its timer.
+     * What the app knows of it: its keys, its popups, its timer, and that it fetches when a feature changed a remote
+     * (ADR 210).
      */
-    public static final Feature FEATURE = Feature.of(FetchAction.ACTION).every(FETCH_INTERVAL, FetchMsg.Tick::new);
+    public static final Feature FEATURE = Feature.of(FetchAction.ACTION)
+            .every(FETCH_INTERVAL, FetchMsg.Tick::new)
+            .reacting(FetchUpdate::reacting);
 
     private FetchFeature() {}
 }

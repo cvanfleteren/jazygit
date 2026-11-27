@@ -50,3 +50,6 @@ pane that lives in its group cannot declare such a field: `Feature` is in the ke
 
 Amended by ADR 202: `PaneKey` is `Slot`, as the kernel declares slots too (`KernelSlots`), and a filler gives an
 `Iterable`, so one may give several.
+
+Amended by ADR 210: a slot that features of several groups fill is declared in the lowest module the pane and all its
+fillers see, as `BranchBadges` and `BranchGroups` are in `kernel-ui`.

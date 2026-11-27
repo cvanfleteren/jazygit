@@ -6,11 +6,12 @@ import net.vanfleteren.jazygit.core.forgejo.ForgejoMergeSettings;
 import net.vanfleteren.jazygit.core.forgejo.ForgejoMergeStyle;
 import net.vanfleteren.jazygit.core.forgejo.ForgejoMerged;
 import net.vanfleteren.jazygit.core.forgejo.ForgejoPullRequestDetails;
-import net.vanfleteren.jazygit.features.changes.fetch.FetchUpdate;
 import net.vanfleteren.jazygit.features.forgejo.pulls.ForgejoPullRequests;
 import net.vanfleteren.jazygit.features.forgejo.pulls.PullRequestUpdate;
 import net.vanfleteren.jazygit.features.forgejo.pulls.ReadPullRequests;
+import net.vanfleteren.jazygit.kernel.state.Events;
 import net.vanfleteren.jazygit.kernel.state.Failure;
+import net.vanfleteren.jazygit.kernel.state.KernelEvent;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.Update.Next;
 import net.vanfleteren.jazygit.kernel.state.operation.OperationMsg;
@@ -88,10 +89,9 @@ public final class MergeUpdate {
     public static Next merged(Model model, MergePullRequestCmd cmd, ForgejoMerged merged) {
         Next done = OperationUpdate.succeeded(model, cmd, List.empty());
         Next went = switch (merged) {
-            case ForgejoMerged.Merged() -> FetchUpdate.requested(done.map(after -> merged(after, cmd)));
+            case ForgejoMerged.Merged() -> remoteChanged(done.map(after -> merged(after, cmd)));
             case ForgejoMerged.BranchKept(String why) ->
-                FetchUpdate.requested(
-                        done.map(after -> merged(after, cmd).inform(new BranchKeptNotice(cmd.branch(), why))));
+                remoteChanged(done.map(after -> merged(after, cmd).inform(new BranchKeptNotice(cmd.branch(), why))));
             case ForgejoMerged.Scheduled() ->
                 done.map(after ->
                         after.mapPart(ForgejoPullRequests.PART, prs -> prs.mergeScheduled(cmd.number(), cmd.style())));
@@ -101,6 +101,13 @@ public final class MergeUpdate {
 
     private static Model merged(Model model, MergePullRequestCmd cmd) {
         return model.mapPart(ForgejoPullRequests.PART, prs -> prs.merged(cmd.number()));
+    }
+
+    /**
+     * {@code next}, with the remotes fetched as soon as possible, as the merge changed them (ADR 210).
+     */
+    private static Next remoteChanged(Next next) {
+        return Events.happened(next, new KernelEvent.RemoteChanged());
     }
 
     /**

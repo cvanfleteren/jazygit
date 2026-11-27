@@ -22,9 +22,11 @@ import net.vanfleteren.jazygit.core.forgejo.ForgejoScheduledMerge;
 import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.PrNumber;
 import net.vanfleteren.jazygit.core.repo.RepoSlug;
-import net.vanfleteren.jazygit.features.changes.fetch.FetchCmd;
 import net.vanfleteren.jazygit.features.forgejo.pulls.ForgejoPullRequests;
 import net.vanfleteren.jazygit.features.forgejo.pulls.PullRequestMsg;
+import net.vanfleteren.jazygit.kernel.state.HeardEvents;
+import net.vanfleteren.jazygit.kernel.state.HeardEvents.Heard;
+import net.vanfleteren.jazygit.kernel.state.KernelEvent;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.Update;
 import net.vanfleteren.jazygit.kernel.state.Update.Next;
@@ -117,7 +119,8 @@ class ScheduleUpdateTest {
                                 new MergeFailure(new ForgejoError.Unreachable("x"), "h", new RepoSlug("r")),
                                 STANDING)));
 
-        Next next = Update.update(shown, new PullRequestMsg.Merged(WHEN_READY, new ForgejoMerged.Scheduled()));
+        Next next = Update.update(
+                HeardEvents.hearing(shown), new PullRequestMsg.Merged(WHEN_READY, new ForgejoMerged.Scheduled()));
 
         assertEquals(Option.of(ForgejoMergeStyle.SQUASH), prs(next.model()).style(new PrNumber(12)));
         assertEquals(HashMap.empty(), prs(next.model()).failedMerges());
@@ -126,7 +129,7 @@ class ScheduleUpdateTest {
                 next.cmds().toString());
         assertTrue(popup(next.model()).asked());
         assertTrue(
-                next.cmds().filter(FetchCmd.ListRemotes.class::isInstance).isEmpty(),
+                !next.cmds().contains(new Heard(new KernelEvent.RemoteChanged())),
                 next.cmds().toString());
     }
 
@@ -137,10 +140,11 @@ class ScheduleUpdateTest {
                         ForgejoPullRequests.PART,
                         prs -> prs.mergeScheduled(new PrNumber(12), ForgejoMergeStyle.SQUASH));
 
-        Next next = Update.update(shown, new PullRequestMsg.Merged(WHEN_READY, new ForgejoMerged.Merged()));
+        Next next = Update.update(
+                HeardEvents.hearing(shown), new PullRequestMsg.Merged(WHEN_READY, new ForgejoMerged.Merged()));
 
         assertTrue(
-                next.cmds().exists(FetchCmd.ListRemotes.class::isInstance),
+                next.cmds().contains(new Heard(new KernelEvent.RemoteChanged())),
                 next.cmds().toString());
         assertEquals(Option.none(), prs(next.model()).style(new PrNumber(12)));
         assertTrue(

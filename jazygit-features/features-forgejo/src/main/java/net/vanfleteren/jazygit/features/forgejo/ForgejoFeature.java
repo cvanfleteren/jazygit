@@ -2,7 +2,6 @@ package net.vanfleteren.jazygit.features.forgejo;
 
 import io.vavr.control.Option;
 import java.time.Duration;
-import net.vanfleteren.jazygit.features.branches.panes.branches.BranchBadges;
 import net.vanfleteren.jazygit.features.forge.checks.ChecksMsg;
 import net.vanfleteren.jazygit.features.forgejo.badges.BuildLegend;
 import net.vanfleteren.jazygit.features.forgejo.badges.ForgejoBadge;
@@ -18,6 +17,7 @@ import net.vanfleteren.jazygit.features.forgejo.pulls.PullRequestReactions;
 import net.vanfleteren.jazygit.features.forgejo.show.ForgejoPullRequestDialog;
 import net.vanfleteren.jazygit.features.forgejo.show.ShowPullRequestAction;
 import net.vanfleteren.jazygit.kernel.state.FeatureId;
+import net.vanfleteren.jazygit.kernel.ui.BranchBadges;
 import net.vanfleteren.jazygit.kernel.ui.Feature;
 import net.vanfleteren.jazygit.kernel.ui.KernelSlots;
 

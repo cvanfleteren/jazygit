@@ -31,7 +31,6 @@ import net.vanfleteren.jazygit.core.git.model.*;
 import net.vanfleteren.jazygit.core.process.ExecutedCommand;
 import net.vanfleteren.jazygit.core.repo.*;
 import net.vanfleteren.jazygit.core.repo.Sha;
-import net.vanfleteren.jazygit.features.changes.fetch.FetchCmd;
 import net.vanfleteren.jazygit.features.github.create.GitHubCreatePullRequestCmd.*;
 import net.vanfleteren.jazygit.features.github.prs.LoadRepositoryPullRequests;
 import net.vanfleteren.jazygit.features.github.show.MergeNotice;
@@ -42,6 +41,9 @@ import net.vanfleteren.jazygit.features.github.show.PullRequestPopup;
 import net.vanfleteren.jazygit.features.github.state.*;
 import net.vanfleteren.jazygit.features.github.state.GitHubState;
 import net.vanfleteren.jazygit.kernel.state.*;
+import net.vanfleteren.jazygit.kernel.state.HeardEvents;
+import net.vanfleteren.jazygit.kernel.state.HeardEvents.Heard;
+import net.vanfleteren.jazygit.kernel.state.KernelEvent;
 import net.vanfleteren.jazygit.kernel.state.TestModels;
 import net.vanfleteren.jazygit.kernel.state.Update.Next;
 import net.vanfleteren.jazygit.kernel.state.load.*;
@@ -213,7 +215,7 @@ class PullRequestActionsUpdateTest {
     @Test
     void aPullRequestGitHubMergedAtOnceShowsMergedUntilThePullRequestsAreReadAgain() {
         MergePullRequest cmd = new MergePullRequest(FEATURE, new PrNumber(42), Option.none(), MergeMethod.MERGE);
-        Model merging = TestModels.running(withPr(), cmd);
+        Model merging = HeardEvents.hearing(TestModels.running(withPr(), cmd));
 
         Next done =
                 TestModels.done(merging, cmd, cmd.run(new Env(StubGit.of()).with(GitHubServices.GH, mergingAtOnce())));
@@ -229,7 +231,9 @@ class PullRequestActionsUpdateTest {
                 done.cmds().contains(new LoadRepositoryPullRequests()),
                 done.cmds().toString());
         // The merge changed the base branch on the remote.
-        assertTrue(done.cmds().contains(new FetchCmd.ListRemotes()), done.cmds().toString());
+        assertTrue(
+                done.cmds().contains(new Heard(new KernelEvent.RemoteChanged())),
+                done.cmds().toString());
     }
 
     @Test
@@ -313,8 +317,8 @@ class PullRequestActionsUpdateTest {
 
     @Test
     void aMergeGitHubFinishedReadsThePullRequestsAndTheRemotesAgain() {
-        Model checking =
-                Update.update(asked(withPr()), new PullRequestMsg.MergeTick()).model();
+        Model checking = Update.update(HeardEvents.hearing(asked(withPr())), new PullRequestMsg.MergeTick())
+                .model();
 
         Next merged = Update.update(
                 checking, new PullRequestMsg.MergeChecked(new PrNumber(42), "merge-42", new MergeStatus.Merged()));
@@ -326,7 +330,7 @@ class PullRequestActionsUpdateTest {
                 merged.cmds().contains(new LoadRepositoryPullRequests()),
                 merged.cmds().toString());
         assertTrue(
-                merged.cmds().contains(new FetchCmd.ListRemotes()),
+                merged.cmds().contains(new Heard(new KernelEvent.RemoteChanged())),
                 merged.cmds().toString());
         assertEquals(
                 List.empty(),

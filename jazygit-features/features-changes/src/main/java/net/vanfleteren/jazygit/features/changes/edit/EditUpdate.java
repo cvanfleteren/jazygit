@@ -76,7 +76,8 @@ public final class EditUpdate {
                     KernelEvent.ScreenShown _,
                     KernelEvent.ChangesOpened _,
                     KernelEvent.Switched _,
-                    KernelEvent.TabShown _ -> Next.of(model);
+                    KernelEvent.TabShown _,
+                    KernelEvent.RemoteChanged _ -> Next.of(model);
         };
     }
 

@@ -36,7 +36,8 @@ public record CommitSearchView(Option<String> line, Option<CommitSearch> search)
                         KernelEvent.ChangesOpened _,
                         KernelEvent.Switched _,
                         KernelEvent.TabShown _,
-                        KernelEvent.FileToOpen _ -> Next.of(model);
+                        KernelEvent.FileToOpen _,
+                        KernelEvent.RemoteChanged _ -> Next.of(model);
             });
 
     /**
