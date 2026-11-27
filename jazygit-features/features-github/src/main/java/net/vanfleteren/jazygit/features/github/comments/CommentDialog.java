@@ -1,4 +1,4 @@
-package net.vanfleteren.jazygit.features.github.comment;
+package net.vanfleteren.jazygit.features.github.comments;
 
 import dev.tamboui.toolkit.element.Element;
 import io.vavr.collection.List;

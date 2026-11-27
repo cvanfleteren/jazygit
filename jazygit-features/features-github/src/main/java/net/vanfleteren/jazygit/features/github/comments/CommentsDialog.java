@@ -26,8 +26,6 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.function.Consumer;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestComment;
-import net.vanfleteren.jazygit.features.github.comment.CommentMsg;
-import net.vanfleteren.jazygit.features.github.comment.CommentPopup;
 import net.vanfleteren.jazygit.features.github.show.PullRequestPopup;
 import net.vanfleteren.jazygit.features.github.widgets.PullRequestSymbols;
 import net.vanfleteren.jazygit.kernel.state.Model;

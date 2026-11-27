@@ -9,6 +9,7 @@ import java.time.Instant;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestDetails.Check;
 import net.vanfleteren.jazygit.core.gh.timing.CheckProgress;
 import net.vanfleteren.jazygit.features.forge.checks.ChecksPopup;
+import net.vanfleteren.jazygit.features.github.state.CheckTimes;
 
 /**
  * How far the checks of the attempts {@code runs} of workflow runs were shown to be, so a bar of how far they are

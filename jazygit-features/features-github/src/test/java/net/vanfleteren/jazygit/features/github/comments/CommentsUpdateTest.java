@@ -23,8 +23,6 @@ import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.ForgeBranch;
 import net.vanfleteren.jazygit.core.repo.PrNumber;
 import net.vanfleteren.jazygit.features.github.browse.OpenLinkCmd;
-import net.vanfleteren.jazygit.features.github.comment.CommentMsg;
-import net.vanfleteren.jazygit.features.github.comment.CommentPopup;
 import net.vanfleteren.jazygit.features.github.comments.CommentsCmd.LoadComments;
 import net.vanfleteren.jazygit.features.github.compose.ComposeMsg;
 import net.vanfleteren.jazygit.features.github.show.PullRequestCmd.OpenPullRequest;

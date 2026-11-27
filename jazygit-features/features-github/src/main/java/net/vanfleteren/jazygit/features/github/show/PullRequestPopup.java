@@ -10,9 +10,13 @@ import net.vanfleteren.jazygit.core.gh.model.PullRequestStack;
 import net.vanfleteren.jazygit.core.gh.timing.CheckTimings;
 import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.PullRequestCommits;
+import net.vanfleteren.jazygit.core.repo.RemoteBranch;
 import net.vanfleteren.jazygit.core.repo.Sha;
-import net.vanfleteren.jazygit.features.github.checks.timings.CheckTimes;
+import net.vanfleteren.jazygit.features.github.checks.GitHubChecksPort;
+import net.vanfleteren.jazygit.features.github.checks.OpensChecks;
 import net.vanfleteren.jazygit.features.github.checks.timings.ChecksReached;
+import net.vanfleteren.jazygit.features.github.state.CheckTimes;
+import net.vanfleteren.jazygit.features.github.state.FromGitHub;
 import net.vanfleteren.jazygit.features.github.state.GitHubState;
 import net.vanfleteren.jazygit.features.github.state.Reading;
 import net.vanfleteren.jazygit.kernel.state.Failure;
@@ -47,7 +51,7 @@ public record PullRequestPopup(
         long read,
         boolean filesWanted,
         Option<ChecksReached> reached)
-        implements ShowsPullRequest {
+        implements ShowsPullRequest, OpensChecks {
 
     /**
      * The popup while its details are being read, from {@code now}, by read {@code read}.
@@ -243,7 +247,7 @@ public record PullRequestPopup(
     /**
      * What the merge key of {@code method} does to it (ADR 112); none before it is read.
      */
-    Option<MergeKey> mergeKey(MergeMethod method) {
+    public Option<MergeKey> mergeKey(MergeMethod method) {
         return readDetails().map(read -> MergeKey.of(read, method));
     }
 
@@ -315,6 +319,17 @@ public record PullRequestPopup(
                         filesWanted,
                         ChecksReached.keeping(pr.checks(), progress(model))))
                 .getOrElse(this);
+    }
+
+    /**
+     * The branch on GitHub it merges from, whose checks it shows, once its details are read; none when it has no
+     * checks, or comes from a fork, whose branch is not one of this repository, though one here may have its name.
+     */
+    @Override
+    public Option<RemoteBranch> checksBranch(Model model) {
+        return detailsRead() && !fromFork
+                ? GitHubChecksPort.withChecks(model, FromGitHub.branch(pullRequest.headBranch()))
+                : Option.none();
     }
 
     /**

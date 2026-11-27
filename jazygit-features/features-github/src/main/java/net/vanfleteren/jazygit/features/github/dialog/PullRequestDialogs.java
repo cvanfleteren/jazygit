@@ -1,8 +1,8 @@
-package net.vanfleteren.jazygit.features.github.show;
+package net.vanfleteren.jazygit.features.github.dialog;
 
 import io.vavr.collection.List;
 import java.util.function.Consumer;
-import net.vanfleteren.jazygit.features.github.comment.CommentDialog;
+import net.vanfleteren.jazygit.features.github.comments.CommentDialog;
 import net.vanfleteren.jazygit.features.github.comments.CommentsDialog;
 import net.vanfleteren.jazygit.features.github.edit.EditPullRequestDialog;
 import net.vanfleteren.jazygit.kernel.state.Msg;

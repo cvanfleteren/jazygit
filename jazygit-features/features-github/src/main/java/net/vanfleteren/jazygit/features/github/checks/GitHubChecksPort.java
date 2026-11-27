@@ -15,11 +15,9 @@ import net.vanfleteren.jazygit.features.forge.checks.ChecksRead;
 import net.vanfleteren.jazygit.features.forge.checks.ForgeCheck;
 import net.vanfleteren.jazygit.features.forge.checks.RerunPlan;
 import net.vanfleteren.jazygit.features.github.checks.branches.BranchChecksUpdate;
-import net.vanfleteren.jazygit.features.github.checks.timings.CheckTimes;
 import net.vanfleteren.jazygit.features.github.checks.timings.CheckTimesUpdate;
 import net.vanfleteren.jazygit.features.github.checks.timings.ChecksReached;
-import net.vanfleteren.jazygit.features.github.show.PullRequestPopup;
-import net.vanfleteren.jazygit.features.github.state.FromGitHub;
+import net.vanfleteren.jazygit.features.github.state.CheckTimes;
 import net.vanfleteren.jazygit.features.github.state.GitHubState;
 import net.vanfleteren.jazygit.kernel.state.Cmd;
 import net.vanfleteren.jazygit.kernel.state.Model;
@@ -48,8 +46,8 @@ public enum GitHubChecksPort implements ChecksPort {
      */
     @Override
     public Option<Opening> ofPullRequest(Model model) {
-        return model.popup(PullRequestPopup.class)
-                .flatMap(dialog -> pullRequestBranch(model, dialog)
+        return model.popup(OpensChecks.class)
+                .flatMap(dialog -> dialog.checksBranch(model)
                         .map(remote -> new Opening(remote.tracking(), remote, Option.none(), Option.of(dialog))));
     }
 
@@ -158,15 +156,12 @@ public enum GitHubChecksPort implements ChecksPort {
     }
 
     /**
-     * The branch on GitHub the pull request of {@code dialog} merges from, whose checks it shows, once its details are
-     * read; none when it has no checks, or comes from a fork, whose branch is not one of this repository, though one
-     * here may have its name. Every remote on GitHub is of the same repository, so has the same checks.
+     * The branch {@code head} on GitHub, whose checks a pull request from it shows; none when it has no checks. Every
+     * remote on GitHub is of the same repository, so has the same checks.
      */
-    public static Option<RemoteBranch> pullRequestBranch(Model model, PullRequestPopup dialog) {
-        BranchName head = FromGitHub.branch(dialog.pullRequest().headBranch());
+    public static Option<RemoteBranch> withChecks(Model model, BranchName head) {
         GitHubState gitHub = model.part(GitHubState.PART);
         return gitHub.branchChecks()
-                .filter(checks -> dialog.detailsRead() && !dialog.fromFork())
                 .toList()
                 .flatMap(checks -> checks.remotes().toList().sorted())
                 .map(remote -> new RemoteBranch(remote, head))

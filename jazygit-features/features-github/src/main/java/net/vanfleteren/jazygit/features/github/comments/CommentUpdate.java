@@ -1,11 +1,10 @@
-package net.vanfleteren.jazygit.features.github.comment;
+package net.vanfleteren.jazygit.features.github.comments;
 
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.time.Instant;
-import net.vanfleteren.jazygit.features.github.comment.CommentCmd.AddComment;
+import net.vanfleteren.jazygit.features.github.comments.CommentCmd.AddComment;
 import net.vanfleteren.jazygit.features.github.comments.CommentsCmd.LoadComments;
-import net.vanfleteren.jazygit.features.github.comments.CommentsPopup;
 import net.vanfleteren.jazygit.features.github.compose.ComposeUpdate;
 import net.vanfleteren.jazygit.features.github.show.PullRequestPopup;
 import net.vanfleteren.jazygit.features.github.show.PullRequestUpdate;

@@ -7,6 +7,7 @@ import net.vanfleteren.jazygit.core.gh.model.Verdict;
 import net.vanfleteren.jazygit.core.repo.PrNumber;
 import net.vanfleteren.jazygit.features.github.compose.ComposePopup;
 import net.vanfleteren.jazygit.features.github.compose.EditorFile;
+import net.vanfleteren.jazygit.features.github.show.FollowsPullRequest;
 import net.vanfleteren.jazygit.features.github.show.PullRequestPopup;
 import net.vanfleteren.jazygit.features.github.show.ShowsPullRequest;
 import net.vanfleteren.jazygit.kernel.state.Model;
@@ -36,7 +37,7 @@ public record VerdictPopup(
         boolean pending,
         String text,
         boolean sending)
-        implements ComposePopup {
+        implements ComposePopup, FollowsPullRequest {
 
     /**
      * The popup asking for a review of the pull request {@code from} shows, which {@code reviewing} says how to.
@@ -74,6 +75,15 @@ public record VerdictPopup(
                                 .map(read -> read.conversation().reviewing().pending())
                                 .getOrElse(pending)))
                 .getOrElse(this);
+    }
+
+    /**
+     * {@code model} with this popup following {@code dialog} as {@link #following(PullRequestPopup)} does; once the
+     * viewer no longer has a pending review, the error that said they had goes.
+     */
+    @Override
+    public Model following(Model model, PullRequestPopup dialog) {
+        return VerdictUpdate.followed(model, this, following(dialog));
     }
 
     @Override

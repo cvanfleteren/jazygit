@@ -9,8 +9,8 @@ import net.vanfleteren.jazygit.features.forge.checks.ChecksMsg;
 import net.vanfleteren.jazygit.features.forge.checks.ChecksPopup;
 import net.vanfleteren.jazygit.features.forge.checks.ChecksPort;
 import net.vanfleteren.jazygit.features.forge.checks.ChecksRead;
-import net.vanfleteren.jazygit.features.github.checks.timings.PendingChecks;
 import net.vanfleteren.jazygit.features.github.show.PullRequestPopup;
+import net.vanfleteren.jazygit.features.github.state.PendingChecks;
 import net.vanfleteren.jazygit.kernel.state.Failure;
 
 /**

@@ -1,4 +1,4 @@
-package net.vanfleteren.jazygit.features.github.comment;
+package net.vanfleteren.jazygit.features.github.comments;
 
 import static net.vanfleteren.jazygit.features.github.PullRequestFixtures.lastRead;
 import static net.vanfleteren.jazygit.kernel.state.TestModels.loaded;
@@ -35,9 +35,8 @@ import net.vanfleteren.jazygit.core.repo.BranchRef;
 import net.vanfleteren.jazygit.core.repo.ForgeBranch;
 import net.vanfleteren.jazygit.core.repo.PrNumber;
 import net.vanfleteren.jazygit.features.github.GitHubServices;
-import net.vanfleteren.jazygit.features.github.comment.CommentCmd.AddComment;
+import net.vanfleteren.jazygit.features.github.comments.CommentCmd.AddComment;
 import net.vanfleteren.jazygit.features.github.comments.CommentsCmd.LoadComments;
-import net.vanfleteren.jazygit.features.github.comments.CommentsPopup;
 import net.vanfleteren.jazygit.features.github.compose.ComposeCmd.OpenInEditor;
 import net.vanfleteren.jazygit.features.github.compose.ComposeMsg;
 import net.vanfleteren.jazygit.features.github.show.PullRequestCmd;

@@ -1,6 +1,7 @@
-package net.vanfleteren.jazygit.features.github.show;
+package net.vanfleteren.jazygit.features.github.dialog;
 
 import net.vanfleteren.jazygit.features.github.prs.PrScopes;
+import net.vanfleteren.jazygit.features.github.show.PullRequestMsg;
 import net.vanfleteren.jazygit.kernel.ui.FeatureAction;
 import net.vanfleteren.jazygit.kernel.ui.keys.Keymap.Binding;
 import net.vanfleteren.jazygit.kernel.ui.keys.Scopes;

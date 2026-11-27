@@ -7,6 +7,7 @@ import java.time.Instant;
 import java.util.function.UnaryOperator;
 import lombok.With;
 import net.vanfleteren.jazygit.core.repo.RepoSlug;
+import net.vanfleteren.jazygit.kernel.state.Env;
 
 /**
  * Where how long the checks of each repository took is kept, from one session to the next (ADR 32). It is state
@@ -29,6 +30,11 @@ public interface CheckTimingsStore {
             return Try.success(change.apply(Kept.EMPTY));
         }
     };
+
+    /**
+     * Where how long the checks took is kept (ADR 32, 169): nowhere until one is given.
+     */
+    Env.Service<CheckTimingsStore> SERVICE = Env.Service.of("github.checkTimings", NONE);
 
     /**
      * What is kept of {@code repository}, as {@code owner/name}; none when nothing was kept or it cannot be read.

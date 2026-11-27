@@ -11,7 +11,7 @@ import net.vanfleteren.jazygit.features.github.GitHubFailure;
 import net.vanfleteren.jazygit.features.github.GitHubServices;
 import net.vanfleteren.jazygit.features.github.checks.timings.CheckTimingsStore.Kept;
 import net.vanfleteren.jazygit.features.github.checks.timings.CheckTimingsStore.Run;
-import net.vanfleteren.jazygit.features.github.state.GitHubStores;
+import net.vanfleteren.jazygit.features.github.state.CheckTimes;
 import net.vanfleteren.jazygit.kernel.state.Cmd;
 import net.vanfleteren.jazygit.kernel.state.Env;
 import net.vanfleteren.jazygit.kernel.state.Failure;
@@ -53,10 +53,10 @@ public sealed interface CheckTimesCmd extends Cmd {
         @Override
         public Msg run(Env env) {
             return samples.isEmpty()
-                    ? recorded(env.service(GitHubStores.CHECK_TIMINGS)
+                    ? recorded(env.service(CheckTimingsStore.SERVICE)
                             .load(repository)
                             .getOrElse(Kept.EMPTY))
-                    : env.service(GitHubStores.CHECK_TIMINGS)
+                    : env.service(CheckTimingsStore.SERVICE)
                             .change(
                                     repository,
                                     kept -> kept.withRuns(
@@ -104,7 +104,7 @@ public sealed interface CheckTimesCmd extends Cmd {
         @Override
         public Msg run(Env env) {
             // Kept or not, the gate in memory holds this jazygit to one try a day.
-            return env.service(GitHubStores.CHECK_TIMINGS)
+            return env.service(CheckTimingsStore.SERVICE)
                     .change(
                             repository,
                             kept -> kept.toppedUp().exists(at -> CheckTimes.toppedUpLately(at, now))

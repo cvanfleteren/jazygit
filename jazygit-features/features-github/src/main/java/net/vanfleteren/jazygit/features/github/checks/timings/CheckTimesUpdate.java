@@ -10,6 +10,7 @@ import net.vanfleteren.jazygit.core.gh.timing.CheckSample;
 import net.vanfleteren.jazygit.core.repo.RepoSlug;
 import net.vanfleteren.jazygit.features.github.checks.timings.CheckTimesCmd.RecordCheckTimes;
 import net.vanfleteren.jazygit.features.github.checks.timings.CheckTimesCmd.TopUpCheckTimes;
+import net.vanfleteren.jazygit.features.github.state.CheckTimes;
 import net.vanfleteren.jazygit.features.github.state.GitHubState;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.Update.Next;

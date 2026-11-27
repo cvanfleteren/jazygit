@@ -40,8 +40,8 @@ import net.vanfleteren.jazygit.features.github.checks.timings.CheckTimesCmd.TopU
 import net.vanfleteren.jazygit.features.github.checks.timings.CheckTimingsStore.Kept;
 import net.vanfleteren.jazygit.features.github.checks.timings.CheckTimingsStore.Run;
 import net.vanfleteren.jazygit.features.github.show.PullRequestMsg;
+import net.vanfleteren.jazygit.features.github.state.CheckTimes;
 import net.vanfleteren.jazygit.features.github.state.GitHubState;
-import net.vanfleteren.jazygit.features.github.state.GitHubStores;
 import net.vanfleteren.jazygit.kernel.state.Env;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.Msg;
@@ -110,7 +110,7 @@ class CheckTimesUpdateTest {
     }
 
     private static Env env(CheckTimingsStore store) {
-        return new Env(StubGit.of()).with(GitHubServices.GH, StubGitHub.of()).with(GitHubStores.CHECK_TIMINGS, store);
+        return new Env(StubGit.of()).with(GitHubServices.GH, StubGitHub.of()).with(CheckTimingsStore.SERVICE, store);
     }
 
     /**
@@ -297,7 +297,7 @@ class CheckTimesUpdateTest {
                         throw new AssertionError("read from GitHub again");
                     }
                 }))
-                .with(GitHubStores.CHECK_TIMINGS, keeping(file));
+                .with(CheckTimingsStore.SERVICE, keeping(file));
 
         Msg skipped = new TopUpCheckTimes(REPO, NOW).run(env);
 

@@ -9,7 +9,6 @@ import net.vanfleteren.jazygit.core.repo.PrNumber;
 import net.vanfleteren.jazygit.core.repo.RepoSlug;
 import net.vanfleteren.jazygit.features.github.GitHubFailure;
 import net.vanfleteren.jazygit.features.github.GitHubServices;
-import net.vanfleteren.jazygit.features.github.state.GitHubStores;
 import net.vanfleteren.jazygit.kernel.state.Cmd;
 import net.vanfleteren.jazygit.kernel.state.Env;
 import net.vanfleteren.jazygit.kernel.state.Failure;
@@ -119,7 +118,7 @@ public sealed interface RemarksCmd extends Cmd {
         public Msg run(Env env) {
             return new RemarksMsg.CollapsedLoaded(
                     number,
-                    env.service(GitHubStores.COLLAPSED).load(repository, number).mapKeys(Collapsed.Key::new));
+                    env.service(CollapsedStore.SERVICE).load(repository, number).mapKeys(Collapsed.Key::new));
         }
 
         // Nothing kept is as nothing flipped.
@@ -139,7 +138,7 @@ public sealed interface RemarksCmd extends Cmd {
 
         @Override
         public Msg run(Env env) {
-            env.service(GitHubStores.COLLAPSED)
+            env.service(CollapsedStore.SERVICE)
                     .save(repository, number, flipped.mapKeys(Collapsed.Key::value), at)
                     .onFailure(failed -> LoggerFactory.getLogger(SaveCollapsed.class)
                             .debug("The review threads collapsed or opened could not be kept", failed));

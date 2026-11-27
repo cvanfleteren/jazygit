@@ -1,4 +1,4 @@
-package net.vanfleteren.jazygit.features.github.checks.timings;
+package net.vanfleteren.jazygit.features.github.state;
 
 import io.vavr.collection.List;
 import io.vavr.control.Option;
