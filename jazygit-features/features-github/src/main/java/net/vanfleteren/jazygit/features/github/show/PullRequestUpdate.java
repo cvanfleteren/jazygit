@@ -428,7 +428,7 @@ public final class PullRequestUpdate {
                 .orElse(() -> model.popup(FollowsPullRequest.class)
                         .flatMap(follower -> follower.from()
                                 .filter(from -> from.number().equals(number))
-                                .map(from -> follower.following(model, change.apply(from.pullRequestPopup())))))
+                                .map(from -> follower.followedIn(model, change.apply(from.pullRequestPopup())))))
                 .getOrElse(model);
     }
 

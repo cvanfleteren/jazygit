@@ -19,5 +19,5 @@ public interface FollowsPullRequest extends Popup {
     /**
      * {@code model} with this popup following {@code dialog}, the dialog it was opened from as it changed.
      */
-    Model following(Model model, PullRequestPopup dialog);
+    Model followedIn(Model model, PullRequestPopup dialog);
 }

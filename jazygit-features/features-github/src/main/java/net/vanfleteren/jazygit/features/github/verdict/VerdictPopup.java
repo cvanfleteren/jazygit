@@ -82,7 +82,7 @@ public record VerdictPopup(
      * viewer no longer has a pending review, the error that said they had goes.
      */
     @Override
-    public Model following(Model model, PullRequestPopup dialog) {
+    public Model followedIn(Model model, PullRequestPopup dialog) {
         return VerdictUpdate.followed(model, this, following(dialog));
     }
 
