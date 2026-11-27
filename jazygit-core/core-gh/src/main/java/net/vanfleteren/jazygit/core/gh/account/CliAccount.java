@@ -137,6 +137,11 @@ public final class CliAccount implements Account {
         return web(browseCommand(branch), accountBrowser());
     }
 
+    @Override
+    public Either<GhFailure, List<ExecutedCommand>> openRun(long runId) {
+        return web(gh("run", "view", String.valueOf(runId), "--web"), accountBrowser());
+    }
+
     /**
      * gh's active account on {@code host}, as its own files name it; none when a token in the environment makes gh
      * run as the account of that token instead, which its files do not name, or when gh names none.

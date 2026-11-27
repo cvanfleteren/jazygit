@@ -70,11 +70,6 @@ public final class CliChecks implements Checks {
     }
 
     @Override
-    public Either<GhFailure, List<ExecutedCommand>> openRun(long runId) {
-        return process.log(RunsInProgressQuery.open(runId));
-    }
-
-    @Override
     public Either<GhError, List<RepoWorkflow>> workflows() {
         return process.readJson(RepoWorkflowsQuery.COMMAND, RepoWorkflowsQuery.DECODER);
     }

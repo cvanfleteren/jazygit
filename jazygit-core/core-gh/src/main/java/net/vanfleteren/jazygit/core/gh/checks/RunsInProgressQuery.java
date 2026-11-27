@@ -8,8 +8,8 @@ import net.vanfleteren.jazygit.core.gh.process.GhCommand;
 import net.vanfleteren.jazygit.lib.json.Decoder;
 
 /**
- * The workflow runs of the repository, over REST, as the builds screen counts and opens them (ADR 212). gh fills in
- * the repository of the working tree for {owner} and {repo}.
+ * How many workflow runs of the repository are in progress, over REST, as the builds screen counts them (ADR 212).
+ * gh fills in the repository of the working tree for {owner} and {repo}.
  */
 final class RunsInProgressQuery {
 
@@ -19,11 +19,4 @@ final class RunsInProgressQuery {
     static final Decoder<Integer> DECODER = field("total_count", integer());
 
     private RunsInProgressQuery() {}
-
-    /**
-     * The command that opens the workflow run {@code runId} in the browser, on the host gh knows the repository on.
-     */
-    static GhCommand open(long runId) {
-        return gh("run", "view", String.valueOf(runId), "--web");
-    }
 }

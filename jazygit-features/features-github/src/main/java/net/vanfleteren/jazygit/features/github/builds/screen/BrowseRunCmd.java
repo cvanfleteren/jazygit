@@ -9,7 +9,8 @@ import net.vanfleteren.jazygit.kernel.state.operation.Operation;
 import net.vanfleteren.jazygit.kernel.state.operation.OperationCmd;
 
 /**
- * Opens the workflow run {@code runId}, titled {@code title}, in the browser (ADR 212).
+ * Opens the workflow run {@code runId}, titled {@code title}, in the browser set for the repository's account (ADR
+ * 88, 212).
  */
 public record BrowseRunCmd(long runId, String title) implements OperationCmd {
 
@@ -28,7 +29,7 @@ public record BrowseRunCmd(long runId, String title) implements OperationCmd {
     @Override
     public Msg run(Env env) {
         return GitHubServices.of(env)
-                .checks()
+                .account()
                 .openRun(runId)
                 .mapLeft(GitHubFailure::of)
                 .fold(this::failed, this::succeeded);

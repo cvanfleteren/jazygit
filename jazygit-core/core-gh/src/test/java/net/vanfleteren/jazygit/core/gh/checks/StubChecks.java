@@ -75,14 +75,6 @@ public interface StubChecks extends Checks {
     }
 
     /**
-     * Opens nothing, and says it did.
-     */
-    @Override
-    default Either<GhFailure, List<ExecutedCommand>> openRun(long runId) {
-        return Either.right(List.empty());
-    }
-
-    /**
      * A repository without workflows.
      */
     @Override

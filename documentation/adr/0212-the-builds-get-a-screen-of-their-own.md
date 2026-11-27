@@ -60,10 +60,11 @@ Since ADR 168 and 211 a feature brings a screen and its panes, as the pull reque
   trend. The median line and the scale stay those of every run the filter keeps, so that a recent slowdown shows
   against how long it took before, rather than becoming the new normal. The summary, the jobs and the runs pane show
   every run read. The choice stays for as long as jazygit runs.
-- **What acts on the run highlighted**: `o` opens it in the browser; `r` runs its failed jobs again (ADR 135); and the
-  keys other features add to a failed build (ADR 161), as the agent's, take the run as a `FailedBuild`. `r` and the
-  failed build's keys show, disabled, why they do not apply to a run that passed or still runs. Not yet: cancelling a
-  run, or its logs in jazygit.
+- **What acts on the run highlighted**: `o` opens it in the browser set for the repository's account, as a pull
+  request opens (ADR 88), with `gh run view --web`: the browser gh would choose may not be logged in to that account;
+  `r` runs its failed jobs again (ADR 135); and the keys other features add to a failed build (ADR 161), as the
+  agent's, take the run as a `FailedBuild`. `r` and the failed build's keys show, disabled, why they do not apply to a
+  run that passed or still runs. Not yet: cancelling a run, or its logs in jazygit.
 - **The title of the status** says after the name of the screen `✗` while the last build on the default branch of
   any workflow failed, and `●N` for the runs in progress on any branch, which REST counts
   (`actions/runs?status=in_progress`, its `total_count`), as the pull requests screen says how many are new.

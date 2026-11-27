@@ -59,11 +59,6 @@ public interface Checks {
     Either<GhError, Integer> runsInProgress();
 
     /**
-     * Opens the workflow run {@code runId} in the browser (ADR 212).
-     */
-    Either<GhFailure, List<ExecutedCommand>> openRun(long runId);
-
-    /**
      * The workflows of GitHub Actions of the repository (ADR 131).
      */
     Either<GhError, List<RepoWorkflow>> workflows();
