@@ -7,11 +7,10 @@ import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.Msg;
 import net.vanfleteren.jazygit.kernel.state.PaneId;
 import net.vanfleteren.jazygit.kernel.state.view.Followed;
-import net.vanfleteren.jazygit.kernel.ui.theme.Theme;
 
 /**
- * A pane of the left column that lives in a group of features (ADR 158), which the app gives the
- * {@link net.vanfleteren.jazygit.kernel.ui.LeftColumn}.
+ * A pane of the left column that lives in a group of features (ADR 158), which brings it to its screen with
+ * {@code Feature.pane} (ADR 211).
  */
 public interface LeftPane {
 
@@ -39,13 +38,5 @@ public interface LeftPane {
      */
     default Option<Followed> followed(Model model) {
         return Option.none();
-    }
-
-    /**
-     * What makes a pane, once the column knows how the theme highlights a row.
-     */
-    @FunctionalInterface
-    interface Factory {
-        LeftPane of(Theme.Highlights highlights);
     }
 }

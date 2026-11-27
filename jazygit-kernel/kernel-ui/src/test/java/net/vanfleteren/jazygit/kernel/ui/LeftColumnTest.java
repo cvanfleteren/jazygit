@@ -14,13 +14,20 @@ import dev.tamboui.toolkit.event.EventRouter;
 import dev.tamboui.toolkit.focus.FocusManager;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
+import java.time.Clock;
+import java.time.Instant;
+import java.time.ZoneOffset;
+import java.util.function.Function;
 import net.vanfleteren.jazygit.kernel.settings.Settings;
+import net.vanfleteren.jazygit.kernel.state.FeatureId;
+import net.vanfleteren.jazygit.kernel.state.FeatureUpdate;
 import net.vanfleteren.jazygit.kernel.state.Focus;
 import net.vanfleteren.jazygit.kernel.state.Freshness;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.Msg;
 import net.vanfleteren.jazygit.kernel.state.PaneId;
 import net.vanfleteren.jazygit.kernel.state.TestModels;
+import net.vanfleteren.jazygit.kernel.state.Update;
 import net.vanfleteren.jazygit.kernel.state.preferences.Screen;
 import net.vanfleteren.jazygit.kernel.state.preferences.TestScreens;
 import net.vanfleteren.jazygit.kernel.state.view.FileStepMsg;
@@ -44,17 +51,14 @@ class LeftColumnTest {
     private static final LeftPane COMMITS = standIn(PaneId.COMMITS);
     private static final LeftPane STASH = standIn(PaneId.STASH);
 
-    private final LeftColumn leftColumn = new LeftColumn(
-            msg -> {},
-            StyleEngine.create(),
-            id -> {},
-            (openDiff, highlights) -> FILES,
-            highlights -> BRANCHES,
-            highlights -> COMMITS,
-            highlights -> STASH,
-            Screens.of(List.of(spec(
-                    TestScreens.OTHER,
-                    (dispatch, open, highlights) -> TestScreens.OTHER.panes().map(LeftColumnTest::standIn)))));
+    // The features bring the panes of the repository screen, and of theirs (ADR 211).
+    private static final List<ScreenPane> REPOSITORY_PANES =
+            List.of(FILES, BRANCHES, COMMITS, STASH).map(pane -> new ScreenPane(Screen.REPOSITORY, context -> pane));
+
+    private final LeftColumn leftColumn = columnWith(
+            spec(TestScreens.OTHER),
+            REPOSITORY_PANES.appendAll(
+                    TestScreens.OTHER.panes().map(id -> new ScreenPane(TestScreens.OTHER, context -> standIn(id)))));
 
     // The repository screen, and one a feature brings (ADR 168).
     static java.util.List<Screen> screens() {
@@ -92,7 +96,7 @@ class LeftColumnTest {
         ElementRegistry registry = new ElementRegistry();
         FocusManager focus = new FocusManager();
         DefaultRenderContext context = new DefaultRenderContext(focus, new EventRouter(focus, registry));
-        columnWith(spec(other, (dispatch, open, highlights) -> List.of(standIn(bottom), standIn(top))))
+        columnWith(spec(other), List.of(bottom, top).map(id -> new ScreenPane(other, made -> standIn(id))))
                 .render(TestModels.loaded().withScreen(other), Option.none(), Option.none(), Option.none())
                 .column()
                 .render(Frame.forTesting(Buffer.empty(AREA)), AREA, context);
@@ -108,29 +112,108 @@ class LeftColumnTest {
                 Settings.leftWidth("ui.bare-width"),
                 Settings.leftHeights("ui.bare-heights", List.empty()));
 
-        LeftColumn.Rendered rendered = columnWith(spec(bare, (dispatch, open, highlights) -> List.empty()))
+        LeftColumn.Rendered rendered = columnWith(spec(bare), List.empty())
                 .render(TestModels.loaded().withScreen(bare), Option.none(), Option.none(), Option.none());
 
         assertEquals(List.empty(), rendered.panes());
     }
 
-    private static LeftColumn columnWith(ScreenSpec spec) {
+    @Test
+    void everyPaneTheContentPanelMirrorsOnItsOwnSaysWhatItHighlightsAndTheFilesFollowWhatTheBranchesDo() {
+        Msg branches = new Probe("branches");
+        Msg stash = new Probe("stash");
+        Followed followed = new Followed.WorkingTree();
+        LeftColumn column = columnWith(
+                spec(TestScreens.OTHER),
+                List.of(
+                        new ScreenPane(Screen.REPOSITORY, context -> following(followed, branches)),
+                        new ScreenPane(Screen.REPOSITORY, context -> saying(PaneId.STASH, stash)),
+                        new ScreenPane(Screen.REPOSITORY, context -> filesFollowing())));
+
+        List<Msg> changes = column.selectionChanges(TestModels.loaded(), Option.none());
+
+        assertEquals(List.of(branches, stash, new Probe("files follow " + followed)), changes);
+    }
+
+    @Test
+    void onAScreenAFeatureBringsOnlyThePaneInUseSaysWhatItHighlights() {
+        PaneId first = TestScreens.OTHER.panes().head();
+        PaneId second = TestScreens.OTHER.panes().last();
+        LeftColumn column = columnWith(
+                spec(TestScreens.OTHER),
+                List.of(
+                        new ScreenPane(TestScreens.OTHER, context -> saying(first, new Probe("first"))),
+                        new ScreenPane(TestScreens.OTHER, context -> saying(second, new Probe("second")))));
+
+        List<Msg> changes =
+                column.selectionChanges(TestModels.loaded().withScreen(TestScreens.OTHER), Option.of(second));
+
+        assertEquals(List.of(new Probe("second")), changes);
+    }
+
+    @Test
+    void aPaneAGatedFeatureBringsShowsAndSaysNothingWhileTheFeatureIsOff() {
+        // A forge brings a pane to a screen it does not own, which shows whether the forge is on or not (ADR 171).
+        FeatureId forge = new FeatureId("forge");
+        PaneId top = TestScreens.OTHER.panes().head();
+        Feature feature = Feature.of()
+                .pane(TestScreens.OTHER, context -> saying(top, new Probe("top")))
+                .applying(forge, model -> {
+                    throw new AssertionError("no forge is detected here");
+                })
+                .gated();
+        LeftColumn column = columnWith(spec(TestScreens.OTHER), feature.panes());
+        Model on = TestModels.loaded().withScreen(TestScreens.OTHER);
+        Model off = FeatureUpdate.off(on, forge);
+
+        assertEquals(List.of(new Probe("top")), column.selectionChanges(on, Option.of(top)));
+        assertEquals(List.empty(), column.selectionChanges(off, Option.of(top)));
+        assertEquals(
+                1,
+                column.render(on, Option.none(), Option.none(), Option.none())
+                        .panes()
+                        .size());
+        assertEquals(
+                List.empty(),
+                column.render(off, Option.none(), Option.none(), Option.none()).panes());
+    }
+
+    @Test
+    void aPaneIsMadeWithWhatTheColumnIsGiven() {
+        java.util.List<ScreenPane.Context> contexts = new java.util.ArrayList<>();
+        Clock clock = Clock.fixed(Instant.EPOCH, ZoneOffset.UTC);
+        new LeftColumn(
+                msg -> {},
+                StyleEngine.create(),
+                id -> {},
+                List.of(new ScreenPane(Screen.REPOSITORY, context -> {
+                    contexts.add(context);
+                    return FILES;
+                })),
+                Fills.NONE,
+                clock,
+                Screens.REPOSITORY);
+
+        assertEquals(1, contexts.size());
+        assertSame(clock, contexts.get(0).clock());
+        assertSame(Fills.NONE, contexts.get(0).fills());
+    }
+
+    private static LeftColumn columnWith(ScreenSpec spec, List<ScreenPane> panes) {
         return new LeftColumn(
                 msg -> {},
                 StyleEngine.create(),
                 id -> {},
-                (openDiff, highlights) -> FILES,
-                highlights -> BRANCHES,
-                highlights -> COMMITS,
-                highlights -> STASH,
+                panes,
+                Fills.NONE,
+                Clock.systemUTC(),
                 Screens.of(List.of(spec)));
     }
 
-    private static ScreenSpec spec(Screen screen, ScreenSpec.Panes panes) {
+    private static ScreenSpec spec(Screen screen) {
         return new ScreenSpec(
                 screen,
                 "screen.repository",
-                panes,
                 model -> Option.none(),
                 model -> Freshness.NEVER,
                 "status.fetch",
@@ -191,8 +274,84 @@ class LeftColumnTest {
             }
 
             @Override
-            public Option<Msg> followChange(Model model, Option<PaneId> inUse, Option<Followed> branches) {
+            public Option<Msg> followChange(
+                    Model model, Option<PaneId> inUse, Function<PaneId, Option<Followed>> followed) {
                 return Option.none();
+            }
+        };
+    }
+
+    // The files pane, which says what the branches follow.
+    private static FilesLeftPane filesFollowing() {
+        return new FilesLeftPane() {
+            @Override
+            public PaneId pane() {
+                return PaneId.FILES;
+            }
+
+            @Override
+            public Panel render(Model model, Option<Focus> focus, Option<PaneId> inUse) {
+                return panel().id(PaneId.FILES.id());
+            }
+
+            @Override
+            public Option<Msg> selectionChange(Model model) {
+                return Option.none();
+            }
+
+            @Override
+            public boolean step(Model model, FileStepMsg.Step step) {
+                return false;
+            }
+
+            @Override
+            public Option<Msg> followChange(
+                    Model model, Option<PaneId> inUse, Function<PaneId, Option<Followed>> followed) {
+                return followed.apply(Scopes.BRANCHES.pane()).map(what -> new Probe("files follow " + what));
+            }
+        };
+    }
+
+    // The branches pane, which follows {@code followed} and says {@code change}.
+    private static LeftPane following(Followed followed, Msg change) {
+        return new LeftPane() {
+            @Override
+            public PaneId pane() {
+                return Scopes.BRANCHES.pane();
+            }
+
+            @Override
+            public Panel render(Model model, Option<Focus> focus, Option<PaneId> inUse) {
+                return panel().id(pane().id());
+            }
+
+            @Override
+            public Option<Msg> selectionChange(Model model) {
+                return Option.of(change);
+            }
+
+            @Override
+            public Option<Followed> followed(Model model) {
+                return Option.of(followed);
+            }
+        };
+    }
+
+    private static LeftPane saying(PaneId id, Msg change) {
+        return new LeftPane() {
+            @Override
+            public PaneId pane() {
+                return id;
+            }
+
+            @Override
+            public Panel render(Model model, Option<Focus> focus, Option<PaneId> inUse) {
+                return panel().id(id.id());
+            }
+
+            @Override
+            public Option<Msg> selectionChange(Model model) {
+                return Option.of(change);
             }
         };
     }
@@ -214,5 +373,13 @@ class LeftColumnTest {
                 return Option.none();
             }
         };
+    }
+
+    private record Probe(String said) implements Msg {
+
+        @Override
+        public Update.Next apply(Model model) {
+            return Update.Next.of(model);
+        }
     }
 }

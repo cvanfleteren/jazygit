@@ -5,6 +5,7 @@ import io.vavr.collection.Map;
 import io.vavr.control.Option;
 import java.nio.file.Path;
 import java.time.Duration;
+import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
@@ -25,6 +26,7 @@ import net.vanfleteren.jazygit.kernel.state.Msg;
 import net.vanfleteren.jazygit.kernel.state.Reactions.Reaction;
 import net.vanfleteren.jazygit.kernel.state.Update;
 import net.vanfleteren.jazygit.kernel.state.forge.ForgeUpdate;
+import net.vanfleteren.jazygit.kernel.state.preferences.Screen;
 import net.vanfleteren.jazygit.kernel.ui.content.ContentArea;
 import net.vanfleteren.jazygit.kernel.ui.content.ContentSource;
 import net.vanfleteren.jazygit.kernel.ui.content.Heading;
@@ -39,8 +41,9 @@ import net.vanfleteren.jazygit.kernel.ui.settings.SettingsSection;
  * A feature, as the app knows it: its actions, which bring its keys and its popups, what it shows in the content
  * panel, the settings it keeps, the sections it adds to the settings panel, what it does every so often, what it
  * answers of what happens in the kernel, what it shows of the branches in the branches pane, the screens it brings,
- * and what its symbols in a panel mean. Each feature package declares one, as {@code XxxFeature.FEATURE}, and
- * {@code Features.ALL} lists it; that is all a new feature changes outside its package (ADR 127).
+ * the panes it brings to a screen, and what its symbols in a panel mean. Each feature package declares one, as
+ * {@code XxxFeature.FEATURE}, and {@code Features.ALL} lists it; that is all a new feature changes outside its package
+ * (ADR 127).
  *
  * <p>Making the standard keymap makes every feature, so a feature does not ask for {@code Keymap.standard()} while its
  * class is initialised.
@@ -54,6 +57,7 @@ import net.vanfleteren.jazygit.kernel.ui.settings.SettingsSection;
  * @param timers      what it dispatches every so often, without input
  * @param reactions   what it answers of what happens in the kernel, whichever part it keeps (ADR 158)
  * @param screens     the screens it brings, which the left of the window shows after the repository's (ADR 168)
+ * @param panes       the panes it brings to a screen, the repository's or its own, which the screen orders (ADR 211)
  * @param legends     what it adds to the legends of the panels it draws in, which their help lists (ADR 168)
  * @param fills       what it gives for the slots, as the line above a list, whether a view spins or the pictures
  *                    its views may draw (ADR 172, 202)
@@ -66,6 +70,7 @@ public record Feature(
         List<Timer> timers,
         List<Reaction> reactions,
         List<ScreenSpec> screens,
+        List<ScreenPane> panes,
         List<Legend> legends,
         Fills fills,
         Running running,
@@ -79,6 +84,7 @@ public record Feature(
     public static Feature of(FeatureAction... actions) {
         return new Feature(
                 List.of(actions),
+                List.empty(),
                 List.empty(),
                 List.empty(),
                 List.empty(),
@@ -103,6 +109,7 @@ public record Feature(
                 timers,
                 reactions,
                 screens,
+                panes,
                 legends,
                 fills,
                 running,
@@ -121,6 +128,7 @@ public record Feature(
                 timers,
                 reactions,
                 screens,
+                panes,
                 legends,
                 fills,
                 running,
@@ -139,6 +147,7 @@ public record Feature(
                 timers,
                 reactions,
                 screens,
+                panes,
                 legends,
                 fills,
                 running,
@@ -158,6 +167,7 @@ public record Feature(
                 timers.append(new Timer(interval, msg)),
                 reactions,
                 screens,
+                panes,
                 legends,
                 fills,
                 running,
@@ -177,6 +187,7 @@ public record Feature(
                 timers,
                 reactions.append(reaction),
                 screens,
+                panes,
                 legends,
                 fills,
                 running,
@@ -197,8 +208,52 @@ public record Feature(
                 timers,
                 reactions,
                 screens,
+                panes,
                 legends,
                 fills.with(slot, filler),
+                running,
+                applying);
+    }
+
+    /**
+     * This feature, also giving what {@code filler} makes for {@code slot} of a model and of what the features give
+     * for the other slots, after what the features before it give (ADR 211): for a slot that joins what a part shows
+     * with what the features add to it, as the times of the branches pane and of the badges on its branches.
+     */
+    public <T> Feature reading(Slot<T> slot, BiFunction<Model, Fills, ? extends Iterable<? extends T>> filler) {
+        return new Feature(
+                actions,
+                contents,
+                settingKeys,
+                settings,
+                timers,
+                reactions,
+                screens,
+                panes,
+                legends,
+                fills.reading(slot, filler),
+                running,
+                applying);
+    }
+
+    /**
+     * This feature, also bringing the pane {@code pane} makes to {@code screen} (ADR 211), which shows it where its
+     * {@link Screen#panes()} lists its id. The repository's screen is given its panes this way, as is a feature's own.
+     * A feature that is on or off for a repository brings panes only to its own screen, which hides with it, as the
+     * layout of a screen counts all its panes; it shows them only while it is on ({@link #gated}).
+     */
+    public Feature pane(Screen screen, ScreenPane.Factory pane) {
+        return new Feature(
+                actions,
+                contents,
+                settingKeys,
+                settings,
+                timers,
+                reactions,
+                screens,
+                panes.append(new ScreenPane(screen, pane)),
+                legends,
+                fills,
                 running,
                 applying);
     }
@@ -216,6 +271,7 @@ public record Feature(
                 timers,
                 reactions,
                 screens.append(screen),
+                panes,
                 legends,
                 fills,
                 running,
@@ -235,6 +291,7 @@ public record Feature(
                 timers,
                 reactions,
                 screens,
+                panes,
                 this.legends.appendAll(List.of(legends)),
                 fills,
                 running,
@@ -254,6 +311,7 @@ public record Feature(
                 timers,
                 reactions,
                 screens,
+                panes,
                 legends,
                 fills,
                 running,
@@ -284,6 +342,7 @@ public record Feature(
                 timers,
                 reactions,
                 screens,
+                panes,
                 legends,
                 fills,
                 running,
@@ -319,6 +378,7 @@ public record Feature(
                         .map(reaction -> (Reaction) new GatedReaction(id, reaction))
                         .prepend(detecting),
                 screens,
+                panes.map(pane -> pane.gated(model -> model.on(id))),
                 legends.map(legend -> legend.of(id)),
                 fills.gated(model -> model.on(id)),
                 running,

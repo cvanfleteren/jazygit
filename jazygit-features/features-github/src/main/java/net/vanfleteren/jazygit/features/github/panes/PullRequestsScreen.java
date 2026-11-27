@@ -8,9 +8,9 @@ import net.vanfleteren.jazygit.kernel.ui.theme.Theme;
 import net.vanfleteren.jazygit.kernel.ui.widgets.LoadableList;
 
 /**
- * The pull requests screen, as GitHub's feature brings it (ADR 168): its three lists, how many pull requests of the
- * repository were opened and not seen yet after its name (ADR 29), and when the pull requests were read last. It is
- * still declared in the kernel.
+ * The pull requests screen, as GitHub's feature brings it (ADR 168): how many pull requests of the repository were
+ * opened and not seen yet after its name (ADR 29), and when the pull requests were read last. The feature brings its
+ * three lists as panes (ADR 211).
  */
 public final class PullRequestsScreen {
 
@@ -20,7 +20,6 @@ public final class PullRequestsScreen {
     public static final ScreenSpec SPEC = new ScreenSpec(
             PrOverview.SCREEN,
             "github.screen.pullRequests",
-            PullRequestsPanel::all,
             PullRequestsScreen::unseen,
             model -> model.part(PrOverview.PART).freshness(),
             "github.status.read",

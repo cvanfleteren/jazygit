@@ -15,6 +15,7 @@ import net.vanfleteren.jazygit.features.github.checks.GitHubChecksPort;
 import net.vanfleteren.jazygit.features.github.checks.ShowChecksAction;
 import net.vanfleteren.jazygit.features.github.comments.CommentsDialog;
 import net.vanfleteren.jazygit.features.github.create.GitHubCreatePullRequestAction;
+import net.vanfleteren.jazygit.features.github.panes.PullRequestsPanel;
 import net.vanfleteren.jazygit.features.github.panes.PullRequestsScreen;
 import net.vanfleteren.jazygit.features.github.panes.StackGroups;
 import net.vanfleteren.jazygit.features.github.prs.PrOverview;
@@ -119,6 +120,9 @@ public final class GitHubFeature {
             .filling(BranchBadges.KEY, model -> Option.some(GitHubBadge::of))
             .filling(BranchGroups.KEY, model -> Option.some(StackGroups::of))
             .screen(PullRequestsScreen.SPEC)
+            .pane(PrOverview.SCREEN, PullRequestsPanel::repository)
+            .pane(PrOverview.SCREEN, PullRequestsPanel::reviewRequested)
+            .pane(PrOverview.SCREEN, PullRequestsPanel::authored)
             .explaining(BadgeLegend.BRANCHES.toJavaArray(Legend[]::new))
             .running(GitHubServices::running)
             // Its dialogs that read what GitHub has, and the times they show (ADR 124).

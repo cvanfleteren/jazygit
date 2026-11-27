@@ -11,6 +11,7 @@ import dev.tamboui.tui.event.PasteEvent;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.util.function.Consumer;
+import java.util.function.Function;
 import net.vanfleteren.jazygit.core.git.model.CommitFile;
 import net.vanfleteren.jazygit.core.git.model.FileEntry;
 import net.vanfleteren.jazygit.core.git.model.FileTree;
@@ -147,8 +148,8 @@ public final class FilesPanel implements FilesLeftPane {
     }
 
     @Override
-    public Option<Msg> followChange(Model model, Option<PaneId> inUse, Option<Followed> branches) {
-        return FollowedFiles.change(model, inUse, branches);
+    public Option<Msg> followChange(Model model, Option<PaneId> inUse, Function<PaneId, Option<Followed>> followed) {
+        return FollowedFiles.change(model, inUse, followed.apply(Scopes.BRANCHES.pane()));
     }
 
     /**

@@ -15,8 +15,8 @@ public final class KernelSlots {
     public static final Slot<Boolean> SPINNING = Slot.of("kernel.spinning");
 
     /**
-     * The times a popup of the feature shows, for which the app is woken when they change, as for a screen's (ADR
-     * 124, 168, 171).
+     * The times a popup or a pane of the feature shows, for which the app is woken when they change, as for a
+     * screen's (ADR 124, 168, 171, 211).
      */
     public static final Slot<ShownTime> CLOCKING = Slot.of("kernel.clocking");
 

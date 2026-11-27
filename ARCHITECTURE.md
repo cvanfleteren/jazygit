@@ -157,10 +157,12 @@ it reaches through them. `lens` and `image` are below `settings` and `state`, an
   names. A feature asks another for work through an event the other answers, so neither names the other: a file to
   open (`FileToOpen`, ADR 206), a remote a forge changed, to fetch (`RemoteChanged`, ADR 210). `Targeted` and
   `LoadMsg.Read` are open, and `Target.inPart` keeps what a feature's load reads in its part. A pane lives in the
-  group that owns most of what it shows, in its `panes` package, as `changes.panes.commits`; the app gives it to
-  `LeftColumn` as a `LeftPane` (the files pane as a `FilesLeftPane`, which also steps to another file and follows the
-  pane in use), and its id is a `PaneId` constant. The search of the commits is the first that moved; the kernel
-  builds no pane.
+  group that owns most of what it shows, in its `panes` package, as `changes.panes.commits`; the feature of that
+  package (`ChangesPanesFeature`, `BranchesPanesFeature`) brings it to its screen with `Feature.pane` (ADR 211), as a
+  `LeftPane` (the files pane as a `FilesLeftPane`, which also steps to another file and follows the pane in use), and
+  its id is a `PaneId` constant.
+  `LeftColumn` shows the panes of the screen shown in the order `Screen.panes()` lists their ids, for the
+  repository's screen as for a feature's; the kernel and the app build no pane.
 - **A pane declares slots the features fill** (ADR 172, 202): a pane in a group names no feature; it declares `Slot`s
   beside itself, as `CommitsPane.LINE` and `CommitsPane.LISTING` or `FilesPane.MARK` (ADR 208), which a `Feature`
   fills with `filling`, and the app gives it the `Fills` of its features (`Features.FILLS`). A slot that features of
@@ -168,9 +170,10 @@ it reaches through them. `lens` and `image` are below `settings` and `state`, an
   `BranchGroups.KEY` of the branches pane, which the forges fill, are in `kernel-ui`, beside `Slot`. A pane asks
   for the first feature that gives anything (`Fills.of`), or for all of them in their order (`Fills.all`), as the
   branches pane joins the badges and the groups of every feature. A filler gives an `Iterable`, an `Option` or a
-  `List`. The kernel declares its own slots in `KernelSlots`: whether a view spins, the times a popup shows and the
-  pictures a view may draw, which the app asks of `Features.FILLS`. A slot is its name, as a part is, and no two
-  share one (`SlotNamesTest`, ADR 203).
+  `List`; one that `reading` gives is handed the fills too, to join what other features give for another slot, as the
+  branches pane's times those of its badges (ADR 211). The kernel declares its own slots in `KernelSlots`: whether
+  a view spins, the times a view shows and the pictures a view may draw, which the app asks of `Features.FILLS`. A
+  slot is its name, as a part is, and no two share one (`SlotNamesTest`, ADR 203).
 - **The kernel names no forge** (ADR 167, 169, 171): GitHub's state, its stores, its screen, its stack and its
   review threads are `features-github`'s. The kernel composes what the features state the branches are built on
   (`BranchBases`, from each part's `StatedBases`), tells the reactions which commands started (`Reaction.started`, as

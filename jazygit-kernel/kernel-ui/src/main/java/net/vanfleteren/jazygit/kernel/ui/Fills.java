@@ -5,6 +5,7 @@ import io.vavr.collection.LinkedHashMap;
 import io.vavr.collection.List;
 import io.vavr.collection.Map;
 import io.vavr.control.Option;
+import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import net.vanfleteren.jazygit.kernel.state.Model;
@@ -14,9 +15,12 @@ import net.vanfleteren.jazygit.kernel.state.Model;
  * gives in a model, which may be nothing or several. A part of the app is given the fills of the app's features, and
  * asks them for its slots; without the app, as in the tests of the views, there are {@link #NONE}.
  *
- * @param fillers what each feature gives for a slot, in their order
+ * <p>What a feature gives may depend on what the features give for other slots: a filler is handed the fills it is
+ * asked through (ADR 211), as the branches pane's times are those of the badges the forges give.
+ *
+ * @param fillers what each feature gives for a slot, in their order, of a model and the fills they are asked through
  */
-public record Fills(Map<Slot<?>, List<Function<Model, Iterable<?>>>> fillers) {
+public record Fills(Map<Slot<?>, List<BiFunction<Model, Fills, Iterable<?>>>> fillers) {
 
     /**
      * Nothing given for any slot.
@@ -28,7 +32,15 @@ public record Fills(Map<Slot<?>, List<Function<Model, Iterable<?>>>> fillers) {
      * gives one or nothing, a {@code List} as many as it holds.
      */
     public <T> Fills with(Slot<T> slot, Function<Model, ? extends Iterable<? extends T>> filler) {
-        Function<Model, Iterable<?>> any = filler::apply;
+        return reading(slot, (model, fills) -> filler.apply(model));
+    }
+
+    /**
+     * These fills, with {@code filler} giving for {@code slot} after what is given for it already, from a model and
+     * the fills it is asked through, whose other slots it may ask (ADR 211).
+     */
+    public <T> Fills reading(Slot<T> slot, BiFunction<Model, Fills, ? extends Iterable<? extends T>> filler) {
+        BiFunction<Model, Fills, Iterable<?>> any = filler::apply;
         return new Fills(fillers.put(slot, List.of(any), List::appendAll));
     }
 
@@ -64,7 +76,7 @@ public record Fills(Map<Slot<?>, List<Function<Model, Iterable<?>>>> fillers) {
         return fillers.get(slot)
                 .getOrElse(List.empty())
                 .iterator()
-                .flatMap(filler -> filler.apply(model))
+                .flatMap(filler -> filler.apply(model, this))
                 .map(given -> (T) given);
     }
 
@@ -72,7 +84,7 @@ public record Fills(Map<Slot<?>, List<Function<Model, Iterable<?>>>> fillers) {
      * These fills, which give nothing in a model where {@code on} does not hold (ADR 171).
      */
     public Fills gated(Predicate<Model> on) {
-        return new Fills(fillers.mapValues(each -> each.map(filler ->
-                (Function<Model, Iterable<?>>) model -> on.test(model) ? filler.apply(model) : List.empty())));
+        return new Fills(fillers.mapValues(each -> each.map(filler -> (BiFunction<Model, Fills, Iterable<?>>)
+                (model, fills) -> on.test(model) ? filler.apply(model, fills) : List.empty())));
     }
 }
