@@ -345,4 +345,163 @@ class BuildsScreenUpdateTest {
                 List.empty(),
                 Update.update(back.model(), new BuildsScreenMsg.Tick()).cmds());
     }
+
+    /**
+     * The screen with {@code runs} read as the runs of Build on every branch.
+     */
+    private static Model withRuns(List<Build> runs) {
+        return Update.update(
+                        read(model()).model(),
+                        new BuildsScreenMsg.RunsRead(
+                                "W_build",
+                                Option.none(),
+                                false,
+                                Option.of(new WorkflowRunsPage(runs, runs.size(), Option.none()))))
+                .model();
+    }
+
+    /**
+     * A run of Build on {@code branch} whose job has not ended yet.
+     */
+    private static Build running(long id, BranchName branch) {
+        Build done = run("Build", id, "SUCCESS", branch);
+        return new Build(
+                done.workflow(),
+                done.event(),
+                done.runId(),
+                done.attempt(),
+                done.sha(),
+                done.title(),
+                done.createdAt(),
+                List.of(new Build.Job("verify", "", Option.of(done.createdAt().plusSeconds(5)), Option.none())),
+                done.file(),
+                done.origin());
+    }
+
+    @Test
+    void aFailedReadOfTheRunsAgainMarksTheScreenStaleAndKeepsWhenItWasRead() {
+        Model runs = withRuns(List.of(run("Build", 10, "SUCCESS", FEATURE)));
+        Option<Instant> before = runs.part(BuildsScreen.PART).freshness().read();
+
+        Model failed = Update.update(
+                        runs,
+                        new BuildsScreenMsg.RunsFailed(
+                                "W_build", Option.none(), true, TestModels.refused("rate limit")))
+                .model();
+
+        assertTrue(failed.part(BuildsScreen.PART).freshness().stale());
+        assertEquals(before, failed.part(BuildsScreen.PART).freshness().read());
+        assertEquals(
+                List.of(10L),
+                failed.part(BuildsScreen.PART)
+                        .filtered()
+                        .getOrElse(List.empty())
+                        .map(Build::runId));
+    }
+
+    @Test
+    void theRunsReadAgainClearTheirFailure() {
+        Model failed = Update.update(
+                        withRuns(List.of(run("Build", 10, "SUCCESS", FEATURE))),
+                        new BuildsScreenMsg.RunsFailed(
+                                "W_build", Option.none(), true, TestModels.refused("rate limit")))
+                .model();
+        Model again = Update.update(
+                        failed,
+                        new BuildsScreenMsg.RunsRead(
+                                "W_build",
+                                Option.none(),
+                                true,
+                                Option.of(new WorkflowRunsPage(
+                                        List.of(run("Build", 9, "SUCCESS", FEATURE)), 1, Option.none()))))
+                .model();
+
+        assertFalse(again.part(BuildsScreen.PART).freshness().stale());
+    }
+
+    @Test
+    void theBuildsOfMineReadOrFailedSayHowFreshTheyAre() {
+        Model mine = Update.update(read(model()).model(), picked(BuildsScreen.Filter.MINE))
+                .model();
+        Model read = Update.update(
+                        mine,
+                        new BuildsScreenMsg.BranchRead(
+                                ORIGIN_FEATURE,
+                                Option.none(),
+                                false,
+                                Option.of(new BuildsPage(
+                                        List.of(run("Build", 10, "SUCCESS", FEATURE)), 1, Option.none()))))
+                .model();
+        Model failed = Update.update(
+                        read,
+                        new BuildsScreenMsg.BranchFailed(
+                                ORIGIN_FEATURE, Option.none(), true, TestModels.refused("rate limit")))
+                .model();
+
+        assertFalse(read.part(BuildsScreen.PART).freshness().stale());
+        assertTrue(failed.part(BuildsScreen.PART).freshness().stale());
+        assertEquals(
+                read.part(BuildsScreen.PART).freshness().read(),
+                failed.part(BuildsScreen.PART).freshness().read());
+    }
+
+    @Test
+    void aFailedReadOfTheWorkflowsKeepsThoseReadAndMarksTheScreenStale() {
+        Model failed = Update.update(
+                        read(model()).model(), new BuildsScreenMsg.WorkflowsFailed(TestModels.refused("rate limit")))
+                .model();
+
+        assertEquals(
+                List.of("Build", "Publish"),
+                failed.part(BuildsScreen.PART).listed().map(RepoWorkflow::name));
+        assertTrue(failed.part(BuildsScreen.PART).freshness().stale());
+    }
+
+    @Test
+    void aFailedFirstReadOfTheDefaultBranchFailsItsBuilds() {
+        Model workflows = Update.update(
+                        shown(model()).model(), new BuildsScreenMsg.WorkflowsRead(List.of(PUBLISH, BUILD)))
+                .model();
+        Model failed = Update.update(
+                        workflows,
+                        new BuildsScreenMsg.DefaultFailed(Option.none(), false, TestModels.refused("rate limit")))
+                .model();
+
+        assertTrue(failed.part(BuildsScreen.PART).onDefault().builds().isFailed());
+        assertTrue(failed.part(BuildsScreen.PART).freshness().stale());
+        // The screen starts on a workflow all the same, as nothing more is waited for.
+        assertTrue(failed.part(BuildsScreen.PART).settled());
+    }
+
+    @Test
+    void aFailedCountOfTheRunsInProgressKeepsTheLastCount() {
+        Model counted = Update.update(read(model()).model(), new BuildsScreenMsg.InProgressRead(2))
+                .model();
+        Model failed = Update.update(counted, new BuildsScreenMsg.InProgressFailed(TestModels.refused("rate limit")))
+                .model();
+
+        assertEquals(Option.of(2), failed.part(BuildsScreen.PART).inProgress());
+    }
+
+    @Test
+    void whileARunRunsItsNewestRunsAreReadAgainSooner() {
+        Next running = Update.update(
+                withRuns(List.of(running(10, FEATURE), run("Build", 11, "SUCCESS", MAIN))),
+                new BuildsScreenMsg.RunningTick());
+        Next done = Update.update(
+                withRuns(List.of(run("Build", 10, "SUCCESS", FEATURE))), new BuildsScreenMsg.RunningTick());
+
+        assertEquals(List.of(new LoadScreenRuns("W_build", Option.none(), true)), running.cmds());
+        assertEquals(List.empty(), done.cmds());
+    }
+
+    @Test
+    void aRunOpensInTheBrowser() {
+        assertEquals(
+                List.<Cmd>of(new BrowseRunCmd(3, "Build · Commit 3")),
+                Update.update(
+                                read(model()).model(),
+                                new BuildsScreenMsg.BrowseRequested(run("Build", 3, "SUCCESS", MAIN)))
+                        .cmds());
+    }
 }

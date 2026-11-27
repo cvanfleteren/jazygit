@@ -16,6 +16,7 @@ import net.vanfleteren.jazygit.features.github.builds.FileAt;
 import net.vanfleteren.jazygit.features.github.builds.Paging;
 import net.vanfleteren.jazygit.features.github.builds.Workflow;
 import net.vanfleteren.jazygit.kernel.state.Cmd;
+import net.vanfleteren.jazygit.kernel.state.Freshness;
 import net.vanfleteren.jazygit.kernel.state.KernelEvent;
 import net.vanfleteren.jazygit.kernel.state.Loadable;
 import net.vanfleteren.jazygit.kernel.state.Model;
@@ -37,6 +38,7 @@ public final class BuildsScreenUpdate {
     private static final String WORKFLOWS = "workflows";
     private static final String DEFAULT = "default";
     private static final String RUNS = "runs";
+    private static final String MINE = "mine";
 
     private BuildsScreenUpdate() {}
 
@@ -117,9 +119,16 @@ public final class BuildsScreenUpdate {
                         pages -> refresh
                                 ? pages.refreshed(
                                         page.map(read -> read.builds()).getOrElse(List.empty()))
-                                : pages.readCommits(page));
+                                : pages.readCommits(page),
+                        fresh -> fresh.succeeded(MINE, model.now()));
             case BuildsScreenMsg.BranchFailed(var branch, var after, boolean refresh, var failure) ->
-                mineRead(model, branch, after, refresh, pages -> refresh ? pages : pages.failed(failure));
+                mineRead(
+                        model,
+                        branch,
+                        after,
+                        refresh,
+                        pages -> refresh ? pages : pages.failed(failure),
+                        fresh -> fresh.failed(MINE));
             case BuildsScreenMsg.RunsRead(String id, var after, boolean refresh, var page) ->
                 runsRead(
                         model,
@@ -129,9 +138,16 @@ public final class BuildsScreenUpdate {
                         pages -> refresh
                                 ? pages.refreshed(
                                         page.map(read -> read.builds()).getOrElse(List.empty()))
-                                : pages.read(page));
+                                : pages.read(page),
+                        fresh -> fresh.succeeded(RUNS, model.now()));
             case BuildsScreenMsg.RunsFailed(String id, var after, boolean refresh, var failure) ->
-                runsRead(model, id, after, refresh, pages -> refresh ? pages : pages.failed(failure));
+                runsRead(
+                        model,
+                        id,
+                        after,
+                        refresh,
+                        pages -> refresh ? pages : pages.failed(failure),
+                        fresh -> fresh.failed(RUNS));
             case BuildsScreenMsg.InProgressRead(int runs) ->
                 Next.of(changed(model, screen -> screen.withInProgress(Option.of(runs))));
             case BuildsScreenMsg.InProgressFailed _ -> Next.of(model);
@@ -370,8 +386,18 @@ public final class BuildsScreenUpdate {
                 : shown;
     }
 
+    /**
+     * {@code model} with what {@code read} makes of the builds of "mine" from {@code after} on, when they are awaited
+     * or {@code refresh} reads the newest again, and its freshness as {@code fresh} says; reading on while more are
+     * to be read.
+     */
     private static Next mineRead(
-            Model model, RemoteBranch branch, Option<String> after, boolean refresh, UnaryOperator<BuildPages> read) {
+            Model model,
+            RemoteBranch branch,
+            Option<String> after,
+            boolean refresh,
+            UnaryOperator<BuildPages> read,
+            UnaryOperator<Freshness> fresh) {
         return screen(model)
                 .mine()
                 .filter(mine ->
@@ -381,7 +407,8 @@ public final class BuildsScreenUpdate {
                     Next shown = ensured(Next.of(changed(
                             model,
                             screen -> screen.withMine(
-                                    Option.of(new BuildsScreen.Mine(mine.local(), mine.remote(), now))))));
+                                            Option.of(new BuildsScreen.Mine(mine.local(), mine.remote(), now)))
+                                    .withFreshness(fresh.apply(screen.freshness())))));
                     return !refresh && now.paging() instanceof Paging.Reading(Option<String> from)
                             ? shown.and(new LoadBranchBuilds(branch, from, false))
                             : shown;
@@ -389,8 +416,18 @@ public final class BuildsScreenUpdate {
                 .getOrElse(() -> Next.of(model));
     }
 
+    /**
+     * {@code model} with what {@code read} makes of the runs of the workflow {@code id} from {@code after} on, when
+     * they are awaited or {@code refresh} reads the newest again, and its freshness as {@code fresh} says; reading on
+     * while more are to be read.
+     */
     private static Next runsRead(
-            Model model, String id, Option<String> after, boolean refresh, UnaryOperator<BuildPages> read) {
+            Model model,
+            String id,
+            Option<String> after,
+            boolean refresh,
+            UnaryOperator<BuildPages> read,
+            UnaryOperator<Freshness> fresh) {
         return screen(model)
                 .runs()
                 .get(id)
@@ -400,7 +437,7 @@ public final class BuildsScreenUpdate {
                     Next shown = ensured(Next.of(changed(
                             model,
                             screen -> screen.withRuns(screen.runs().put(id, now))
-                                    .withFreshness(screen.freshness().succeeded(RUNS, model.now())))));
+                                    .withFreshness(fresh.apply(screen.freshness())))));
                     return !refresh && now.paging() instanceof Paging.Reading(Option<String> from)
                             ? shown.and(new LoadScreenRuns(id, from, false))
                             : shown;
