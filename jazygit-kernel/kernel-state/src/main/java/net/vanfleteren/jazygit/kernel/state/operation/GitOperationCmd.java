@@ -25,12 +25,19 @@ public interface GitOperationCmd extends OperationCmd {
 
     @Override
     default Msg run(Env env) {
-        return perform(env.git())
-                .fold(
-                        failure -> failure.error() instanceof GitError.StoppedOnConflicts(var inProgress, int conflicts)
-                                ? new OperationMsg.Stopped(
-                                        this, failure.commands(), new Notice.StoppedOnConflicts(inProgress, conflicts))
-                                : failed(Failure.of(failure)),
-                        this::succeeded);
+        return reported(perform(env.git()));
+    }
+
+    /**
+     * What {@link #run} reports of the {@code result} of performing the operation: it succeeded, stopped on conflicts,
+     * or failed.
+     */
+    default Msg reported(Either<GitFailure, List<ExecutedCommand>> result) {
+        return result.fold(
+                failure -> failure.error() instanceof GitError.StoppedOnConflicts(var inProgress, int conflicts)
+                        ? new OperationMsg.Stopped(
+                                this, failure.commands(), new Notice.StoppedOnConflicts(inProgress, conflicts))
+                        : failed(Failure.of(failure)),
+                this::succeeded);
     }
 }

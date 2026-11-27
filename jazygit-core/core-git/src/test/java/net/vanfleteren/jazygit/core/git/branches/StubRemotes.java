@@ -9,6 +9,7 @@ import io.vavr.collection.Map;
 import io.vavr.control.Either;
 import net.vanfleteren.jazygit.core.git.model.CommitFile;
 import net.vanfleteren.jazygit.core.git.model.DeleteScope;
+import net.vanfleteren.jazygit.core.git.model.PullMode;
 import net.vanfleteren.jazygit.core.git.model.PushMode;
 import net.vanfleteren.jazygit.core.git.process.GitError;
 import net.vanfleteren.jazygit.core.git.process.GitFailure;
@@ -58,8 +59,13 @@ public interface StubRemotes extends Remotes {
     }
 
     @Override
-    default Either<GitFailure, List<ExecutedCommand>> pull() {
+    default Either<GitFailure, List<ExecutedCommand>> pull(PullMode mode) {
         return ran();
+    }
+
+    @Override
+    default Either<GitError, Boolean> pullConfigured(BranchName branch) {
+        return Either.right(true);
     }
 
     @Override

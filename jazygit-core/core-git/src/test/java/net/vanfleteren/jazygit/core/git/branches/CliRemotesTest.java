@@ -13,6 +13,7 @@ import java.nio.file.Path;
 import java.nio.file.attribute.PosixFilePermissions;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
+import net.vanfleteren.jazygit.core.git.model.PullMode;
 import net.vanfleteren.jazygit.core.git.process.GitCommand;
 import net.vanfleteren.jazygit.core.git.process.GitError;
 import net.vanfleteren.jazygit.core.git.process.GitFailure;
@@ -134,7 +135,7 @@ class CliRemotesTest {
                 refused, failedWith(CliRemotes.fetch(repo, new RemoteName("origin"), Option.none(), HashMap.empty())));
         assertEquals(
                 refused, failedWith(CliRemotes.run(repo, GitCommand.git("push", "origin", "main"), HashMap.empty())));
-        assertEquals(refused, failedWith(new CliRemotes(repo, HashMap::empty).pull()));
+        assertEquals(refused, failedWith(new CliRemotes(repo, HashMap::empty).pull(PullMode.CONFIGURED)));
     }
 
     /**
@@ -146,7 +147,7 @@ class CliRemotesTest {
 
         assertTrue(failedWith(CliRemotes.fetch(repo, new RemoteName("origin"), Option.none(), HashMap.empty()))
                 .exists(error -> error instanceof GitError.CommandFailed));
-        assertTrue(failedWith(new CliRemotes(repo, HashMap::empty).pull())
+        assertTrue(failedWith(new CliRemotes(repo, HashMap::empty).pull(PullMode.CONFIGURED))
                 .exists(error -> error instanceof GitError.CommandFailed));
     }
 
@@ -162,7 +163,7 @@ class CliRemotesTest {
         RemoteBranch main = new RemoteBranch("origin", new BranchName("main"));
         Option<GitError> refused = Option.of(new GitError.SshKeyRefused("asking: Permission denied (publickey)."));
 
-        assertEquals(refused, failedWith(remotes.pull()));
+        assertEquals(refused, failedWith(remotes.pull(PullMode.CONFIGURED)));
         assertEquals(refused, failedWith(remotes.pushSettingUpstream(new BranchName("main"), main)));
         assertEquals(refused, failedWith(remotes.deleteRemoteBranch(main)));
         assertEquals(
@@ -187,10 +188,12 @@ class CliRemotesTest {
 
         assertEquals(
                 Option.of(new GitError.SshKeyRefused("asking: Permission denied (publickey).")),
-                failedWith(new CliRemotes(repo, HashMap::empty, new Asking(Option.of(passphrase))).pull()));
+                failedWith(new CliRemotes(repo, HashMap::empty, new Asking(Option.of(passphrase)))
+                        .pull(PullMode.CONFIGURED)));
         assertEquals(
                 Option.of(new GitError.SshCancelled("Verification code:")),
-                failedWith(new CliRemotes(repo, HashMap::empty, new Asking(Option.of(code))).pull()));
+                failedWith(
+                        new CliRemotes(repo, HashMap::empty, new Asking(Option.of(code))).pull(PullMode.CONFIGURED)));
     }
 
     @Test

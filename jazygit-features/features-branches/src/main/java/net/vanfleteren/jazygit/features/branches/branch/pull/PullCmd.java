@@ -5,10 +5,13 @@ import io.vavr.control.Either;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.core.git.Git;
 import net.vanfleteren.jazygit.core.git.model.*;
+import net.vanfleteren.jazygit.core.git.process.GitError;
 import net.vanfleteren.jazygit.core.git.process.GitFailure;
 import net.vanfleteren.jazygit.core.process.ExecutedCommand;
 import net.vanfleteren.jazygit.core.repo.*;
 import net.vanfleteren.jazygit.features.branches.branch.BranchCmd;
+import net.vanfleteren.jazygit.kernel.state.Env;
+import net.vanfleteren.jazygit.kernel.state.Msg;
 import net.vanfleteren.jazygit.kernel.state.operation.Operation;
 
 /**
@@ -29,9 +32,21 @@ public sealed interface PullCmd extends BranchCmd.KeepsBranchBusy {
     }
 
     /**
-     * Pulls {@code branch}, the checked out branch, from its upstream.
+     * Pulls {@code branch}, the checked out branch, from its upstream, reconciling the two as {@code mode} says.
      */
-    record Pull(BranchName branch) implements PullCmd {
+    record Pull(BranchName branch, PullMode mode) implements PullCmd {
+
+        /**
+         * What git says, in the C locale the commands run in, when it refuses to pull a diverged branch.
+         */
+        private static final String DIVERGED = "divergent branches";
+
+        /**
+         * Pulls as git's own settings say.
+         */
+        public Pull(BranchName branch) {
+            this(branch, PullMode.CONFIGURED);
+        }
 
         @Override
         public Operation operation() {
@@ -40,7 +55,23 @@ public sealed interface PullCmd extends BranchCmd.KeepsBranchBusy {
 
         @Override
         public Either<GitFailure, List<ExecutedCommand>> perform(Git git) {
-            return git.remotes().pull();
+            return git.remotes().pull(mode);
+        }
+
+        /**
+         * A pull as the settings say, which git refuses as the branch has diverged and nothing says how to pull it, is
+         * answered by asking how, as the branch can look only ahead until the pull fetched. Any other failure fails
+         * it.
+         */
+        @Override
+        public Msg run(Env env) {
+            Either<GitFailure, List<ExecutedCommand>> result = perform(env.git());
+            return mode == PullMode.CONFIGURED
+                            && result.isLeft()
+                            && result.getLeft().error() instanceof GitError.CommandFailed refused
+                            && refused.says(DIVERGED)
+                    ? new PullMsg.NeedsStrategy(this, result.getLeft().commands())
+                    : reported(result);
         }
     }
 

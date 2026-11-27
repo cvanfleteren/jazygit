@@ -9,6 +9,7 @@ import java.nio.file.Path;
 import java.nio.file.attribute.PosixFilePermissions;
 import java.util.concurrent.CompletableFuture;
 import net.vanfleteren.jazygit.core.git.branches.CliRemotes;
+import net.vanfleteren.jazygit.core.git.model.PullMode;
 import net.vanfleteren.jazygit.core.git.process.GitError;
 import net.vanfleteren.jazygit.core.git.process.GitFailure;
 import org.junit.jupiter.api.Test;
@@ -28,8 +29,9 @@ class AskpassChainTest {
         try (AskpassServer server = AskpassServer.in(dir)) {
             server.answeredBy(new Answering("s3cret"));
 
-            GitFailure failure =
-                    new CliRemotes(repo, HashMap::empty, server).pull().getLeft();
+            GitFailure failure = new CliRemotes(repo, HashMap::empty, server)
+                    .pull(PullMode.CONFIGURED)
+                    .getLeft();
 
             assertTrue(
                     failure.error() instanceof GitError.CommandFailed failed

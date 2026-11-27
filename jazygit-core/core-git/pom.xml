@@ -59,6 +59,11 @@
                 <artifactId>maven-surefire-plugin</artifactId>
                 <configuration>
                     <forkCount>4</forkCount>
+                    <!-- The tests read the settings of git (pull.rebase, push.default): not those of whoever runs them. -->
+                    <environmentVariables>
+                        <GIT_CONFIG_GLOBAL>/dev/null</GIT_CONFIG_GLOBAL>
+                        <GIT_CONFIG_NOSYSTEM>1</GIT_CONFIG_NOSYSTEM>
+                    </environmentVariables>
                     <properties>
                         <configurationParameters>
                             junit.jupiter.execution.parallel.enabled=true

@@ -668,10 +668,16 @@ class BranchesPane:
 
         self.ui.changing_repo(f"{branch} to be pushed", keys)
 
-    def pull(self, branch: str):
-        """Pulls the checked out branch from its upstream, or fast-forwards another one to its upstream."""
+    def pull(self, branch: str, by: str = None):
+        """Pulls the checked out branch from its upstream, or fast-forwards another one to its upstream. A diverged
+        branch, when git's pull.rebase and pull.ff say nothing, is asked how: by "rebase" or by "merge"."""
         self.select(branch)
-        self.ui.changing_repo(f"{branch} to be pulled", lambda: self.app.press("p"))
+        self.ui.changing_repo(f"{branch} to be pulled", lambda: self._ask_pull(branch, by))
+
+    def _ask_pull(self, branch: str, by: str = None):
+        self.app.press("p")
+        if by is not None:
+            self.ui.confirm(f"Pull '{branch}', which has diverged", key={"rebase": "r", "merge": "m"}[by])
 
     def try_to_pull(self, branch: str):
         """Asks to pull the branch, for when the app is to refuse it: it does not wait for the repository to
