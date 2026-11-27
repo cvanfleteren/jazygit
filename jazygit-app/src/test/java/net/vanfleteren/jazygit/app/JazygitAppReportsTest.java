@@ -27,6 +27,7 @@ import net.vanfleteren.jazygit.core.git.branches.Remotes;
 import net.vanfleteren.jazygit.core.git.branches.StubBranches;
 import net.vanfleteren.jazygit.core.git.branches.StubRemotes;
 import net.vanfleteren.jazygit.core.git.model.Fixtures;
+import net.vanfleteren.jazygit.core.git.model.PullMode;
 import net.vanfleteren.jazygit.core.git.model.SampleData;
 import net.vanfleteren.jazygit.core.git.process.GitError;
 import net.vanfleteren.jazygit.core.git.process.GitFailure;
@@ -401,7 +402,7 @@ class JazygitAppReportsTest {
         public Remotes remotes() {
             return new StubRemotes() {
                 @Override
-                public Either<GitFailure, List<ExecutedCommand>> pull() {
+                public Either<GitFailure, List<ExecutedCommand>> pull(PullMode mode) {
                     try {
                         pulled.await();
                     } catch (InterruptedException interrupted) {

@@ -11,6 +11,7 @@ import java.nio.file.Path;
 import java.util.concurrent.TimeoutException;
 import net.vanfleteren.jazygit.core.git.CliGitFixture;
 import net.vanfleteren.jazygit.core.git.Git;
+import net.vanfleteren.jazygit.core.git.model.PullMode;
 import net.vanfleteren.jazygit.core.git.process.GitError;
 import net.vanfleteren.jazygit.core.git.process.GitFailure;
 import net.vanfleteren.jazygit.core.process.ExecutedCommand;
@@ -62,7 +63,8 @@ class CliPullTest {
         assertEquals(List.of(1, 1), counts("main"));
 
         assertEquals(
-                List.of("git pull --no-edit"), repository.remotes().pull().get().map(ExecutedCommand::line));
+                List.of("git pull --no-edit"),
+                repository.remotes().pull(PullMode.CONFIGURED).get().map(ExecutedCommand::line));
 
         assertEquals(List.of(2, 0), counts("main"));
         assertEquals("theirs\n", Files.readString(repo.resolve("README.md")));
@@ -76,7 +78,7 @@ class CliPullTest {
         Files.writeString(repo.resolve("README.md"), "ours\n");
         git("commit", "-q", "-am", "ours");
 
-        GitFailure failure = repository.remotes().pull().getLeft();
+        GitFailure failure = repository.remotes().pull(PullMode.CONFIGURED).getLeft();
 
         assertInstanceOf(GitError.StoppedOnConflicts.class, failure.error());
         assertEquals(List.of("git pull --no-edit"), failure.commands().map(ExecutedCommand::line));
@@ -90,7 +92,7 @@ class CliPullTest {
         Files.writeString(repo.resolve("README.md"), "ours\n");
         git("commit", "-q", "-am", "ours");
 
-        GitFailure failure = repository.remotes().pull().getLeft();
+        GitFailure failure = repository.remotes().pull(PullMode.CONFIGURED).getLeft();
 
         assertInstanceOf(GitError.StoppedOnConflicts.class, failure.error());
         assertEquals(List.of("git pull --no-edit"), failure.commands().map(ExecutedCommand::line));
@@ -114,6 +116,86 @@ class CliPullTest {
                         .map(ExecutedCommand::line));
 
         assertEquals(List.of(0, 0), counts("main"));
+    }
+
+    @Test
+    void pullingARebaseReplaysOurCommitsWhateverTheSettingsSay() throws Exception {
+        remoteWithTheirCommitOn("main");
+        git("commit", "-q", "--allow-empty", "-m", "ours");
+
+        assertEquals(
+                List.of("git pull --rebase"),
+                repository.remotes().pull(PullMode.REBASE).get().map(ExecutedCommand::line));
+
+        assertEquals(List.of(1, 0), counts("main"));
+        assertEquals("ours", git("log", "-1", "--format=%s").strip());
+    }
+
+    @Test
+    void pullingAMergeMakesAMergeCommitWhateverTheSettingsSay() throws Exception {
+        remoteWithTheirCommitOn("main");
+        git("commit", "-q", "--allow-empty", "-m", "ours");
+
+        assertEquals(
+                List.of("git pull --no-rebase --no-edit"),
+                repository.remotes().pull(PullMode.MERGE).get().map(ExecutedCommand::line));
+
+        assertEquals(List.of(2, 0), counts("main"));
+        assertEquals("1", git("rev-list", "--merges", "--count", "HEAD").strip());
+    }
+
+    @Test
+    void aRebasingPullThatConflictsLeavesTheRebaseForTheUser() throws Exception {
+        remoteWithTheirCommitOn("main");
+        Files.writeString(repo.resolve("README.md"), "ours\n");
+        git("commit", "-q", "-am", "ours");
+
+        GitFailure failure = repository.remotes().pull(PullMode.REBASE).getLeft();
+
+        assertInstanceOf(GitError.StoppedOnConflicts.class, failure.error());
+        assertTrue(Files.exists(repo.resolve(".git/rebase-merge")));
+    }
+
+    @Test
+    void aMergingPullThatConflictsLeavesTheMergeForTheUser() throws Exception {
+        remoteWithTheirCommitOn("main");
+        Files.writeString(repo.resolve("README.md"), "ours\n");
+        git("commit", "-q", "-am", "ours");
+
+        GitFailure failure = repository.remotes().pull(PullMode.MERGE).getLeft();
+
+        assertInstanceOf(GitError.StoppedOnConflicts.class, failure.error());
+        assertTrue(gitSucceedsIn(repo, "rev-parse", "--verify", "--quiet", "MERGE_HEAD"));
+    }
+
+    @Test
+    void thePullIsConfiguredWhenPullRebaseOrPullFfIsSet() throws Exception {
+        assertEquals(
+                false,
+                repository.remotes().pullConfigured(new BranchName("main")).get());
+
+        git("config", "pull.ff", "only");
+        assertEquals(
+                true,
+                repository.remotes().pullConfigured(new BranchName("main")).get());
+
+        git("config", "--unset", "pull.ff");
+        git("config", "pull.rebase", "false");
+        assertEquals(
+                true,
+                repository.remotes().pullConfigured(new BranchName("main")).get());
+
+        git("config", "--unset", "pull.rebase");
+        assertEquals(
+                false,
+                repository.remotes().pullConfigured(new BranchName("main")).get());
+        git("config", "branch.main.rebase", "true");
+        assertEquals(
+                true,
+                repository.remotes().pullConfigured(new BranchName("main")).get());
+        assertEquals(
+                false,
+                repository.remotes().pullConfigured(new BranchName("other")).get());
     }
 
     @Test

@@ -24,8 +24,10 @@ import net.vanfleteren.jazygit.features.branches.branch.newbranch.NameAsked;
 import net.vanfleteren.jazygit.features.branches.branch.newbranch.NewBranchCmd;
 import net.vanfleteren.jazygit.features.branches.branch.newbranch.NewBranchMsg;
 import net.vanfleteren.jazygit.features.branches.branch.newbranch.NewBranchPopup;
+import net.vanfleteren.jazygit.features.branches.branch.pull.PullCheck;
 import net.vanfleteren.jazygit.features.branches.branch.pull.PullCmd;
 import net.vanfleteren.jazygit.features.branches.branch.pull.PullMsg;
+import net.vanfleteren.jazygit.features.branches.branch.pull.PullPopup;
 import net.vanfleteren.jazygit.features.branches.branch.push.ForcePushCheck;
 import net.vanfleteren.jazygit.features.branches.branch.push.ForcePushPopup;
 import net.vanfleteren.jazygit.features.branches.branch.push.PushCmd;
@@ -631,13 +633,14 @@ class BranchUpdateTest {
     }
 
     @Test
-    void pullRequestOfTheCheckedOutBranchPullsItEvenWhenItHasDiverged() {
-        Model failedBefore = Update.update(pullable(2, 0), failed(new PullCmd.Pull(new BranchName("main")), "boom"))
+    void pullRequestOfTheCheckedOutBranchThatIsOnlyBehindPullsItWithoutAsking() {
+        Model failedBefore = Update.update(pullable(0, 0), failed(new PullCmd.Pull(new BranchName("main")), "boom"))
                 .model();
 
         Next next = TestModels.stepped(failedBefore, new PullMsg.Requested(new BranchName("main")));
 
         assertEquals(List.of(new PullCmd.Pull(new BranchName("main"))), next.cmds());
+        assertEquals(Option.none(), next.model().popup(PullPopup.class));
         assertEquals(Option.none(), next.model().outcome().error());
         assertEquals(
                 io.vavr.collection.HashMap.of(new BranchRef.Local(new BranchName("main")), PullCmd.PULL),
@@ -647,6 +650,108 @@ class BranchUpdateTest {
                 List.of(),
                 Update.update(next.model(), new PullMsg.Requested(new BranchName("main")))
                         .cmds());
+    }
+
+    @Test
+    void pullRequestOfADivergedCheckedOutBranchAsksWhetherGitKnowsHowToPull() {
+        Next next = Update.update(pullable(2, 0), new PullMsg.Requested(new BranchName("main")));
+
+        assertEquals(List.of(new PullCheck(new BranchName("main"))), next.cmds());
+        assertEquals(Option.none(), next.model().popup());
+        assertEquals(io.vavr.collection.HashMap.empty(), next.model().jobs().busy());
+    }
+
+    @Test
+    void aDivergedBranchIsPulledAsGitSaysWhenPullRebaseOrPullFfIsSet() {
+        Next next = TestModels.stepped(pullable(2, 0), new PullMsg.Checked(new BranchName("main"), true));
+
+        assertEquals(List.of(new PullCmd.Pull(new BranchName("main"), PullMode.CONFIGURED)), next.cmds());
+        assertEquals(Option.none(), next.model().popup());
+    }
+
+    @Test
+    void aDivergedBranchAsksHowToPullWhenNeitherSettingIsSet() {
+        Next next = Update.update(pullable(2, 0), new PullMsg.Checked(new BranchName("main"), false));
+
+        assertEquals(List.of(), next.cmds());
+        assertEquals(
+                Option.of(new PullPopup(new BranchName("main"))), next.model().popup());
+    }
+
+    @Test
+    void theChosenWayIsTheOnePullsAndNothingIsSaved() {
+        Model asked = Update.update(pullable(2, 0), new PullMsg.Checked(new BranchName("main"), false))
+                .model();
+
+        Next rebasing = TestModels.stepped(asked, new PullMsg.Chosen(PullMode.REBASE));
+        assertEquals(List.of(new PullCmd.Pull(new BranchName("main"), PullMode.REBASE)), rebasing.cmds());
+        assertEquals(Option.none(), rebasing.model().popup());
+
+        Next merging = TestModels.stepped(asked, new PullMsg.Chosen(PullMode.MERGE));
+        assertEquals(List.of(new PullCmd.Pull(new BranchName("main"), PullMode.MERGE)), merging.cmds());
+
+        Next cancelled = Update.update(asked, new PopupMsg.Dismissed(PullPopup.class));
+        assertEquals(List.of(), cancelled.cmds());
+        assertEquals(Option.none(), cancelled.model().popup());
+    }
+
+    @Test
+    void aBranchThatIsNoLongerDivergedWhenGitAnswersIsHandledAgain() {
+        Next next = TestModels.stepped(pullable(0, 0), new PullMsg.Checked(new BranchName("main"), false));
+
+        assertEquals(List.of(new PullCmd.Pull(new BranchName("main"))), next.cmds());
+        assertEquals(Option.none(), next.model().popup());
+    }
+
+    @Test
+    void aPullThatGitRefusesAsTheBranchDivergedAsksHowToPullAndIsLogged() {
+        PullCmd.Pull pull = new PullCmd.Pull(new BranchName("main"));
+        Model pulling = TestModels.stepped(pullable(2, 0), new PullMsg.Checked(new BranchName("main"), true))
+                .model();
+
+        Next next = TestModels.done(
+                pulling,
+                pull,
+                new PullMsg.NeedsStrategy(
+                        pull, net.vanfleteren.jazygit.core.git.StubGit.executed("git pull --no-edit")));
+
+        assertEquals(
+                Option.of(new PullPopup(new BranchName("main"))), next.model().popup());
+        assertEquals(Option.none(), next.model().outcome().error());
+        assertEquals(
+                io.vavr.collection.HashSet.empty(), next.model().jobs().busy().keySet());
+        assertEquals(
+                List.of("git pull --no-edit"),
+                next.model()
+                        .outcome()
+                        .commandLog()
+                        .flatMap(entry -> entry.commands())
+                        .map(command -> command.line()));
+    }
+
+    @Test
+    void anAnswerOfGitDoesNotTakeAwayAPopupTheUserOpenedMeanwhile() {
+        Model merging = Update.update(pullable(2, 0), new MergeMsg.Requested(new BranchName("feature")))
+                .model();
+        assertTrue(merging.popup().isDefined());
+
+        Next next = Update.update(merging, new PullMsg.Checked(new BranchName("main"), false));
+
+        assertEquals(merging.popup(), next.model().popup());
+        assertEquals(Option.none(), next.model().popup(PullPopup.class));
+    }
+
+    @Test
+    void aFailedCheckIsReportedAsAFailedPull() {
+        Next next = Update.update(
+                pullable(2, 0),
+                new PullMsg.CheckFailed(
+                        new BranchName("main"),
+                        net.vanfleteren.jazygit.kernel.state.Failure.of(
+                                new net.vanfleteren.jazygit.core.git.process.GitError.CommandFailed("boom", 1))));
+
+        assertEquals(List.of(), next.cmds());
+        assertEquals(Option.of("Pulling branch main failed: boom"), errorText(next.model()));
     }
 
     @Test

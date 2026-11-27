@@ -7,6 +7,7 @@ import io.vavr.control.Either;
 import net.vanfleteren.jazygit.core.git.files.Diffs;
 import net.vanfleteren.jazygit.core.git.model.CommitFile;
 import net.vanfleteren.jazygit.core.git.model.DeleteScope;
+import net.vanfleteren.jazygit.core.git.model.PullMode;
 import net.vanfleteren.jazygit.core.git.model.PushMode;
 import net.vanfleteren.jazygit.core.git.process.GitError;
 import net.vanfleteren.jazygit.core.git.process.GitFailure;
@@ -68,11 +69,17 @@ public interface Remotes {
     // Pulling the checked out branch, as git pull does.
 
     /**
-     * Pulls the checked out branch from its upstream, as git's {@code pull.rebase} and {@code pull.ff} say, without
-     * asking for a merge message. A pull that stops on conflicts is left so, and fails with
-     * {@link GitError.StoppedOnConflicts}.
+     * Pulls the checked out branch from its upstream, as {@code mode} says, without asking for a merge message. A pull
+     * that stops on conflicts is left so, and fails with {@link GitError.StoppedOnConflicts}.
      */
-    Either<GitFailure, List<ExecutedCommand>> pull();
+    Either<GitFailure, List<ExecutedCommand>> pull(PullMode mode);
+
+    /**
+     * Whether git has been told how to pull the diverged {@code branch}: {@code branch.<name>.rebase},
+     * {@code pull.rebase} or {@code pull.ff} is set, in any of git's configuration files. Without any, git refuses such
+     * a pull.
+     */
+    Either<GitError, Boolean> pullConfigured(BranchName branch);
 
     // Fetching from the remotes, as git fetch does.
 
