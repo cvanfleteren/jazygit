@@ -3,9 +3,9 @@ package net.vanfleteren.jazygit.app.keys;
 import static org.junit.jupiter.api.Assertions.*;
 
 import io.vavr.collection.List;
-import net.vanfleteren.jazygit.features.branches.panes.branches.BranchBadges;
 import net.vanfleteren.jazygit.features.branches.panes.branches.BranchesPane;
 import net.vanfleteren.jazygit.features.changes.panes.commits.CommitsPane;
+import net.vanfleteren.jazygit.kernel.ui.BranchBadges;
 import net.vanfleteren.jazygit.kernel.ui.KernelSlots;
 import net.vanfleteren.jazygit.kernel.ui.Slot;
 import org.junit.jupiter.api.Test;

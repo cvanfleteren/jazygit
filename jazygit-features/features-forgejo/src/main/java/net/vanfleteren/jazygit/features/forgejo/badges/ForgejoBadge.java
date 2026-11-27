@@ -6,9 +6,9 @@ import net.vanfleteren.jazygit.core.repo.Branch;
 import net.vanfleteren.jazygit.core.repo.BranchRef;
 import net.vanfleteren.jazygit.core.repo.RemoteRef;
 import net.vanfleteren.jazygit.core.repo.Sha;
-import net.vanfleteren.jazygit.features.branches.panes.branches.BranchBadges;
 import net.vanfleteren.jazygit.features.forgejo.builds.ForgejoBuilds;
 import net.vanfleteren.jazygit.kernel.state.Model;
+import net.vanfleteren.jazygit.kernel.ui.BranchBadges;
 
 /**
  * How the last build of a branch on Forgejo went, as the branches pane shows it among its badges (ADR 167, 174): that

@@ -34,7 +34,8 @@ public final class ForgejoReactions {
                     KernelEvent.LogRead _,
                     KernelEvent.ScreenShown _,
                     KernelEvent.ChangesOpened _,
-                    KernelEvent.FileToOpen _ -> Next.of(model);
+                    KernelEvent.FileToOpen _,
+                    KernelEvent.RemoteChanged _ -> Next.of(model);
         };
     }
 }

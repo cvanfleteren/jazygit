@@ -12,7 +12,6 @@ import net.vanfleteren.jazygit.core.repo.BranchRef;
 import net.vanfleteren.jazygit.features.branches.branch.base.SetBaseCmd;
 import net.vanfleteren.jazygit.features.branches.branch.pullrequest.CreatePullRequestCmd.ReadTitle;
 import net.vanfleteren.jazygit.features.branches.branch.pullrequest.CreatePullRequestUpdate;
-import net.vanfleteren.jazygit.features.changes.fetch.FetchUpdate;
 import net.vanfleteren.jazygit.features.github.GitHubError;
 import net.vanfleteren.jazygit.features.github.create.GitHubCreatePullRequestCmd.Base;
 import net.vanfleteren.jazygit.features.github.create.GitHubCreatePullRequestCmd.CreatePullRequest;
@@ -23,6 +22,8 @@ import net.vanfleteren.jazygit.features.github.prs.PullRequestReads;
 import net.vanfleteren.jazygit.features.github.stack.StackPopups;
 import net.vanfleteren.jazygit.features.github.state.*;
 import net.vanfleteren.jazygit.kernel.state.*;
+import net.vanfleteren.jazygit.kernel.state.Events;
+import net.vanfleteren.jazygit.kernel.state.KernelEvent;
 import net.vanfleteren.jazygit.kernel.state.Update.Next;
 import net.vanfleteren.jazygit.kernel.state.operation.*;
 import net.vanfleteren.jazygit.kernel.state.operation.OperationUpdate;
@@ -147,7 +148,7 @@ public final class GitHubCreatePullRequestUpdate {
                         .getOrElse(succeeded));
         // A read that is still running may have missed it, so this one is started anyway. GitHub may have
         // changed the remote too, which a fetch brings in.
-        Next read = FetchUpdate.requested(PullRequestReads.loadAnyway(done));
+        Next read = Events.happened(PullRequestReads.loadAnyway(done), new KernelEvent.RemoteChanged());
         // Stacked once it is there: on the pull request of its base, as the dialog said (ADR 73).
         return cmd.stacking()
                 .flatMap(stacking -> pullRequest.map(pr -> stacking.cmd(pr.number())))

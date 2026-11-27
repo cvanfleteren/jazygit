@@ -34,6 +34,13 @@ public sealed interface KernelEvent {
     record Fetched() implements KernelEvent {}
 
     /**
+     * A feature changed what a remote has, as merging or opening a pull request on its forge does, without fetching
+     * it (ADR 210): what the remotes have is to be fetched again. The feature that fetches answers it, so the one that
+     * changed the remote names no fetch.
+     */
+    record RemoteChanged() implements KernelEvent {}
+
+    /**
      * A repository was opened, at the start of the app or once another was switched to: nothing was read of it yet.
      */
     record RepositoryOpened() implements KernelEvent {}

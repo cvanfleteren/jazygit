@@ -53,7 +53,10 @@ final class GitHubReactions {
             case KernelEvent.Switched _, KernelEvent.RepositoryOpened _, KernelEvent.TabShown _ -> Next.of(model);
             // The review threads of a pull request whose files were opened, and those collapsed (ADR 55, 63, 171).
             case KernelEvent.ChangesOpened(var changes) -> RemarksUpdate.opened(model, changes);
-            case KernelEvent.LogRead _, KernelEvent.ScreenShown _, KernelEvent.FileToOpen _ -> Next.of(model);
+            case KernelEvent.LogRead _,
+                    KernelEvent.ScreenShown _,
+                    KernelEvent.FileToOpen _,
+                    KernelEvent.RemoteChanged _ -> Next.of(model);
         };
     }
 }

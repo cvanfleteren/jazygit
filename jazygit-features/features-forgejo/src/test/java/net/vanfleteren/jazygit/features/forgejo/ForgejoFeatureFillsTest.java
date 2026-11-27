@@ -3,11 +3,11 @@ package net.vanfleteren.jazygit.features.forgejo;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import net.vanfleteren.jazygit.features.branches.panes.branches.BranchBadges;
-import net.vanfleteren.jazygit.features.branches.panes.branches.BranchGroups;
 import net.vanfleteren.jazygit.kernel.state.FeatureUpdate;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.TestModels;
+import net.vanfleteren.jazygit.kernel.ui.BranchBadges;
+import net.vanfleteren.jazygit.kernel.ui.BranchGroups;
 import net.vanfleteren.jazygit.kernel.ui.Fills;
 import org.junit.jupiter.api.Test;
 

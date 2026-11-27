@@ -12,6 +12,7 @@ import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.time.Instant;
 import net.vanfleteren.jazygit.core.repo.RemoteName;
+import net.vanfleteren.jazygit.kernel.state.Events;
 import net.vanfleteren.jazygit.kernel.state.KernelEvent;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.Reactions;
@@ -102,6 +103,17 @@ class FetchUpdateTest {
 
         assertEquals(List.of(LIST), started.cmds());
         assertFalse(started.model().jobs().fetchAgain());
+    }
+
+    @Test
+    void aRemoteAFeatureChangedIsFetchedFromAndNoOtherEventFetches() {
+        Model answering = loaded().withReactions(new Reactions(FetchFeature.FEATURE.reactions()));
+
+        Next changed = Events.happened(Next.of(answering), new KernelEvent.RemoteChanged());
+        Next fetched = Events.happened(Next.of(answering), new KernelEvent.Fetched());
+
+        assertEquals(List.of(LIST), changed.cmds());
+        assertEquals(List.of(), fetched.cmds());
     }
 
     @Test
