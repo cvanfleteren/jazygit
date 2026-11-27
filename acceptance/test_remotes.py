@@ -426,6 +426,8 @@ def test_set_the_upstream_of_a_branch_that_follows_main(repo, origin, jazygit):
 
     assert repo.upstream("new") == "origin/new"
     assert repo.sync("new") == ""
+    # The pane's ahead and behind follow the new upstream.
+    assert ui.branches.shows_branches()
 
 
 def test_set_the_upstream_of_a_branch_to_another_branch(repo, origin, jazygit):
@@ -490,7 +492,9 @@ def test_a_branch_without_upstream_has_none_to_unset(repo, origin, jazygit):
 
     ui.branches.try_to_unset_upstream("local-only")
 
-    ui.app.wait_for("Branch local-only has no upstream")
+    # The choice is disabled: the dialog stays open and nothing changes.
+    ui.app.wait_for("(u) unset upstream")
+    assert repo.upstream("local-only") == ""
 
 
 def test_rename_a_branch_keeps_its_upstream(repo, origin, jazygit):

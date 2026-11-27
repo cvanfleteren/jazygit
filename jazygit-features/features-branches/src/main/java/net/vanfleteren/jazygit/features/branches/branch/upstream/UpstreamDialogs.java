@@ -4,6 +4,7 @@ import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.util.function.Consumer;
 import net.vanfleteren.jazygit.core.repo.Branch;
+import net.vanfleteren.jazygit.core.repo.Tracking;
 import net.vanfleteren.jazygit.kernel.state.Msg;
 import net.vanfleteren.jazygit.kernel.ui.PopupSlot;
 import net.vanfleteren.jazygit.kernel.ui.i18n.Messages;
@@ -19,8 +20,8 @@ public final class UpstreamDialogs {
 
     /**
      * Asks what to do with the upstream: view how the highlighted branch diverged from it or from the main
-     * branch, reset the checked out branch onto it, or set or unset the upstream of the highlighted branch. Its options are offered also when they cannot be done, to
-     * tell why.
+     * branch, reset the checked out branch onto it, or set or unset the upstream of the highlighted branch. Its
+     * options are offered also when they cannot be done, to tell why.
      */
     public static final ChoiceDialog.Spec<UpstreamPopup> UPSTREAM = new ChoiceDialog.Spec<>(
             "upstream",
@@ -53,8 +54,15 @@ public final class UpstreamDialogs {
                             .withDetails("branches.dialog.upstream.reset.details"),
                     new Choice<UpstreamPopup>('s', "branches.dialog.upstream.set", UpstreamMsg.SetChosen::new)
                             .withDetails("branches.dialog.upstream.set.details"),
-                    new Choice<UpstreamPopup>('u', "branches.dialog.upstream.unset", UpstreamMsg.UnsetChosen::new)
-                            .withDetails("branches.dialog.upstream.unset.details")));
+                    new Choice<UpstreamPopup>(
+                                    'u',
+                                    "branches.dialog.upstream.unset",
+                                    UpstreamMsg.UnsetChosen::new,
+                                    (model, popup) -> followsSomething(popup))
+                            .withDetails(popup -> Messages.get(
+                                    followsSomething(popup)
+                                            ? "branches.dialog.upstream.unset.details"
+                                            : "branches.dialog.upstream.unset.none"))));
 
     /**
      * Asks which remote branch a branch is to follow, as {@code <remote> <branchname>}, starting out with the branch
@@ -76,6 +84,13 @@ public final class UpstreamDialogs {
         return List.of(
                 PopupSlot.returningTo(Scopes.BRANCHES.pane(), new ChoiceDialog<>(UPSTREAM, dispatch)),
                 PopupSlot.returningTo(Scopes.BRANCHES.pane(), new TextInputDialog<>(CHANGE_UPSTREAM, dispatch)));
+    }
+
+    /**
+     * Whether the highlighted branch has an upstream configured, also one that was deleted on the remote.
+     */
+    private static boolean followsSomething(UpstreamPopup popup) {
+        return popup.branch().exists(branch -> !(branch.tracking() instanceof Tracking.None));
     }
 
     private static String upstreamName(Option<Branch> branch) {

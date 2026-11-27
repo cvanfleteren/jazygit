@@ -110,7 +110,7 @@ public final class UpstreamUpdate {
         return model.repo()
                 .remoteBranches()
                 .toOption()
-                .exists(refs -> !model.repo().remoteBranch(upstream).isDefined());
+                .exists(refs -> !refs.exists(ref -> ref.branch().equals(upstream)));
     }
 
     /**

@@ -96,6 +96,38 @@ class UpstreamDialogTest {
                 List.ofAll(dispatched));
     }
 
+    @Test
+    void theKeysSetAndUnsetTheUpstreamOfABranchThatHasOne() throws Exception {
+        UpstreamPopup popup = new UpstreamPopup(Option.of(TRACKING), Option.none(), Option.none());
+        assertTrue(render(popup).contains("(s) set upstream"));
+        assertTrue(render(popup).contains("(u) unset upstream"));
+
+        assertEquals(List.of(new UpstreamMsg.SetChosen(), new UpstreamMsg.UnsetChosen()), pressed(popup, 's', 'u'));
+    }
+
+    @Test
+    void aBranchWithoutUpstreamStillOffersToUnsetItButDoesNotChooseIt() throws Exception {
+        Branch main = Fixtures.branch(new BranchName("main"), true, new Sha("a"));
+        UpstreamPopup popup = new UpstreamPopup(Option.of(main), Option.none(), Option.none());
+
+        assertTrue(render(popup).contains("(u) unset upstream"));
+        assertEquals(List.of(), pressed(popup, 'u'));
+    }
+
+    private List<Msg> pressed(UpstreamPopup popup, char... keys) throws Exception {
+        dispatched.clear();
+        Model open = TestModels.loaded().openPopup(popup);
+        try (ToolkitTestRunner runner = ToolkitTestRunner.runTest(() -> view(open))) {
+            SettledPilot.focus(runner, UpstreamDialogs.UPSTREAM.id());
+            RenderedText.of(runner, () -> view(open));
+            for (char key : keys) {
+                SettledPilot.of(runner).press(key);
+            }
+            SettledPilot.of(runner).pause();
+        }
+        return List.ofAll(dispatched);
+    }
+
     private String render(UpstreamPopup popup) throws Exception {
         Model open = TestModels.loaded().openPopup(popup);
         try (ToolkitTestRunner runner = ToolkitTestRunner.runTest(() -> view(open))) {

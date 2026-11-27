@@ -6,7 +6,6 @@ import static org.junit.jupiter.api.Assertions.*;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.io.IOException;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.concurrent.TimeoutException;
 import net.vanfleteren.jazygit.core.git.CliGitFixture;
@@ -25,6 +24,9 @@ class CliUpstreamTest {
     private static final RemoteBranch ORIGIN_FEATURE = new RemoteBranch("origin", FEATURE);
 
     @TempDir
+    Path remote;
+
+    @TempDir
     Path repo;
 
     private Git repository;
@@ -32,7 +34,7 @@ class CliUpstreamTest {
     @BeforeEach
     void setUp() throws Exception {
         repository = CliGitFixture.init(repo);
-        Path bare = Files.createTempDirectory("remote").resolve("remote.git");
+        Path bare = remote.resolve("remote.git");
         git("init", "-q", "--bare", "-b", "main", bare.toString());
         git("remote", "add", "origin", bare.toString());
         git("branch", "feature");

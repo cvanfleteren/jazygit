@@ -810,11 +810,12 @@ class BranchesPane:
             self.app.press("u"), self.ui.confirm("Upstream options for", key="u")))
 
     def try_to_unset_upstream(self, branch: str):
-        """Asks to make the branch follow nothing, for when the app is to refuse it: it does not wait for the
-        repository to change."""
+        """Asks to make the branch follow nothing, for when the app is to refuse it: the choice is disabled, so the
+        dialog stays open. It does not wait for the repository to change."""
         self.select(branch)
         self.app.press("u")
-        self.ui.confirm("Upstream options for", key="u")
+        self.app.wait_for("Upstream options for")
+        self.app.press("u")
 
     def checkout_remote(self, branch: str, name: str = None):
         """Checks out the local branch that follows the remote branch, such as "origin/feature", creating it when
