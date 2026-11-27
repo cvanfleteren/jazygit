@@ -1,181 +1,117 @@
-## code style
-- prefer modern, functional java, preferring things like recursion, immutable collections and stream processing over
-  things like javabeans and for loops
+# Working on jazygit
 
-The ArchUnit tests (`*ArchitectureTest`) enforce these rules; a build that breaks one fails.
+jazygit is modern, functional Java: an Elm loop over immutable values (Vavr) on TamboUI. Prefer recursion, streams and
+records to JavaBeans and loops. `ARCHITECTURE.md` maps the modules, the runtime loop and the anatomy of a feature: read
+it before adding a feature or moving code between modules.
 
-### The Elm loop
-- Messages, commands and popups are values: records, or enums. Each feature's `XxxMsg` is a sealed interface, so its
-  update switches over every message without a `default`.
-- An error is a value that says itself as a `Phrase` (a message key and what goes into it), never as text. Each feature
-  keeps its errors in a sealed `XxxError extends AppError` of its own; `AppError` keeps only what belongs to no feature,
-  so a new error edits neither it nor `ErrorText`.
-- A feature package with keys or popups declares them as `XxxFeature.FEATURE`, a `Feature` of its actions, and is
-  wired in by one line in `Features.ALL`, in the order its keys are to be listed in a panel; neither `Popups` nor
-  `app.keys.Standard` names a feature (`FeaturesTest`, ADR 127).
-- A feature lives in its group of features: `changes`, `branches`, `github`, `forgejo` or `chrome`, a module each
-  (ADR 136). A group uses only the groups below it (`branches` uses `changes`), never one beside or above it; the
-  forges, `github` and `forgejo`, do not use each other, so that either can be deleted (ADR 171, 174).
-- An `XxxUpdate` is a final class with a private constructor and only static methods and static fields: it is only
-  functions.
-- Updates make commands; only `Program` (and `StartApp`, for the start screen) runs them through `Cmd.run` or `perform`.
-  A command may run another as part of itself.
-- Views, keys and dialogs only send messages: they never construct a command or call `Msg.apply`. They may read a
-  command as data.
-- A method reference (`Cmd::run`, `Msg::apply`, `Instant::now`, `XxxCmd::new`) counts as a call.
+## Rules the build enforces
 
-### Pure code
-The updates, messages, popups and the model are pure. Pure code:
-- returns values: no `void` methods
-- fails with a value, never by throwing
-- never fills a mutable collection or a `StringBuilder`; it builds new values
-- never reads the clock, the environment, the machine's defaults or chance: no `java.time` `now`,
-  `System.currentTimeMillis`/`nanoTime`/`getenv`/`getProperty`, `ZoneId.systemDefault`, `Clock.system*`,
-  `Locale`/`TimeZone.getDefault`, `Runtime`, `ProcessHandle`, `Random` or any other `RandomGenerator`,
-  `UUID.randomUUID`. That is IO, for a command; the model is told the time.
+The ArchUnit rules in `jazygit-test-support` (`AppRules`, `CoreRules`, `ModelRules`) fail the build when broken; their
+names and Javadoc are the exact rules. Write to them from the start:
 
-### Values all the way down
-- A field in state, the features, settings, `app.cli`, lens and the git and gh models holds a value that never
-  changes: a primitive, `String`, a boxed primitive, `Class`, `java.time`, `Path`, `FileTime`, `Pattern`, a function,
-  an enum, a record, a Vavr type, or an interface of jazygit. Arrays, `Object`, `CharSequence`, java.util collections,
-  `StringBuilder` and `java.util.concurrent` types are not. What a type is of counts too: `List<StringBuilder>` is no
-  value, though `Object` there says no more than a type variable, and a function's or a `Class`'s type arguments are
-  not looked at. (`Failure.Bug` keeps what a command threw, to report it.)
-- Fields are final; static fields are final too, and never of a mutable type.
-- Collections are Vavr's: no method takes or returns one of java.util's, but where a library's interface says so.
-- A missing value is Vavr's `Option`, not `java.util.Optional`, but where a library's interface says so (TamboUI,
-  picocli in `app.cli`).
-- Classes are built of records and interfaces: no class in state, the features, lens or the models extends another.
-- Commands, and the public methods of the core, declare no exceptions, checked or unchecked, of any type: failures are
-  values (`Either`, `Failure`).
+- **Pure**: updates, messages, popups and the model return values, fail with values (`Either`, `Failure`) and build new
+  values rather than filling collections or a `StringBuilder`. Reading the clock, the environment, the machine's
+  defaults or randomness is IO, for a command; the model is told the time.
+- **Values all the way down**: fields, static ones too, are final and hold immutable values. Collections are Vavr's and
+  a missing value is `Option`; java.util appears only where a library's interface demands it (TamboUI, picocli).
+  Classes are built of records and interfaces; none extends another.
+- **Elm loop**: messages, commands and popups are records or enums. A feature's `XxxMsg` and its errors
+  (`XxxError extends AppError`) are sealed, so its update switches without a `default`. An `XxxUpdate` is a final class
+  of static functions. Updates make commands and only `Program` (and `StartApp`) runs them; views, keys and dialogs
+  only send messages. A method reference (`Cmd::run`, `Msg::apply`, `Instant::now`) counts as a call.
+- **Errors** say themselves as a `Phrase` (a message key and its arguments), and live in the feature's own error set,
+  so a new error leaves `AppError` and `ErrorText` untouched.
+- Commands and the core's public methods declare no exceptions: failures are values.
 
+## Features are compile-time plugins
 
+- A feature declares `XxxFeature.FEATURE` and is wired in by one line in `Features.ALL`, in the order its keys list in a
+  panel; nothing outside its package names it (`FeaturesTest`, ADR 127). The native image needs this closed world.
+- It lives in a group module: `changes`, `branches`, `github`, `forgejo` or `chrome` (ADR 136). A group uses only the
+  groups below it (`branches` uses `changes`); the forges never use each other, so either can be deleted (ADR 171, 174).
+- The kernel knows git, not forges (#588, `theKernelNamesNoForge`). Forge code talks to the rest through forge-neutral
+  models such as `FailedBuild`: the forge's ids, URLs and commands travel through them only as opaque values the forge
+  side writes, and what only the forge needs (a GitHub workflow run) stays in its feature (`FailedBuilds`).
+- New feature state is the feature's own `Part` (ADR 157), kept out of the kernel's records.
+- A feature reaches what its module may not depend on only through an extension point (ADR 159, 161): `Feature`'s
+  builder methods (`showing`, `keeping`, `filling`, `screen`, `explaining`, `reacting`, …) and `Keymap.host`. Adding
+  a feature starts with choosing its extension point. When none fits, add a general one rather than a special case,
+  and enforce the boundary with module dependencies. Reference pattern: the failed-checks agent action consumes a
+  neutral subject without knowing which forge produced it.
+- A feature's dialogs and panes draw with its `widgets` package.
 
-### Small rules
-- Records keep their default `toString()`. Where a wrapper record (`Branch.Name`, `Sha`) must become a `String`, call
-  `.value()`: in concatenation, `formatted`, git arguments and `Messages.get(...)`, whose `Object...` arguments compile
-  without it.
-- An unused binding in a `case` label is `_` (`case Outside _ when … ->`). Elsewhere, let Spotless confirm it formats
-  `_` before relying on it.
+## Small rules
+
+- Records keep their default `toString()`. Turn a wrapper record (`Branch.Name`, `Sha`) into a `String` with
+  `.value()`: in concatenation, `formatted`, git arguments and `Messages.get(...)`, whose `Object...` compiles without it.
+- An unused `case` binding is `_` (`case Outside _ when … ->`); elsewhere, check that Spotless formats `_` first.
 - Nested types come after all methods (checkstyle's InnerTypeLast).
-- A message key starts with the root of the module whose code names it (`github.dialog.…`, `branches.help.…`), and
-  is in that module's `messages.properties`; a key more than one module uses is in the lowest one they all see, and
-  one of the views alone has no prefix (ADR 136). The module's `*BundleTest` says when one is missing.
+- A message key starts with the root of the module whose code names it (`github.dialog.…`) and lives in that module's
+  `messages.properties`; a key several modules use goes in the lowest one they all see (ADR 136). `*BundleTest` catches
+  a missing one.
 - Main code decodes images without AWT: `ImageIO` and tamboui-image make the native image need extra `.so` files, and
   jazygit ships one file (ADR 84). Tests may use `ImageIO`.
 
-## Architecture direction: forge neutral, everything a plugin
-jazygit's kernel is to know about git, not about GitHub or any other forge (#588). It does not yet: `GitHubState`
-(a `Part`, but still in the kernel), `Env.gitHub`, `kernel.state.github` and the branch rows still name `core.gh`
-types. Add no more, and move them out when
-a change touches them. Forge-specific code (GitHub today; GitLab, Forgejo, Bitbucket later) lives in its own feature
-modules, which talk to the rest of the app only through neutral models such as `FailedBuild`. Those models name no
-forge: their fields and types are neutral. A forge's ids, URLs and commands may travel through them only as opaque
-values that the forge side writes and nothing else interprets, as `FailedBuild`'s repository, URL and `logs` do; what
-only the forge needs, such as GitHub's workflow run, stays in its feature and is not carried (`FailedBuilds` turns it
-into `logs`).
-
-Features are plugins, at compile time: each is listed in `Features.ALL`, never loaded at runtime, as the native image
-needs a closed world. Today a `Feature` contributes its actions, with their keys, and what it shows in the content
-panel (`ContentSource`); actions on another feature's subject go through a hosted key scope (`Keymap.host`, as
-`Scopes.FAILED_BUILD`); its state is a `Part` of its own (ADR 157); the settings it keeps in `config.toml` are
-`SettingKey`s (`Feature.settingKeys`, through `keeping`), and the rows it adds to the settings panel are
-`SettingsSection`s (`Feature.settings`, through `withSettings`) (ADR 163); what it shows in a pane that lives in a
-group fills a `Slot` the pane declares beside itself (`Feature.fills`, through `filling`; the kernel's own, as whether a
-view spins, are in `KernelSlots`, ADR 202), as the line and the
-listing of the commits pane, and the badges of a branch and the groups of the local branches in the branches pane
-(`BranchBadges.KEY`, `BranchGroups.KEY`) (ADR 167, 172); a screen it brings beside the repository's is a
-`ScreenSpec` (`Feature.screens`, through `screen`), whose `Screen` is an open value, and what its symbols in a panel
-mean are `Legend`s (`Feature.legends`, through `explaining`), which the help lists after the panel's own (ADR 168).
-What a feature's dialogs and panes draw with lives in its `widgets` package. A feature uses only the features its
-module may depend on (ADR 159), and reaches anything else, such as a pane of a later group or a subject another
-feature produces, only through an extension point, as `features-agent` does (ADR 161). New feature state goes
-in the feature's own part, not in a new field of a kernel record. The failed-checks agent action is the reference
-pattern: a forge produces a neutral subject, and an action consumes it without knowing which forge produced it. When
-you add a feature, first ask which extension point it plugs into. If none fits, add a general one rather than a special
-case, and enforce the boundary through module dependencies, not just tests.
-
 ## UI conventions
-- An action that does not apply right now shows disabled, with the reason, in its menu or dialog; it stays visible.
-- Of the movement keys, only the arrows cross into another panel; h/j/k/l scroll or move the cursor inside the focused
-  panel. Enter, Escape, Tab and clicks move focus too.
-- Pane cursors and focus are view state, kept by the TamboUI widgets; the model holds what an update reads (ADR 2). The
+
+- An action that does not apply right now stays visible, disabled, with the reason, in its menu or dialog.
+- Only the arrows cross into another panel; h/j/k/l move inside the focused one. Enter, Escape, Tab and clicks move
+  focus too.
+- Pane cursors and focus are view state, kept by the TamboUI widgets (ADR 2); the model holds what an update reads. The
   rich diff's cursor is the exception: updates act on it, so it lives in the model.
-- Help texts (`<root>.help.*.details`) are one sentence saying what the key does, in the third person ("Lists…", "Adds…"),
-  under ~160 characters. Add a second sentence only for a warning that matters, such as lost work. Leave out what the
-  popup's own choices explain, how conflicts or diffs are handled (that is the same everywhere), and rare edge cases.
+- A help text (`<root>.help.*.details`) is one sentence, third person ("Lists…", "Adds…"), under ~160 characters. Add a
+  second only to warn of lost work or the like. Leave the popup's own choices, conflict and diff handling, and rare edge
+  cases to the popup.
 
 ## TamboUI gotchas
+
 - A style value set in code wins over CSS; CSS only fills properties the code leaves null. `DialogElement` sets a border
   type itself, so theme borders need `.borderType(null)` (`DialogFrame.themed`).
 - Key routing: for the focused id, each element's `handleKeyEvent` runs before its `onKeyEvent` lambda, and global
   handlers come last. To pre-empt a key a text field swallows, register a wrapper under the same id first
   (`SubmittableTextArea`). Tab and Shift+Tab only move focus; a popup's "switch" key is a free Ctrl chord.
-- The standard binding set is in use: `Actions.MOVE_UP/DOWN` match the arrows only, so a widget that wants j/k checks
-  `event.isChar` itself.
-- `RichTextAreaElement` ignores its horizontal scroll; `ScrollArea` (`content`) cuts the columns off the lines
-  itself.
-- A click focuses the clicked pane through the app's global mouse handler (`FocusKeeper.clicked`), since the router
-  stops at the container that forwards the click.
+- `Actions.MOVE_UP/DOWN` match the arrows only, so a widget that wants j/k checks `event.isChar` itself.
+- `RichTextAreaElement` ignores its horizontal scroll; `ScrollArea` (`content`) cuts the columns off the lines itself.
+- A click focuses the clicked pane through the app's global mouse handler (`FocusKeeper.clicked`), since the router stops
+  at the container that forwards the click.
 
+## Navigating the code
 
-## Process
+- For questions about Java types, use JavaLens: `find_implementations` and `get_type_hierarchy` (feature messages reach
+  `Msg` through a per-feature interface, so grep finds under a quarter of them), `get_call_hierarchy_incoming`,
+  `analyze_change_impact`, `find_affected_tests`, and `rename_symbol` / `change_method_signature` for those changes.
+  Set `maxResults` on broad queries: an unbounded `Msg` hierarchy is ~190 KB.
+- grep suits distinctive names, strings, message keys and non-Java files.
 
-### ARCHITECTURE.md
+## Tests
 
-- `ARCHITECTURE.md` is a short map of the shape of the code: modules, layers, the runtime loop, what a feature is made
-  of. Update it only when that shape changes, never to describe a feature; feature details belong in the code, its
-  Javadoc and the ADRs.
+- Every behaviour has a unit test, in the module of what it tests. A test that needs a feature's messages or text, or
+  the app's keymap (`Keymap.standard()` is empty without the app), goes in `jazygit-app`, in the package of what it
+  tests.
+- UI tests drive TamboUI's Pilot and assert on the rendered screen, not only on the dispatched message. Clicks are
+  tested at app level (`JazygitAppReportsTest`), where the full layout routes them.
+- The Python tests in `acceptance/` sanity-check the repository and output after a command (`acceptance/README.md`).
+- Per-module JUnit configuration goes in that module's surefire `configurationParameters`. A module whose pom has the
+  `test-jar` goal puts its `src/test/resources` on the test classpath of the modules above it.
 
-### ADR
+## Before committing
 
-- Decisions with a big impact on the architecture or were impactful design decisions had to be made are recorded in an
-  ADR (Architecture Decision Record) in `documentation/adr`. Each ADR is a markdown file with a name like `0001-foo.md`
-  (Context / Decision / Consequences), where the number is the next available integer.
-- The next number is the next free one on `origin/main` (after `git fetch`) *and* in the open PRs (`gh pr list`,
-  `gh pr view N --json files`): parallel branches claim numbers all the time. Check again before opening the PR.
-- A plan settled in a grilling session becomes an ADR before implementation starts.
-- View tweaks, visual rearrangements and shortcut changes need no ADR, even when an older ADR spelled out the old
-  detail: change the code and Javadoc.
-- ADR's are immutable once they are in the main branch. They can be amended in a new ADR, but the old one is never
-  changed apart from a reference to a newer one with a sentence like "Amended by ADR XX: this is why bla bla bla"
-- The ADR's are a historical record of the decisions made, and the reasons for them. They are not a design document, and
-  they are not a specification. They are a record of the decisions made, and the reasons for them.
-
-
-## Code Analysis Preferences
-
-For Java code analysis, prefer JavaLens MCP tools over text search:
-- Use `find_references` instead of grep for finding usages
-- Use `find_implementations` instead of text search for implementations
-- Use `analyze_type` to understand a class before modifying it
-- Use refactoring tools (rename_symbol, extract_method) for safe changes
-
-Semantic analysis from JDT is more accurate than text-based search,
-especially for overloaded methods, inheritance, and generic types.
-
-## Testing
-
-### Unit Tests
-
-- all functionality needs to be covered by unit tests
-- the acceptance tests are written in python. Their main focus in validating the state of the git repository after a
-  command has been run, and that the output is as expected. They are not meant to be a complete test of the
-  functionality, but rather a sanity check that the core is working as expected.
-- integration tests are written in java, use a Pilot from Tamboui, and test the rendering and interaction of the UI.
-- A rendering or scrolling test asserts on the rendered screen, not only on the message it dispatched. Click behaviour
-  is tested at app level (`JazygitAppReportsTest`), where the full layout routes the click.
-- Per-module JUnit configuration goes in that module's surefire `configurationParameters`. core-git, core-gh,
-  kernel-state, kernel-ui, features-branches and features-github ship test-jars, so their `src/test/resources`
-  lands on the test classpath of the modules above them.
-- A test goes in the module of what it tests, unless it needs what that module cannot see: a feature's messages or
-  text, or the app's keymap (`Keymap.standard()` is empty without the app). Then it goes in `jazygit-app`, in the
-  package of what it tests.
-
-### Before committing
-1. `./mvnw verify`, as the last build: checkstyle only runs in verify, and Spotless reformats files locally while CI
-   only checks them. Commit what it reformatted; after any later edit, run `./mvnw spotless:apply`.
+1. `./mvnw verify`, as the last build: checkstyle only runs in verify, and Spotless reformats locally while CI only
+   checks. Commit what it reformatted; after any later edit, run `./mvnw spotless:apply`.
 2. After a UI change (pane layout, row text): `python3 -m pytest acceptance -q -n 8`, against the jar verify built. CI
    runs these; verify does not.
 3. After a Markdown change: `markdownlint-cli2` (in the dev shell). Prose wraps at 120 columns; tables, code blocks,
    headings and long links may be wider.
+
+## ARCHITECTURE.md and ADRs
+
+- `ARCHITECTURE.md` is the shape of the code: modules, layers, the runtime loop, what a feature is made of. Update it
+  when that shape changes; feature details belong in the code, its Javadoc and the ADRs.
+- An ADR in `documentation/adr/NNNN-slug.md` (Context / Decision / Consequences) records each decision that shapes the
+  architecture or the design, and each plan settled in a grilling session, before implementation starts. View tweaks,
+  rearrangements and shortcut changes take none, even when an older ADR spelled out the old detail: change the code and
+  Javadoc.
+- Its number is the next one free on `origin/main` (after `git fetch`) *and* in the open PRs (`gh pr list`,
+  `gh pr view N --json files`): parallel branches claim numbers all the time. Check again before opening the PR.
+- ADRs on main are a historical record, immutable: a new ADR amends one, and the old one gains only a line such as
+  "Amended by ADR NNNN: <why>".
