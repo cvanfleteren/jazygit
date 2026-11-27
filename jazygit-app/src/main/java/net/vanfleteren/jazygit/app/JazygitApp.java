@@ -28,11 +28,7 @@ import net.vanfleteren.jazygit.app.keys.Features;
 import net.vanfleteren.jazygit.core.askpass.AskpassServer;
 import net.vanfleteren.jazygit.core.git.branches.BatchSsh;
 import net.vanfleteren.jazygit.core.process.SshAsking;
-import net.vanfleteren.jazygit.features.branches.panes.branches.BranchesPanel;
 import net.vanfleteren.jazygit.features.changes.files.step.FileStepEnded;
-import net.vanfleteren.jazygit.features.changes.panes.commits.CommitsPanel;
-import net.vanfleteren.jazygit.features.changes.panes.files.FilesPanel;
-import net.vanfleteren.jazygit.features.changes.panes.stash.StashPanel;
 import net.vanfleteren.jazygit.features.chrome.layout.LayoutMsg;
 import net.vanfleteren.jazygit.kernel.content.ContentPanel;
 import net.vanfleteren.jazygit.kernel.content.ContentView;
@@ -162,10 +158,9 @@ public class JazygitApp extends ToolkitApp {
                 dispatch,
                 styleEngine,
                 focus::openContent,
-                (openDiff, highlights) -> new FilesPanel(dispatch, openDiff, highlights, Features.FILLS),
-                highlights -> new BranchesPanel(dispatch, clock, highlights, Features.FILLS),
-                highlights -> new CommitsPanel(dispatch, highlights, Features.FILLS),
-                highlights -> new StashPanel(dispatch, highlights),
+                Features.ALL.flatMap(Feature::panes),
+                Features.FILLS,
+                clock,
                 Screens.standard());
         this.commandLogPanel = new CommandLogPanel(
                 Theme.spanStyles(styleEngine),

@@ -67,6 +67,27 @@ class FillsTest {
     }
 
     @Test
+    void aFillerThatReadsIsGivenWhatTheFeaturesAfterItGiveForAnotherSlot() {
+        // The branches pane's times are those of the badges the forges, after it, give (ADR 211).
+        Fills reading = Fills.NONE.reading(
+                KEY, (model, fills) -> fills.all(OTHER, model).map(given -> "saw " + given));
+        Fills fills = reading.andThen(Fills.NONE.with(OTHER, model -> List.of("one", "two")));
+
+        assertEquals(List.of("saw one", "saw two"), fills.all(KEY, MODEL));
+        assertEquals(List.empty(), reading.all(KEY, MODEL));
+    }
+
+    @Test
+    void aGatedFillerThatReadsGivesNothingWhileItsFeatureIsOff() {
+        Fills fills = Fills.NONE
+                .reading(KEY, (model, given) -> given.all(OTHER, model))
+                .gated(model -> false)
+                .andThen(Fills.NONE.with(OTHER, model -> Option.of("other")));
+
+        assertEquals(List.empty(), fills.all(KEY, MODEL));
+    }
+
+    @Test
     void slotsOfTheSameNameAreTheSameSlot() {
         Fills fills = Fills.NONE.with(KEY, model -> Option.of("filled"));
 

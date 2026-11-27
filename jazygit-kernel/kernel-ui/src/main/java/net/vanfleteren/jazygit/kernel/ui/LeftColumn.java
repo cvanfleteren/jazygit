@@ -11,7 +11,9 @@ import dev.tamboui.toolkit.elements.Panel;
 import io.vavr.collection.List;
 import io.vavr.collection.Map;
 import io.vavr.control.Option;
+import java.time.Clock;
 import java.util.function.Consumer;
+import java.util.function.Function;
 import net.vanfleteren.jazygit.kernel.state.Focus;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.Msg;
@@ -19,6 +21,8 @@ import net.vanfleteren.jazygit.kernel.state.PaneId;
 import net.vanfleteren.jazygit.kernel.state.preferences.Screen;
 import net.vanfleteren.jazygit.kernel.state.preferences.ScreenMsg;
 import net.vanfleteren.jazygit.kernel.state.view.FileStepMsg;
+import net.vanfleteren.jazygit.kernel.state.view.Followed;
+import net.vanfleteren.jazygit.kernel.ui.content.Mirrored;
 import net.vanfleteren.jazygit.kernel.ui.screen.FilesLeftPane;
 import net.vanfleteren.jazygit.kernel.ui.screen.LeftPane;
 import net.vanfleteren.jazygit.kernel.ui.screen.Screens;
@@ -27,7 +31,9 @@ import net.vanfleteren.jazygit.kernel.ui.widgets.Pane;
 
 /**
  * The left column of the app: the status above the panes of the screen shown, which are the files, the branches, the
- * commits and the stashes of the repository, or those of a screen a feature brings (ADR 168).
+ * commits and the stashes of the repository, or those of a screen a feature brings (ADR 168). The features bring the
+ * panes of either (ADR 211); the column makes each once, and shows those of the screen shown in the order it lists
+ * them.
  */
 public final class LeftColumn {
 
@@ -43,42 +49,41 @@ public final class LeftColumn {
 
     private final Consumer<Msg> dispatch;
     private final StyleEngine styleEngine;
-    private final FilesLeftPane filesPanel;
-    private final LeftPane branchesPanel;
-    private final LeftPane commitsPanel;
-    private final LeftPane stashPanel;
     private final Screens screens;
     private final Map<Screen, List<LeftPane>> screenPanes;
+    // The files pane, which steps to another file without the focus and lists what the pane in use follows, if a
+    // feature brings it.
+    private final Option<FilesLeftPane> filesPanel;
 
     /**
-     * @param styleEngine     the active theme, which highlights the selected rows
-     * @param openContent     moves the focus to the content shown for the pane given
-     * @param files           makes the files pane, which lives in a group of features (ADR 158)
-     * @param branches        makes the branches pane, which lives in a group of features (ADR 158)
-     * @param commits         makes the commits pane, which lives in a group of features
-     * @param stash           makes the stash pane, which lives in a group of features
-     * @param screens         the screens the left of the window shows, whose panes the features make
+     * @param styleEngine the active theme, which highlights the selected rows
+     * @param openContent moves the focus to the content shown for the pane given
+     * @param panes       the panes the features bring to the screens, in the order of the features (ADR 211)
+     * @param fills       what the features give for the slots, which the panes ask for theirs (ADR 172)
+     * @param clock       turns the spinners of the panes
+     * @param screens     the screens the left of the window shows
      */
     public LeftColumn(
             Consumer<Msg> dispatch,
             StyleEngine styleEngine,
             Consumer<PaneId> openContent,
-            FilesLeftPane.Factory files,
-            LeftPane.Factory branches,
-            LeftPane.Factory commits,
-            LeftPane.Factory stash,
+            List<ScreenPane> panes,
+            Fills fills,
+            Clock clock,
             Screens screens) {
         this.dispatch = dispatch;
         this.styleEngine = styleEngine;
         // How the active theme highlights the selected row of a pane, in use or not.
         Theme.Highlights highlight = active -> Theme.highlights(styleEngine).of(active);
-        this.filesPanel = files.of(() -> openContent.accept(PaneId.FILES), highlight);
-        this.branchesPanel = branches.of(highlight);
-        this.commitsPanel = commits.of(highlight);
-        this.stashPanel = stash.of(highlight);
+        ScreenPane.Context context = new ScreenPane.Context(dispatch, openContent, highlight, fills, clock);
         this.screens = screens;
-        this.screenPanes = screens.all()
-                .toLinkedMap(spec -> spec.screen(), spec -> spec.panes().of(dispatch, openContent, highlight));
+        this.screenPanes = panes.groupBy(ScreenPane::screen)
+                .mapValues(brought -> brought.map(pane -> pane.factory().of(context)));
+        this.filesPanel = screenPanes
+                .values()
+                .flatMap(made -> made)
+                .flatMap(LeftColumn::files)
+                .headOption();
     }
 
     /**
@@ -93,9 +98,7 @@ public final class LeftColumn {
         if (model.preferences().leftCollapsed(model.screen())) {
             return new Rendered(column(collapsed()), List.empty());
         }
-        List<Panel> shown = model.screen().equals(Screen.REPOSITORY)
-                ? repositoryPanes(model, focus, inUse)
-                : panesOf(model.screen()).map(pane -> pane.render(model, focus, inUse));
+        List<Panel> shown = panesOf(model.screen()).map(pane -> pane.render(model, focus, inUse));
         if (shown.isEmpty()) {
             // A screen whose feature made none of its panes shows the status alone.
             return new Rendered(column(status(model)), List.empty());
@@ -116,32 +119,28 @@ public final class LeftColumn {
      * is, and says whether there was one (ADR 117).
      */
     public boolean stepFile(Model model, FileStepMsg.Step step) {
-        return filesPanel.step(model, step);
+        return filesPanel.exists(files -> files.step(model, step));
     }
 
     /**
-     * What the panes highlight that the model, which they were last rendered from, does not know: the item the
-     * content panel shows the preview of, and whose files the files pane lists (ADR 141). On a screen a feature brings,
-     * only the pane in use, {@code inUse}, says (ADR 168).
+     * What the panes of the screen shown highlight that the model, which they were last rendered from, does not know:
+     * the item the content panel shows the preview of, and whose files the files pane lists (ADR 141). A pane the
+     * content panel mirrors on its own, as those of the repository, always says; of the others, only the pane in use,
+     * {@code inUse}, whose highlight the content panel shows (ADR 168).
      */
     public List<Msg> selectionChanges(Model model, Option<PaneId> inUse) {
-        return !model.screen().equals(Screen.REPOSITORY)
-                // The content panel shows the item highlighted in the pane in use.
-                ? panesOf(model.screen())
-                        .filter(pane -> inUse.contains(pane.pane()))
-                        .flatMap(pane -> pane.selectionChange(model))
-                : List.of(
-                                branchesPanel.selectionChange(model),
-                                commitsPanel.selectionChange(model),
-                                filesPanel.selectionChange(model),
-                                stashPanel.selectionChange(model),
-                                filesPanel.followChange(model, inUse, branchesPanel.followed(model)))
-                        .flatMap(change -> change);
+        List<LeftPane> shown = panesOf(model.screen());
+        Function<PaneId, Option<Followed>> followed =
+                id -> shown.find(pane -> pane.pane().equals(id)).flatMap(pane -> pane.followed(model));
+        return shown.filter(pane -> Mirrored.of(pane.pane()).isDefined() || inUse.contains(pane.pane()))
+                .flatMap(pane -> pane.selectionChange(model))
+                .appendAll(
+                        shown.flatMap(LeftColumn::files).flatMap(files -> files.followChange(model, inUse, followed)));
     }
 
     /**
-     * The panes of {@code screen}, a screen a feature brings, top to bottom: those its feature made, in the order the
-     * screen lists them, matched by their ids.
+     * The panes of {@code screen}, top to bottom: those the features made for it, in the order the screen lists them,
+     * matched by their ids.
      */
     private List<LeftPane> panesOf(Screen screen) {
         List<LeftPane> made = screenPanes.get(screen).getOrElse(List.empty());
@@ -149,14 +148,10 @@ public final class LeftColumn {
     }
 
     /**
-     * The panes of the repository screen under the status: the files, the branches, the commits and the stashes.
+     * {@code pane}, if it is the files pane.
      */
-    private List<Panel> repositoryPanes(Model model, Option<Focus> focus, Option<PaneId> inUse) {
-        return List.of(
-                filesPanel.render(model, focus, inUse),
-                branchesPanel.render(model, focus, inUse),
-                commitsPanel.render(model, focus, inUse),
-                stashPanel.render(model, focus, inUse));
+    private static Option<FilesLeftPane> files(LeftPane pane) {
+        return pane instanceof FilesLeftPane files ? Option.of(files) : Option.none();
     }
 
     /**

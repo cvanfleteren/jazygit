@@ -41,11 +41,10 @@ class FeaturesTest {
     private static final List<String> WHOLE = List.of("github", "forgejo", "agent");
 
     /**
-     * The top-level feature packages that are no feature: {@code layout} has only global keys, {@code start} has
-     * the popups of the start screen, and {@code panes} has the panes of its group (ADR 158).
+     * The top-level feature packages that are no feature: {@code layout} has only global keys, and {@code start} has
+     * the popups of the start screen. Each {@code panes} is the feature that brings the panes of its group (ADR 211).
      */
-    private static final Set<String> NO_FEATURE =
-            HashSet.of("chrome.layout", "branches.start", "branches.panes", "changes.panes");
+    private static final Set<String> NO_FEATURE = HashSet.of("chrome.layout", "branches.start");
 
     private static final JavaClasses CLASSES = new ClassFileImporter()
             .withImportOption(new ImportOption.DoNotIncludeTests())

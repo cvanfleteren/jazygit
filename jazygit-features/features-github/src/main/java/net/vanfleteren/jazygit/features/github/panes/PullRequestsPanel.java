@@ -19,6 +19,7 @@ import net.vanfleteren.jazygit.kernel.state.Loadable;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.Msg;
 import net.vanfleteren.jazygit.kernel.state.PaneId;
+import net.vanfleteren.jazygit.kernel.ui.ScreenPane;
 import net.vanfleteren.jazygit.kernel.ui.i18n.Messages;
 import net.vanfleteren.jazygit.kernel.ui.keys.Keymap;
 import net.vanfleteren.jazygit.kernel.ui.keys.Keymap.Scope;
@@ -93,23 +94,33 @@ public final class PullRequestsPanel implements LeftPane {
     }
 
     /**
-     * The panes of the pull requests screen, top to bottom: the ones of the repository, the ones that ask for the
-     * user's review, and the ones they opened.
+     * The pane of the pull requests of the repository, the first of the pull requests screen.
      */
-    public static List<LeftPane> all(
-            Consumer<Msg> dispatch, Consumer<PaneId> openPullRequest, Theme.Highlights highlights) {
-        return List.of(
-                new PullRequestsPanel(
-                        PrScopes.REPOSITORY, PrOverview::repository, false, dispatch, openPullRequest, highlights),
-                new PullRequestsPanel(
-                        PrScopes.REVIEW_REQUESTED,
-                        PrOverview::reviewRequested,
-                        true,
-                        dispatch,
-                        openPullRequest,
-                        highlights),
-                new PullRequestsPanel(
-                        PrScopes.AUTHORED, PrOverview::authored, true, dispatch, openPullRequest, highlights));
+    public static LeftPane repository(ScreenPane.Context context) {
+        return of(context, PrScopes.REPOSITORY, PrOverview::repository, false);
+    }
+
+    /**
+     * The pane of the pull requests that ask for the user's review, of any repository.
+     */
+    public static LeftPane reviewRequested(ScreenPane.Context context) {
+        return of(context, PrScopes.REVIEW_REQUESTED, PrOverview::reviewRequested, true);
+    }
+
+    /**
+     * The pane of the pull requests the user opened, in any repository.
+     */
+    public static LeftPane authored(ScreenPane.Context context) {
+        return of(context, PrScopes.AUTHORED, PrOverview::authored, true);
+    }
+
+    private static LeftPane of(
+            ScreenPane.Context context,
+            Scope<PullRequestSummary> scope,
+            Function<PrOverview, Loadable<PullRequestList>> list,
+            boolean anyRepository) {
+        return new PullRequestsPanel(
+                scope, list, anyRepository, context.dispatch(), context.openContent(), context.highlights());
     }
 
     /**

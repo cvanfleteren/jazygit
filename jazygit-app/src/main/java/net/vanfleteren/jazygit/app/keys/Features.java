@@ -7,6 +7,7 @@ import io.vavr.control.Option;
 import net.vanfleteren.jazygit.features.agent.AgentFeature;
 import net.vanfleteren.jazygit.features.branches.branch.BranchFeature;
 import net.vanfleteren.jazygit.features.branches.forcedelete.ForceDeleteFeature;
+import net.vanfleteren.jazygit.features.branches.panes.BranchesPanesFeature;
 import net.vanfleteren.jazygit.features.branches.repos.RecentReposFeature;
 import net.vanfleteren.jazygit.features.branches.worktree.WorktreeFeature;
 import net.vanfleteren.jazygit.features.changes.cherrypick.CherryPickFeature;
@@ -17,6 +18,7 @@ import net.vanfleteren.jazygit.features.changes.discard.DiscardFeature;
 import net.vanfleteren.jazygit.features.changes.edit.EditFeature;
 import net.vanfleteren.jazygit.features.changes.fetch.FetchFeature;
 import net.vanfleteren.jazygit.features.changes.files.FilesFeature;
+import net.vanfleteren.jazygit.features.changes.panes.ChangesPanesFeature;
 import net.vanfleteren.jazygit.features.changes.reflog.ReflogFeature;
 import net.vanfleteren.jazygit.features.changes.stage.StageFeature;
 import net.vanfleteren.jazygit.features.changes.stash.StashFeature;
@@ -51,6 +53,9 @@ public final class Features {
      * order of the popups does not matter, as only one is open.
      */
     private static final List<Feature> DECLARED = List.of(
+                    // The panes of the repository screen, which have no keys of their own (ADR 211).
+                    ChangesPanesFeature.FEATURE,
+                    BranchesPanesFeature.FEATURE,
                     StageFeature.FEATURE,
                     CommitFeature.FEATURE,
                     ReflogFeature.FEATURE,
