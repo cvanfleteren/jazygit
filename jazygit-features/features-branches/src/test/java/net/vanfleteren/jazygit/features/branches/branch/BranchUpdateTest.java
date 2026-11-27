@@ -731,7 +731,8 @@ class BranchUpdateTest {
 
     @Test
     void anAnswerOfGitDoesNotTakeAwayAPopupTheUserOpenedMeanwhile() {
-        Model merging = Update.update(pullable(2, 0), new MergeMsg.Requested(new BranchName("feature")))
+        Model merging = Update.update(
+                        pullable(2, 0), new MergeMsg.Requested(new BranchRef.Local(new BranchName("feature"))))
                 .model();
         assertTrue(merging.popup().isDefined());
 
