@@ -24,6 +24,21 @@ public sealed interface UpstreamMsg extends Msg {
     record ResetChosen() implements UpstreamMsg {}
 
     /**
+     * The user chose to set the upstream of the highlighted branch; which one is still to be entered.
+     */
+    record SetChosen() implements UpstreamMsg {}
+
+    /**
+     * The user confirmed the upstream entered.
+     */
+    record SetConfirmed() implements UpstreamMsg {}
+
+    /**
+     * The user chose to unset the upstream of the highlighted branch.
+     */
+    record UnsetChosen() implements UpstreamMsg {}
+
+    /**
      * The user chose to see the commits the highlighted branch and its upstream do not share.
      */
     record UpstreamDivergenceChosen() implements UpstreamMsg {}

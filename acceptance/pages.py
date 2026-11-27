@@ -780,6 +780,42 @@ class BranchesPane:
 
         self.ui.changing_repo(f"{self.repo.current_branch()} reset onto its upstream", keys)
 
+    def set_upstream(self, branch: str, upstream: str = None):
+        """Makes the branch follow upstream, "<remote> <branch>", which is the branch of the same name on the remote it
+        follows, or on origin, as the app offers, when not given."""
+        self.select(branch)
+
+        def keys():
+            self.app.press("u")
+            self.ui.confirm("Upstream options for", key="s")
+            if upstream is None:
+                self.ui.confirm("Upstream of")
+            else:
+                self.ui.enter_text("Upstream of", upstream)
+
+        self.ui.changing_repo(f"{branch} to follow another upstream", keys)
+
+    def try_to_set_upstream(self, branch: str, upstream: str):
+        """Asks to make the branch follow upstream, "<remote> <branch>", for when the app is to refuse it: it does not
+        wait for the repository to change."""
+        self.select(branch)
+        self.app.press("u")
+        self.ui.confirm("Upstream options for", key="s")
+        self.ui.enter_text("Upstream of", upstream)
+
+    def unset_upstream(self, branch: str):
+        """Makes the branch follow nothing."""
+        self.select(branch)
+        self.ui.changing_repo(f"{branch} to follow nothing", lambda: (
+            self.app.press("u"), self.ui.confirm("Upstream options for", key="u")))
+
+    def try_to_unset_upstream(self, branch: str):
+        """Asks to make the branch follow nothing, for when the app is to refuse it: it does not wait for the
+        repository to change."""
+        self.select(branch)
+        self.app.press("u")
+        self.ui.confirm("Upstream options for", key="u")
+
     def checkout_remote(self, branch: str, name: str = None):
         """Checks out the local branch that follows the remote branch, such as "origin/feature", creating it when
         there is none. When the name it has on the remote is taken, the new branch is called name."""

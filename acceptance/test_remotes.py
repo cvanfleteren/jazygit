@@ -406,6 +406,93 @@ def test_hard_reset_onto_the_upstream_discards_the_uncommitted_changes_once_conf
     assert repo.status() == {}
 
 
+def made_from_main(repo, origin):
+    """Published, and a branch new with one commit, which git made follow origin/main, as it does for a branch made
+    from a remote branch; it is not on the remote."""
+    published(repo, origin)
+    repo("switch", "--create", "new", "origin/main")
+    repo.commit("Add new", **{"new.txt": "new\n"})
+    repo("switch", "main")
+
+
+def test_set_the_upstream_of_a_branch_that_follows_main(repo, origin, jazygit):
+    made_from_main(repo, origin)
+    repo("push", "origin", "new")
+    assert repo.upstream("new") == "origin/main"
+    assert repo.sync("new") == "ahead 1"
+    ui = jazygit()
+
+    ui.branches.set_upstream("new")
+
+    assert repo.upstream("new") == "origin/new"
+    assert repo.sync("new") == ""
+
+
+def test_set_the_upstream_of_a_branch_to_another_branch(repo, origin, jazygit):
+    made_from_main(repo, origin)
+    ui = jazygit()
+
+    ui.branches.set_upstream("new", "origin feature")
+
+    assert repo.upstream("new") == "origin/feature"
+    assert repo.sync("new") == "ahead 1, behind 1"
+
+
+def test_set_the_upstream_of_a_branch_to_one_that_is_not_there_is_refused(repo, origin, jazygit):
+    made_from_main(repo, origin)
+    ui = jazygit()
+
+    ui.branches.try_to_set_upstream("new", "origin nope")
+
+    ui.app.wait_for("There is no branch origin/nope on the remote as last fetched: fetch first")
+    assert repo.upstream("new") == "origin/main"
+
+
+def test_set_the_upstream_of_a_branch_whose_upstream_was_deleted(repo, origin, clone, jazygit):
+    published(repo, origin)
+    clone()("push", "origin", "--delete", "feature")
+    repo("fetch", "--prune")
+    assert repo.sync("feature") == "gone"
+    ui = jazygit()
+
+    ui.branches.set_upstream("feature", "origin main")
+
+    assert repo.upstream("feature") == "origin/main"
+    assert repo.sync("feature") == "ahead 1"
+
+
+def test_unset_the_upstream_of_a_branch(repo, origin, jazygit):
+    made_from_main(repo, origin)
+    ui = jazygit()
+
+    ui.branches.unset_upstream("new")
+
+    assert repo.upstream("new") == ""
+
+
+def test_unset_the_upstream_of_a_branch_whose_upstream_was_deleted(repo, origin, clone, jazygit):
+    published(repo, origin)
+    clone()("push", "origin", "--delete", "feature")
+    repo("fetch", "--prune")
+    ui = jazygit()
+
+    ui.branches.unset_upstream("feature")
+
+    assert repo.upstream("feature") == ""
+    assert repo.sync("feature") == ""
+
+
+def test_a_branch_without_upstream_has_none_to_unset(repo, origin, jazygit):
+    published(repo, origin)
+    repo("switch", "--create", "local-only")
+    repo("switch", "main")
+    ui = jazygit()
+
+    ui.branches.try_to_unset_upstream("local-only")
+
+    ui.app.wait_for("Branch local-only has no upstream")
+
+
 def test_rename_a_branch_keeps_its_upstream(repo, origin, jazygit):
     published(repo, origin)
     ui = jazygit()

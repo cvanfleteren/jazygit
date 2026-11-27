@@ -10,6 +10,7 @@ import net.vanfleteren.jazygit.kernel.ui.i18n.Messages;
 import net.vanfleteren.jazygit.kernel.ui.keys.Scopes;
 import net.vanfleteren.jazygit.kernel.ui.widgets.ChoiceDialog;
 import net.vanfleteren.jazygit.kernel.ui.widgets.ChoiceDialog.Choice;
+import net.vanfleteren.jazygit.kernel.ui.widgets.TextInputDialog;
 
 /**
  * The popup of the upstream options of a branch.
@@ -18,7 +19,7 @@ public final class UpstreamDialogs {
 
     /**
      * Asks what to do with the upstream: view how the highlighted branch diverged from it or from the main
-     * branch, or reset the checked out branch onto it. Its options are offered also when they cannot be done, to
+     * branch, reset the checked out branch onto it, or set or unset the upstream of the highlighted branch. Its options are offered also when they cannot be done, to
      * tell why.
      */
     public static final ChoiceDialog.Spec<UpstreamPopup> UPSTREAM = new ChoiceDialog.Spec<>(
@@ -49,12 +50,32 @@ public final class UpstreamDialogs {
                                     popup -> Messages.get(
                                             "branches.dialog.upstream.reset", upstreamName(popup.checkedOut())),
                                     UpstreamMsg.ResetChosen::new)
-                            .withDetails("branches.dialog.upstream.reset.details")));
+                            .withDetails("branches.dialog.upstream.reset.details"),
+                    new Choice<UpstreamPopup>('s', "branches.dialog.upstream.set", UpstreamMsg.SetChosen::new)
+                            .withDetails("branches.dialog.upstream.set.details"),
+                    new Choice<UpstreamPopup>('u', "branches.dialog.upstream.unset", UpstreamMsg.UnsetChosen::new)
+                            .withDetails("branches.dialog.upstream.unset.details")));
+
+    /**
+     * Asks which remote branch a branch is to follow, as {@code <remote> <branchname>}, starting out with the branch
+     * of its own name. What cannot be read that way, or is not on the remote as last fetched, keeps it open.
+     */
+    public static final TextInputDialog.Spec<ChangeUpstreamPopup> CHANGE_UPSTREAM = new TextInputDialog.Spec<>(
+                    "change-upstream",
+                    ChangeUpstreamPopup.class,
+                    popup -> Messages.get(
+                            "branches.dialog.changeUpstream.title",
+                            popup.branch().value()),
+                    Option.none(),
+                    UpstreamMsg.SetConfirmed::new)
+            .withWidth(TextInputDialog.BRANCH_NAME_WIDTH);
 
     private UpstreamDialogs() {}
 
     public static List<PopupSlot> popups(Consumer<Msg> dispatch) {
-        return List.of(PopupSlot.returningTo(Scopes.BRANCHES.pane(), new ChoiceDialog<>(UPSTREAM, dispatch)));
+        return List.of(
+                PopupSlot.returningTo(Scopes.BRANCHES.pane(), new ChoiceDialog<>(UPSTREAM, dispatch)),
+                PopupSlot.returningTo(Scopes.BRANCHES.pane(), new TextInputDialog<>(CHANGE_UPSTREAM, dispatch)));
     }
 
     private static String upstreamName(Option<Branch> branch) {

@@ -17,6 +17,7 @@ import net.vanfleteren.jazygit.core.repo.Branch;
 import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.BranchRef;
 import net.vanfleteren.jazygit.core.repo.CaughtUpBranch;
+import net.vanfleteren.jazygit.core.repo.RemoteBranch;
 import net.vanfleteren.jazygit.core.repo.RemoteRef;
 import net.vanfleteren.jazygit.core.repo.Sha;
 
@@ -62,6 +63,16 @@ public interface StubBranches extends Branches {
 
     @Override
     default Either<GitFailure, List<ExecutedCommand>> rename(BranchName name, BranchName newName) {
+        return ran();
+    }
+
+    @Override
+    default Either<GitFailure, List<ExecutedCommand>> setUpstream(BranchName name, RemoteBranch upstream) {
+        return ran();
+    }
+
+    @Override
+    default Either<GitFailure, List<ExecutedCommand>> unsetUpstream(BranchName name) {
         return ran();
     }
 

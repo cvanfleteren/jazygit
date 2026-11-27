@@ -26,6 +26,18 @@ public sealed interface BranchError extends AppError {
     }
 
     /**
+     * Following {@code upstream} was asked for, but git has no such remote-tracking branch: it is not fetched for the
+     * purpose.
+     */
+    record UpstreamMissing(RemoteBranch upstream) implements BranchError {
+
+        @Override
+        public Phrase phrase() {
+            return Phrase.of("branches.error.upstream.missing", upstream.shortName());
+        }
+    }
+
+    /**
      * Checking out {@code branch} was asked for, but the worktree shown is rebasing it, with its HEAD detached
      * meanwhile: it is the branch worked on here already, and the rebase is to be continued or aborted (ADR 197).
      */
