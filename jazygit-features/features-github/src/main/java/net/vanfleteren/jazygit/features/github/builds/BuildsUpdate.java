@@ -102,7 +102,9 @@ public final class BuildsUpdate {
                             WorkflowRuns now = read.apply(runs);
                             Next shown = BuildsReads.next(shown(
                                     model, Option.of(view.withRuns(view.runs().put(id, now)))));
-                            return now.reading() ? shown.and(new LoadWorkflowRuns(id, now.after())) : shown;
+                            return now.paging() instanceof Paging.Reading(Option<String> from)
+                                    ? shown.and(new LoadWorkflowRuns(id, from))
+                                    : shown;
                         }))
                 .getOrElse(() -> Next.of(model));
     }
@@ -128,7 +130,7 @@ public final class BuildsUpdate {
                         .flatMap(WorkflowRuns::more)
                         .map(runs -> Next.of(
                                 shown(model, Option.of(view.withRuns(view.runs().put(id, runs)))),
-                                new LoadWorkflowRuns(id, runs.after()))));
+                                new LoadWorkflowRuns(id, runs.paging().from()))));
     }
 
     /**
@@ -137,7 +139,9 @@ public final class BuildsUpdate {
     private static Option<Next> moreCommits(Model model, BuildsView view) {
         return view.onGitHub()
                 .flatMap(remote -> view.more()
-                        .map(more -> Next.of(shown(model, Option.of(more)), new LoadBuilds(remote, more.after()))));
+                        .map(more -> Next.of(
+                                shown(model, Option.of(more)),
+                                new LoadBuilds(remote, more.paging().from()))));
     }
 
     /**
@@ -163,7 +167,9 @@ public final class BuildsUpdate {
                 .map(read)
                 .map(view -> {
                     Next shown = BuildsReads.next(shown(model, Option.of(view)));
-                    return view.reading() ? shown.and(new LoadBuilds(branch, view.after())) : shown;
+                    return view.paging() instanceof Paging.Reading(Option<String> from)
+                            ? shown.and(new LoadBuilds(branch, from))
+                            : shown;
                 })
                 .getOrElse(() -> Next.of(model));
     }

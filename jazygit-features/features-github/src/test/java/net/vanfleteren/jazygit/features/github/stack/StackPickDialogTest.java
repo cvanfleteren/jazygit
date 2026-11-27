@@ -2,6 +2,7 @@ package net.vanfleteren.jazygit.features.github.stack;
 
 import static dev.tamboui.toolkit.Toolkit.stack;
 import static dev.tamboui.toolkit.Toolkit.text;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import dev.tamboui.toolkit.app.ToolkitTestRunner;
@@ -28,6 +29,8 @@ import net.vanfleteren.jazygit.kernel.state.Msg;
 import net.vanfleteren.jazygit.kernel.state.TestModels;
 import net.vanfleteren.jazygit.kernel.state.popup.ListCursor;
 import net.vanfleteren.jazygit.kernel.ui.RenderedText;
+import net.vanfleteren.jazygit.kernel.ui.SettledPilot;
+import net.vanfleteren.jazygit.kernel.ui.keys.Keymap;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -141,6 +144,26 @@ class StackPickDialogTest {
         String screen = render(new StackPopups.Pick(above, Option.none(), Option.of(new StackId(12))));
 
         assertTrue(screen.contains("feat/d has no pull request: Enter creates one on feat/c"), screen);
+    }
+
+    @Test
+    void bAndTMakeTheHighlightedBranchTheBottomAndTheTopAndAreInTheHelp() throws Exception {
+        Keymap keymap = StackAction.ACTION.keys().apply(Keymap.empty());
+        StackPickDialog keyed = new StackPickDialog(dispatched::add, () -> keymap);
+        Model open = TestModels.loaded()
+                .openPopup(new StackPopups.Pick(CHOICE, Option.none(), Option.none()))
+                .withListCursor(ListCursor.START.at(1));
+
+        try (ToolkitTestRunner runner = ToolkitTestRunner.runTest(
+                () -> stack(text("background"), keyed.render(open).get()))) {
+            SettledPilot.focus(runner, StackPickDialog.ID);
+            SettledPilot.of(runner).press('b');
+            SettledPilot.of(runner).press('t');
+            SettledPilot.of(runner).pause();
+        }
+
+        assertEquals(java.util.List.of(new StackMsg.BottomChosen(1), new StackMsg.TopChosen(1)), dispatched);
+        assertEquals(List.of("b", "t"), keymap.bindings(StackAction.PICK.id()).map(Keymap.Binding::label));
     }
 
     private String render(StackPopups.Pick pick) throws Exception {

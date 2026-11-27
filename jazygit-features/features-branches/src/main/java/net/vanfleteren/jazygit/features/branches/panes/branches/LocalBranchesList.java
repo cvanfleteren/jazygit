@@ -180,28 +180,47 @@ class LocalBranchesList implements BranchesTabList {
      * the header of its stack when that is closed.
      */
     private static int reselect(List<BranchNode> previous, List<BranchNode> next, int selected) {
-        Option<BranchName> before = current(previous);
-        boolean detached = detached(next);
-        Option<String> target = before.equals(current(next)) && detached == detached(previous)
-                ? Option.of(selected)
-                        .filter(i -> i < previous.size())
-                        .map(previous::get)
-                        .map(node -> node instanceof BranchNode.Leaf leaf
-                                ? leafKey(renamed(
-                                        branches(previous),
-                                        branches(next),
-                                        leaf.branch().name()))
-                                : node.key())
-                // Once HEAD is detached, it is what is checked out, listed first.
-                : detached
-                        ? next.find(BranchNode.Detached.class::isInstance).map(BranchNode::key)
-                        : current(next)
-                                .map(name -> next.find(node -> holds(node, name))
-                                        .map(BranchNode::key)
-                                        .getOrElse(() -> leafKey(name)));
+        Option<String> target = switch (HeadChange.of(previous, next)) {
+            case SAME -> followedKey(previous, next, selected);
+            case DETACHED -> detachedKey(next);
+            case MOVED -> checkedOut(next);
+        };
         return target.map(key -> next.indexWhere(node -> node.key().equals(key)))
                 .filter(i -> i >= 0)
                 .getOrElse(selected);
+    }
+
+    /**
+     * The key in {@code next} of the node {@code selected} in {@code previous}: a branch's under its new name when it
+     * was renamed.
+     */
+    private static Option<String> followedKey(List<BranchNode> previous, List<BranchNode> next, int selected) {
+        return Option.of(selected)
+                .filter(i -> i < previous.size())
+                .map(previous::get)
+                .map(node -> node instanceof BranchNode.Leaf leaf
+                        ? leafKey(renamed(
+                                branches(previous),
+                                branches(next),
+                                leaf.branch().name()))
+                        : node.key());
+    }
+
+    /**
+     * Once HEAD is detached, it is what is checked out, listed first.
+     */
+    private static Option<String> detachedKey(List<BranchNode> next) {
+        return next.find(BranchNode.Detached.class::isInstance).map(BranchNode::key);
+    }
+
+    /**
+     * The key of the new current branch, or of the header of its stack when that is closed.
+     */
+    private static Option<String> checkedOut(List<BranchNode> next) {
+        return current(next)
+                .map(name -> next.find(node -> holds(node, name))
+                        .map(BranchNode::key)
+                        .getOrElse(() -> leafKey(name)));
     }
 
     private static boolean detached(List<BranchNode> nodes) {
@@ -464,5 +483,25 @@ class LocalBranchesList implements BranchesTabList {
                         () -> keymap.handle(Scopes.BRANCHES, event, selectedBranch(), tabs),
                         keys -> keys.handle(keymap, event)
                                 .orElse(() -> keymap.handle(Scopes.BRANCHES, event, Option.none(), tabs)));
+    }
+
+    /**
+     * How what is checked out changed between two listings, which decides where the selection goes.
+     */
+    private enum HeadChange {
+        /** The same branch is current, or HEAD is detached in both: the selection follows its node. */
+        SAME,
+        /** HEAD is detached now: the selection goes to it. */
+        DETACHED,
+        /** Another branch is current now: the selection goes to it. */
+        MOVED;
+
+        static HeadChange of(List<BranchNode> previous, List<BranchNode> next) {
+            boolean detached = detached(next);
+            if (current(previous).equals(current(next)) && detached == detached(previous)) {
+                return SAME;
+            }
+            return detached ? DETACHED : MOVED;
+        }
     }
 }

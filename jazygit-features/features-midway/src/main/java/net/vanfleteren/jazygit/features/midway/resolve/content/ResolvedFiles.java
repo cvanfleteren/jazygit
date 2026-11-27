@@ -8,7 +8,7 @@ import net.vanfleteren.jazygit.core.git.model.RepoStatus;
 import net.vanfleteren.jazygit.core.repo.RepoPath;
 import net.vanfleteren.jazygit.features.changes.panes.files.FileMark;
 import net.vanfleteren.jazygit.kernel.state.Model;
-import net.vanfleteren.jazygit.kernel.ui.i18n.Messages;
+import net.vanfleteren.jazygit.kernel.state.Phrase;
 import net.vanfleteren.jazygit.kernel.ui.theme.Theme;
 import net.vanfleteren.jazygit.kernel.ui.widgets.LoadableList;
 
@@ -41,16 +41,17 @@ public final class ResolvedFiles {
 
     /**
      * How far the resolving of the conflicts of the operation in progress got, once one of them is resolved:
-     * {@code · 2 of 4 resolved}.
+     * {@code 2 of 4 resolved}.
      */
-    public static Option<String> progress(Model model) {
+    public static Option<Phrase> progress(Model model) {
         return model.repo().status().toOption().flatMap(ResolvedFiles::progress);
     }
 
-    private static Option<String> progress(RepoStatus status) {
+    private static Option<Phrase> progress(RepoStatus status) {
         int done = status.resolved().size();
         return Option.when(
                 status.inProgress().isDefined() && done > 0,
-                () -> Messages.get("midway.panes.files.resolved", done, done + status.conflicts()));
+                () -> Phrase.of(
+                        "midway.panes.files.resolved", Phrase.count(done), Phrase.count(done + status.conflicts())));
     }
 }

@@ -122,10 +122,10 @@ public sealed interface ForgejoCreatePullRequestCmd extends Cmd {
         }
 
         private Msg create(Forgejo forgejo, ForgejoRepository home, ForgejoRepository repository) {
-            String head =
-                    ForgejoNewPullRequest.head(home, repository, target.branch().value());
-            // A head with the owner before it is in a fork, which a 404 then says must be one of the home's.
-            Option<RepoSlug> fork = Option.when(!head.equals(target.branch().value()), repository::slug);
+            ForgejoNewPullRequest.Head head = ForgejoNewPullRequest.Head.of(
+                    home, repository, new ForgeBranch(target.branch().value()));
+            // A head in a fork, which a 404 then says must be one of the home's.
+            Option<RepoSlug> fork = head.owner().map(owner -> repository.slug());
             return forgejo.createPullRequest(
                             home, new ForgejoNewPullRequest(head, new ForgeBranch(base.value()), title, body, draft))
                     .fold(

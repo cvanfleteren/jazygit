@@ -41,20 +41,6 @@ public final class TreeFolds {
     private TreeFolds() {}
 
     /**
-     * Whether {@code tree} is a mapping or a sequence.
-     */
-    public static boolean container(Tree tree) {
-        return tree instanceof Tree.Mapping || tree instanceof Tree.Sequence;
-    }
-
-    /**
-     * Whether {@code tree} is drawn as one value: a scalar or an alias.
-     */
-    public static boolean leaf(Tree tree) {
-        return tree instanceof Tree.Scalar || tree instanceof Tree.Alias;
-    }
-
-    /**
      * How many fields or elements {@code tree} has, or lines a block; none for a leaf.
      */
     public static int size(Tree tree) {
@@ -62,8 +48,7 @@ public final class TreeFolds {
             case Tree.Mapping mapping -> mapping.fields().size();
             case Tree.Sequence sequence -> sequence.elements().size();
             case Tree.Block block -> block.lines().size();
-            case Tree.Scalar scalar -> 0;
-            case Tree.Alias alias -> 0;
+            case Tree.Leaf _ -> 0;
             case Tree.Markup markup -> markup.nodes().size();
             case Tree.Element element ->
                 text(element)
@@ -90,7 +75,7 @@ public final class TreeFolds {
      * Whether {@code tree} is drawn on one line: a container of leaves, empty or no wider than {@link #ONE_LINE}.
      */
     public static boolean oneLine(Tree tree) {
-        if (!container(tree) || !values(tree).forAll(TreeFolds::leaf)) {
+        if (!(tree instanceof Tree.Container) || !values(tree).forAll(Tree.Leaf.class::isInstance)) {
             return false;
         }
         int keys = tree instanceof Tree.Mapping mapping
@@ -136,7 +121,7 @@ public final class TreeFolds {
         List<Option<List<String>>> keys = sequence.elements()
                 .map(element -> element instanceof Tree.Mapping mapping
                                 && !mapping.fields().isEmpty()
-                                && mapping.fields().forAll(field -> leaf(field.value()))
+                                && mapping.fields().forAll(field -> field.value() instanceof Tree.Leaf)
                         ? Option.of(mapping.fields().map(Tree.Field::key))
                         : Option.none());
         return keys.head().filter(first -> keys.forAll(other -> other.contains(first)));
@@ -149,7 +134,7 @@ public final class TreeFolds {
     public static boolean packed(Tree tree) {
         return tree instanceof Tree.Sequence sequence
                 && sequence.elements().size() > STARTS_OPEN
-                && sequence.elements().forAll(TreeFolds::leaf);
+                && sequence.elements().forAll(Tree.Leaf.class::isInstance);
     }
 
     /**
@@ -331,7 +316,7 @@ public final class TreeFolds {
      * Whether the root of a document drawn apart folds: a mapping or a sequence that holds anything.
      */
     public static boolean foldsApart(Tree.Document document) {
-        return container(document.root()) && size(document.root()) > 0;
+        return document.root() instanceof Tree.Container && size(document.root()) > 0;
     }
 
     /**

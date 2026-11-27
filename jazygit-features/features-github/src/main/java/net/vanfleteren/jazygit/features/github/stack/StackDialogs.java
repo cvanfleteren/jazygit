@@ -245,7 +245,10 @@ public final class StackDialogs {
         return text + " ".repeat(Math.max(0, width - TextWidth.of(text)));
     }
 
-    private static String kindKey(StackCheckout.Kind kind) {
+    /**
+     * What the key of the text of {@code kind} ends in, after {@code github.dialog.checkoutStack.}.
+     */
+    static String kindKey(StackCheckout.Kind kind) {
         return switch (kind) {
             case MADE -> "made";
             case FAST_FORWARDED -> "fastForwarded";

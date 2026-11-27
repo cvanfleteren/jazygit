@@ -55,6 +55,51 @@ class HiddenHunksTest {
                     })
                     .mkString();
 
+    /**
+     * Twenty lines: an import changed on line 2, a line of code on line 10, another import on line 18.
+     */
+    private static final String GIT_THREE = """
+            diff --git a/A.java b/A.java
+            --- a/A.java
+            +++ b/A.java
+            @@ -1,5 +1,5 @@
+             package a;
+            -import a.B;
+            +import a.C;
+             x3
+             x4
+             x5
+            @@ -7,7 +7,7 @@
+             x7
+             x8
+             x9
+            -x10
+            +y10
+             x11
+             x12
+             x13
+            @@ -15,6 +15,6 @@
+             x15
+             x16
+             x17
+            -import a.D;
+            +import a.E;
+             x19
+             x20
+            """;
+
+    private static final String WHOLE_THREE =
+            "diff --git a/A.java b/A.java\n--- a/A.java\n+++ b/A.java\n@@ -1,20 +1,20 @@\n"
+                    + List.rangeClosed(1, 20)
+                            .map(n -> switch (n) {
+                                case 1 -> " package a;\n";
+                                case 2 -> "-import a.B;\n+import a.C;\n";
+                                case 10 -> "-x10\n+y10\n";
+                                case 18 -> "-import a.D;\n+import a.E;\n";
+                                default -> " x" + n + "\n";
+                            })
+                            .mkString();
+
     @Test
     void theHunksOfImportsOnlyAreHidden() {
         List<Hidden> hidden = HiddenHunks.of(git(), List.of(IMPORTS), hunk -> false);
@@ -95,6 +140,24 @@ class HiddenHunksTest {
         assertEquals(List.of(true, false), pieces.map(piece -> piece.hidden().isDefined()));
         assertEquals("@@ -1,5 +1,5 @@", pieces.head().hunk().hunk().header());
         assertEquals("@@ -6,15 +6,15 @@", pieces.last().hunk().hunk().header());
+        assertEquals(
+                folded.hunks().head().lines(),
+                pieces.flatMap(piece -> piece.hunk().lines()));
+    }
+
+    @Test
+    void eachPieceOfAHunkCutInSeveralIsNumberedAfterThoseBeforeIt() {
+        ParsedFile git = ParsedDiff.of(GIT_THREE).files().head();
+        ParsedFile folded = Folding.fold(ParsedDiff.of(WHOLE_THREE).files().head(), 6, List.empty());
+        assertEquals(1, folded.hunks().size());
+
+        List<Piece> pieces = HiddenHunks.split(folded, HiddenHunks.of(git, List.of(IMPORTS), hunk -> false));
+
+        assertEquals(
+                List.of(true, false, true), pieces.map(piece -> piece.hidden().isDefined()));
+        assertEquals(
+                List.of("@@ -1,5 +1,5 @@", "@@ -6,9 +6,9 @@", "@@ -15,6 +15,6 @@"),
+                pieces.map(piece -> piece.hunk().hunk().header()));
         assertEquals(
                 folded.hunks().head().lines(),
                 pieces.flatMap(piece -> piece.hunk().lines()));

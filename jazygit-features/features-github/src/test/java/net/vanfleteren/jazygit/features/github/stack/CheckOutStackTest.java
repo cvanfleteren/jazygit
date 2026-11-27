@@ -1,15 +1,19 @@
 package net.vanfleteren.jazygit.features.github.stack;
 
+import static dev.tamboui.toolkit.Toolkit.text;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import dev.tamboui.toolkit.Toolkit;
+import dev.tamboui.toolkit.app.ToolkitTestRunner;
 import io.vavr.collection.HashMap;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.nio.file.Path;
 import java.time.Instant;
+import net.vanfleteren.jazygit.Bundles;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest.Checks;
 import net.vanfleteren.jazygit.core.gh.model.PullRequest.Review;
@@ -41,8 +45,11 @@ import net.vanfleteren.jazygit.features.github.stack.StackCheckout.Landing;
 import net.vanfleteren.jazygit.features.github.stack.StackCheckout.Status;
 import net.vanfleteren.jazygit.features.github.state.GitHubState;
 import net.vanfleteren.jazygit.kernel.state.Model;
+import net.vanfleteren.jazygit.kernel.state.Msg;
 import net.vanfleteren.jazygit.kernel.state.TestModels;
 import net.vanfleteren.jazygit.kernel.state.Update;
+import net.vanfleteren.jazygit.kernel.ui.SettledPilot;
+import net.vanfleteren.jazygit.kernel.ui.keys.Keymap;
 import net.vanfleteren.jazygit.kernel.ui.text.TextWidth;
 import org.junit.jupiter.api.Test;
 
@@ -502,5 +509,73 @@ class CheckOutStackTest {
                 .map(line -> TextWidth.of(line.substring(0, line.indexOf("up to date"))));
 
         assertEquals(List.of(18, 18), columns);
+    }
+
+    @Test
+    void theKeysOfThePopupChooseWhatIsCheckedOutAfterTheStackAndAreInTheHelp() throws Exception {
+        java.util.List<Msg> dispatched = pressedInPopup(upToDate(Option.of(new PrNumber(10))), 't', 'h', 'n');
+
+        assertEquals(
+                java.util.List.of(
+                        new StackMsg.CheckoutConfirmed(Landing.TOP),
+                        new StackMsg.CheckoutConfirmed(Landing.ASKED),
+                        new StackMsg.CheckoutConfirmed(Landing.STAY)),
+                dispatched);
+        assertEquals(
+                List.of("t", "h", "n"),
+                StackAction.ACTION
+                        .keys()
+                        .apply(Keymap.empty())
+                        .bindings(StackAction.CHECKOUT.id())
+                        .map(Keymap.Binding::label));
+    }
+
+    // The keys are made of the kind of each line, which the bundle's own test cannot see.
+    @Test
+    void everyKindOfLineHasAText() {
+        assertEquals(
+                List.empty(),
+                List.of(Kind.values())
+                        .map(kind -> "github.dialog.checkoutStack." + StackDialogs.kindKey(kind))
+                        .filter(key -> !Bundles.keys("github").contains(key)));
+    }
+
+    @Test
+    void theKeyOfAPullRequestTheStackWasNotOpenedOnDoesNothing() throws Exception {
+        assertEquals(java.util.List.of(), pressedInPopup(upToDate(Option.none()), 'h'));
+    }
+
+    /**
+     * A stack of feat/a and a branch of wide characters, both up to date, asked for on {@code on}.
+     */
+    private static StackCheckout upToDate(Option<PrNumber> on) {
+        BranchName wide = new BranchName("feat/日本語");
+        return new StackCheckout(
+                new StackId(12),
+                List.of(
+                        new StackCheckout.Line(new PrNumber(10), A, origin(A), Kind.UP_TO_DATE, 0, Option.none()),
+                        new StackCheckout.Line(
+                                new PrNumber(11), wide, origin(wide), Kind.UP_TO_DATE, 0, Option.none())),
+                List.empty(),
+                on);
+    }
+
+    /**
+     * What the popup asking about {@code checkout} sends, with the keys of the feature, as {@code keys} are pressed.
+     */
+    private static java.util.List<Msg> pressedInPopup(StackCheckout checkout, char... keys) throws Exception {
+        java.util.List<Msg> dispatched = new java.util.ArrayList<>();
+        StackCheckoutDialog dialog = new StackCheckoutDialog(
+                dispatched::add, () -> StackAction.ACTION.keys().apply(Keymap.empty()));
+        Model asked = ONE_LOCAL.openPopup(new StackPopups.Checkout(checkout));
+        try (ToolkitTestRunner runner = ToolkitTestRunner.runTest(
+                () -> Toolkit.stack(text("background"), dialog.render(asked).get()))) {
+            SettledPilot.focus(runner, StackCheckoutDialog.ID);
+            for (char key : keys) {
+                SettledPilot.of(runner).press(key);
+            }
+            SettledPilot.of(runner).pause();
+        }
+        return dispatched;
     }
 }

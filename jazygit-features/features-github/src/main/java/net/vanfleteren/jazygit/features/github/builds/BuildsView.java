@@ -29,9 +29,7 @@ import net.vanfleteren.jazygit.kernel.state.Part;
  * @param builds        the builds read so far, of the newest commit first
  * @param commits       how many commits of the branch were read, with or without builds
  * @param limit         how many commits are read before it stops, until more are asked for
- * @param after         where the commits still to be read start; none at the tip
- * @param reading       whether more commits are being read
- * @param stopped       why reading more failed, after some were read; none while it did not
+ * @param paging        whether more commits are being read, are left to read from where, or why reading them stopped
  * @param workflows     the files of the workflows read, at the commit of a build, which say which job needs which;
  *                      none for one being read, or that could not be
  * @param selected      the workflow whose builds show, as the user chose it; none to show the one on the tip
@@ -48,9 +46,7 @@ public record BuildsView(
         Loadable<List<Build>> builds,
         int commits,
         int limit,
-        Option<String> after,
-        boolean reading,
-        Option<Failure> stopped,
+        Paging paging,
         Map<BuildsView.FileAt, Option<Workflow>> workflows,
         Option<BuildsView.Pipeline> selected,
         @With boolean allBranches,
@@ -84,9 +80,7 @@ public record BuildsView(
                 Loadable.loading(),
                 0,
                 COMMITS,
-                Option.none(),
-                true,
-                Option.none(),
+                new Paging.Reading(Option.none()),
                 HashMap.empty(),
                 Option.none(),
                 false,
@@ -94,6 +88,13 @@ public record BuildsView(
                 Option.none(),
                 Option.none(),
                 Option.none());
+    }
+
+    /**
+     * Whether more commits are being read.
+     */
+    public boolean reading() {
+        return paging.reading();
     }
 
     /**
@@ -106,9 +107,7 @@ public record BuildsView(
                 new Loadable.Loaded<>(List.empty()),
                 0,
                 COMMITS,
-                Option.none(),
-                false,
-                Option.none(),
+                new Paging.Done(),
                 HashMap.empty(),
                 Option.none(),
                 false,
@@ -145,7 +144,7 @@ public record BuildsView(
      * Whether this waits for the commits of {@code branch} from {@code from} on.
      */
     public boolean awaits(RemoteBranch branch, Option<String> from) {
-        return reading && onGitHub.contains(branch) && after.equals(from);
+        return onGitHub.contains(branch) && paging.awaits(from);
     }
 
     /**
@@ -162,9 +161,7 @@ public record BuildsView(
                         .appendAll(page.map(BuildsPage::builds).getOrElse(List.empty()))),
                 read,
                 limit,
-                next,
-                read < limit && next.isDefined(),
-                Option.none(),
+                Paging.after(read, limit, next),
                 workflows,
                 selected,
                 allBranches,
@@ -185,9 +182,7 @@ public record BuildsView(
                 builds.failed(failure),
                 commits,
                 limit,
-                after,
-                false,
-                builds.toOption().map(read -> failure),
+                paging.failed(failure, builds.toOption().isDefined()),
                 workflows,
                 selected,
                 allBranches,
@@ -202,14 +197,14 @@ public record BuildsView(
      * being read (ADR 131).
      */
     public boolean hasMore() {
-        return !reading && (after.isDefined() || builds.isFailed());
+        return !paging.reading() && (paging.from().isDefined() || builds.isFailed());
     }
 
     /**
      * Whether reading the commits failed: the first ones, or more after some were read.
      */
     public boolean hasFailed() {
-        return builds.isFailed() || stopped.isDefined();
+        return builds.isFailed() || paging instanceof Paging.Stopped;
     }
 
     /**
@@ -225,9 +220,7 @@ public record BuildsView(
                         builds.isFailed() ? Loadable.loading() : builds,
                         commits,
                         commits + COMMITS,
-                        after,
-                        true,
-                        Option.none(),
+                        paging.more(),
                         workflows,
                         selected,
                         allBranches,
@@ -247,9 +240,7 @@ public record BuildsView(
                 builds,
                 commits,
                 limit,
-                after,
-                reading,
-                stopped,
+                paging,
                 workflows.merge(read, (was, now) -> now),
                 selected,
                 allBranches,
@@ -269,9 +260,7 @@ public record BuildsView(
                 builds,
                 commits,
                 limit,
-                after,
-                reading,
-                stopped,
+                paging,
                 workflows,
                 Option.of(pipeline),
                 allBranches,

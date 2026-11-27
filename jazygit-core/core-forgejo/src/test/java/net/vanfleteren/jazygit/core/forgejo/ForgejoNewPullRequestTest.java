@@ -14,24 +14,29 @@ class ForgejoNewPullRequestTest {
 
     private static final ForgejoRepository HOME = new ForgejoRepository("https://code.example.net", "cvf", "nix");
 
+    private static final ForgeBranch FEATURE = new ForgeBranch("feature");
+
     private static ForgejoNewPullRequest titled(String title, boolean draft) {
-        return new ForgejoNewPullRequest("feature", new ForgeBranch("main"), title, "", draft);
+        return new ForgejoNewPullRequest(
+                new ForgejoNewPullRequest.Head(Option.none(), FEATURE), new ForgeBranch("main"), title, "", draft);
     }
 
     @Test
     void aHeadInTheHomeIsTheBranchAlone() {
-        assertEquals(
-                "feature",
-                ForgejoNewPullRequest.head(
-                        HOME, new ForgejoRepository("https://code.example.net", "CVF", "Nix"), "feature"));
+        ForgejoNewPullRequest.Head head = ForgejoNewPullRequest.Head.of(
+                HOME, new ForgejoRepository("https://code.example.net", "CVF", "Nix"), FEATURE);
+
+        assertEquals(new ForgejoNewPullRequest.Head(Option.none(), FEATURE), head);
+        assertEquals("feature", head.wire());
     }
 
     @Test
     void aHeadInAForkHasItsOwnerBeforeIt() {
-        assertEquals(
-                "anna:feature",
-                ForgejoNewPullRequest.head(
-                        HOME, new ForgejoRepository("https://code.example.net", "anna", "nix"), "feature"));
+        ForgejoNewPullRequest.Head head = ForgejoNewPullRequest.Head.of(
+                HOME, new ForgejoRepository("https://code.example.net", "anna", "nix"), FEATURE);
+
+        assertEquals(new ForgejoNewPullRequest.Head(Option.of("anna"), FEATURE), head);
+        assertEquals("anna:feature", head.wire());
     }
 
     @Test

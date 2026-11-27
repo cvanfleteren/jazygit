@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import io.vavr.collection.List;
 import net.vanfleteren.jazygit.Bundles;
+import net.vanfleteren.jazygit.kernel.settings.DiffStyle;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -25,5 +26,15 @@ class ChangesBundleTest {
     @Test
     void everyKeyTheCodeNamesIsInTheBundle() {
         assertEquals(List.empty(), Bundles.missing("changes"));
+    }
+
+    // The diff options name a style by a key made of its id, which the test above cannot see.
+    @Test
+    void everyDiffStyleHasAName() {
+        assertEquals(
+                List.empty(),
+                List.of(DiffStyle.values())
+                        .map(style -> "changes.dialog.diffOptions.style." + style.id())
+                        .filter(key -> !Bundles.keys("changes").contains(key)));
     }
 }

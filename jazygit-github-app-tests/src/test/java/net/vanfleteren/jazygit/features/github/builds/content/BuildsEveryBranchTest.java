@@ -32,6 +32,7 @@ import net.vanfleteren.jazygit.features.github.builds.BuildsView;
 import net.vanfleteren.jazygit.features.github.builds.BuildsView.Pipeline;
 import net.vanfleteren.jazygit.features.github.builds.LoadRepoWorkflows;
 import net.vanfleteren.jazygit.features.github.builds.LoadWorkflowRuns;
+import net.vanfleteren.jazygit.features.github.builds.Paging;
 import net.vanfleteren.jazygit.features.github.builds.WorkflowRuns;
 import net.vanfleteren.jazygit.kernel.content.ContentViews;
 import net.vanfleteren.jazygit.kernel.state.Env;
@@ -259,8 +260,7 @@ class BuildsEveryBranchTest {
 
         assertEquals(List.of(new LoadWorkflowRuns(BUILD_ID, Option.of("c25"))), again.cmds());
         WorkflowRuns runs = view(again.model()).runs().get(BUILD_ID).get();
-        assertTrue(runs.reading());
-        assertEquals(Option.none(), runs.stopped());
+        assertEquals(new Paging.Reading(Option.of("c25")), runs.paging());
         assertEquals(125, runs.limit());
         assertEquals("Builds: main · last 3 commits · every branch · reading, 25 runs so far", title(again.model()));
     }

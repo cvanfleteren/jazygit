@@ -26,8 +26,12 @@ import org.junit.jupiter.api.Test;
  */
 class HttpForgejoCreateTest {
 
-    private static final ForgejoNewPullRequest NEW =
-            new ForgejoNewPullRequest("anna:feature", new ForgeBranch("main"), "Create it", "Why \"it\"", true);
+    private static final ForgejoNewPullRequest NEW = new ForgejoNewPullRequest(
+            new ForgejoNewPullRequest.Head(Option.of("anna"), new ForgeBranch("feature")),
+            new ForgeBranch("main"),
+            "Create it",
+            "Why \"it\"",
+            true);
 
     private HttpServer server;
     private final ConcurrentLinkedQueue<String> asked = new ConcurrentLinkedQueue<>();

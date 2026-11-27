@@ -24,6 +24,7 @@ import net.vanfleteren.jazygit.kernel.state.view.RepoView;
 import net.vanfleteren.jazygit.kernel.ui.Fills;
 import net.vanfleteren.jazygit.kernel.ui.i18n.Messages;
 import net.vanfleteren.jazygit.kernel.ui.keys.Scopes;
+import net.vanfleteren.jazygit.kernel.ui.text.ErrorText;
 import net.vanfleteren.jazygit.kernel.ui.theme.Theme;
 import net.vanfleteren.jazygit.kernel.ui.widgets.LoadableList;
 import net.vanfleteren.jazygit.kernel.ui.widgets.PaneKeys;
@@ -92,7 +93,9 @@ final class WorkingTreeFilesList {
         marks = fills.all(FilesPane.MARK, model);
         return frame.bordered(
                 Messages.get("panel.files.title")
-                        + fills.all(FilesPane.TITLE, model).mkString()
+                        + fills.all(FilesPane.TITLE, model)
+                                .map(part -> Messages.get("changes.panes.files.titlePart", ErrorText.of(part)))
+                                .mkString()
                         + (all ? Messages.get("changes.panes.files.all") : "")
                         + frame.filtered()
                         + frame.locked(),

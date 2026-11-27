@@ -107,10 +107,12 @@ final class TreeText {
             return "{" + fitting(((Tree.Mapping) first.get()).fields().map(Tree.Field::key)) + "}";
         }
         return fitting(sequence.elements()
-                .takeWhile(TreeFolds::leaf)
+                .takeWhile(Tree.Leaf.class::isInstance)
                 .map(TreeText::text)
                 .appendAll(
-                        sequence.elements().exists(element -> !TreeFolds.leaf(element)) ? List.of("…") : List.empty()));
+                        sequence.elements().exists(element -> !(element instanceof Tree.Leaf))
+                                ? List.of("…")
+                                : List.empty()));
     }
 
     /**
