@@ -1,5 +1,7 @@
 """Pushing and pulling branches, and working with the remote branches: checking them out and deleting them."""
 
+import time
+
 
 def published(repo, origin):
     """Main with one commit, and a branch feature with one more, both pushed to origin, which they track."""
@@ -492,8 +494,11 @@ def test_a_branch_without_upstream_has_none_to_unset(repo, origin, jazygit):
 
     ui.branches.try_to_unset_upstream("local-only")
 
-    # The choice is disabled: the dialog stays open and nothing changes.
-    ui.app.wait_for("(u) unset upstream")
+    # The choice is disabled: pressing it neither closes the dialog nor tells the branch has no upstream.
+    time.sleep(1)
+    screen = ui.app.text()
+    assert "(u) unset upstream" in screen
+    assert "has no upstream" not in screen
     assert repo.upstream("local-only") == ""
 
 
