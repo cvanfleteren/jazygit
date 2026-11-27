@@ -150,6 +150,7 @@ class CliRebaseTest {
         repository.integrate().rebase(new BranchName("main")).get();
 
         assertTrue(commits().get().exists(Commit::isMerge));
+        assertEquals(git("rev-parse", "main"), git("merge-base", "feat", "main"));
     }
 
     private void commitFile(String name, String summary) throws Exception {
