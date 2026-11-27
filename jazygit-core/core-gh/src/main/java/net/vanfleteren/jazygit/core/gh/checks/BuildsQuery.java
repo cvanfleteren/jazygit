@@ -32,8 +32,10 @@ import net.vanfleteren.jazygit.core.gh.graphql.SuiteFragment;
 import net.vanfleteren.jazygit.core.gh.model.Build;
 import net.vanfleteren.jazygit.core.gh.model.BuildsPage;
 import net.vanfleteren.jazygit.core.gh.model.CheckRun;
+import net.vanfleteren.jazygit.core.gh.model.DefaultBranchPage;
 import net.vanfleteren.jazygit.core.gh.model.PullRequestDetails.Check;
 import net.vanfleteren.jazygit.core.gh.process.GhCommand;
+import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.lib.json.Decoder;
 
@@ -147,6 +149,22 @@ final class BuildsQuery {
     static final Decoder<Option<BuildsPage>> DECODER =
             at("data.repository.ref", nullable(field("target", HISTORY)).map(page -> page.flatMap(read -> read)));
 
+    // The builds on the commits of the default branch, which says its name: the same query, from defaultBranchRef
+    // rather than a ref named (ADR 212).
+    static final String DEFAULT_QUERY = QUERY.replace("$branch: String!, ", "")
+            .replace("ref(qualifiedName: $branch) { target", "defaultBranchRef { name target");
+
+    /**
+     * The builds read on the default branch, with its name; none in a repository without a commit.
+     */
+    static final Decoder<Option<DefaultBranchPage>> DEFAULT_DECODER = at(
+                    "data.repository.defaultBranchRef",
+                    nullable(map2(
+                            field("name", string()),
+                            field("target", HISTORY),
+                            (name, page) -> page.map(read -> new DefaultBranchPage(new BranchName(name), read)))))
+            .map(page -> page.flatMap(read -> read));
+
     private BuildsQuery() {}
 
     /**
@@ -167,6 +185,18 @@ final class BuildsQuery {
                         "count=" + COMMITS)
                 .appendAll(after.toList().flatMap(cursor -> List.of("-f", "after=" + cursor)))
                 .appendAll(List.of("-f", "query=" + QUERY));
+        return gh(args.toJavaArray(String[]::new));
+    }
+
+    /**
+     * The call reading the builds on {@link #COMMITS} commits of the default branch, the newest first, from
+     * {@code after} on, or from its tip without (ADR 212).
+     */
+    static GhCommand defaultCommand(Option<String> after) {
+        List<String> args = List.of(
+                        "api", "graphql", "-F", "owner={owner}", "-F", "name={repo}", "-F", "count=" + COMMITS)
+                .appendAll(after.toList().flatMap(cursor -> List.of("-f", "after=" + cursor)))
+                .appendAll(List.of("-f", "query=" + DEFAULT_QUERY));
         return gh(args.toJavaArray(String[]::new));
     }
 

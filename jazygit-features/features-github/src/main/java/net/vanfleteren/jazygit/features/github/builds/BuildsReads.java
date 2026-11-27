@@ -34,7 +34,7 @@ public final class BuildsReads {
                     BuildsView asked = view.withWorkflows(
                                     HashMap.ofEntries(files.map(file -> Tuple.of(file, Option.<Workflow>none()))))
                             .withRepoWorkflows(repo ? Option.of(Loadable.loading()) : view.repoWorkflows())
-                            .withRuns(runs.map(id -> view.runs().put(id, WorkflowRuns.asked()))
+                            .withRuns(runs.map(id -> view.runs().put(id, BuildPages.asked()))
                                     .getOrElse(view.runs()));
                     List<Cmd> cmds = files.<Cmd>map(ReadWorkflows::new)
                             .appendAll(Option.when(repo, LoadRepoWorkflows::new))

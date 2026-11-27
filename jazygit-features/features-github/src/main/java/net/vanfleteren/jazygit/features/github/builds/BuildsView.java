@@ -50,7 +50,7 @@ public record BuildsView(
         Map<BuildsView.FileAt, Option<Workflow>> workflows,
         Option<BuildsView.Pipeline> selected,
         @With boolean allBranches,
-        @With Map<String, WorkflowRuns> runs,
+        @With Map<String, BuildPages> runs,
         @With Option<Loadable<List<RepoWorkflow>>> repoWorkflows,
         @With Option<Integer> window,
         @With Option<Long> picked) {
@@ -454,7 +454,7 @@ public record BuildsView(
     /**
      * The runs on every branch of the workflow {@code workflow}, as far as they are asked for.
      */
-    public Option<WorkflowRuns> runsOf(String workflow) {
+    public Option<BuildPages> runsOf(String workflow) {
         return workflowId(workflow).flatMap(runs::get);
     }
 
@@ -468,7 +468,7 @@ public record BuildsView(
         Set<Sha> mine = HashSet.ofAll(builds.map(Build::sha));
         return shownTab().map(tab -> {
             Loadable<List<Build>> ofTab = allBranches
-                    ? runsOf(tab.workflow()).map(WorkflowRuns::builds).getOrElse(Loadable::loading)
+                    ? runsOf(tab.workflow()).map(BuildPages::builds).getOrElse(Loadable::loading)
                     : new Loadable.Loaded<>(builds.filter(tab::ran));
             Loadable<List<Build>> windowed =
                     ofTab.map(read -> window.map(read::take).getOrElse(read));

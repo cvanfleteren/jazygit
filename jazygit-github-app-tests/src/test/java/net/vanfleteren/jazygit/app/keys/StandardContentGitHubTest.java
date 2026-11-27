@@ -66,6 +66,7 @@ class StandardContentGitHubTest {
                         "ReflogSource",
                         "BuildsSource",
                         "PullRequestSource",
+                        "BuildsScreenSource",
                         "CommitFilesSource",
                         "UnchangedSource",
                         "FileDiffsSource",

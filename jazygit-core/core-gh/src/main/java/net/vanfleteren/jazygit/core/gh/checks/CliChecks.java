@@ -60,6 +60,21 @@ public final class CliChecks implements Checks {
     }
 
     @Override
+    public Either<GhError, Option<DefaultBranchPage>> defaultBranchBuilds(Option<String> after) {
+        return process.readJson(BuildsQuery.defaultCommand(after), BuildsQuery.DEFAULT_DECODER);
+    }
+
+    @Override
+    public Either<GhError, Integer> runsInProgress() {
+        return process.readJson(RunsInProgressQuery.COMMAND, RunsInProgressQuery.DECODER);
+    }
+
+    @Override
+    public Either<GhFailure, List<ExecutedCommand>> openRun(long runId) {
+        return process.log(RunsInProgressQuery.open(runId));
+    }
+
+    @Override
     public Either<GhError, List<RepoWorkflow>> workflows() {
         return process.readJson(RepoWorkflowsQuery.COMMAND, RepoWorkflowsQuery.DECODER);
     }

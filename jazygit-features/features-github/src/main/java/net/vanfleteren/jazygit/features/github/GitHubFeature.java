@@ -8,7 +8,12 @@ import net.vanfleteren.jazygit.features.github.badges.BadgeLegend;
 import net.vanfleteren.jazygit.features.github.badges.GitHubBadge;
 import net.vanfleteren.jazygit.features.github.browse.BrowseAction;
 import net.vanfleteren.jazygit.features.github.builds.BuildsAction;
+import net.vanfleteren.jazygit.features.github.builds.content.BuildsScreenSource;
 import net.vanfleteren.jazygit.features.github.builds.content.BuildsSource;
+import net.vanfleteren.jazygit.features.github.builds.screen.BuildsScreen;
+import net.vanfleteren.jazygit.features.github.builds.screen.BuildsScreenAction;
+import net.vanfleteren.jazygit.features.github.builds.screen.BuildsScreenMsg;
+import net.vanfleteren.jazygit.features.github.builds.screen.BuildsScreenUpdate;
 import net.vanfleteren.jazygit.features.github.checkout.CheckoutPullRequestAction;
 import net.vanfleteren.jazygit.features.github.checks.ChecksDialog;
 import net.vanfleteren.jazygit.features.github.checks.GitHubChecksPort;
@@ -17,6 +22,9 @@ import net.vanfleteren.jazygit.features.github.comments.CommentsDialog;
 import net.vanfleteren.jazygit.features.github.create.GitHubCreatePullRequestAction;
 import net.vanfleteren.jazygit.features.github.dialog.PullRequestDialog;
 import net.vanfleteren.jazygit.features.github.dialog.ShowPullRequestAction;
+import net.vanfleteren.jazygit.features.github.panes.BuildsRunsPanel;
+import net.vanfleteren.jazygit.features.github.panes.BuildsScreenSpec;
+import net.vanfleteren.jazygit.features.github.panes.BuildsWorkflowsPanel;
 import net.vanfleteren.jazygit.features.github.panes.PullRequestsPanel;
 import net.vanfleteren.jazygit.features.github.panes.PullRequestsScreen;
 import net.vanfleteren.jazygit.features.github.panes.StackGroups;
@@ -91,12 +99,13 @@ public final class GitHubFeature {
      * The operations, in the order their keys are listed in a panel, the builds of a branch in the content panel
      * (ADR 131), and how gh runs in the settings panel (ADR 163). It reads from GitHub as the timers say, and as what
      * happens in the kernel makes it do, shows how each branch is doing on GitHub in the branches pane (ADR 167), with
-     * what that means in its help, and brings the screen of the pull requests (ADR 168).
+     * what that means in its help, and brings the screens of the pull requests (ADR 168) and of the builds (ADR 212).
      */
     public static final Feature FEATURE = Feature.of(
                     ShowPullRequestAction.ACTION,
                     ShowChecksAction.ACTION,
                     BuildsAction.ACTION,
+                    BuildsScreenAction.ACTION,
                     CheckoutPullRequestAction.ACTION,
                     REFRESH,
                     SCREEN,
@@ -106,10 +115,19 @@ public final class GitHubFeature {
                     ReviewAction.ACTION,
                     VerdictAction.ACTION,
                     FeatureAction.ofPopups(GitHubSettingsDialogs::popups))
-            .showing(new BuildsSource(), new PullRequestSource())
-            .keeping(GitHubSettings.GH_EXECUTABLE, GitHubSettings.BROWSERS, PrOverview.WIDTH, PrOverview.HEIGHTS)
+            .showing(new BuildsSource(), new PullRequestSource(), new BuildsScreenSource())
+            .keeping(
+                    GitHubSettings.GH_EXECUTABLE,
+                    GitHubSettings.BROWSERS,
+                    PrOverview.WIDTH,
+                    PrOverview.HEIGHTS,
+                    BuildsScreen.WIDTH,
+                    BuildsScreen.HEIGHTS)
             .withSettings(GitHubSettingsDialogs.SECTION)
             .every(OVERVIEW_INTERVAL, PrOverviewMsg.Tick::new)
+            .every(OVERVIEW_INTERVAL, BuildsScreenMsg.Tick::new)
+            // The builds screen reads its newest runs again while one of them runs, as the checks are (ADR 34, 212).
+            .every(CheckTimings.READ_WHILE_PENDING, BuildsScreenMsg.RunningTick::new)
             // The dialogs that list checks read them only while one is not done, or once a minute (ADR 34).
             .every(CheckTimings.READ_WHILE_PENDING, PullRequestMsg.Tick::new)
             .every(CheckTimings.READ_WHILE_PENDING, () -> new ChecksMsg.Tick(GitHubChecksPort.PORT))
@@ -117,12 +135,16 @@ public final class GitHubFeature {
             .every(STACK_CHECK_INTERVAL, StackMsg.Tick::new)
             .reacting(GitHubReactions.REACTION)
             .reacting(PrOverviewUpdate::to)
+            .reacting(BuildsScreenUpdate::to)
             .filling(BranchBadges.KEY, model -> Option.some(GitHubBadge::of))
             .filling(BranchGroups.KEY, model -> Option.some(StackGroups::of))
             .screen(PullRequestsScreen.SPEC)
             .pane(PrOverview.SCREEN, PullRequestsPanel::repository)
             .pane(PrOverview.SCREEN, PullRequestsPanel::reviewRequested)
             .pane(PrOverview.SCREEN, PullRequestsPanel::authored)
+            .screen(BuildsScreenSpec.SPEC)
+            .pane(BuildsScreen.SCREEN, BuildsWorkflowsPanel::of)
+            .pane(BuildsScreen.SCREEN, BuildsRunsPanel::of)
             .explaining(BadgeLegend.BRANCHES.toJavaArray(Legend[]::new))
             .running(GitHubServices::running)
             // Its dialogs that read what GitHub has, and the times they show (ADR 124).

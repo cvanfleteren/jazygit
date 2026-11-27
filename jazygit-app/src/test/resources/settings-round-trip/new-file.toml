@@ -6,6 +6,8 @@ diff-pairs = false
 repository-heights = [25, 25, 25]
 pull-requests-width = 50
 pull-requests-heights = [40, 30]
+builds-width = 50
+builds-heights = [40]
 diff-filters = ["java-imports", "lockfiles"]
 
 [git]

@@ -59,6 +59,30 @@ public interface StubChecks extends Checks {
     }
 
     /**
+     * A repository without a commit.
+     */
+    @Override
+    default Either<GhError, Option<DefaultBranchPage>> defaultBranchBuilds(Option<String> after) {
+        return Either.right(Option.none());
+    }
+
+    /**
+     * No run in progress.
+     */
+    @Override
+    default Either<GhError, Integer> runsInProgress() {
+        return Either.right(0);
+    }
+
+    /**
+     * Opens nothing, and says it did.
+     */
+    @Override
+    default Either<GhFailure, List<ExecutedCommand>> openRun(long runId) {
+        return Either.right(List.empty());
+    }
+
+    /**
      * A repository without workflows.
      */
     @Override

@@ -44,7 +44,7 @@ public record ReadWorkflows(FileAt file) implements Cmd {
      * The workflow of the file {@code at}, from git, else from GitHub: the commit of a build of a pull request is not
      * fetched once the pull request is merged and its branch deleted, and GitHub still has it (ADR 138).
      */
-    private static Option<Workflow> read(Env env, FileAt at) {
+    public static Option<Workflow> read(Env env, FileAt at) {
         return env.git()
                 .diffs()
                 .treeText(at.sha(), new RepoPath(at.path()))

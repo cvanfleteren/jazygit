@@ -93,13 +93,13 @@ public final class BuildsUpdate {
      * {@code model} with what {@code read} makes of the runs of the workflow {@code id} from {@code after} on, when
      * those are still awaited; reading on from where they end while more are to be read.
      */
-    private static Next runsAwaited(Model model, String id, Option<String> after, UnaryOperator<WorkflowRuns> read) {
+    private static Next runsAwaited(Model model, String id, Option<String> after, UnaryOperator<BuildPages> read) {
         return model.part(BuildsView.PART)
                 .flatMap(view -> view.runs()
                         .get(id)
                         .filter(runs -> runs.awaits(after))
                         .map(runs -> {
-                            WorkflowRuns now = read.apply(runs);
+                            BuildPages now = read.apply(runs);
                             Next shown = BuildsReads.next(shown(
                                     model, Option.of(view.withRuns(view.runs().put(id, now)))));
                             return now.paging() instanceof Paging.Reading(Option<String> from)
@@ -127,7 +127,7 @@ public final class BuildsUpdate {
                 .flatMap(tab -> view.workflowId(tab.workflow()))
                 .flatMap(id -> view.runs()
                         .get(id)
-                        .flatMap(WorkflowRuns::more)
+                        .flatMap(BuildPages::more)
                         .map(runs -> Next.of(
                                 shown(model, Option.of(view.withRuns(view.runs().put(id, runs)))),
                                 new LoadWorkflowRuns(id, runs.paging().from()))));

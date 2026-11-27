@@ -6,10 +6,10 @@ import net.vanfleteren.jazygit.core.gh.model.PullRequest;
 import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.BranchRef;
 import net.vanfleteren.jazygit.core.repo.RemoteBranch;
+import net.vanfleteren.jazygit.features.github.builds.BuildPages;
 import net.vanfleteren.jazygit.features.github.builds.BuildsShown;
 import net.vanfleteren.jazygit.features.github.builds.BuildsView;
 import net.vanfleteren.jazygit.features.github.builds.Paging;
-import net.vanfleteren.jazygit.features.github.builds.WorkflowRuns;
 import net.vanfleteren.jazygit.features.github.failed.FailedBuilds;
 import net.vanfleteren.jazygit.features.github.state.GitHubState;
 import net.vanfleteren.jazygit.kernel.state.Model;
@@ -104,7 +104,7 @@ public record BuildsSource() implements ContentSource {
      */
     private static String title(BuildsView view) {
         String ofBranch = ofBranch(view);
-        Option<WorkflowRuns> runs = view.shownTab().flatMap(tab -> view.runsOf(tab.workflow()));
+        Option<BuildPages> runs = view.shownTab().flatMap(tab -> view.runsOf(tab.workflow()));
         // On every branch, the title says when more runs of the tab are being read, as m asked: the first ones say so
         // in the body.
         String every = view.allBranches()
@@ -115,11 +115,11 @@ public record BuildsSource() implements ContentSource {
                 : ofBranch;
         // Older builds can be read with m, or read again after failing: of the branch, or on every branch, of the tab
         // (ADR 131).
-        boolean more = view.allBranches() ? runs.exists(WorkflowRuns::hasMore) : view.hasMore();
+        boolean more = view.allBranches() ? runs.exists(BuildPages::hasMore) : view.hasMore();
         if (!more) {
             return every;
         }
-        boolean failed = view.allBranches() ? runs.exists(WorkflowRuns::hasFailed) : view.hasFailed();
+        boolean failed = view.allBranches() ? runs.exists(BuildPages::hasFailed) : view.hasFailed();
         return Messages.get(failed ? "github.builds.panel.retry" : "github.builds.panel.more", every);
     }
 

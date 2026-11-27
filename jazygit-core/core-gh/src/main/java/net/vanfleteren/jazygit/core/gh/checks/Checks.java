@@ -48,6 +48,22 @@ public interface Checks {
     Either<GhError, Option<WorkflowRunsPage>> workflowRuns(String workflowId, Option<String> after);
 
     /**
+     * The builds on the commits of the default branch from {@code after} on, or from its tip, with its name; none in a
+     * repository without a commit (ADR 212).
+     */
+    Either<GhError, Option<DefaultBranchPage>> defaultBranchBuilds(Option<String> after);
+
+    /**
+     * How many workflow runs are in progress, on any branch (ADR 212).
+     */
+    Either<GhError, Integer> runsInProgress();
+
+    /**
+     * Opens the workflow run {@code runId} in the browser (ADR 212).
+     */
+    Either<GhFailure, List<ExecutedCommand>> openRun(long runId);
+
+    /**
      * The workflows of GitHub Actions of the repository (ADR 131).
      */
     Either<GhError, List<RepoWorkflow>> workflows();

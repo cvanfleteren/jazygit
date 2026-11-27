@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
 
 import io.vavr.collection.List;
+import net.vanfleteren.jazygit.features.github.builds.screen.BuildsScreen;
 import net.vanfleteren.jazygit.features.github.prs.PrOverview;
 import net.vanfleteren.jazygit.kernel.state.preferences.Screen;
 import net.vanfleteren.jazygit.kernel.ui.screen.ScreenSpec;
@@ -21,9 +22,9 @@ class StandardScreensTest {
     }
 
     @Test
-    void theRepositoryComesFirstThenThePullRequestsGitHubBrings() {
+    void theRepositoryComesFirstThenThePullRequestsAndTheBuildsGitHubBrings() {
         assertEquals(
-                List.of(Screen.REPOSITORY, PrOverview.SCREEN),
+                List.of(Screen.REPOSITORY, PrOverview.SCREEN, BuildsScreen.SCREEN),
                 Screens.standard().all().map(ScreenSpec::screen));
     }
 

@@ -26,6 +26,7 @@ import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.core.repo.Upstream;
 import net.vanfleteren.jazygit.features.github.GitHubFailure;
 import net.vanfleteren.jazygit.features.github.GitHubServices;
+import net.vanfleteren.jazygit.features.github.builds.BuildPages;
 import net.vanfleteren.jazygit.features.github.builds.BuildsMsg;
 import net.vanfleteren.jazygit.features.github.builds.BuildsShown;
 import net.vanfleteren.jazygit.features.github.builds.BuildsView;
@@ -34,7 +35,6 @@ import net.vanfleteren.jazygit.features.github.builds.LoadRepoWorkflows;
 import net.vanfleteren.jazygit.features.github.builds.LoadWorkflowRuns;
 import net.vanfleteren.jazygit.features.github.builds.Paging;
 import net.vanfleteren.jazygit.features.github.builds.RunsDrawn;
-import net.vanfleteren.jazygit.features.github.builds.WorkflowRuns;
 import net.vanfleteren.jazygit.kernel.content.ContentViews;
 import net.vanfleteren.jazygit.kernel.state.Env;
 import net.vanfleteren.jazygit.kernel.state.Failure;
@@ -192,7 +192,7 @@ class BuildsEveryBranchTest {
 
         assertTrue(first.cmds().contains(new LoadWorkflowRuns(BUILD_ID, Option.of("c25"))));
         assertSame(first.model(), stale.model());
-        WorkflowRuns runs = view(first.model()).runs().get(BUILD_ID).get();
+        BuildPages runs = view(first.model()).runs().get(BUILD_ID).get();
         assertEquals(25, runs.count());
         assertTrue(runs.reading());
     }
@@ -219,7 +219,7 @@ class BuildsEveryBranchTest {
         Next more = Update.update(hundred, new BuildsMsg.MoreRequested());
 
         assertEquals(List.of(new LoadWorkflowRuns(BUILD_ID, Option.of("c100"))), more.cmds());
-        WorkflowRuns runs = view(more.model()).runs().get(BUILD_ID).get();
+        BuildPages runs = view(more.model()).runs().get(BUILD_ID).get();
         assertTrue(runs.reading());
         assertEquals(200, runs.limit());
         assertFalse(view(more.model()).reading());
@@ -260,7 +260,7 @@ class BuildsEveryBranchTest {
         Next again = Update.update(stopped, new BuildsMsg.MoreRequested());
 
         assertEquals(List.of(new LoadWorkflowRuns(BUILD_ID, Option.of("c25"))), again.cmds());
-        WorkflowRuns runs = view(again.model()).runs().get(BUILD_ID).get();
+        BuildPages runs = view(again.model()).runs().get(BUILD_ID).get();
         assertEquals(new Paging.Reading(Option.of("c25")), runs.paging());
         assertEquals(125, runs.limit());
         assertEquals("Builds: main · last 3 commits · every branch · reading, 25 runs so far", title(again.model()));
@@ -275,7 +275,7 @@ class BuildsEveryBranchTest {
         Next again = Update.update(failed, new BuildsMsg.MoreRequested());
 
         assertEquals(List.of(new LoadWorkflowRuns(BUILD_ID, Option.none())), again.cmds());
-        WorkflowRuns runs = view(again.model()).runs().get(BUILD_ID).get();
+        BuildPages runs = view(again.model()).runs().get(BUILD_ID).get();
         assertTrue(runs.reading());
         assertInstanceOf(Loadable.Loading.class, runs.builds());
         assertInstanceOf(Loadable.Loading.class, shown(again.model()).builds());
@@ -308,7 +308,7 @@ class BuildsEveryBranchTest {
                 .withAllBranches(true)
                 .withRuns(io.vavr.collection.HashMap.of(
                         BUILD_ID,
-                        WorkflowRuns.asked()
+                        BuildPages.asked()
                                 .read(Option.of(new WorkflowRunsPage(
                                         List.of(MINE, run("Build", BUILD_ID, 8, "other", 300, Option.of(494))),
                                         2,

@@ -1,6 +1,7 @@
 package net.vanfleteren.jazygit.core.gh.checks;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.vavr.collection.List;
@@ -9,8 +10,10 @@ import io.vavr.control.Option;
 import java.time.Instant;
 import net.vanfleteren.jazygit.core.gh.model.Build;
 import net.vanfleteren.jazygit.core.gh.model.BuildsPage;
+import net.vanfleteren.jazygit.core.gh.model.DefaultBranchPage;
 import net.vanfleteren.jazygit.core.gh.process.GhError;
 import net.vanfleteren.jazygit.core.gh.process.GhProcess;
+import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import org.junit.jupiter.api.Test;
 
@@ -205,5 +208,44 @@ class BuildsQueryTest {
     void aCommitWhoseIdIsNotAnObjectIdIsNotRead() {
         assertTrue(page(history(false, commit("not-an-oid", "Tip", ""))).isLeft());
         assertTrue(page(history(false, commit("", "Tip", ""))).isLeft());
+    }
+
+    @Test
+    void theDefaultBranchSaysItsNameWithTheBuildsOnItsCommits() {
+        Option<DefaultBranchPage> read = GhProcess.decoded(
+                        "{ \"data\": { \"repository\": { \"defaultBranchRef\": { \"name\": \"main\", "
+                                + history(false, commit(AAA, "Fix", "")).substring(1)
+                                + " } } }",
+                        BuildsQuery.DEFAULT_DECODER)
+                .get();
+
+        assertEquals(Option.of(new BranchName("main")), read.map(DefaultBranchPage::branch));
+        assertEquals(Option.of(1), read.map(page -> page.page().commits()));
+    }
+
+    @Test
+    void aRepositoryWithoutACommitHasNoDefaultBranch() {
+        assertEquals(
+                Option.none(),
+                GhProcess.decoded(
+                                "{ \"data\": { \"repository\": { \"defaultBranchRef\": null } } }",
+                                BuildsQuery.DEFAULT_DECODER)
+                        .get());
+    }
+
+    @Test
+    void theDefaultBranchIsAskedForWithoutANameOfItsOwn() {
+        String query = BuildsQuery.DEFAULT_QUERY;
+
+        assertTrue(query.contains("defaultBranchRef { name target"), query);
+        assertFalse(query.contains("$branch"), query);
+    }
+
+    @Test
+    void theRunsInProgressAreCountedByGitHub() {
+        assertEquals(
+                3,
+                GhProcess.decoded("{ \"total_count\": 3, \"workflow_runs\": [] }", RunsInProgressQuery.DECODER)
+                        .get());
     }
 }
