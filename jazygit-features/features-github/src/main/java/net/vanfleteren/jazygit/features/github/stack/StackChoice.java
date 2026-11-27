@@ -1,5 +1,6 @@
 package net.vanfleteren.jazygit.features.github.stack;
 
+import io.vavr.Tuple;
 import io.vavr.Tuple2;
 import io.vavr.collection.HashSet;
 import io.vavr.collection.List;
@@ -18,15 +19,30 @@ import net.vanfleteren.jazygit.core.repo.PrNumber;
 /**
  * The branches a stack can be made of from one branch, and the bottom and the top chosen among them (ADR 73): the
  * line of its parents down to the first root, which is the base of the stack and not listed; the branch; then the
- * branches built on it, and on those, as a tree.
+ * branches built on it, and on those, as a tree. The line is the trunk of that tree, each branch of it the one child
+ * of the one below, so the rows from the bottom to the top are a path from the root of the tree.
  *
- * @param rows   the branches, the bottom of the line first, then the branch, then the tree above it depth first
+ * <p>Made by {@link #of} and {@link #above}, and changed by {@link #withBottom} and {@link #withTop}, which keep
+ * {@code rows} and {@code chosen} those of the tree.
+ *
+ * @param tree   the branches, the lowest of the line at its root
  * @param branch the row of the branch it was opened on
  * @param bottom the row of the chosen bottom: the branch or one below it
  * @param top    the row of the chosen top: the branch or one above it
  * @param base   the base of the stack: the root the line stands on, if it stands on one
+ * @param rows   the rows of {@code tree}, depth first: the bottom of the line first, then the branch, then the tree
+ *               above it
+ * @param chosen the rows from the bottom to the top, the bottom first: the one line between them, also where the tree
+ *               forks
  */
-public record StackChoice(List<StackChoice.Row> rows, int branch, int bottom, int top, Option<BranchName> base) {
+public record StackChoice(
+        StackChoice.Node tree,
+        int branch,
+        int bottom,
+        int top,
+        Option<BranchName> base,
+        List<StackChoice.Row> rows,
+        List<StackChoice.Row> chosen) {
 
     /**
      * The branches a stack can be made of from {@code branch}, with the bottom as far down as the branches have open
@@ -44,19 +60,30 @@ public record StackChoice(List<StackChoice.Row> rows, int branch, int bottom, in
             Predicate<BranchName> root,
             Function<Branch, Option<PullRequest>> pullRequest) {
         Map<BranchName, Branch> byName = local.toMap(Branch::name, b -> b);
-        List<Branch> line = below(branch, byName, parents, root);
-        List<Row> lineRows = line.zipWithIndex()
-                .map(at -> new Row(at._1(), 0, Option.when(at._2() > 0, at._2() - 1), pullRequest.apply(at._1())));
-        int at = line.size();
-        List<Row> rows = lineRows.append(new Row(branch, 0, Option.when(at > 0, at - 1), pullRequest.apply(branch)));
-        rows = grown(rows, at, local, parents, pullRequest);
+        List<Branch> line = below(branch.name(), HashSet.of(branch.name()), byName, parents, root);
+        Node above = grown(
+                        new Row(branch, 0, line.lastOption().map(Branch::name), pullRequest.apply(branch)),
+                        line.map(Branch::name).toSet().add(branch.name()),
+                        local,
+                        parents,
+                        pullRequest)
+                ._1();
+        // The trunk: each branch of the line is the one child of the one below it.
+        List<Option<BranchName>> under = line.map(b -> Option.of(b.name())).prepend(Option.none());
+        Node tree = line.zip(under)
+                .foldRight(
+                        above,
+                        (at, child) ->
+                                new Node(new Row(at._1(), 0, at._2(), pullRequest.apply(at._1())), List.of(child)));
         Option<BranchName> base =
                 parents.get(line.headOption().getOrElse(branch).name()).filter(root);
-        int bottom = at;
-        while (bottom > 0 && rows.get(bottom - 1).pullRequest().isDefined()) {
-            bottom--;
-        }
-        return new StackChoice(rows, at, bottom, at, base);
+        int at = line.size();
+        // As far down as the line below the branch has open pull requests.
+        int bottom = at
+                - line.reverse()
+                        .takeWhile(b -> pullRequest.apply(b).isDefined())
+                        .size();
+        return choice(tree, at, bottom, at, base);
     }
 
     /**
@@ -69,33 +96,48 @@ public record StackChoice(List<StackChoice.Row> rows, int branch, int bottom, in
             List<Branch> local,
             Map<BranchName, BranchName> parents,
             Function<Branch, Option<PullRequest>> pullRequest) {
-        List<Row> rows =
-                grown(List.of(new Row(top, 0, Option.none(), pullRequest.apply(top))), 0, local, parents, pullRequest);
-        return new StackChoice(rows, 0, 0, appended(rows), Option.none());
+        Node tree = grown(
+                        new Row(top, 0, Option.none(), pullRequest.apply(top)),
+                        HashSet.of(top.name()),
+                        local,
+                        parents,
+                        pullRequest)
+                ._1();
+        return choice(tree, 0, 0, appended(tree), Option.none());
     }
 
     /**
-     * The row the line above the first of {@code rows} ends at, as {@link #above} chooses it.
+     * The choice of {@code tree} from {@code bottom} to {@code top}, its rows and the chosen ones read once.
      */
-    private static int appended(List<Row> rows) {
-        int at = 0;
-        Option<Integer> above = onlyAbove(rows, at);
-        while (above.isDefined()
-                && rows.get(above.get()).pullRequest().exists(pr -> pr.stack().isEmpty())) {
-            at = above.get();
-            above = onlyAbove(rows, at);
-        }
+    private static StackChoice choice(Node tree, int branch, int bottom, int top, Option<BranchName> base) {
+        List<Row> rows = tree.rows();
+        List<Row> chosen =
+                tree.path(rows.get(top).branch().name()).getOrElse(List.empty()).drop(bottom);
+        return new StackChoice(tree, branch, bottom, top, base, rows, chosen);
+    }
+
+    /**
+     * The row the line above the root of {@code tree} ends at, as {@link #above} chooses it: the one child of a branch
+     * is the row after it, so the row is how far the line goes.
+     */
+    private static int appended(Node tree) {
+        int line = linked(tree);
         // The first branch above, without a pull request, is chosen to create it.
-        return at == 0 && above.exists(row -> rows.get(row).pullRequest().isEmpty()) ? above.get() : at;
+        return line == 0
+                        && tree.only().exists(above -> above.row().pullRequest().isEmpty())
+                ? 1
+                : line;
     }
 
     /**
-     * The row of the one branch built on the one at {@code row}; none where none is, or where the tree forks.
+     * How far the line above {@code node} goes while its branches have an open pull request in no stack.
      */
-    private static Option<Integer> onlyAbove(List<Row> rows, int row) {
-        List<Integer> above =
-                rows.zipWithIndex().filter(at -> at._1().parent().contains(row)).map(Tuple2::_2);
-        return Option.when(above.size() == 1, above::head);
+    private static int linked(Node node) {
+        return node.only()
+                .filter(above ->
+                        above.row().pullRequest().exists(pr -> pr.stack().isEmpty()))
+                .map(above -> 1 + linked(above))
+                .getOrElse(0);
     }
 
     /**
@@ -133,85 +175,74 @@ public record StackChoice(List<StackChoice.Row> rows, int branch, int bottom, in
     }
 
     /**
-     * The line of the parents of {@code branch} that are no roots, the lowest first.
+     * The line of the parents of {@code name} that are no roots, the lowest first; none of {@code seen}, so a loop of
+     * parents ends.
      */
     private static List<Branch> below(
-            Branch branch,
+            BranchName name,
+            Set<BranchName> seen,
             Map<BranchName, Branch> byName,
             Map<BranchName, BranchName> parents,
             Predicate<BranchName> root) {
-        List<Branch> line = List.empty();
-        Set<BranchName> seen = HashSet.of(branch.name());
-        Option<Branch> next = parents.get(branch.name()).filter(root.negate()).flatMap(byName::get);
-        while (next.isDefined() && !seen.contains(next.get().name())) {
-            Branch parent = next.get();
-            line = line.prepend(parent);
-            seen = seen.add(parent.name());
-            next = parents.get(parent.name()).filter(root.negate()).flatMap(byName::get);
-        }
-        return line;
+        return parents.get(name)
+                .filter(root.negate())
+                .flatMap(byName::get)
+                .filter(parent -> !seen.contains(parent.name()))
+                .map(parent -> below(parent.name(), seen.add(parent.name()), byName, parents, root)
+                        .append(parent))
+                .getOrElse(List.empty());
     }
 
     /**
-     * {@code rows} with the branches built on the one at row {@code at} added after it, depth first, in the order of
-     * {@code local}; none that is in the rows already, so a loop of parents ends.
+     * The tree of {@code row} and the branches built on it, depth first, in the order of {@code local}, with the names
+     * it holds, {@code taken} among them: none of {@code taken} is in it, so a loop of parents ends.
      */
-    private static List<Row> grown(
-            List<Row> rows,
-            int at,
+    private static Tuple2<Node, Set<BranchName>> grown(
+            Row row,
+            Set<BranchName> taken,
             List<Branch> local,
             Map<BranchName, BranchName> parents,
             Function<Branch, Option<PullRequest>> pullRequest) {
-        BranchName name = rows.get(at).branch().name();
-        List<Row> result = rows;
-        for (Branch child : local.filter(b -> parents.get(b.name()).contains(name))) {
-            if (result.exists(row -> row.branch().name().equals(child.name()))) {
-                continue;
-            }
-            int index = result.size();
-            result = grown(
-                    result.append(new Row(child, rows.get(at).depth() + 1, Option.of(at), pullRequest.apply(child))),
-                    index,
-                    local,
-                    parents,
-                    pullRequest);
-        }
-        return result;
+        BranchName name = row.branch().name();
+        Tuple2<List<Node>, Set<BranchName>> children = local.filter(
+                        b -> parents.get(b.name()).contains(name))
+                .foldLeft(
+                        Tuple.of(List.<Node>empty(), taken),
+                        (grown, child) -> grown._2().contains(child.name())
+                                ? grown
+                                : grown(
+                                                new Row(
+                                                        child,
+                                                        row.depth() + 1,
+                                                        Option.of(name),
+                                                        pullRequest.apply(child)),
+                                                grown._2().add(child.name()),
+                                                local,
+                                                parents,
+                                                pullRequest)
+                                        .map1(grown._1()::append));
+        return children.map1(nodes -> new Node(row, nodes));
     }
 
     /**
      * This with {@code row} as the bottom, when it is the branch or below it.
      */
     public Option<StackChoice> withBottom(int row) {
-        return Option.when(row >= 0 && row <= branch, () -> new StackChoice(rows, branch, row, top, base));
+        return Option.when(row >= 0 && row <= branch, () -> choice(tree, branch, row, top, base));
     }
 
     /**
      * This with {@code row} as the top, when it is the branch or above it.
      */
     public Option<StackChoice> withTop(int row) {
-        return Option.when(row >= branch && row < rows.size(), () -> new StackChoice(rows, branch, bottom, row, base));
-    }
-
-    /**
-     * The rows from the bottom to the top, the bottom first: the one line between them, also where the tree forks.
-     */
-    public List<Row> chosen() {
-        List<Row> path = List.empty();
-        Option<Integer> at = Option.of(top);
-        while (at.isDefined() && at.get() >= bottom) {
-            Row row = rows.get(at.get());
-            path = path.prepend(row);
-            at = at.get() == bottom ? Option.none() : row.parent();
-        }
-        return path;
+        return Option.when(row >= branch && row < rows.size(), () -> choice(tree, branch, bottom, row, base));
     }
 
     /**
      * Whether {@code row} is between the bottom and the top.
      */
     public boolean isChosen(int row) {
-        return chosen().contains(rows.get(row));
+        return chosen.contains(rows.get(row));
     }
 
     /**
@@ -251,10 +282,45 @@ public record StackChoice(List<StackChoice.Row> rows, int branch, int bottom, in
      *
      * @param branch      the branch
      * @param depth       how far it is indented: 0 for the line and the branch, one more per branch above that
-     * @param parent      the row of its parent, none for the lowest of the line
+     * @param below       the branch under it in the tree, none for the lowest of the line
      * @param pullRequest its open pull request, if it has one
      */
-    public record Row(Branch branch, int depth, Option<Integer> parent, Option<PullRequest> pullRequest) {}
+    public record Row(Branch branch, int depth, Option<BranchName> below, Option<PullRequest> pullRequest) {}
+
+    /**
+     * A branch of the tree and the branches built on it.
+     *
+     * @param row      the branch
+     * @param children the branches built on it, in the order of the local branches
+     */
+    public record Node(Row row, List<Node> children) {
+
+        /**
+         * The rows of this tree, depth first: this one, then each child's.
+         */
+        List<Row> rows() {
+            return children.flatMap(Node::rows).prepend(row);
+        }
+
+        /**
+         * The rows from this one up to the one of {@code name}, this one first; none when it is not in this tree.
+         */
+        Option<List<Row>> path(BranchName name) {
+            return row.branch().name().equals(name)
+                    ? Option.of(List.of(row))
+                    : children.iterator()
+                            .flatMap(child -> child.path(name))
+                            .headOption()
+                            .map(path -> path.prepend(row));
+        }
+
+        /**
+         * The one branch built on this one; none where none is, or where the tree forks.
+         */
+        Option<Node> only() {
+            return Option.when(children.size() == 1, children::head);
+        }
+    }
 
     /**
      * A base of a pull request that has to change for the stack to be one line.
