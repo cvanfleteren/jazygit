@@ -18,6 +18,7 @@ import net.vanfleteren.jazygit.core.git.history.CliRebase;
 import net.vanfleteren.jazygit.core.git.history.Unfinished;
 import net.vanfleteren.jazygit.core.git.model.CommitFile;
 import net.vanfleteren.jazygit.core.git.model.DeleteScope;
+import net.vanfleteren.jazygit.core.git.model.PullMode;
 import net.vanfleteren.jazygit.core.git.model.PushDefault;
 import net.vanfleteren.jazygit.core.git.model.PushMode;
 import net.vanfleteren.jazygit.core.git.process.GitArgs;
@@ -57,6 +58,8 @@ public final class CliRemotes implements Remotes {
     private static final String SKIP_FETCH_ALL_KEY = ".skipfetchall";
     private static final String URL_KEY = ".url";
     private static final String PUSH_DEFAULT = "push.default";
+    private static final String PULL_REBASE = "pull.rebase";
+    private static final String PULL_FF = "pull.ff";
     private static final String SIMPLE = "simple";
 
     private final Path worktree;
@@ -257,17 +260,37 @@ public final class CliRemotes implements Remotes {
 
     /**
      * Runs {@code git pull --no-edit}: pulls the checked out branch from its upstream, merging or rebasing as
-     * git's {@code pull.rebase} and {@code pull.ff} say. A merge commit gets git's own message instead of an
-     * editor, and with {@code pull.rebase=interactive} the todo list is taken as it is. A pull that stops on
-     * conflicts is left so, for the user to resolve them; a rebase that stops otherwise is aborted again. One that
-     * git refuses to start, as the repository is in the middle of something else, leaves that alone.
+     * git's {@code pull.rebase} and {@code pull.ff} say, or as {@code mode} says when it is not
+     * {@link PullMode#CONFIGURED} ({@code --rebase}, {@code --no-rebase}). A merge commit gets git's own message
+     * instead of an editor, and with {@code pull.rebase=interactive} the todo list is taken as it is. A pull that
+     * stops on conflicts is left so, for the user to resolve them; a rebase that stops otherwise is aborted again.
+     * One that git refuses to start, as the repository is in the middle of something else, leaves that alone.
      */
     @Override
-    public Either<GitFailure, List<ExecutedCommand>> pull() {
+    public Either<GitFailure, List<ExecutedCommand>> pull(PullMode mode) {
         return asking(remote -> Unfinished.runOrUndo(
                 worktree,
-                remote.apply(git("pull", "--no-edit").withEnvironment(HashMap.of("GIT_SEQUENCE_EDITOR", ":"))),
+                remote.apply(git(pullArguments(mode)).withEnvironment(HashMap.of("GIT_SEQUENCE_EDITOR", ":"))),
                 left -> Option.when(left.rebasing(), CliRebase.ABORT)));
+    }
+
+    static List<String> pullArguments(PullMode mode) {
+        return switch (mode) {
+            case CONFIGURED -> List.of("pull", "--no-edit");
+            case REBASE -> List.of("pull", "--rebase");
+            case MERGE -> List.of("pull", "--no-rebase", "--no-edit");
+        };
+    }
+
+    /**
+     * Whether {@code pull.rebase} or {@code pull.ff} is set.
+     */
+    @Override
+    public Either<GitError, Boolean> pullConfigured() {
+        return CliConfig.effective(worktree, PULL_REBASE)
+                .flatMap(rebase -> rebase.isDefined()
+                        ? Either.right(true)
+                        : CliConfig.effective(worktree, PULL_FF).map(Option::isDefined));
     }
 
     @Override

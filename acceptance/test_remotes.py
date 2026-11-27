@@ -118,6 +118,82 @@ def test_pull_rebases_local_commits_onto_the_upstream(repo, origin, clone, jazyg
     assert repo.sync("main") == "ahead 1"
 
 
+def diverged(repo, origin, clone):
+    """Main with a commit of its own and one of a teammate, fetched, with no setting for how to pull."""
+    published(repo, origin)
+    teammate = clone()
+    teammate.commit("Add theirs", **{"theirs.txt": "theirs\n"})
+    teammate("push")
+    repo.commit("Add mine", **{"mine.txt": "mine\n"})
+    repo("fetch")
+    assert "pull." not in repo("config", "--list")
+
+
+def test_pull_of_a_diverged_branch_without_a_setting_asks_and_rebases_when_told_to(repo, origin, clone, jazygit):
+    diverged(repo, origin, clone)
+    ui = jazygit()
+
+    ui.branches.pull("main", by="rebase")
+
+    assert repo.subjects() == ["Add mine", "Add theirs", "Add one"]
+    assert repo.sync("main") == "ahead 1"
+    assert repo.in_progress() is None
+    assert "pull." not in repo("config", "--list")
+
+
+def test_pull_of_a_diverged_branch_without_a_setting_asks_and_merges_when_told_to(repo, origin, clone, jazygit):
+    diverged(repo, origin, clone)
+    ui = jazygit()
+
+    ui.branches.pull("main", by="merge")
+
+    assert repo.subjects()[1:] == ["Add mine", "Add theirs", "Add one"]
+    assert repo("rev-list", "--merges", "--count", "HEAD") == "1"
+    assert repo.sync("main") == "ahead 2"
+    assert "pull." not in repo("config", "--list")
+
+
+def test_pull_of_a_diverged_branch_without_a_setting_changes_nothing_when_cancelled(repo, origin, clone, jazygit):
+    diverged(repo, origin, clone)
+    main = repo("rev-parse", "main")
+    ui = jazygit()
+
+    ui.branches.try_to_pull("main")
+    ui.app.wait_for("Pull 'main', which has diverged")
+    ui.app.press("escape")
+
+    ui.app.wait_gone("which has diverged")
+    assert repo("rev-parse", "main") == main
+    assert repo.in_progress() is None
+
+
+def test_pull_of_a_diverged_branch_without_a_setting_stops_on_conflicts_for_the_user(repo, origin, clone, jazygit):
+    repo.commit("Add one", **{"one.txt": "one\n"})
+    repo("push", "--set-upstream", "origin", "main")
+    teammate = clone()
+    teammate.commit("Change one, theirs", **{"one.txt": "theirs\n"})
+    teammate("push")
+    repo.commit("Change one, mine", **{"one.txt": "mine\n"})
+    repo("fetch")
+    ui = jazygit()
+
+    ui.branches.pull("main", by="rebase")
+
+    assert repo.in_progress() == "rebase"
+    assert repo.conflicts() == ["one.txt"]
+
+
+def test_pull_of_a_diverged_branch_with_a_setting_does_not_ask(repo, origin, clone, jazygit):
+    diverged(repo, origin, clone)
+    repo("config", "pull.rebase", "false")
+    ui = jazygit()
+
+    ui.branches.pull("main")
+
+    assert repo.subjects()[1:] == ["Add mine", "Add theirs", "Add one"]
+    assert repo.sync("main") == "ahead 2"
+
+
 def test_pull_a_branch_that_is_not_checked_out_fast_forwards_it(repo, origin, clone, jazygit):
     published(repo, origin)
     teammate = clone()

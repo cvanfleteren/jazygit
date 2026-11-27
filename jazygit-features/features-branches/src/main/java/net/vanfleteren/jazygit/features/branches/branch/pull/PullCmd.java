@@ -29,9 +29,16 @@ public sealed interface PullCmd extends BranchCmd.KeepsBranchBusy {
     }
 
     /**
-     * Pulls {@code branch}, the checked out branch, from its upstream.
+     * Pulls {@code branch}, the checked out branch, from its upstream, reconciling the two as {@code mode} says.
      */
-    record Pull(BranchName branch) implements PullCmd {
+    record Pull(BranchName branch, PullMode mode) implements PullCmd {
+
+        /**
+         * Pulls as git's own settings say.
+         */
+        public Pull(BranchName branch) {
+            this(branch, PullMode.CONFIGURED);
+        }
 
         @Override
         public Operation operation() {
@@ -40,7 +47,7 @@ public sealed interface PullCmd extends BranchCmd.KeepsBranchBusy {
 
         @Override
         public Either<GitFailure, List<ExecutedCommand>> perform(Git git) {
-            return git.remotes().pull();
+            return git.remotes().pull(mode);
         }
     }
 
