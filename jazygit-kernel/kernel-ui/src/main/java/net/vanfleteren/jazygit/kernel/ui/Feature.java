@@ -239,6 +239,7 @@ public record Feature(
     /**
      * This feature, also bringing the pane {@code pane} makes to {@code screen} (ADR 211), which shows it where its
      * {@link Screen#panes()} lists its id. The repository's screen is given its panes this way, as is a feature's own.
+     * A feature that is on or off for a repository shows the pane only while it is on ({@link #gated}).
      */
     public Feature pane(Screen screen, ScreenPane.Factory pane) {
         return new Feature(
@@ -376,7 +377,7 @@ public record Feature(
                         .map(reaction -> (Reaction) new GatedReaction(id, reaction))
                         .prepend(detecting),
                 screens,
-                panes,
+                panes.map(pane -> pane.gated(model -> model.on(id))),
                 legends.map(legend -> legend.of(id)),
                 fills.gated(model -> model.on(id)),
                 running,

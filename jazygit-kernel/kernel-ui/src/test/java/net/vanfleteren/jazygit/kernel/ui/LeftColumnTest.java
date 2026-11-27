@@ -19,6 +19,8 @@ import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.function.Function;
 import net.vanfleteren.jazygit.kernel.settings.Settings;
+import net.vanfleteren.jazygit.kernel.state.FeatureId;
+import net.vanfleteren.jazygit.kernel.state.FeatureUpdate;
 import net.vanfleteren.jazygit.kernel.state.Focus;
 import net.vanfleteren.jazygit.kernel.state.Freshness;
 import net.vanfleteren.jazygit.kernel.state.Model;
@@ -147,6 +149,33 @@ class LeftColumnTest {
                 column.selectionChanges(TestModels.loaded().withScreen(TestScreens.OTHER), Option.of(second));
 
         assertEquals(List.of(new Probe("second")), changes);
+    }
+
+    @Test
+    void aPaneAGatedFeatureBringsShowsAndSaysNothingWhileTheFeatureIsOff() {
+        // A forge brings a pane to a screen it does not own, which shows whether the forge is on or not (ADR 171).
+        FeatureId forge = new FeatureId("forge");
+        PaneId top = TestScreens.OTHER.panes().head();
+        Feature feature = Feature.of()
+                .pane(TestScreens.OTHER, context -> saying(top, new Probe("top")))
+                .applying(forge, model -> {
+                    throw new AssertionError("no forge is detected here");
+                })
+                .gated();
+        LeftColumn column = columnWith(spec(TestScreens.OTHER), feature.panes());
+        Model on = TestModels.loaded().withScreen(TestScreens.OTHER);
+        Model off = FeatureUpdate.off(on, forge);
+
+        assertEquals(List.of(new Probe("top")), column.selectionChanges(on, Option.of(top)));
+        assertEquals(List.empty(), column.selectionChanges(off, Option.of(top)));
+        assertEquals(
+                1,
+                column.render(on, Option.none(), Option.none(), Option.none())
+                        .panes()
+                        .size());
+        assertEquals(
+                List.empty(),
+                column.render(off, Option.none(), Option.none(), Option.none()).panes());
     }
 
     @Test

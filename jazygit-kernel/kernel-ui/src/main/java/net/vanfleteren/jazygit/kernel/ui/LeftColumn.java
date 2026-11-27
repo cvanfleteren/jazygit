@@ -14,6 +14,7 @@ import io.vavr.control.Option;
 import java.time.Clock;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.function.Predicate;
 import net.vanfleteren.jazygit.kernel.state.Focus;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.Msg;
@@ -50,7 +51,7 @@ public final class LeftColumn {
     private final Consumer<Msg> dispatch;
     private final StyleEngine styleEngine;
     private final Screens screens;
-    private final Map<Screen, List<LeftPane>> screenPanes;
+    private final Map<Screen, List<Made>> screenPanes;
     // The files pane, which steps to another file without the focus and lists what the pane in use follows, if a
     // feature brings it.
     private final Option<FilesLeftPane> filesPanel;
@@ -78,10 +79,12 @@ public final class LeftColumn {
         ScreenPane.Context context = new ScreenPane.Context(dispatch, openContent, highlight, fills, clock);
         this.screens = screens;
         this.screenPanes = panes.groupBy(ScreenPane::screen)
-                .mapValues(brought -> brought.map(pane -> pane.factory().of(context)));
+                .mapValues(
+                        brought -> brought.map(pane -> new Made(pane.factory().of(context), pane.shown())));
         this.filesPanel = screenPanes
                 .values()
                 .flatMap(made -> made)
+                .map(Made::pane)
                 .flatMap(LeftColumn::files)
                 .headOption();
     }
@@ -98,7 +101,7 @@ public final class LeftColumn {
         if (model.preferences().leftCollapsed(model.screen())) {
             return new Rendered(column(collapsed()), List.empty());
         }
-        List<Panel> shown = panesOf(model.screen()).map(pane -> pane.render(model, focus, inUse));
+        List<Panel> shown = panesOf(model).map(pane -> pane.render(model, focus, inUse));
         if (shown.isEmpty()) {
             // A screen whose feature made none of its panes shows the status alone.
             return new Rendered(column(status(model)), List.empty());
@@ -129,7 +132,7 @@ public final class LeftColumn {
      * {@code inUse}, whose highlight the content panel shows (ADR 168).
      */
     public List<Msg> selectionChanges(Model model, Option<PaneId> inUse) {
-        List<LeftPane> shown = panesOf(model.screen());
+        List<LeftPane> shown = panesOf(model);
         Function<PaneId, Option<Followed>> followed =
                 id -> shown.find(pane -> pane.pane().equals(id)).flatMap(pane -> pane.followed(model));
         return shown.filter(pane -> Mirrored.of(pane.pane()).isDefined() || inUse.contains(pane.pane()))
@@ -139,11 +142,16 @@ public final class LeftColumn {
     }
 
     /**
-     * The panes of {@code screen}, top to bottom: those the features made for it, in the order the screen lists them,
-     * matched by their ids.
+     * The panes of the screen {@code model} shows, top to bottom: those the features made for it, in the order the
+     * screen lists them, matched by their ids, but those whose feature is off in {@code model} (ADR 171).
      */
-    private List<LeftPane> panesOf(Screen screen) {
-        List<LeftPane> made = screenPanes.get(screen).getOrElse(List.empty());
+    private List<LeftPane> panesOf(Model model) {
+        Screen screen = model.screen();
+        List<LeftPane> made = screenPanes
+                .get(screen)
+                .getOrElse(List.empty())
+                .filter(pane -> pane.shown().test(model))
+                .map(Made::pane);
         return screen.panes().flatMap(id -> made.find(pane -> pane.pane().equals(id)));
     }
 
@@ -170,6 +178,11 @@ public final class LeftColumn {
         return StatusPanel.render(
                 model, Theme.spanStyles(styleEngine), screens, screen -> dispatch.accept(new ScreenMsg.Shown(screen)));
     }
+
+    /**
+     * A pane made for a screen, and in which models it shows.
+     */
+    private record Made(LeftPane pane, Predicate<Model> shown) {}
 
     /**
      * The left column, and the panes in it under the status.

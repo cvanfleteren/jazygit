@@ -2,6 +2,8 @@ package net.vanfleteren.jazygit.kernel.ui;
 
 import java.time.Clock;
 import java.util.function.Consumer;
+import java.util.function.Predicate;
+import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.Msg;
 import net.vanfleteren.jazygit.kernel.state.PaneId;
 import net.vanfleteren.jazygit.kernel.state.preferences.Screen;
@@ -15,8 +17,24 @@ import net.vanfleteren.jazygit.kernel.ui.theme.Theme;
  *
  * @param screen  the screen it is shown on
  * @param factory what makes it, once the column knows what a pane is made with
+ * @param shown   in which models it shows: those where its feature is on, for a feature that is on or off for a
+ *                repository (ADR 171); in all of them otherwise
  */
-public record ScreenPane(Screen screen, Factory factory) {
+public record ScreenPane(Screen screen, Factory factory, Predicate<Model> shown) {
+
+    /**
+     * The pane {@code factory} makes for {@code screen}, shown whenever the screen is.
+     */
+    public ScreenPane(Screen screen, Factory factory) {
+        this(screen, factory, model -> true);
+    }
+
+    /**
+     * This pane, shown only in the models where {@code on} holds as well.
+     */
+    public ScreenPane gated(Predicate<Model> on) {
+        return new ScreenPane(screen, factory, shown.and(on));
+    }
 
     /**
      * What makes a pane, once the column knows what it is made with.
