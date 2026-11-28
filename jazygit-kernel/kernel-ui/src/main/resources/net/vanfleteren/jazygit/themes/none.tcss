@@ -38,3 +38,6 @@ Span.search-current { text-style: bold underlined italic; }
 
 /* The column of a text area past the length its lines are to keep to (ADR 193). */
 Span.ruler { text-style: underlined; }
+
+/* The sha of a commit not pushed to the upstream of its branch yet (#722). */
+.unpushed { text-style: bold; }

@@ -1,6 +1,8 @@
 package net.vanfleteren.jazygit.kernel.ui.commits;
 
+import io.vavr.collection.HashSet;
 import io.vavr.collection.List;
+import io.vavr.collection.Set;
 import io.vavr.collection.Stream;
 import io.vavr.control.Option;
 import java.util.regex.Matcher;
@@ -33,9 +35,25 @@ public final class CommitRows {
      * @param copied the commit copied to cherry-pick, whose sha stands out
      */
     public static List<LoadableList.Item> graphed(List<Commit> commits, Option<Sha> copied, AheadView ahead) {
+        return graphed(commits, copied, ahead, HashSet.empty());
+    }
+
+    /**
+     * @param unpushed the commits not pushed to the upstream of the branch yet, whose shas are in bold (#722)
+     */
+    public static List<LoadableList.Item> graphed(
+            List<Commit> commits, Option<Sha> copied, AheadView ahead, Set<Sha> unpushed) {
         Stream<CommitGraph.Node> nodes = CommitGraph.laidOut(commits);
         return commits.zipWithIndex((commit, at) -> LoadableList.Item.later(
-                1, () -> marked(row(nodes.get(at), copied.contains(commit.sha())), commit.sha(), ahead)));
+                1,
+                () -> marked(
+                        row(
+                                nodes.get(at).commit(),
+                                graph(nodes.get(at)),
+                                copied.contains(commit.sha()),
+                                unpushed.contains(commit.sha())),
+                        commit.sha(),
+                        ahead)));
     }
 
     /**
@@ -62,10 +80,20 @@ public final class CommitRows {
      * @param copied whether the commit is copied to cherry-pick, which shows in its sha
      */
     public static LoadableList.Row row(Commit commit, String graph, boolean copied) {
+        return row(commit, graph, copied, false);
+    }
+
+    /**
+     * @param unpushed whether the commit is not pushed to the upstream of its branch yet, which shows in its sha,
+     *                 unless it is copied
+     */
+    public static LoadableList.Row row(Commit commit, String graph, boolean copied, boolean unpushed) {
         String author = " " + initials(commit.authorName()) + " " + graph;
-        List<LoadableList.Seg> prefix = copied
-                ? List.of(LoadableList.Seg.styled(commit.shortSha(), Theme.Classes.COPIED), LoadableList.Seg.of(author))
-                : List.of(LoadableList.Seg.of(commit.shortSha() + author));
+        Option<String> shaClass =
+                copied ? Option.of(Theme.Classes.COPIED) : Option.when(unpushed, Theme.Classes.UNPUSHED);
+        List<LoadableList.Seg> prefix = shaClass.fold(
+                () -> List.of(LoadableList.Seg.of(commit.shortSha() + author)),
+                style -> List.of(LoadableList.Seg.styled(commit.shortSha(), style), LoadableList.Seg.of(author)));
         List<LoadableList.Seg> tags =
                 commit.tags().map(tag -> LoadableList.Seg.styled("[" + tag.name() + "] ", Theme.Classes.TAG));
         return new LoadableList.Row(prefix.appendAll(tags)

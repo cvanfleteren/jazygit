@@ -365,3 +365,17 @@ def test_a_commit_not_pushed_yet_is_rewritten_without_a_warning(repo, origin, ja
 
     assert repo.subjects() == ["Add the fourth file", "Add three", "Add two", "Add one"]
     assert repo.sync("main") == "ahead 1"
+
+
+def test_the_commits_not_pushed_yet_have_their_sha_in_bold_until_they_are_pushed(repo, origin, jazygit):
+    three_commits(repo)
+    repo("push", "--quiet", "--set-upstream", "origin", "main")
+    repo.commit("Add four", **{"four.txt": "four\n"})
+    four, three = repo.short("HEAD"), repo.short("HEAD~")
+    ui = jazygit()
+
+    ui.app.eventually(lambda: four in ui.app.bold_in("Commits"), "the sha of the commit not pushed in bold")
+    assert three not in ui.app.bold_in("Commits")
+
+    repo("push", "--quiet")
+    ui.app.eventually(lambda: four not in ui.app.bold_in("Commits"), "the sha of the pushed commit no longer in bold")

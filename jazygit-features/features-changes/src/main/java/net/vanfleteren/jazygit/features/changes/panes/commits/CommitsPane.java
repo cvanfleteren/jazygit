@@ -1,5 +1,6 @@
 package net.vanfleteren.jazygit.features.changes.panes.commits;
 
+import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.kernel.state.view.TabId;
 import net.vanfleteren.jazygit.kernel.ui.Slot;
 import net.vanfleteren.jazygit.kernel.ui.tabs.PaneTab;
@@ -26,6 +27,11 @@ public final class CommitsPane {
      * feature lists in its place.
      */
     public static final Slot<CommitsAbove> ABOVE = Slot.of("changes.panes.commits.above");
+
+    /**
+     * The commits of the log of HEAD not pushed to the upstream of the branch yet, whose shas stand out (#722).
+     */
+    public static final Slot<Sha> UNPUSHED = Slot.of("changes.panes.commits.unpushed");
 
     /**
      * The tabs the features add after the log, in the order of the features (ADR 185).

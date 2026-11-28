@@ -47,7 +47,7 @@ public final class PushedCheck {
     /**
      * The main branch, unless it is the one checked out.
      */
-    private static Option<BranchName> otherMain(Model model) {
+    static Option<BranchName> otherMain(Model model) {
         return model.repo()
                 .branches()
                 .toOption()

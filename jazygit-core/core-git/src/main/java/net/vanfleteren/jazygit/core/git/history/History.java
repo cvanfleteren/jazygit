@@ -2,6 +2,7 @@ package net.vanfleteren.jazygit.core.git.history;
 
 import io.vavr.collection.List;
 import io.vavr.collection.Seq;
+import io.vavr.collection.Set;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.core.git.model.Blame;
@@ -75,6 +76,12 @@ public interface History {
      * How many commits are on {@code branch} and not on {@code base}, counting no further than {@code max}.
      */
     Either<GitError, Integer> countNotOn(BranchRef branch, BranchRef base, int max);
+
+    /**
+     * The commits {@code tip} has and none of {@code others} has, at most {@code max}, newest first: those of a branch
+     * not pushed yet, when {@code others} are the tips of its upstream and the main branch.
+     */
+    Either<GitError, Set<Sha>> onlyOn(Sha tip, List<Sha> others, int max);
 
     /**
      * The commits of the local branch {@code branch} from {@code oldest} up to its tip, and how many of them are

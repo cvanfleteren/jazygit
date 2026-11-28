@@ -297,6 +297,16 @@ public final class CliHistory implements History {
         return count(worktree, List.of("--max-count=" + max, GitArgs.revision(branch), GitArgs.not(base)));
     }
 
+    @Override
+    public Either<GitError, Set<Sha>> onlyOn(Sha tip, List<Sha> others, int max) {
+        return GitProcess.read(
+                worktree,
+                GitCommand.reading(List.of("rev-list", "--max-count=" + max, GitArgs.revision(new Revision.Commit(tip)))
+                        .appendAll(others.map(other -> GitArgs.not(new Revision.Commit(other))))
+                        .append("--")),
+                raw -> Either.right(GitOutput.nonBlankLines(raw).map(Sha::new).toSet()));
+    }
+
     /**
      * How many commits {@code revisions} select.
      */

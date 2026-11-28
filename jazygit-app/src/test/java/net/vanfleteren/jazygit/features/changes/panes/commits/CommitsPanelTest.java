@@ -23,8 +23,11 @@ import net.vanfleteren.jazygit.core.repo.CommitMessage;
 import net.vanfleteren.jazygit.core.repo.Head;
 import net.vanfleteren.jazygit.core.repo.InProgress;
 import net.vanfleteren.jazygit.core.repo.RemoteBranch;
+import net.vanfleteren.jazygit.core.repo.RemoteRef;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.core.repo.Tag;
+import net.vanfleteren.jazygit.core.repo.Upstream;
+import net.vanfleteren.jazygit.features.changes.commit.Unpushed;
 import net.vanfleteren.jazygit.features.changes.commit.search.CommitSearch;
 import net.vanfleteren.jazygit.features.changes.commit.search.CommitSearchMsg;
 import net.vanfleteren.jazygit.features.changes.commit.search.CommitSearchView;
@@ -456,7 +459,10 @@ class CommitsPanelTest {
     @Test
     void theCommitsFoundAreListedWithoutRails() {
         List<LoadableList.Row> rows = CommitsPanel.foundItems(
-                        List.of(commit("mmmmmmm", "bbbbbbb", "fffff02"), commit("aaaaaaa")), Option.none(), NO_BASE)
+                        List.of(commit("mmmmmmm", "bbbbbbb", "fffff02"), commit("aaaaaaa")),
+                        Option.none(),
+                        NO_BASE,
+                        io.vavr.collection.HashSet.empty())
                 .map(LoadableList.Item::row);
 
         assertEquals(
@@ -576,6 +582,47 @@ class CommitsPanelTest {
 
         assertEquals(List.of(Option.none(), Option.none()), before);
         assertEquals(List.of(Option.none(), Option.of(Theme.Classes.COPIED)), shaClasses(panel));
+    }
+
+    // #722: the commits not pushed to the upstream yet have their sha in bold, once they were read for where HEAD and
+    // the upstream are; read for elsewhere, none is marked.
+    @Test
+    void theCommitsNotPushedYetStandOut() {
+        RemoteBranch upstream = new RemoteBranch(RemoteBranch.DEFAULT_REMOTE, new BranchName("feature"));
+        Model model = TestModels.localBranchesRead(
+                        TestModels.loaded(SampleData.git())
+                                .mapRepo(repo -> repo.withCommits(
+                                                new Loadable.Loaded<>(List.of(commit("s1", "s0"), commit("s0"))))
+                                        .withRemoteBranches(new Loadable.Loaded<>(List.of(new RemoteRef(
+                                                upstream, commit("s0").sha(), Instant.EPOCH))))),
+                        List.of(Fixtures.branch(
+                                new BranchName("feature"),
+                                true,
+                                commit("s1").sha(),
+                                Instant.EPOCH,
+                                true,
+                                false,
+                                Option.of(new Upstream(new BranchRef.Remote(upstream), 1, 0)))))
+                .model();
+        Unpushed.Tips tips =
+                new Unpushed.Tips(commit("s1").sha(), List.of(commit("s0").sha()));
+        Unpushed read = new Unpushed(
+                Option.of(tips),
+                Option.of(tips),
+                io.vavr.collection.HashSet.of(commit("s1").sha()));
+        CommitsPanel panel = new CommitsPanel(msg -> {}, Features.FILLS);
+
+        panel.render(model.withPart(Unpushed.PART, read), CommitsPanel.PANE);
+        List<Option<String>> marked = shaClasses(panel);
+        Unpushed.Tips elsewhere =
+                new Unpushed.Tips(commit("s0").sha(), List.of(commit("s0").sha()));
+        panel.render(
+                model.withPart(
+                        Unpushed.PART, read.withAsked(Option.of(elsewhere)).withRead(Option.of(elsewhere))),
+                CommitsPanel.PANE);
+
+        assertEquals(List.of(Option.of(Theme.Classes.UNPUSHED), Option.none()), marked);
+        assertEquals(List.of(Option.none(), Option.none()), shaClasses(panel));
     }
 
     /**

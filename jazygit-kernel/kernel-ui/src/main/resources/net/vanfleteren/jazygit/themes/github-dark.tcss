@@ -122,6 +122,7 @@ Span.current-branch { color: $attention; text-style: bold; }
 Span.sha { color: $link; }
 Span.tag { color: $added; }
 Span.copied { color: $accent; text-style: bold; }
+.unpushed { text-style: bold; }
 Span.bold { text-style: bold; }
 
 /* The draft box of a new pull request, when it has the focus: reversed, as a cursor. */

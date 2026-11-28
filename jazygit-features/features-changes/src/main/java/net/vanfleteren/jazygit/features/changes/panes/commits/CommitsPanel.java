@@ -7,10 +7,11 @@ import dev.tamboui.tui.event.KeyEvent;
 import dev.tamboui.tui.event.PasteEvent;
 import io.vavr.Tuple;
 import io.vavr.Tuple2;
-import io.vavr.Tuple5;
+import io.vavr.Tuple6;
 import io.vavr.collection.HashMap;
 import io.vavr.collection.List;
 import io.vavr.collection.Map;
+import io.vavr.collection.Set;
 import io.vavr.control.Option;
 import java.util.function.Consumer;
 import net.vanfleteren.jazygit.core.repo.BranchName;
@@ -87,8 +88,8 @@ public class CommitsPanel implements LeftPane {
     private final Consumer<PasteEvent> paste;
     // The rows of the commits listed, worked out again only when what they are drawn from changes: the graph is not
     // laid out on every render.
-    private final Memo<Tuple5<Listed, Boolean, Option<Sha>, AheadView, Option<Sha>>, List<LoadableList.Item>> drawn =
-            new Memo<>();
+    private final Memo<Tuple6<Listed, Boolean, Option<Sha>, AheadView, Option<Sha>, Set<Sha>>, List<LoadableList.Item>>
+            drawn = new Memo<>();
     // What is listed, the same instance while it stays equal: the list moves its highlight only when it changes.
     private final Memo<Tuple2<Loadable<List<Commit>>, List<CommitsAbove.Row>>, Loadable<Listed>> listed = new Memo<>();
 
@@ -204,13 +205,15 @@ public class CommitsPanel implements LeftPane {
      * The items of the commits listed in place of the log, without the rails of merges: with commits left out, they no
      * longer join up. A merge is still a {@code ◎}. Each row is worked out once it is drawn.
      */
-    static List<LoadableList.Item> foundItems(List<Commit> commits, Option<Sha> copied, AheadView ahead) {
-        return commits.map(commit ->
-                LoadableList.Item.later(1, () -> CommitRows.marked(foundRow(commit, copied), commit.sha(), ahead)));
+    static List<LoadableList.Item> foundItems(
+            List<Commit> commits, Option<Sha> copied, AheadView ahead, Set<Sha> unpushed) {
+        return commits.map(commit -> LoadableList.Item.later(
+                1, () -> CommitRows.marked(foundRow(commit, copied, unpushed), commit.sha(), ahead)));
     }
 
-    private static LoadableList.Row foundRow(Commit commit, Option<Sha> copied) {
-        return CommitRows.row(commit, commit.isMerge() ? "◎ " : "○ ", copied.contains(commit.sha()));
+    private static LoadableList.Row foundRow(Commit commit, Option<Sha> copied, Set<Sha> unpushed) {
+        return CommitRows.row(
+                commit, commit.isMerge() ? "◎ " : "○ ", copied.contains(commit.sha()), unpushed.contains(commit.sha()));
     }
 
     /**
@@ -277,6 +280,7 @@ public class CommitsPanel implements LeftPane {
         Option<Sha> copied = model.repoView().commits().cherryPick().map(Commit::sha);
         boolean found = listing.isDefined();
         Option<Sha> doneAbove = above.flatMap(CommitsAbove::doneAbove);
+        Set<Sha> unpushed = fills.all(CommitsPane.UNPUSHED, model).toSet();
         list.whenEmpty(listing.map(CommitsListing::emptyText));
         Loadable<List<Commit>> commits = listing.map(CommitsListing::commits)
                 .getOrElse(() -> model.repo().commits());
@@ -285,14 +289,14 @@ public class CommitsPanel implements LeftPane {
                         Tuple.of(commits, above.map(CommitsAbove::rows).getOrElse(List.empty())),
                         key -> key._1().map(loaded -> new Listed(key._2(), loaded))),
                 shown -> drawn.get(
-                        Tuple.of(shown, found, copied, ahead, doneAbove),
+                        Tuple.of(shown, found, copied, ahead, doneAbove, unpushed),
                         key -> shown.above()
                                 .map(row -> LoadableList.Item.of(row.row()))
                                 .appendAll(
                                         found
-                                                ? foundItems(shown.commits(), copied, ahead)
+                                                ? foundItems(shown.commits(), copied, ahead, unpushed)
                                                 : done(
-                                                        CommitRows.graphed(shown.commits(), copied, ahead),
+                                                        CommitRows.graphed(shown.commits(), copied, ahead, unpushed),
                                                         shown.commits(),
                                                         doneAbove))),
                 focused,

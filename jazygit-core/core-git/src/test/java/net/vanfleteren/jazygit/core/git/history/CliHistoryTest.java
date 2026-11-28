@@ -63,6 +63,29 @@ class CliHistoryTest {
         assertEquals(Option.of(tip("main")), two.forkPoint().map(Commit::sha));
     }
 
+    // #722: the commits not pushed are those none of the other tips has.
+    @Test
+    void theCommitsOnlyATipHasAreThoseNoneOfTheOthersHas() throws Exception {
+        git("checkout", "-q", "-b", "pushed");
+        git("commit", "-q", "--allow-empty", "-m", "Pushed");
+        git("checkout", "-q", "-b", "side");
+        git("commit", "-q", "--allow-empty", "-m", "Side one");
+        Sha one = tip("side");
+        git("commit", "-q", "--allow-empty", "-m", "Side two");
+        Sha two = tip("side");
+        CliHistory history = new CliHistory(repo);
+
+        assertEquals(
+                io.vavr.collection.HashSet.of(one, two),
+                history.onlyOn(two, List.of(tip("pushed"), tip("main")), 10).get());
+        assertEquals(
+                io.vavr.collection.HashSet.of(two),
+                history.onlyOn(two, List.of(tip("pushed")), 1).get());
+        assertEquals(
+                io.vavr.collection.HashSet.empty(),
+                history.onlyOn(one, List.of(two), 10).get());
+    }
+
     private Sha tip(String branch) throws Exception {
         return new Sha(git("rev-parse", "refs/heads/" + branch).strip());
     }

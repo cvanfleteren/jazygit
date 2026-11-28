@@ -13,10 +13,11 @@ import net.vanfleteren.jazygit.features.changes.commit.squash.SquashAction;
 import net.vanfleteren.jazygit.features.changes.panes.commits.CommitsPane;
 import net.vanfleteren.jazygit.features.changes.panes.commits.CommitsTabsAction;
 import net.vanfleteren.jazygit.kernel.ui.Feature;
+import net.vanfleteren.jazygit.kernel.ui.Refresh;
 
 /**
  * The commit operations: committing, amending (the last or any commit), rewording, squashing, fixing up, dropping,
- * reverting, resetting, searching them, and listing only those not on the base. Adding one is adding its subpackage, and listing its action here.
+ * reverting, resetting, searching them, listing only those not on the base, and marking those not pushed. Adding one is adding its subpackage, and listing its action here.
  */
 public final class CommitFeature {
 
@@ -36,7 +37,11 @@ public final class CommitFeature {
                     CommitSearchAction.ACTION,
                     CommitsTabsAction.ACTION)
             .filling(CommitsPane.LINE, CommitSearchShown::line)
-            .filling(CommitsPane.LISTING, CommitSearchShown::listing);
+            .filling(CommitsPane.LISTING, CommitSearchShown::listing)
+            // The commits not pushed yet stand out in the log (#722).
+            .filling(CommitsPane.UNPUSHED, UnpushedUpdate::shown)
+            .reacting(UnpushedUpdate::reacting)
+            .every(Refresh.INTERVAL, UnpushedMsg.Tick::new);
 
     private CommitFeature() {}
 }

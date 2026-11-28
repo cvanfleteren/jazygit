@@ -1,7 +1,9 @@
 package net.vanfleteren.jazygit.core.git.history;
 
+import io.vavr.collection.HashSet;
 import io.vavr.collection.List;
 import io.vavr.collection.Seq;
+import io.vavr.collection.Set;
 import io.vavr.collection.Vector;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
@@ -61,6 +63,11 @@ public interface StubHistory extends History {
     @Override
     default Either<GitError, Integer> countNotOn(BranchRef branch, BranchRef base, int max) {
         return Either.right(0);
+    }
+
+    @Override
+    default Either<GitError, Set<Sha>> onlyOn(Sha tip, List<Sha> others, int max) {
+        return Either.right(HashSet.empty());
     }
 
     @Override

@@ -291,6 +291,8 @@ public final class Theme {
         public static final String SHA = "sha";
         public static final String TAG = "tag";
         public static final String COPIED = "copied";
+        // The sha of a commit not pushed to the upstream of its branch yet (#722).
+        public static final String UNPUSHED = "unpushed";
         public static final String IN_PROGRESS = "in-progress";
         public static final String REPO_BRANCH = "repo-branch";
         public static final String REPO_LOCATION = "repo-location";
