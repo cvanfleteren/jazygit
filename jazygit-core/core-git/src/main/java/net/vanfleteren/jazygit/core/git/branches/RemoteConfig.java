@@ -56,8 +56,11 @@ record RemoteConfig(
                 HashMap.ofEntries(lines.flatMap(RemoteConfig::pushRemote)));
     }
 
+    /**
+     * The last value of {@code key}, as git has it: the files are read system, global, then local.
+     */
     private static Option<RemoteName> value(List<Line> lines, String key) {
-        return lines.find(line -> line.key().equals(key)).flatMap(line -> RemoteName.parse(line.value()));
+        return lines.findLast(line -> line.key().equals(key)).flatMap(line -> RemoteName.parse(line.value()));
     }
 
     private static Option<RemoteName> remote(Line line) {
