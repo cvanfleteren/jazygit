@@ -116,6 +116,29 @@ public final class CliBranches implements Branches {
         return GitProcess.log(worktree, git("branch", "--move", "--", GitArgs.name(name), GitArgs.name(newName)));
     }
 
+    /**
+     * Runs {@code git branch --set-upstream-to=<remote>/<branch> -- <name>}, which refuses a remote-tracking branch
+     * that does not exist.
+     */
+    @Override
+    public Either<GitFailure, List<ExecutedCommand>> setUpstream(BranchName name, RemoteBranch upstream) {
+        return GitProcess.log(
+                worktree,
+                git(
+                        "branch",
+                        "--set-upstream-to=" + GitArgs.revision(new BranchRef.Remote(upstream)),
+                        "--",
+                        GitArgs.name(name)));
+    }
+
+    /**
+     * Runs {@code git branch --unset-upstream -- <name>}.
+     */
+    @Override
+    public Either<GitFailure, List<ExecutedCommand>> unsetUpstream(BranchName name) {
+        return GitProcess.log(worktree, git("branch", "--unset-upstream", "--", GitArgs.name(name)));
+    }
+
     @Override
     public Either<GitFailure, List<ExecutedCommand>> deleteLocal(BranchName name) {
         return deleteLocal(worktree, name);

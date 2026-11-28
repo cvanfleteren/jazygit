@@ -13,6 +13,7 @@ import net.vanfleteren.jazygit.core.repo.AllBranches;
 import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.BranchRef;
 import net.vanfleteren.jazygit.core.repo.CaughtUpBranch;
+import net.vanfleteren.jazygit.core.repo.RemoteBranch;
 import net.vanfleteren.jazygit.core.repo.Sha;
 
 /**
@@ -47,6 +48,17 @@ public interface Branches {
      * branch is called {@code newName} already.
      */
     Either<GitFailure, List<ExecutedCommand>> rename(BranchName name, BranchName newName);
+
+    /**
+     * Makes the local branch {@code name} follow {@code upstream}, which git requires to be a remote-tracking branch
+     * that exists: it is not fetched.
+     */
+    Either<GitFailure, List<ExecutedCommand>> setUpstream(BranchName name, RemoteBranch upstream);
+
+    /**
+     * Makes the local branch {@code name} follow nothing; git refuses one that follows nothing.
+     */
+    Either<GitFailure, List<ExecutedCommand>> unsetUpstream(BranchName name);
 
     /**
      * Has each of {@code branches} at its branch on the remote, as that was last fetched (ADR 99): makes the ones

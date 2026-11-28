@@ -400,6 +400,113 @@ class UpstreamUpdateTest {
         assertEquals(Option.of("No branch is checked out"), errorText(next.model()));
     }
 
+    private static final Branch UNTRACKED = Fixtures.branch(FEATURE, false, new Sha("ffff"));
+
+    private static Model entering(Model model, String text) {
+        Model asking = Update.update(opened(model, FEATURE), new UpstreamMsg.SetChosen())
+                .model();
+        return Update.update(asking, new PopupMsg.TextEdited(text)).model();
+    }
+
+    @Test
+    void settingTheUpstreamAsksForItStartingWithTheBranchOfTheSameName() {
+        Next next = Update.update(
+                opened(withRemotes(with(TRACKING, UNTRACKED), REMOTES), FEATURE), new UpstreamMsg.SetChosen());
+
+        assertEquals(Option.none(), next.model().popup(UpstreamPopup.class));
+        assertEquals(
+                Option.of(new ChangeUpstreamPopup(FEATURE, ORIGIN_FEATURE.text())),
+                next.model().popup(ChangeUpstreamPopup.class));
+        assertEquals(List.of(), next.cmds());
+    }
+
+    @Test
+    void settingTheUpstreamOfABranchTracksTheRemoteItAlreadyFollows() {
+        Branch other = Fixtures.branch(
+                FEATURE,
+                false,
+                new Sha("ffff"),
+                Instant.EPOCH,
+                true,
+                false,
+                Option.of(new Upstream(new BranchRef.Remote(new RemoteBranch("fork", MAIN)), 0, 0)));
+
+        Next next = Update.update(opened(with(TRACKING, other), FEATURE), new UpstreamMsg.SetChosen());
+
+        assertEquals(
+                Option.of(new ChangeUpstreamPopup(FEATURE, new RemoteBranch("fork", FEATURE).text())),
+                next.model().popup(ChangeUpstreamPopup.class));
+    }
+
+    @Test
+    void theUpstreamEnteredIsSetOnTheHighlightedBranchNotTheCheckedOutOne() {
+        Model model = entering(withRemotes(with(TRACKING, UNTRACKED), REMOTES), ORIGIN_FEATURE.text());
+
+        Next next = Update.update(model, new UpstreamMsg.SetConfirmed());
+
+        assertEquals(List.of(new UpstreamCmd.Set(FEATURE, ORIGIN_FEATURE)), next.cmds());
+        assertEquals(Option.none(), next.model().popup());
+    }
+
+    @Test
+    void anUpstreamThatIsNotOnTheRemoteIsRefusedAndTheDialogStaysOpen() {
+        Model model = entering(
+                withRemotes(with(TRACKING, UNTRACKED), REMOTES),
+                new RemoteBranch("origin", new BranchName("nope")).text());
+
+        Next next = Update.update(model, new UpstreamMsg.SetConfirmed());
+
+        assertEquals(List.of(), next.cmds());
+        assertEquals(true, next.model().popup(ChangeUpstreamPopup.class).isDefined());
+        assertEquals(
+                Option.of("There is no branch origin/nope on the remote as last fetched: fetch first"),
+                errorText(next.model()));
+    }
+
+    @Test
+    void anUpstreamThatIsNotWrittenAsRemoteAndBranchIsRefusedAndTheDialogStaysOpen() {
+        Model model = entering(withRemotes(with(TRACKING, UNTRACKED), REMOTES), "origin");
+
+        Next next = Update.update(model, new UpstreamMsg.SetConfirmed());
+
+        assertEquals(List.of(), next.cmds());
+        assertEquals(true, next.model().popup(ChangeUpstreamPopup.class).isDefined());
+        assertEquals(Option.of("Enter the upstream as <remote> <branchname>, not \"origin\""), errorText(next.model()));
+    }
+
+    @Test
+    void unsettingTheUpstreamRunsOnTheHighlightedBranch() {
+        Next next = Update.update(
+                opened(withRemotes(with(TRACKING, FEATURE_BRANCH), REMOTES), FEATURE), new UpstreamMsg.UnsetChosen());
+
+        assertEquals(List.of(new UpstreamCmd.Unset(FEATURE)), next.cmds());
+        assertEquals(Option.none(), next.model().popup());
+    }
+
+    @Test
+    void anUpstreamThatWasDeletedCanBeUnset() {
+        Branch gone = Fixtures.branch(
+                FEATURE,
+                false,
+                new Sha("ffff"),
+                Instant.EPOCH,
+                false,
+                false,
+                new Tracking.Gone(new BranchRef.Remote(ORIGIN_FEATURE)));
+
+        Next next = Update.update(opened(with(TRACKING, gone), FEATURE), new UpstreamMsg.UnsetChosen());
+
+        assertEquals(List.of(new UpstreamCmd.Unset(FEATURE)), next.cmds());
+    }
+
+    @Test
+    void aBranchWithoutUpstreamHasNoneToUnset() {
+        Next next = Update.update(opened(with(TRACKING, UNTRACKED), FEATURE), new UpstreamMsg.UnsetChosen());
+
+        assertEquals(List.of(), next.cmds());
+        assertEquals(Option.of("Branch feature has no upstream"), errorText(next.model()));
+    }
+
     @Test
     void cancellingClosesThePopup() {
         Next next = Update.update(opened(with(TRACKING)), new PopupMsg.Dismissed(UpstreamPopup.class));
