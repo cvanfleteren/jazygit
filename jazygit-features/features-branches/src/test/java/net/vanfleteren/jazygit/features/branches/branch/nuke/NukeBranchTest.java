@@ -116,14 +116,16 @@ class NukeBranchTest {
     }
 
     @Test
-    void aRemoteBranchOfAnotherNameIsLeftAlone() {
+    void aRemoteBranchOfAnotherNameOrOnAnotherRemoteIsLeftAlone() {
         BranchName fix = new BranchName("fix");
+        BranchName develop = new BranchName("develop");
         BranchName local = new BranchName("local");
         Model model = model(
                 branch(fix, false, false, Option.of(new RemoteBranch("origin", MAIN))),
+                branch(develop, false, false, Option.of(new RemoteBranch("upstream", develop))),
                 branch(local, false, false, Option.none()));
 
-        for (BranchName name : List.of(fix, local)) {
+        for (BranchName name : List.of(fix, develop, local)) {
             Model asked =
                     Update.update(model, new NukeBranchMsg.Requested(name)).model();
             assertEquals(Option.of(new NukeBranchPopup(name, Option.none(), Option.none())), asked.popup());

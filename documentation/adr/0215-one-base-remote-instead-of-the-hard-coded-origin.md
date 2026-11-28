@@ -45,7 +45,8 @@ exist.
   the default branch of `upstream`, and the fork's `main` can be deleted.
 - A clone whose only remote is `github` has its main branch, and a first push starts out with `github`; in a fork it
   starts out with `origin`, the fork.
-- Nuke deletes the remote branch a branch is pushed to under its own name, on any remote, so the fork's goes too; the
+- Nuke deletes the remote branch under its own name on the base remote or on the remote the branch is pushed to, so
+  the fork's goes too; one on another remote is left alone; the
   default branch is refused before.
 - A repository with several remotes, none called `origin` and none picked, has no base remote: no remote main branch,
   the local `main` or `master`.
