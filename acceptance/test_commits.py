@@ -314,3 +314,54 @@ def test_the_only_commit_is_not_dropped(repo, jazygit):
 
     ui.caught_up()
     assert repo("rev-parse", "HEAD") == head
+
+
+# Rewriting a pushed commit warns that the next push has to be a force push (#722).
+
+def test_rewording_a_pushed_commit_warns_of_the_force_push_first(repo, origin, jazygit):
+    three_commits(repo)
+    repo("push", "--quiet", "--set-upstream", "origin", "main")
+    ui = jazygit()
+
+    ui.commits.select("Add two")
+    ui.app.press("r")
+    ui.app.wait_for("Rewrite a pushed commit")
+    ui.app.wait_for("already on origin/main;")
+    ui.app.press("escape")
+    ui.app.eventually(lambda: "Rewrite a pushed commit" not in ui.app.text(), "the warning closed")
+    ui.commits.reword("Add two", "Add the second file", pushed=True)
+
+    assert repo.subjects() == ["Add three", "Add the second file", "Add one"]
+    assert repo.sync("main") == "ahead 2, behind 2"
+
+
+def test_dropping_a_commit_of_the_main_branch_warns_more_strongly(repo, origin, jazygit):
+    three_commits(repo)
+    repo("push", "--quiet", "--set-upstream", "origin", "main")
+    repo("switch", "--quiet", "--create", "feature")
+    repo.commit("Add four", **{"four.txt": "four\n"})
+    repo("push", "--quiet", "--set-upstream", "origin", "feature")
+    head = repo("rev-parse", "HEAD")
+    ui = jazygit()
+
+    ui.commits.select("Add two")
+    ui.app.press("d")
+    ui.app.wait_for("Drop commit")
+    ui.app.wait_for("Careful: this commit is on the main branch")
+    ui.app.press("escape")
+    ui.app.eventually(lambda: "Careful:" not in ui.app.text(), "the question closed")
+
+    assert repo("rev-parse", "HEAD") == head
+
+
+def test_a_commit_not_pushed_yet_is_rewritten_without_a_warning(repo, origin, jazygit):
+    three_commits(repo)
+    repo("push", "--quiet", "--set-upstream", "origin", "main")
+    repo.commit("Add four", **{"four.txt": "four\n"})
+    ui = jazygit()
+
+    # Rewording goes straight to the message: a warning first would keep it from showing.
+    ui.commits.reword("Add four", "Add the fourth file")
+
+    assert repo.subjects() == ["Add the fourth file", "Add three", "Add two", "Add one"]
+    assert repo.sync("main") == "ahead 1"

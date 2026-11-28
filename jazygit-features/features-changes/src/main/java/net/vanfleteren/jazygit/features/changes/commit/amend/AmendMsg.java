@@ -2,6 +2,7 @@ package net.vanfleteren.jazygit.features.changes.commit.amend;
 
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.core.repo.Sha;
+import net.vanfleteren.jazygit.features.changes.commit.PushedWarning;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.Msg;
 import net.vanfleteren.jazygit.kernel.state.Update;
@@ -33,4 +34,9 @@ public sealed interface AmendMsg extends Msg {
      * The user agreed to amend with all files, as none was staged.
      */
     record StageAllConfirmed() implements AmendMsg {}
+
+    /**
+     * It was read whether the commit {@code target} is pushed: {@code warning} when it is.
+     */
+    record Checked(AmendTarget target, Option<PushedWarning> warning) implements AmendMsg {}
 }

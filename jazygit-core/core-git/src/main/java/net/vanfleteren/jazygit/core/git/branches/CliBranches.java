@@ -270,6 +270,25 @@ public final class CliBranches implements Branches {
                         .map(BranchName::new)));
     }
 
+    @Override
+    public Either<GitError, List<BranchRef>> containing(Sha commit, List<BranchRef> among) {
+        if (among.isEmpty()) {
+            return Either.right(List.empty());
+        }
+        return GitProcess.read(
+                worktree,
+                GitCommand.reading(List.of(
+                                "for-each-ref",
+                                "--format=%(refname)",
+                                "--contains",
+                                GitArgs.revision(new Revision.Commit(commit)))
+                        .appendAll(among.map(GitArgs::revision))),
+                raw -> {
+                    Set<String> refs = GitOutput.nonBlankLines(raw).toSet();
+                    return Either.right(among.filter(ref -> refs.contains(GitArgs.revision(ref))));
+                });
+    }
+
     private static String parentKey(BranchName branch) {
         return PARENT_PREFIX + GitArgs.name(branch) + PARENT_SUFFIX;
     }

@@ -7,6 +7,8 @@ import net.vanfleteren.jazygit.core.git.model.RepoStatus;
 import net.vanfleteren.jazygit.core.repo.RepoPath;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.features.changes.commit.CommitError;
+import net.vanfleteren.jazygit.features.changes.commit.PushedCheck;
+import net.vanfleteren.jazygit.features.changes.commit.amend.AmendMsg.Checked;
 import net.vanfleteren.jazygit.features.changes.commit.amend.AmendMsg.Confirmed;
 import net.vanfleteren.jazygit.features.changes.commit.amend.AmendMsg.Requested;
 import net.vanfleteren.jazygit.features.changes.commit.amend.AmendMsg.StageAllConfirmed;
@@ -29,6 +31,7 @@ public final class AmendUpdate {
             case Requested(Option<Sha> sha) -> requested(model, sha);
             case Confirmed() -> confirmed(model);
             case StageAllConfirmed() -> stageAllConfirmed(model);
+            case Checked(var target, var warning) -> PopupUpdate.ask(model, new AmendPopup(target, warning));
         };
     }
 
@@ -37,7 +40,7 @@ public final class AmendUpdate {
      * the one HEAD is, is the last commit.
      */
     private static Next requested(Model model, Option<Sha> sha) {
-        Option<Sha> head = model.repo().status().toOption().flatMap(RepoStatus::headCommit);
+        Option<Sha> head = head(model);
         return sha.filter(older -> !head.contains(older))
                 .fold(
                         () -> ask(model, new LastCommit()),
@@ -48,13 +51,29 @@ public final class AmendUpdate {
                                 .getOrElse(() -> Next.of(model)));
     }
 
+    /**
+     * Asks to confirm amending {@code target}, warning when it is pushed already.
+     */
     private static Next ask(Model model, AmendTarget target) {
+        Option<Sha> amended = switch (target) {
+            case LastCommit() -> head(model);
+            case Older(var sha) -> Option.of(sha);
+        };
         return model.repo()
                 .files()
                 .map(files -> files.isEmpty()
                         ? Next.of(model.fail(new CommitError.NothingToAmend()))
-                        : PopupUpdate.ask(model, new AmendPopup(target)))
+                        : amended.map(sha -> PushedCheck.first(model, sha, target, () -> unwarned(model, target)))
+                                .getOrElse(() -> unwarned(model, target)))
                 .getOrElse(() -> Next.of(model));
+    }
+
+    private static Next unwarned(Model model, AmendTarget target) {
+        return PopupUpdate.ask(model, new AmendPopup(target));
+    }
+
+    private static Option<Sha> head(Model model) {
+        return model.repo().status().toOption().flatMap(RepoStatus::headCommit);
     }
 
     /**

@@ -1,8 +1,11 @@
 package net.vanfleteren.jazygit.features.changes.commit.drop;
 
 import io.vavr.collection.List;
+import io.vavr.control.Option;
 import net.vanfleteren.jazygit.core.repo.Commit;
 import net.vanfleteren.jazygit.core.repo.Sha;
+import net.vanfleteren.jazygit.features.changes.commit.PushedCheck;
+import net.vanfleteren.jazygit.features.changes.commit.PushedWarning;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.Update.Next;
 import net.vanfleteren.jazygit.kernel.state.popup.PopupUpdate;
@@ -16,14 +19,26 @@ public final class DropUpdate {
 
     public static Next update(Model model, DropMsg msg) {
         return switch (msg) {
-            case DropMsg.Requested(Sha sha) -> requested(model, sha);
+            case DropMsg.Requested requested -> requested(model, requested);
+            case DropMsg.Checked(var sha, var warning) -> ask(model, sha, warning);
         };
     }
 
-    private static Next requested(Model model, Sha sha) {
+    /**
+     * Asks to confirm dropping a commit that can be dropped, warning when it is pushed already.
+     */
+    private static Next requested(Model model, DropMsg.Requested requested) {
+        Sha sha = requested.sha();
         return model.commit(sha)
                 .filter(commit -> droppable(model, commit))
-                .map(DropPopup::new)
+                .map(commit -> PushedCheck.first(model, sha, requested, () -> ask(model, sha, Option.none())))
+                .getOrElse(() -> Next.of(model));
+    }
+
+    private static Next ask(Model model, Sha sha, Option<PushedWarning> warning) {
+        return model.commit(sha)
+                .filter(commit -> droppable(model, commit))
+                .map(commit -> new DropPopup(commit, warning))
                 .transform(popup -> PopupUpdate.ask(model, popup));
     }
 

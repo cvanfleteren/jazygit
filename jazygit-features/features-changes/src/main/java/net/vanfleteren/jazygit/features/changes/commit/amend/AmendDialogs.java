@@ -2,6 +2,7 @@ package net.vanfleteren.jazygit.features.changes.commit.amend;
 
 import io.vavr.collection.List;
 import java.util.function.Consumer;
+import net.vanfleteren.jazygit.features.changes.commit.PushedDialogs;
 import net.vanfleteren.jazygit.kernel.state.Msg;
 import net.vanfleteren.jazygit.kernel.ui.PopupSlot;
 import net.vanfleteren.jazygit.kernel.ui.i18n.Messages;
@@ -19,7 +20,7 @@ public final class AmendDialogs {
             "amend-commit",
             AmendPopup.class,
             popup -> Messages.get(amendKey(popup.target()) + ".title"),
-            popup -> Messages.get(amendKey(popup.target()) + ".message"),
+            popup -> PushedDialogs.withWarning(Messages.get(amendKey(popup.target()) + ".message"), popup.warning()),
             AmendMsg.Confirmed::new);
 
     /**

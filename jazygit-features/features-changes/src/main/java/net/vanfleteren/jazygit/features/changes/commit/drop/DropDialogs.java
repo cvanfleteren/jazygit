@@ -2,6 +2,7 @@ package net.vanfleteren.jazygit.features.changes.commit.drop;
 
 import io.vavr.collection.List;
 import java.util.function.Consumer;
+import net.vanfleteren.jazygit.features.changes.commit.PushedDialogs;
 import net.vanfleteren.jazygit.kernel.state.Msg;
 import net.vanfleteren.jazygit.kernel.state.PaneId;
 import net.vanfleteren.jazygit.kernel.ui.PopupSlot;
@@ -20,10 +21,12 @@ public final class DropDialogs {
             "drop-commit",
             DropPopup.class,
             popup -> Messages.get("changes.dialog.drop.title"),
-            popup -> Messages.get(
-                    "changes.dialog.drop.message",
-                    popup.commit().sha().shortSha(),
-                    popup.commit().message().summary()));
+            popup -> PushedDialogs.withWarning(
+                    Messages.get(
+                            "changes.dialog.drop.message",
+                            popup.commit().sha().shortSha(),
+                            popup.commit().message().summary()),
+                    popup.warning()));
 
     private DropDialogs() {}
 

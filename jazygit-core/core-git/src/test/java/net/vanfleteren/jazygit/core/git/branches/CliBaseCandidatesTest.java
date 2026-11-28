@@ -165,6 +165,26 @@ class CliBaseCandidatesTest {
                 new CliBranches(repo).containing(new Sha(tip())).get());
     }
 
+    @Test
+    void ofTheGivenBranchesThoseThatHaveACommitAreKeptInOrder() throws Exception {
+        git("checkout", "-q", "-b", "topic");
+        commit("topic");
+        Sha topic = new Sha(tip());
+        git("checkout", "-q", "-b", "beside", "main");
+        commit("beside");
+        BranchRef main = new BranchRef.Local(MAIN);
+        BranchRef beside = new BranchRef.Local(new BranchName("beside"));
+        BranchRef missing = new BranchRef.Remote(new RemoteBranch(RemoteBranch.DEFAULT_REMOTE, TOPIC));
+
+        CliBranches branches = new CliBranches(repo);
+
+        assertEquals(
+                List.of(new BranchRef.Local(TOPIC)),
+                branches.containing(topic, List.of(main, beside, new BranchRef.Local(TOPIC), missing))
+                        .get());
+        assertEquals(List.empty(), branches.containing(topic, List.empty()).get());
+    }
+
     private BaseCandidates candidates() throws Exception {
         return new CliBranches(repo).baseCandidates(TOPIC, new Sha(tip())).get();
     }

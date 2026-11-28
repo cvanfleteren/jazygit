@@ -935,11 +935,12 @@ class CommitsPane:
         self.select(subject)
         self.app.press("A")
 
-    def reword(self, subject: str, summary: str):
-        """Replaces the summary of the commit with this subject."""
+    def reword(self, subject: str, summary: str, pushed: bool = False):
+        """Replaces the summary of the commit with this subject; when it is pushed already, after going on past the
+        warning that the next push has to be a force push."""
         self.select(subject)
         self.ui.changing_repo(f"{subject!r} reworded", lambda: (
-            self.app.press("r"), self.ui.enter_text("Commit summary", summary)))
+            self.app.press("r"), self.go_on_although_pushed(pushed), self.ui.enter_text("Commit summary", summary)))
 
     def squash(self, subject: str):
         """Squashes the commit with this subject into the one below, keeping both messages."""
@@ -947,13 +948,20 @@ class CommitsPane:
         self.ui.changing_repo(f"{subject!r} squashed", lambda: (
             self.app.press("s"), self.ui.confirm("Squash commit")))
 
-    def fixup(self, subject: str, keep_message: str = "below"):
+    def fixup(self, subject: str, keep_message: str = "below", pushed: bool = False):
         """Fixes up the commit with this subject into the one below, keeping the message of the commit "below"
-        or of the "selected" one."""
+        or of the "selected" one; when it is pushed already, after going on past the warning."""
         key = {"below": "f", "selected": "C"}[keep_message]
         self.select(subject)
         self.ui.changing_repo(f"{subject!r} fixed up", lambda: (
-            self.app.press("f"), self.ui.confirm("Fixup and use this commit's message", key=key)))
+            self.app.press("f"),
+            self.go_on_although_pushed(pushed),
+            self.ui.confirm("Fixup and use this commit's message", key=key)))
+
+    def go_on_although_pushed(self, pushed: bool):
+        """Goes on past the warning that the commit to rewrite is pushed already, when it is (#722)."""
+        if pushed:
+            self.ui.confirm("Rewrite a pushed commit")
 
     def drop(self, subject: str):
         self.select(subject)

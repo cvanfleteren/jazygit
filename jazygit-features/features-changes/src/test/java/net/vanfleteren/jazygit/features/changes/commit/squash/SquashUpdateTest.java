@@ -1,5 +1,9 @@
 package net.vanfleteren.jazygit.features.changes.commit.squash;
 
+import static net.vanfleteren.jazygit.features.changes.commit.PushedModels.MAIN;
+import static net.vanfleteren.jazygit.features.changes.commit.PushedModels.ORIGIN_FEATURE;
+import static net.vanfleteren.jazygit.features.changes.commit.PushedModels.onFollowingBranch;
+import static net.vanfleteren.jazygit.features.changes.commit.PushedModels.warning;
 import static net.vanfleteren.jazygit.kernel.state.TestModels.failed;
 import static net.vanfleteren.jazygit.kernel.ui.text.ErrorTexts.errorText;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -11,6 +15,7 @@ import net.vanfleteren.jazygit.core.git.model.Fixtures;
 import net.vanfleteren.jazygit.core.git.model.SquashMode;
 import net.vanfleteren.jazygit.core.repo.Commit;
 import net.vanfleteren.jazygit.core.repo.Sha;
+import net.vanfleteren.jazygit.features.changes.commit.PushedCheckCmd;
 import net.vanfleteren.jazygit.features.changes.commit.search.SearchedModels;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.TestModels;
@@ -126,5 +131,34 @@ class SquashUpdateTest {
                 TestModels.loaded(), failed(new SquashCmd(new Sha("aaaa"), SquashMode.SQUASH), "conflict"));
 
         assertEquals(Option.of("Squash failed: conflict"), errorText(next.model()));
+    }
+
+    // #722: a commit that may be pushed is read first, so the question can warn of the force push.
+    @Test
+    void onABranchFollowingARemoteOneTheCommitIsReadToBePushedFirst() {
+        Model model = onFollowingBranch(withCommits(TIP, MIDDLE, ROOT));
+        SquashMsg.Requested requested = new SquashMsg.Requested(TIP.sha());
+
+        Next next = Update.update(model, requested);
+
+        assertEquals(Option.none(), next.model().popup(SquashPopup.class));
+        assertEquals(List.of(new PushedCheckCmd(TIP.sha(), ORIGIN_FEATURE, Option.of(MAIN), requested)), next.cmds());
+    }
+
+    @Test
+    void aPushedCommitIsAskedAboutWithTheWarning() {
+        Next next = Update.update(
+                withCommits(TIP, MIDDLE, ROOT), new SquashMsg.Checked(TIP.sha(), Option.of(warning(false))));
+
+        assertEquals(
+                Option.of(new SquashPopup(TIP, MIDDLE.sha(), Option.of(warning(false)))),
+                next.model().popup(SquashPopup.class));
+    }
+
+    @Test
+    void aCommitThatCannotBeSquashedIsNotReadToBePushed() {
+        Next next = Update.update(onFollowingBranch(withCommits(MIDDLE, ROOT)), new SquashMsg.Requested(ROOT.sha()));
+
+        assertEquals(List.of(), next.cmds());
     }
 }

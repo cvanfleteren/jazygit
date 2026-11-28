@@ -1,5 +1,9 @@
 package net.vanfleteren.jazygit.features.changes.commit.drop;
 
+import static net.vanfleteren.jazygit.features.changes.commit.PushedModels.MAIN;
+import static net.vanfleteren.jazygit.features.changes.commit.PushedModels.ORIGIN_FEATURE;
+import static net.vanfleteren.jazygit.features.changes.commit.PushedModels.onFollowingBranch;
+import static net.vanfleteren.jazygit.features.changes.commit.PushedModels.warning;
 import static net.vanfleteren.jazygit.kernel.state.TestModels.failed;
 import static net.vanfleteren.jazygit.kernel.ui.text.ErrorTexts.errorText;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -10,6 +14,7 @@ import java.time.Instant;
 import net.vanfleteren.jazygit.core.git.model.Fixtures;
 import net.vanfleteren.jazygit.core.repo.Commit;
 import net.vanfleteren.jazygit.core.repo.Sha;
+import net.vanfleteren.jazygit.features.changes.commit.PushedCheckCmd;
 import net.vanfleteren.jazygit.features.changes.commit.search.SearchedModels;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.TestModels;
@@ -129,5 +134,35 @@ class DropUpdateTest {
         Next next = Update.update(TestModels.loaded(), failed(new DropCmd(new Sha("aaaa")), "conflict"));
 
         assertEquals(Option.of("Drop failed: conflict"), errorText(next.model()));
+    }
+
+    // #722: a commit that may be pushed is read first, so the question can warn of the force push.
+    @Test
+    void onABranchFollowingARemoteOneTheCommitIsReadToBePushedFirst() {
+        Model model = onFollowingBranch(withCommits(TIP, MIDDLE, ROOT));
+        DropMsg.Requested requested = new DropMsg.Requested(MIDDLE.sha());
+
+        Next next = Update.update(model, requested);
+
+        assertEquals(Option.none(), next.model().popup(DropPopup.class));
+        assertEquals(
+                List.of(new PushedCheckCmd(MIDDLE.sha(), ORIGIN_FEATURE, Option.of(MAIN), requested)), next.cmds());
+    }
+
+    @Test
+    void aPushedCommitIsAskedAboutWithTheWarning() {
+        Next next = Update.update(
+                withCommits(TIP, MIDDLE, ROOT), new DropMsg.Checked(MIDDLE.sha(), Option.of(warning(true))));
+
+        assertEquals(
+                Option.of(new DropPopup(MIDDLE, Option.of(warning(true)))),
+                next.model().popup(DropPopup.class));
+    }
+
+    @Test
+    void aCommitReadNotToBePushedIsAskedAboutPlainly() {
+        Next next = Update.update(withCommits(TIP, MIDDLE, ROOT), new DropMsg.Checked(MIDDLE.sha(), Option.none()));
+
+        assertEquals(Option.of(new DropPopup(MIDDLE)), next.model().popup(DropPopup.class));
     }
 }

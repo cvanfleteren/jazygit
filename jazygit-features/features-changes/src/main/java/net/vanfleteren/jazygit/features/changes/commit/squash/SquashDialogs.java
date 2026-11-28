@@ -2,6 +2,7 @@ package net.vanfleteren.jazygit.features.changes.commit.squash;
 
 import io.vavr.collection.List;
 import java.util.function.Consumer;
+import net.vanfleteren.jazygit.features.changes.commit.PushedDialogs;
 import net.vanfleteren.jazygit.kernel.state.Msg;
 import net.vanfleteren.jazygit.kernel.state.PaneId;
 import net.vanfleteren.jazygit.kernel.ui.PopupSlot;
@@ -20,7 +21,7 @@ public final class SquashDialogs {
             "squash-commit",
             SquashPopup.class,
             popup -> Messages.get("changes.dialog.squash.title"),
-            popup -> Messages.get("changes.dialog.squash.message"));
+            popup -> PushedDialogs.withWarning(Messages.get("changes.dialog.squash.message"), popup.warning()));
 
     private SquashDialogs() {}
 

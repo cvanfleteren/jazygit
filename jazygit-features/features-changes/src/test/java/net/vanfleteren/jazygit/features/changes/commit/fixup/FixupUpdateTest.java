@@ -1,5 +1,9 @@
 package net.vanfleteren.jazygit.features.changes.commit.fixup;
 
+import static net.vanfleteren.jazygit.features.changes.commit.PushedModels.MAIN;
+import static net.vanfleteren.jazygit.features.changes.commit.PushedModels.ORIGIN_FEATURE;
+import static net.vanfleteren.jazygit.features.changes.commit.PushedModels.onFollowingBranch;
+import static net.vanfleteren.jazygit.features.changes.commit.PushedModels.warning;
 import static net.vanfleteren.jazygit.kernel.state.TestModels.failed;
 import static net.vanfleteren.jazygit.kernel.ui.text.ErrorTexts.errorText;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -11,6 +15,7 @@ import net.vanfleteren.jazygit.core.git.model.Fixtures;
 import net.vanfleteren.jazygit.core.git.model.SquashMode;
 import net.vanfleteren.jazygit.core.repo.Commit;
 import net.vanfleteren.jazygit.core.repo.Sha;
+import net.vanfleteren.jazygit.features.changes.commit.PushedCheckCmd;
 import net.vanfleteren.jazygit.features.changes.commit.search.SearchedModels;
 import net.vanfleteren.jazygit.features.changes.commit.squash.SquashCmd;
 import net.vanfleteren.jazygit.kernel.state.*;
@@ -125,5 +130,48 @@ class FixupUpdateTest {
                 TestModels.loaded(), failed(new SquashCmd(new Sha("aaaa"), SquashMode.FIXUP), "conflict"));
 
         assertEquals(Option.of("Fixup failed: conflict"), errorText(next.model()));
+    }
+
+    // #722: a commit that may be pushed is read first, and a pushed one is warned about before the choice.
+    @Test
+    void onABranchFollowingARemoteOneTheCommitIsReadToBePushedFirst() {
+        Model model = onFollowingBranch(withCommits(TIP, MIDDLE, ROOT));
+        FixupMsg.Requested requested = new FixupMsg.Requested(TIP.sha());
+
+        Next next = Update.update(model, requested);
+
+        assertEquals(Option.none(), next.model().popup());
+        assertEquals(List.of(new PushedCheckCmd(TIP.sha(), ORIGIN_FEATURE, Option.of(MAIN), requested)), next.cmds());
+    }
+
+    @Test
+    void aPushedCommitIsWarnedAboutBeforeTheChoice() {
+        Next next = Update.update(
+                withCommits(TIP, MIDDLE, ROOT), new FixupMsg.Checked(TIP.sha(), Option.of(warning(false))));
+
+        assertEquals(
+                Option.of(new FixupPushedPopup(TIP, MIDDLE.sha(), warning(false))),
+                next.model().popup(FixupPushedPopup.class));
+        assertEquals(Option.none(), next.model().popup(FixupPopup.class));
+    }
+
+    @Test
+    void goingOnAfterTheWarningAsksWhichMessageToKeep() {
+        Model warned = Update.update(
+                        withCommits(TIP, MIDDLE, ROOT), new FixupMsg.Checked(TIP.sha(), Option.of(warning(false))))
+                .model();
+
+        Next next = Update.update(warned, new FixupMsg.PushedConfirmed());
+
+        assertEquals(Option.none(), next.model().popup(FixupPushedPopup.class));
+        assertEquals(Option.of(new FixupPopup(TIP, MIDDLE.sha())), next.model().popup(FixupPopup.class));
+        assertEquals(List.of(), next.cmds());
+    }
+
+    @Test
+    void aCommitReadNotToBePushedGoesStraightToTheChoice() {
+        Next next = Update.update(withCommits(TIP, MIDDLE, ROOT), new FixupMsg.Checked(TIP.sha(), Option.none()));
+
+        assertEquals(Option.of(new FixupPopup(TIP, MIDDLE.sha())), next.model().popup(FixupPopup.class));
     }
 }

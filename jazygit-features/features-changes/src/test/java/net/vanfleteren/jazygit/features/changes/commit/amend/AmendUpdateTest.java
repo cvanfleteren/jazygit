@@ -1,5 +1,9 @@
 package net.vanfleteren.jazygit.features.changes.commit.amend;
 
+import static net.vanfleteren.jazygit.features.changes.commit.PushedModels.MAIN;
+import static net.vanfleteren.jazygit.features.changes.commit.PushedModels.ORIGIN_FEATURE;
+import static net.vanfleteren.jazygit.features.changes.commit.PushedModels.onFollowingBranch;
+import static net.vanfleteren.jazygit.features.changes.commit.PushedModels.warning;
 import static net.vanfleteren.jazygit.kernel.state.TestModels.failed;
 import static net.vanfleteren.jazygit.kernel.ui.text.ErrorTexts.errorText;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -18,6 +22,7 @@ import net.vanfleteren.jazygit.core.repo.Commit;
 import net.vanfleteren.jazygit.core.repo.Head;
 import net.vanfleteren.jazygit.core.repo.RepoPath;
 import net.vanfleteren.jazygit.core.repo.Sha;
+import net.vanfleteren.jazygit.features.changes.commit.PushedCheckCmd;
 import net.vanfleteren.jazygit.features.changes.commit.amend.AmendTarget.LastCommit;
 import net.vanfleteren.jazygit.features.changes.commit.amend.AmendTarget.Older;
 import net.vanfleteren.jazygit.kernel.state.Loadable;
@@ -211,5 +216,46 @@ class AmendUpdateTest {
 
         assertEquals(Option.of("Amend failed: no commit"), errorText(last.model()));
         assertEquals(Option.of("Amend commit failed: conflict"), errorText(older.model()));
+    }
+
+    // #722: the commit to amend, the last one too, is read to be pushed first, so the question can warn of it.
+    @Test
+    void onABranchFollowingARemoteOneTheLastCommitIsReadToBePushedFirst() {
+        Model model = onFollowingBranch(with(List.of(STAGED), TIP, MIDDLE, ROOT));
+
+        Next next = Update.update(model, new AmendMsg.Requested());
+
+        assertEquals(Option.none(), next.model().popup(AmendPopup.class));
+        assertEquals(
+                List.of(new PushedCheckCmd(TIP.sha(), ORIGIN_FEATURE, Option.of(MAIN), new LastCommit())), next.cmds());
+    }
+
+    @Test
+    void onABranchFollowingARemoteOneAnOlderCommitIsReadToBePushedFirst() {
+        Model model = onFollowingBranch(with(List.of(STAGED), TIP, MIDDLE, ROOT));
+
+        Next next = Update.update(model, new AmendMsg.Requested(Option.of(MIDDLE.sha())));
+
+        assertEquals(
+                List.of(new PushedCheckCmd(MIDDLE.sha(), ORIGIN_FEATURE, Option.of(MAIN), new Older(MIDDLE.sha()))),
+                next.cmds());
+    }
+
+    @Test
+    void withNothingToAmendNothingIsRead() {
+        Next next = Update.update(onFollowingBranch(with(List.of(), TIP, MIDDLE, ROOT)), new AmendMsg.Requested());
+
+        assertEquals(List.of(), next.cmds());
+    }
+
+    @Test
+    void aPushedCommitIsAskedAboutWithTheWarning() {
+        Next next = Update.update(
+                with(List.of(STAGED), TIP, MIDDLE, ROOT),
+                new AmendMsg.Checked(new Older(MIDDLE.sha()), Option.of(warning(false))));
+
+        assertEquals(
+                Option.of(new AmendPopup(new Older(MIDDLE.sha()), Option.of(warning(false)))),
+                next.model().popup(AmendPopup.class));
     }
 }

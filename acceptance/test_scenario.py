@@ -136,7 +136,7 @@ def test_a_feature_worked_on_with_a_teammate_through_origin(repo, origin, clone,
     repo.write("parser.py", "def parse(text):\n    return text\n")
     ui.files.commit("Fix typo")
     ui.commits.fixup("Fix typo")
-    ui.commits.reword("Add parser", "Add the parser")
+    ui.commits.reword("Add parser", "Add the parser", pushed=True)
     assert repo.sync("feature") == "ahead 2, behind 2"
     ui.branches.force_push("feature")
     assert origin.subjects("feature") == ["Add tests", "Add the parser", "Initial commit"]
