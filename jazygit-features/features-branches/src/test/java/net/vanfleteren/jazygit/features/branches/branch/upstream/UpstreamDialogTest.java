@@ -16,6 +16,7 @@ import net.vanfleteren.jazygit.core.repo.Branch;
 import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.BranchRef;
 import net.vanfleteren.jazygit.core.repo.RemoteBranch;
+import net.vanfleteren.jazygit.core.repo.RemoteRef;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.core.repo.Upstream;
 import net.vanfleteren.jazygit.kernel.state.Model;
@@ -102,7 +103,17 @@ class UpstreamDialogTest {
         assertTrue(render(popup).contains("(s) set upstream"));
         assertTrue(render(popup).contains("(u) unset upstream"));
 
-        assertEquals(List.of(new UpstreamMsg.SetChosen(), new UpstreamMsg.UnsetChosen()), pressed(popup, 's', 'u'));
+        assertEquals(
+                List.of(new UpstreamMsg.SetChosen(), new UpstreamMsg.UnsetChosen()),
+                pressed(withARemoteBranch(), popup, 's', 'u'));
+    }
+
+    @Test
+    void withoutAnyRemoteBranchSettingTheUpstreamIsOfferedButNotChosen() throws Exception {
+        UpstreamPopup popup = new UpstreamPopup(Option.of(TRACKING), Option.none(), Option.none());
+
+        assertTrue(render(popup).contains("(s) set upstream"));
+        assertEquals(List.of(), pressed(TestModels.loaded(), popup, 's'));
     }
 
     @Test
@@ -114,9 +125,21 @@ class UpstreamDialogTest {
         assertEquals(List.of(), pressed(popup, 'u'));
     }
 
+    private static Model withARemoteBranch() {
+        return TestModels.remoteBranchesRead(
+                        TestModels.loaded(),
+                        List.of(new RemoteRef(
+                                new RemoteBranch("origin", new BranchName("main")), new Sha("a0a0"), Instant.EPOCH)))
+                .model();
+    }
+
     private List<Msg> pressed(UpstreamPopup popup, char... keys) throws Exception {
+        return pressed(TestModels.loaded(), popup, keys);
+    }
+
+    private List<Msg> pressed(Model model, UpstreamPopup popup, char... keys) throws Exception {
         dispatched.clear();
-        Model open = TestModels.loaded().openPopup(popup);
+        Model open = model.openPopup(popup);
         try (ToolkitTestRunner runner = ToolkitTestRunner.runTest(() -> view(open))) {
             SettledPilot.focus(runner, UpstreamDialogs.UPSTREAM.id());
             RenderedText.of(runner, () -> view(open));

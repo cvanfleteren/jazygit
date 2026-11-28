@@ -5,6 +5,7 @@ import io.vavr.control.Option;
 import java.util.function.Consumer;
 import net.vanfleteren.jazygit.core.repo.Branch;
 import net.vanfleteren.jazygit.core.repo.Tracking;
+import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.Msg;
 import net.vanfleteren.jazygit.kernel.ui.PopupSlot;
 import net.vanfleteren.jazygit.kernel.ui.i18n.Messages;
@@ -52,7 +53,11 @@ public final class UpstreamDialogs {
                                             "branches.dialog.upstream.reset", upstreamName(popup.checkedOut())),
                                     UpstreamMsg.ResetChosen::new)
                             .withDetails("branches.dialog.upstream.reset.details"),
-                    new Choice<UpstreamPopup>('s', "branches.dialog.upstream.set", UpstreamMsg.SetChosen::new)
+                    new Choice<UpstreamPopup>(
+                                    's',
+                                    "branches.dialog.upstream.set",
+                                    UpstreamMsg.SetChosen::new,
+                                    (model, popup) -> remoteBranchesToFollow(model))
                             .withDetails("branches.dialog.upstream.set.details"),
                     new Choice<UpstreamPopup>(
                                     'u',
@@ -84,6 +89,14 @@ public final class UpstreamDialogs {
         return List.of(
                 PopupSlot.returningTo(Scopes.BRANCHES.pane(), new ChoiceDialog<>(UPSTREAM, dispatch)),
                 PopupSlot.returningTo(Scopes.BRANCHES.pane(), new TextInputDialog<>(CHANGE_UPSTREAM, dispatch)));
+    }
+
+    /**
+     * Whether there is a remote branch to follow: not when the remote branches are read and there are none, as in a
+     * repository without a remote, or one that was not fetched yet. Fetching cannot help without a remote.
+     */
+    private static boolean remoteBranchesToFollow(Model model) {
+        return model.repo().remoteBranches().toOption().forAll(refs -> !refs.isEmpty());
     }
 
     /**

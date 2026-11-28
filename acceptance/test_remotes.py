@@ -465,6 +465,22 @@ def test_set_the_upstream_of_a_branch_whose_upstream_was_deleted(repo, origin, c
     assert repo.sync("feature") == "ahead 1"
 
 
+def test_setting_the_upstream_is_disabled_without_a_remote(repo, jazygit):
+    repo.commit("Add one", **{"one.txt": "one\n"})
+    ui = jazygit()
+    ui.branches.select("main")
+
+    ui.app.press("u")
+    ui.app.wait_for("Upstream options for")
+    ui.app.press("s")
+
+    # The choice is disabled: the dialog stays open, and no question about the upstream comes.
+    time.sleep(1)
+    screen = ui.app.text()
+    assert "(s) set upstream" in screen
+    assert "Upstream of" not in screen
+
+
 def test_unset_the_upstream_of_a_branch(repo, origin, jazygit):
     made_from_main(repo, origin)
     ui = jazygit()
