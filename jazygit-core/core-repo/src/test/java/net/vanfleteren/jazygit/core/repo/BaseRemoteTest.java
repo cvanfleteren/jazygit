@@ -62,13 +62,26 @@ class BaseRemoteTest {
         RemoteSetup setup = new RemoteSetup(
                 Option.of(named("upstream")),
                 Option.of(named("fork")),
-                HashMap.of(new BranchName("other"), named("mine")));
+                HashMap.of(new BranchName("other"), named("mine")),
+                remotes("upstream", "fork", "mine"));
 
         assertEquals(Option.of(named("fork")), setup.pushRemote(branch));
         assertEquals(Option.of(named("mine")), setup.pushRemote(new BranchName("other")));
         assertEquals(
                 Option.of(named("upstream")),
-                new RemoteSetup(setup.base(), Option.none(), setup.pushRemotes()).pushRemote(branch));
+                new RemoteSetup(setup.base(), Option.none(), setup.pushRemotes(), setup.remotes()).pushRemote(branch));
         assertEquals(Option.none(), RemoteSetup.NONE.pushRemote(branch));
+    }
+
+    @Test
+    void withNothingSetABranchIsPushedToOriginEvenWhenTheBaseIsTheProject() {
+        RemoteSetup fork = new RemoteSetup(
+                Option.of(named("upstream")), Option.none(), HashMap.empty(), remotes("origin", "upstream"));
+
+        assertEquals(Option.of(named("origin")), fork.pushRemote(new BranchName("feature")));
+        assertEquals(
+                Option.of(named("github")),
+                new RemoteSetup(Option.of(named("github")), Option.none(), HashMap.empty(), remotes("github"))
+                        .pushRemote(new BranchName("feature")));
     }
 }

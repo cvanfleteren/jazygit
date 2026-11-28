@@ -29,20 +29,24 @@ exist.
   (`RereadUpdate.branches`).
 - **Replaced**: the main branch is the `HEAD` of the base remote, else `main` or `master`; the branches that count as
   bases and as the remote ones of `BranchRef.bases`, the candidates of the base dialog, the distances, the divergence
-  from the base, "rebase on base", the default-branch protection of delete and nuke, and the browse, create and edit of
+  from the base, "rebase on base", the default-branch protection of delete, and the browse, create and edit of
   pull requests and the stacks, when nothing more specific says (the upstream of the branch).
-- **A branch without an upstream is pushed to** `branch.<name>.pushRemote`, else `remote.pushDefault`, else the base
-  remote (`Branch.pushRemote`, `RemoteSetup.pushRemote`). The push dialog and *set upstream…* start out with it, and a
-  branch counts as on its remote when it is there.
+- **A branch without an upstream is pushed to** `branch.<name>.pushRemote`, else `remote.pushDefault`, else `origin`
+  when there is one, as git does, else the base remote (`Branch.pushRemote`, `RemoteSetup.pushRemote`). The base is what
+  to compare with; in a fork it is the project, where one does not push. The push dialog and *set upstream…* start
+  out with it, and a branch counts as on its remote when it is there.
 - **`DEFAULT_REMOTE` stays** only as the last resort where something must be written when the repository has no remote,
   and in `PullRequestHome`, which names the remotes by their usual names. `GhAccount` still reads the account from
   `origin`: it is the account of the user, not a base.
 
 ## Consequences
 
-- In a fork, the base, its ahead and behind, the divergence and "rebase on base" go by `upstream`; delete and nuke
-  protect the default branch of `upstream`, and the fork's `main` can be deleted.
-- A clone whose only remote is `github` has its main branch, and a first push starts out with `github`.
+- In a fork, the base, its ahead and behind, the divergence and "rebase on base" go by `upstream`; delete protects
+  the default branch of `upstream`, and the fork's `main` can be deleted.
+- A clone whose only remote is `github` has its main branch, and a first push starts out with `github`; in a fork it
+  starts out with `origin`, the fork.
+- Nuke deletes the remote branch a branch is pushed to under its own name, on any remote, so the fork's goes too; the
+  default branch is refused before.
 - A repository with several remotes, none called `origin` and none picked, has no base remote: no remote main branch,
   the local `main` or `master`.
 - The first read of the branches comes before the forge decides, with the git-only rule; a read follows when the home is

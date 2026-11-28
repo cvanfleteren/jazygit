@@ -128,16 +128,33 @@ class BaseRemoteParseTest {
     }
 
     @Test
-    void aBranchIsOnItsRemoteWhenThatIsWhereItIsPushedTo() {
+    void aBranchIsOnItsRemoteWhenThatIsWhereItIsPushedToWhichIsOriginNotTheBaseOfAFork() {
         String raw =
                 local("feature") + remote("refs/remotes/upstream/feature", "") + remote("refs/remotes/origin/main", "");
+        String pushed = raw + remote("refs/remotes/origin/feature", "");
 
         assertEquals(
-                List.of(true),
+                List.of(false),
                 read(raw, RemoteConfig.NONE, Option.of(UPSTREAM)).local().map(Branch::hasRemote));
         assertEquals(
-                List.of(false),
-                read(raw, RemoteConfig.NONE, Option.of(ORIGIN)).local().map(Branch::hasRemote));
+                List.of(true),
+                read(pushed, RemoteConfig.NONE, Option.of(UPSTREAM)).local().map(Branch::hasRemote));
+        assertEquals(
+                new RemoteBranch(ORIGIN, new BranchName("feature")),
+                read(raw, RemoteConfig.NONE, Option.of(UPSTREAM)).local().head().pushTarget());
+    }
+
+    @Test
+    void whenTheSameKeyIsSetSeveralTimesTheLastOneWins() {
+        RemoteConfig config = RemoteConfig.parse("""
+                remote.pushdefault origin
+                checkout.defaultremote origin
+                remote.pushdefault fork
+                checkout.defaultremote upstream
+                """);
+
+        assertEquals(Option.of(new RemoteName("fork")), config.pushDefault());
+        assertEquals(Option.of(UPSTREAM), config.checkoutDefault());
     }
 
     @Test

@@ -417,7 +417,8 @@ public final class CliBranches implements Branches {
                     RemoteSetup setup = new RemoteSetup(
                             BaseRemote.of(preferred, config.checkoutDefault(), remotes),
                             config.pushDefault(),
-                            config.pushRemotes());
+                            config.pushRemotes(),
+                            remotes);
                     return new AllBranches(branches(refs, created, inUse, setup).sorted(order), remote, setup);
                 });
     }
