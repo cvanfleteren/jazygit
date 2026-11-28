@@ -45,3 +45,5 @@ Rebase 'feat/b'
 - The checked out branch catches up with its base with `r` `b`, from any row.
 - `r` on the checked out branch opens a popup, where it did nothing.
 - A base that is behind its remote is rebased on as it is here, until it is pulled.
+
+Amended by ADR 214: the base on the remote is taken when the local one has no commits of its own.

@@ -23,7 +23,7 @@ public final class MergeDialogs {
             MergePopup.class,
             popup -> Messages.get(
                     "branches.dialog.merge.title",
-                    popup.branch().value(),
+                    popup.branch().name(),
                     popup.into().value()),
             List.of(
                     new Choice<MergePopup>(

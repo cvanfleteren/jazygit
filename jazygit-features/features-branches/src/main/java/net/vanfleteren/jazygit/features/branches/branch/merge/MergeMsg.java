@@ -1,7 +1,7 @@
 package net.vanfleteren.jazygit.features.branches.branch.merge;
 
 import net.vanfleteren.jazygit.core.git.model.MergeMode;
-import net.vanfleteren.jazygit.core.repo.BranchName;
+import net.vanfleteren.jazygit.core.repo.BranchRef;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.Msg;
 import net.vanfleteren.jazygit.kernel.state.Update;
@@ -16,7 +16,7 @@ public sealed interface MergeMsg extends Msg {
     /**
      * The user asked to merge {@code branch} into the checked out branch; how is still to be chosen.
      */
-    record Requested(BranchName branch) implements MergeMsg {}
+    record Requested(BranchRef branch) implements MergeMsg {}
 
     /**
      * The user chose how to merge.

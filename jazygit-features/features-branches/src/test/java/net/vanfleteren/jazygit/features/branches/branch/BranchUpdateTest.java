@@ -167,11 +167,11 @@ class BranchUpdateTest {
                         .cmds());
         assertEquals(
                 Option.none(),
-                Update.update(pushing, new MergeMsg.Requested(new BranchName("feature")))
+                Update.update(pushing, new MergeMsg.Requested(new BranchRef.Local(new BranchName("feature"))))
                         .model()
                         .popup());
         // The rebase popup opens, for the base branch, but does not rebase onto the busy one (ADR 91).
-        Model rebasing = Update.update(pushing, new RebaseMsg.Requested(new BranchName("feature")))
+        Model rebasing = Update.update(pushing, new RebaseMsg.Requested(new BranchRef.Local(new BranchName("feature"))))
                 .model();
         assertTrue(rebasing.popup(RebasePopup.class).isDefined());
         assertEquals(
@@ -731,7 +731,8 @@ class BranchUpdateTest {
 
     @Test
     void anAnswerOfGitDoesNotTakeAwayAPopupTheUserOpenedMeanwhile() {
-        Model merging = Update.update(pullable(2, 0), new MergeMsg.Requested(new BranchName("feature")))
+        Model merging = Update.update(
+                        pullable(2, 0), new MergeMsg.Requested(new BranchRef.Local(new BranchName("feature"))))
                 .model();
         assertTrue(merging.popup().isDefined());
 
@@ -1201,10 +1202,11 @@ class BranchUpdateTest {
                                 Fixtures.branch(new BranchName("feature"), false, new Sha("2"))))
                 .model();
 
-        Next next = Update.update(model, new RebaseMsg.Requested(new BranchName("feature")));
+        Next next = Update.update(model, new RebaseMsg.Requested(new BranchRef.Local(new BranchName("feature"))));
 
         assertEquals(
-                Option.of(new RebasePopup(new BranchName("main"), new BranchName("feature"), Option.none())),
+                Option.of(new RebasePopup(
+                        new BranchName("main"), new BranchRef.Local(new BranchName("feature")), Option.none())),
                 next.model().popup(RebasePopup.class));
         assertEquals(List.of(), next.cmds());
     }
@@ -1220,7 +1222,7 @@ class BranchUpdateTest {
 
         assertEquals(
                 Option.none(),
-                Update.update(model, new RebaseMsg.Requested(new BranchName("nope")))
+                Update.update(model, new RebaseMsg.Requested(new BranchRef.Local(new BranchName("nope"))))
                         .model()
                         .popup(RebasePopup.class));
     }
@@ -1233,18 +1235,19 @@ class BranchUpdateTest {
                                 Fixtures.branch(new BranchName("main"), true, new Sha("1")),
                                 Fixtures.branch(new BranchName("feature"), false, new Sha("2"))))
                 .model();
-        open = Update.update(open, new RebaseMsg.Requested(new BranchName("feature")))
+        open = Update.update(open, new RebaseMsg.Requested(new BranchRef.Local(new BranchName("feature"))))
                 .model();
 
         Next next = Update.update(open, new RebaseMsg.Chosen(RebaseMsg.Target.ONTO));
 
-        assertEquals(List.of(new RebaseCmd(new BranchName("feature"))), next.cmds());
+        assertEquals(List.of(new RebaseCmd(new BranchRef.Local(new BranchName("feature")))), next.cmds());
         assertEquals(Option.none(), next.model().popup(RebasePopup.class));
     }
 
     @Test
     void aFailedRebaseShowsTheError() {
-        Next next = Update.update(loaded(), failed(new RebaseCmd(new BranchName("feature")), "conflict"));
+        Next next = Update.update(
+                loaded(), failed(new RebaseCmd(new BranchRef.Local(new BranchName("feature"))), "conflict"));
 
         assertEquals(Option.of("Rebasing onto feature failed: conflict"), errorText(next.model()));
     }

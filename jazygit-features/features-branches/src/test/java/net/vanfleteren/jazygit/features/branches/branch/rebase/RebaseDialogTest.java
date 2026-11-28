@@ -14,6 +14,8 @@ import io.vavr.control.Option;
 import java.util.ArrayList;
 import net.vanfleteren.jazygit.core.git.model.SampleData;
 import net.vanfleteren.jazygit.core.repo.BranchName;
+import net.vanfleteren.jazygit.core.repo.BranchRef;
+import net.vanfleteren.jazygit.core.repo.RemoteBranch;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.Msg;
 import net.vanfleteren.jazygit.kernel.state.TestModels;
@@ -34,7 +36,7 @@ class RebaseDialogTest {
             new net.vanfleteren.jazygit.kernel.ui.widgets.ChoiceDialog<>(RebaseDialogs.REBASE, dispatched::add);
     private Model open = Update.update(
                     TestModels.loaded(SampleData.git()),
-                    new RebaseMsg.Requested(new BranchName("feature/initial-layout")))
+                    new RebaseMsg.Requested(new BranchRef.Local(new BranchName("feature/initial-layout"))))
             .model();
 
     @Test
@@ -78,7 +80,9 @@ class RebaseDialogTest {
     @Test
     void enterOnTheCheckedOutRowChoosesTheBase() throws Exception {
         open = open.openPopup(new RebasePopup(
-                new BranchName("main"), new BranchName("main"), Option.of(new BranchName("feature/jgit-backend"))));
+                new BranchName("main"),
+                new BranchRef.Local(new BranchName("main")),
+                Option.of(new BranchRef.Local(new BranchName("feature/jgit-backend")))));
         assertEquals(
                 List.of(new RebaseMsg.Chosen(RebaseMsg.Target.BASE)),
                 pressing(r -> SettledPilot.of(r).press(KeyCode.ENTER)));
@@ -87,7 +91,9 @@ class RebaseDialogTest {
     @Test
     void onTheCheckedOutRowWhatRebasingOnTheBaseDoesShowsFirst() throws Exception {
         open = open.openPopup(new RebasePopup(
-                new BranchName("main"), new BranchName("main"), Option.of(new BranchName("feature/jgit-backend"))));
+                new BranchName("main"),
+                new BranchRef.Local(new BranchName("main")),
+                Option.of(new BranchRef.Local(new BranchName("feature/jgit-backend")))));
         try (ToolkitTestRunner runner = ToolkitTestRunner.runTest(() -> view())) {
             String screen = RenderedText.ofLarge(runner, () -> view());
             assertTrue(screen.contains("on top of its base branch"), screen);
@@ -114,8 +120,22 @@ class RebaseDialogTest {
     }
 
     @Test
+    void aRemoteTrackingBaseIsNamedAndSaysItIsWhatTheRemoteHas() throws Exception {
+        open = open.openPopup(new RebasePopup(
+                new BranchName("main"),
+                new BranchRef.Local(new BranchName("feature/initial-layout")),
+                Option.of(new RemoteBranch("origin", new BranchName("main")).tracking())));
+        try (ToolkitTestRunner runner = ToolkitTestRunner.runTest(() -> view())) {
+            String screen = RenderedText.ofLarge(runner, () -> view());
+            assertTrue(screen.contains("(b) rebase on base branch (origin/main)"), screen);
+        }
+    }
+
+    @Test
     void onTheCheckedOutRowNeitherAppliesWithoutABaseButBothShow() throws Exception {
-        open = Update.update(TestModels.loaded(SampleData.git()), new RebaseMsg.Requested(new BranchName("main")))
+        open = Update.update(
+                        TestModels.loaded(SampleData.git()),
+                        new RebaseMsg.Requested(new BranchRef.Local(new BranchName("main"))))
                 .model();
         try (ToolkitTestRunner runner = ToolkitTestRunner.runTest(() -> view())) {
             String screen = RenderedText.ofLarge(runner, () -> view());
@@ -134,8 +154,10 @@ class RebaseDialogTest {
      * The popup as opened on {@code feature/initial-layout}, with {@code base} as the base of {@code main}.
      */
     private Model withBase(BranchName base) {
-        return open.openPopup(
-                new RebasePopup(new BranchName("main"), new BranchName("feature/initial-layout"), Option.of(base)));
+        return open.openPopup(new RebasePopup(
+                new BranchName("main"),
+                new BranchRef.Local(new BranchName("feature/initial-layout")),
+                Option.of(new BranchRef.Local(base))));
     }
 
     private List<Msg> pressing(Keys keys) throws Exception {

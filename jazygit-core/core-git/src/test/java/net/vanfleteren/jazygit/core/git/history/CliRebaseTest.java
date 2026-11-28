@@ -47,8 +47,11 @@ class CliRebaseTest {
         git("commit", "-q", "-m", "Main work");
         git("checkout", "-q", "feature");
 
-        List<String> executed =
-                repository.integrate().rebase(new BranchName("main")).get().map(ExecutedCommand::line);
+        List<String> executed = repository
+                .integrate()
+                .rebase(new BranchRef.Local(new BranchName("main")))
+                .get()
+                .map(ExecutedCommand::line);
 
         assertEquals(List.of("git rebase --autostash --no-autosquash refs/heads/main"), executed);
         assertEquals(
@@ -70,8 +73,38 @@ class CliRebaseTest {
         git("branch", "other", "main");
         git("checkout", "-q", "feature");
 
-        repository.integrate().rebase(new BranchName("other")).get();
+        repository
+                .integrate()
+                .rebase(new BranchRef.Local(new BranchName("other")))
+                .get();
 
+        assertEquals(
+                List.of("Feature work", "Main work", "Initial commit"),
+                commits().get().map(c -> c.message().summary()).toList());
+    }
+
+    @Test
+    void rebaseOntoARemoteTrackingBranchUsesItsFullRefAndIgnoresATag() throws Exception {
+        git("checkout", "-q", "-b", "feature");
+        Files.writeString(repo.resolve("f.txt"), "f\n");
+        git("add", "f.txt");
+        git("commit", "-q", "-m", "Feature work");
+        git("checkout", "-q", "main");
+        git("tag", "origin/main", "main");
+        Files.writeString(repo.resolve("m.txt"), "m\n");
+        git("add", "m.txt");
+        git("commit", "-q", "-m", "Main work");
+        git("update-ref", "refs/remotes/origin/main", "main");
+        git("reset", "-q", "--hard", "HEAD~1");
+        git("checkout", "-q", "feature");
+
+        List<String> executed = repository
+                .integrate()
+                .rebase(new BranchRef.Remote(new RemoteBranch("origin", new BranchName("main"))))
+                .get()
+                .map(ExecutedCommand::line);
+
+        assertEquals(List.of("git rebase --autostash --no-autosquash refs/remotes/origin/main"), executed);
         assertEquals(
                 List.of("Feature work", "Main work", "Initial commit"),
                 commits().get().map(c -> c.message().summary()).toList());
@@ -102,7 +135,10 @@ class CliRebaseTest {
         git("commit", "-q", "-m", "Main work");
         git("checkout", "-q", "feature");
 
-        repository.integrate().rebase(new BranchName("main")).get();
+        repository
+                .integrate()
+                .rebase(new BranchRef.Local(new BranchName("main")))
+                .get();
 
         List<Commit> after = commits().get();
         assertEquals(
@@ -124,7 +160,10 @@ class CliRebaseTest {
         commitFile("m3.txt", "m3");
         git("checkout", "-q", "feat");
 
-        repository.integrate().rebase(new BranchName("main")).get();
+        repository
+                .integrate()
+                .rebase(new BranchRef.Local(new BranchName("main")))
+                .get();
 
         List<Commit> after = commits().get();
         assertEquals(
@@ -147,7 +186,10 @@ class CliRebaseTest {
         commitFile("m2.txt", "m2");
         git("checkout", "-q", "feat");
 
-        repository.integrate().rebase(new BranchName("main")).get();
+        repository
+                .integrate()
+                .rebase(new BranchRef.Local(new BranchName("main")))
+                .get();
 
         assertTrue(commits().get().exists(Commit::isMerge));
         assertEquals(git("rev-parse", "main"), git("merge-base", "feat", "main"));
@@ -169,8 +211,10 @@ class CliRebaseTest {
         git("commit", "-q", "-am", "Main edit");
         git("checkout", "-q", "feature");
 
-        GitFailure failure =
-                repository.integrate().rebase(new BranchName("main")).getLeft();
+        GitFailure failure = repository
+                .integrate()
+                .rebase(new BranchRef.Local(new BranchName("main")))
+                .getLeft();
 
         GitError.StoppedOnConflicts stopped = assertInstanceOf(GitError.StoppedOnConflicts.class, failure.error());
         assertInstanceOf(InProgress.Rebasing.class, stopped.inProgress().get());
@@ -196,8 +240,10 @@ class CliRebaseTest {
         // Picking "Add x" would overwrite it, so the rebase stops there, without conflicts.
         Files.writeString(repo.resolve("x.txt"), "untracked\n");
 
-        GitFailure failure =
-                repository.integrate().rebase(new BranchName("main")).getLeft();
+        GitFailure failure = repository
+                .integrate()
+                .rebase(new BranchRef.Local(new BranchName("main")))
+                .getLeft();
 
         assertInstanceOf(GitError.CommandFailed.class, failure.error());
         assertEquals(List.of("git rebase --abort"), failure.commands().tail().map(ExecutedCommand::line));
@@ -210,8 +256,10 @@ class CliRebaseTest {
 
     @Test
     void aRebaseThatDoesNotStartIsNotAborted() {
-        GitFailure failure =
-                repository.integrate().rebase(new BranchName("nope")).getLeft();
+        GitFailure failure = repository
+                .integrate()
+                .rebase(new BranchRef.Local(new BranchName("nope")))
+                .getLeft();
 
         assertInstanceOf(GitError.CommandFailed.class, failure.error());
         assertEquals(1, failure.commands().size(), failure.commands().toString());
@@ -226,8 +274,10 @@ class CliRebaseTest {
         git("branch", "other");
         gitWithEnvironment("GIT_SEQUENCE_EDITOR", "sed -i -e 's/^pick/edit/'", "rebase", "-i", "--root");
 
-        GitFailure failure =
-                repository.integrate().rebase(new BranchName("other")).getLeft();
+        GitFailure failure = repository
+                .integrate()
+                .rebase(new BranchRef.Local(new BranchName("other")))
+                .getLeft();
 
         assertTrue(
                 failure.commands().forAll(command -> !command.line().contains("--abort")),

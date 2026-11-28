@@ -1,6 +1,6 @@
 package net.vanfleteren.jazygit.features.branches.branch.rebase;
 
-import net.vanfleteren.jazygit.core.repo.BranchName;
+import net.vanfleteren.jazygit.core.repo.BranchRef;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.Msg;
 import net.vanfleteren.jazygit.kernel.state.Update;
@@ -23,7 +23,7 @@ public sealed interface RebaseMsg extends Msg {
     /**
      * The user asked to rebase the checked out branch, on {@code highlighted}; where onto is still to be chosen.
      */
-    record Requested(BranchName highlighted) implements RebaseMsg {}
+    record Requested(BranchRef highlighted) implements RebaseMsg {}
 
     /**
      * The user chose where to rebase onto.

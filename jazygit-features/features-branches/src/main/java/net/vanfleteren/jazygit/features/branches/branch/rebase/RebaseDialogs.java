@@ -3,6 +3,7 @@ package net.vanfleteren.jazygit.features.branches.branch.rebase;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import java.util.function.Consumer;
+import net.vanfleteren.jazygit.core.repo.BranchRef;
 import net.vanfleteren.jazygit.kernel.state.Msg;
 import net.vanfleteren.jazygit.kernel.ui.PopupSlot;
 import net.vanfleteren.jazygit.kernel.ui.i18n.Messages;
@@ -29,21 +30,27 @@ public final class RebaseDialogs {
                                             's',
                                             popup -> Messages.get(
                                                     "branches.dialog.rebase.simple",
-                                                    popup.highlighted().value()),
+                                                    popup.highlighted().name()),
                                             () -> new RebaseMsg.Chosen(RebaseMsg.Target.ONTO),
                                             (model, popup) -> RebaseUpdate.onto(model, popup, RebaseMsg.Target.ONTO)
                                                     .isDefined())
-                                    .withDetails("branches.dialog.rebase.simple.details"),
+                                    .withDetails(popup -> Messages.get(
+                                            popup.highlighted() instanceof BranchRef.Remote
+                                                    ? "branches.dialog.rebase.simple.remote.details"
+                                                    : "branches.dialog.rebase.simple.details")),
                             new Choice<RebasePopup>(
                                             'b',
                                             popup -> popup.base()
                                                     .map(base ->
-                                                            Messages.get("branches.dialog.rebase.base", base.value()))
+                                                            Messages.get("branches.dialog.rebase.base", base.name()))
                                                     .getOrElse(() -> Messages.get("branches.dialog.rebase.noBase")),
                                             () -> new RebaseMsg.Chosen(RebaseMsg.Target.BASE),
                                             (model, popup) -> RebaseUpdate.onto(model, popup, RebaseMsg.Target.BASE)
                                                     .isDefined())
-                                    .withDetails("branches.dialog.rebase.base.details")))
+                                    .withDetails(popup -> Messages.get(
+                                            popup.base().exists(base -> base instanceof BranchRef.Remote)
+                                                    ? "branches.dialog.rebase.base.remote.details"
+                                                    : "branches.dialog.rebase.base.details"))))
             .openingAt(popup -> popup.onto().isEmpty() ? Option.of('b') : Option.none());
 
     private RebaseDialogs() {}

@@ -239,3 +239,4 @@ another tool adds it there too.
 | 210 | [The forges reach the branches pane and the fetch through the kernel](0210-the-forges-reach-the-branches-pane-and-the-fetch-through-the-kernel.md) |  |
 | 211 | [A feature brings a pane to a screen](0211-a-feature-brings-a-pane-to-a-screen.md) |  |
 | 212 | [The builds get a screen of their own](0212-the-builds-get-a-screen-of-their-own.md) |  |
+| 214 | [Rebase on the base takes the remote one when the local one has nothing of its own](0214-rebase-on-the-base-takes-the-remote-one-when-it-is-ahead.md) |  |

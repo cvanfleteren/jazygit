@@ -12,6 +12,7 @@ operation starts from there. The tests assert what the operation should have don
 
 import re
 import subprocess
+import time
 from pathlib import Path
 
 from harness import App, AppExited, Git
@@ -465,7 +466,7 @@ class BranchesPane:
         self.ui.caught_up()
         self.app.focus("Branches")
         self.show_tab("Remotes")
-        self.ui.caught_up()
+        # Not caught_up, which wants the local branches shown.
         self.app.move_cursor("Branches", branch)
         self.wait_for_log(branch)
 
@@ -684,20 +685,21 @@ class BranchesPane:
         self.select(branch)
         self.app.press("p")
 
-    def merge(self, branch: str, mode: str = "fast-forward"):
+    def merge(self, branch: str, mode: str = "fast-forward", remote: bool = False):
         """Merges the branch into the checked out one: a regular merge that fast-forwards when it can
         ("fast-forward"), or makes a "merge commit" anyway, or a squash merge, left uncommitted ("squash") or
-        committed ("squash and commit")."""
+        committed ("squash and commit"). With remote, the branch is one of the remote ones, such as "origin/main"."""
         into = self.repo.current_branch()
         head = self.repo("rev-parse", "HEAD")
-        self.select(branch)
+        if not remote:
+            self.select(branch)
 
         # A squash merge that is committed takes a git command for the commit, after the one that staged the
         # changes; one that stops on conflicts commits nothing.
         def done():
             return mode != "squash and commit" or self.repo("rev-parse", "HEAD") != head or bool(self.repo.conflicts())
 
-        self.ui.changing_repo(f"{branch} merged into {into}", lambda: self._ask_merge(branch, into, mode), done)
+        self.ui.changing_repo(f"{branch} merged into {into}", lambda: self._ask_merge(branch, into, mode, remote), done)
 
     def try_to_merge(self, branch: str, mode: str = "fast-forward"):
         """Asks to merge the branch into the checked out one as merge does, for when nothing is to change: it does
@@ -706,17 +708,35 @@ class BranchesPane:
         self.select(branch)
         self._ask_merge(branch, into, mode)
 
-    def _ask_merge(self, branch: str, into: str, mode: str):
+    def _ask_merge(self, branch: str, into: str, mode: str, remote: bool = False):
+        if remote:
+            self.select_remote(branch)
         key = {"fast-forward": "m", "merge commit": "n", "squash": "s", "squash and commit": "S"}[mode]
         self.app.press("m")
         self.ui.confirm(f"Merge '{branch}' into '{into}'", key=key)
+        self._back_to_local()
 
-    def rebase_onto(self, branch: str):
-        """Rebases the checked out branch onto the branch."""
+    def _back_to_local(self):
+        """Shows the local branches again after an action of a remote branch, as the app is only caught up with them
+        shown: the log of the remote branch is shown in place of the commits of the checked out one."""
+        # A key pressed while the dialog is closing or the operation starts is lost: so it is pressed again until the
+        # list changes.
+        for _ in range(10):
+            if self.tab() == "Branches":
+                return
+            self.app.press("]")
+            time.sleep(0.5)
+        self.show_tab("Branches")
+
+    def rebase_onto(self, branch: str, remote: bool = False):
+        """Rebases the checked out branch onto the branch; with remote, one of the remote ones, such as
+        "origin/main"."""
         checked_out = self.repo.current_branch()
-        self.select(branch)
+        if not remote:
+            self.select(branch)
         self.ui.changing_repo(f"{checked_out} rebased onto {branch}", lambda: (
-            self.app.press("r"), self.ui.confirm(f"Rebase '{checked_out}'", key="s")))
+            self.select_remote(branch) if remote else None,
+            self.app.press("r"), self.ui.confirm(f"Rebase '{checked_out}'", key="s"), self._back_to_local()))
 
     def set_base(self, branch: str, base: str = None):
         """Sets the branch branch is built on to base, picked from the branches the app offers; None records none.

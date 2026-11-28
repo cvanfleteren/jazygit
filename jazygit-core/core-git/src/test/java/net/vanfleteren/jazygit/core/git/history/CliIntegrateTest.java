@@ -11,7 +11,9 @@ import net.vanfleteren.jazygit.core.git.process.GitError;
 import net.vanfleteren.jazygit.core.git.process.GitFailure;
 import net.vanfleteren.jazygit.core.process.ExecutedCommand;
 import net.vanfleteren.jazygit.core.repo.BranchName;
+import net.vanfleteren.jazygit.core.repo.BranchRef;
 import net.vanfleteren.jazygit.core.repo.InProgress;
+import net.vanfleteren.jazygit.core.repo.RemoteBranch;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -48,7 +50,7 @@ class CliIntegrateTest {
         assertEquals(
                 List.of("git merge --ff --no-edit -m 'Merge branch '\\''feature'\\''' refs/heads/feature"),
                 new CliIntegrate(repo)
-                        .merge(new BranchName("feature"), MergeMode.FAST_FORWARD)
+                        .merge(new BranchRef.Local(new BranchName("feature")), MergeMode.FAST_FORWARD)
                         .get()
                         .map(ExecutedCommand::line));
 
@@ -60,7 +62,7 @@ class CliIntegrateTest {
         commitOnMain();
 
         new CliIntegrate(repo)
-                .merge(new BranchName("feature"), MergeMode.FAST_FORWARD)
+                .merge(new BranchRef.Local(new BranchName("feature")), MergeMode.FAST_FORWARD)
                 .get();
 
         assertEquals(2, parents("HEAD"));
@@ -71,7 +73,7 @@ class CliIntegrateTest {
         assertEquals(
                 List.of("git merge --no-ff --no-edit -m 'Merge branch '\\''feature'\\''' refs/heads/feature"),
                 new CliIntegrate(repo)
-                        .merge(new BranchName("feature"), MergeMode.MERGE_COMMIT)
+                        .merge(new BranchRef.Local(new BranchName("feature")), MergeMode.MERGE_COMMIT)
                         .get()
                         .map(ExecutedCommand::line));
 
@@ -86,7 +88,7 @@ class CliIntegrateTest {
         assertEquals(
                 List.of("git merge --squash refs/heads/feature"),
                 new CliIntegrate(repo)
-                        .merge(new BranchName("feature"), MergeMode.SQUASH)
+                        .merge(new BranchRef.Local(new BranchName("feature")), MergeMode.SQUASH)
                         .get()
                         .map(ExecutedCommand::line));
 
@@ -101,7 +103,7 @@ class CliIntegrateTest {
         assertEquals(
                 List.of("git merge --squash refs/heads/feature", "git commit --quiet --no-edit"),
                 new CliIntegrate(repo)
-                        .merge(new BranchName("feature"), MergeMode.SQUASH_AND_COMMIT)
+                        .merge(new BranchRef.Local(new BranchName("feature")), MergeMode.SQUASH_AND_COMMIT)
                         .get()
                         .map(ExecutedCommand::line));
 
@@ -113,14 +115,14 @@ class CliIntegrateTest {
     @Test
     void squashAndCommitOfAMergedBranchCommitsNothing() throws Exception {
         new CliIntegrate(repo)
-                .merge(new BranchName("feature"), MergeMode.FAST_FORWARD)
+                .merge(new BranchRef.Local(new BranchName("feature")), MergeMode.FAST_FORWARD)
                 .get();
         String head = git("rev-parse", "HEAD");
 
         assertEquals(
                 List.of("git merge --squash refs/heads/feature"),
                 new CliIntegrate(repo)
-                        .merge(new BranchName("feature"), MergeMode.SQUASH_AND_COMMIT)
+                        .merge(new BranchRef.Local(new BranchName("feature")), MergeMode.SQUASH_AND_COMMIT)
                         .get()
                         .map(ExecutedCommand::line));
 
@@ -142,7 +144,7 @@ class CliIntegrateTest {
         write("unrelated.txt", "keep\n");
 
         GitFailure failure = new CliIntegrate(repo)
-                .merge(new BranchName("conflicting"), MergeMode.MERGE_COMMIT)
+                .merge(new BranchRef.Local(new BranchName("conflicting")), MergeMode.MERGE_COMMIT)
                 .getLeft();
 
         assertEquals(
@@ -167,7 +169,7 @@ class CliIntegrateTest {
         String head = git("rev-parse", "HEAD");
 
         GitFailure failure = new CliIntegrate(repo)
-                .merge(new BranchName("conflicting"), MergeMode.SQUASH_AND_COMMIT)
+                .merge(new BranchRef.Local(new BranchName("conflicting")), MergeMode.SQUASH_AND_COMMIT)
                 .getLeft();
 
         assertEquals(new GitError.StoppedOnConflicts(Option.none(), 1), failure.error());
@@ -184,7 +186,7 @@ class CliIntegrateTest {
         git("add", "b.txt");
 
         GitFailure failure = new CliIntegrate(repo)
-                .merge(new BranchName("feature"), MergeMode.FAST_FORWARD)
+                .merge(new BranchRef.Local(new BranchName("feature")), MergeMode.FAST_FORWARD)
                 .getLeft();
 
         // Nothing was started, so nothing is undone.
@@ -203,7 +205,7 @@ class CliIntegrateTest {
         write("a.txt", "resolved\n");
 
         GitFailure failure = new CliIntegrate(repo)
-                .merge(new BranchName("feature"), MergeMode.MERGE_COMMIT)
+                .merge(new BranchRef.Local(new BranchName("feature")), MergeMode.MERGE_COMMIT)
                 .getLeft();
 
         assertEquals(
@@ -223,7 +225,7 @@ class CliIntegrateTest {
         Files.delete(repo.resolve(".git/MERGE_HEAD"));
 
         GitFailure failure = new CliIntegrate(repo)
-                .merge(new BranchName("feature"), MergeMode.SQUASH)
+                .merge(new BranchRef.Local(new BranchName("feature")), MergeMode.SQUASH)
                 .getLeft();
 
         assertEquals(
@@ -240,9 +242,63 @@ class CliIntegrateTest {
         // The tag is on main, so merging it would be "Already up to date".
         git("tag", "feature", "main");
 
-        new CliIntegrate(repo).merge(new BranchName("feature"), mode).get();
+        new CliIntegrate(repo)
+                .merge(new BranchRef.Local(new BranchName("feature")), mode)
+                .get();
 
         assertTrue(Files.exists(repo.resolve("b.txt")));
+    }
+
+    @ParameterizedTest
+    @EnumSource(
+            value = MergeMode.class,
+            names = {"FAST_FORWARD", "MERGE_COMMIT", "SQUASH", "SQUASH_AND_COMMIT"})
+    void aRemoteTrackingBranchIsMergedByItsFullRef(MergeMode mode) throws Exception {
+        git("update-ref", "refs/remotes/origin/feature", "feature");
+        git("branch", "-D", "feature");
+        // A tag named like the remote-tracking branch, on main, would make a bare "origin/feature" "up to date".
+        git("tag", "origin/feature", "main");
+
+        new CliIntegrate(repo).merge(remote("origin", "feature"), mode).get();
+
+        assertTrue(Files.exists(repo.resolve("b.txt")));
+    }
+
+    @Test
+    void aMergeCommitOfARemoteTrackingBranchIsWordedAsGitDoes() throws Exception {
+        git("update-ref", "refs/remotes/origin/feature", "feature");
+        commitOnMain();
+
+        List<String> executed = new CliIntegrate(repo)
+                .merge(remote("origin", "feature"), MergeMode.MERGE_COMMIT)
+                .get()
+                .map(ExecutedCommand::line);
+
+        assertEquals(
+                List.of(
+                        "git merge --no-ff --no-edit -m 'Merge remote-tracking branch '\\''origin/feature'\\''' refs/remotes/origin/feature"),
+                executed);
+        String ours = git("log", "-1", "--format=%B").strip();
+        git("reset", "-q", "--hard", "HEAD~1");
+        git("merge", "--no-ff", "--no-edit", "origin/feature");
+        assertEquals(git("log", "-1", "--format=%B").strip(), ours);
+    }
+
+    @Test
+    void aBranchOfAnotherRemoteIsMergedToo() throws Exception {
+        git("update-ref", "refs/remotes/upstream/feature", "feature");
+
+        new CliIntegrate(repo)
+                .merge(remote("upstream", "feature"), MergeMode.MERGE_COMMIT)
+                .get();
+
+        assertEquals(
+                "Merge remote-tracking branch 'upstream/feature'",
+                git("log", "-1", "--format=%s").strip());
+    }
+
+    private static BranchRef remote(String remote, String branch) {
+        return new BranchRef.Remote(new RemoteBranch(remote, new BranchName(branch)));
     }
 
     @Test
@@ -250,7 +306,7 @@ class CliIntegrateTest {
         git("tag", "feature", "main");
 
         new CliIntegrate(repo)
-                .merge(new BranchName("feature"), MergeMode.MERGE_COMMIT)
+                .merge(new BranchRef.Local(new BranchName("feature")), MergeMode.MERGE_COMMIT)
                 .get();
 
         assertEquals("Merge branch 'feature'", git("log", "-1", "--format=%s").strip());
@@ -262,7 +318,7 @@ class CliIntegrateTest {
         git("tag", "feature", "main");
 
         new CliIntegrate(repo)
-                .merge(new BranchName("feature"), MergeMode.MERGE_COMMIT)
+                .merge(new BranchRef.Local(new BranchName("feature")), MergeMode.MERGE_COMMIT)
                 .get();
 
         assertEquals(
@@ -275,7 +331,7 @@ class CliIntegrateTest {
         git("branch", "-m", "main", "master");
 
         new CliIntegrate(repo)
-                .merge(new BranchName("feature"), MergeMode.MERGE_COMMIT)
+                .merge(new BranchRef.Local(new BranchName("feature")), MergeMode.MERGE_COMMIT)
                 .get();
 
         assertEquals("Merge branch 'feature'", git("log", "-1", "--format=%s").strip());
@@ -286,7 +342,7 @@ class CliIntegrateTest {
         git("checkout", "-q", "--detach");
 
         new CliIntegrate(repo)
-                .merge(new BranchName("feature"), MergeMode.MERGE_COMMIT)
+                .merge(new BranchRef.Local(new BranchName("feature")), MergeMode.MERGE_COMMIT)
                 .get();
 
         assertEquals(
@@ -300,7 +356,7 @@ class CliIntegrateTest {
         git("config", "merge.suppressDest", "develop");
 
         new CliIntegrate(repo)
-                .merge(new BranchName("feature"), MergeMode.MERGE_COMMIT)
+                .merge(new BranchRef.Local(new BranchName("feature")), MergeMode.MERGE_COMMIT)
                 .get();
 
         assertEquals("Merge branch 'feature'", git("log", "-1", "--format=%s").strip());
@@ -311,7 +367,7 @@ class CliIntegrateTest {
         git("config", "merge.log", "true");
 
         new CliIntegrate(repo)
-                .merge(new BranchName("feature"), MergeMode.MERGE_COMMIT)
+                .merge(new BranchRef.Local(new BranchName("feature")), MergeMode.MERGE_COMMIT)
                 .get();
 
         String message = git("log", "-1", "--format=%B");

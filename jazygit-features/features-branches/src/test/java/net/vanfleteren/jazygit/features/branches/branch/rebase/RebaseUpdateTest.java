@@ -12,7 +12,10 @@ import java.time.Instant;
 import net.vanfleteren.jazygit.core.git.model.Fixtures;
 import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.BranchRef;
+import net.vanfleteren.jazygit.core.repo.RemoteBranch;
+import net.vanfleteren.jazygit.core.repo.RemoteRef;
 import net.vanfleteren.jazygit.core.repo.Sha;
+import net.vanfleteren.jazygit.core.repo.Upstream;
 import net.vanfleteren.jazygit.features.branches.branch.push.PushCmd;
 import net.vanfleteren.jazygit.kernel.state.Model;
 import net.vanfleteren.jazygit.kernel.state.Part;
@@ -38,26 +41,105 @@ class RebaseUpdateTest {
         Model model = withParents(checkedOut(CHILD), HashMap.of(CHILD, PARENT));
 
         assertEquals(
-                Option.of(new RebasePopup(CHILD, CHILD, Option.of(PARENT))),
-                Update.update(model, new RebaseMsg.Requested(CHILD)).model().popup(RebasePopup.class));
+                Option.of(new RebasePopup(CHILD, new BranchRef.Local(CHILD), Option.of(new BranchRef.Local(PARENT)))),
+                Update.update(model, new RebaseMsg.Requested(new BranchRef.Local(CHILD)))
+                        .model()
+                        .popup(RebasePopup.class));
     }
 
     @Test
     void anotherRowAsksToRebaseOntoItOrOnTheBase() {
         Model model = withParents(checkedOut(CHILD), HashMap.of(CHILD, PARENT));
 
-        RebasePopup popup = Update.update(model, new RebaseMsg.Requested(OTHER))
+        RebasePopup popup = Update.update(model, new RebaseMsg.Requested(new BranchRef.Local(OTHER)))
                 .model()
                 .popup(RebasePopup.class)
                 .get();
 
-        assertEquals(Option.of(OTHER), popup.onto());
-        assertEquals(Option.of(PARENT), popup.base());
+        assertEquals(Option.of(new BranchRef.Local(OTHER)), popup.onto());
+        assertEquals(Option.of(new BranchRef.Local(PARENT)), popup.base());
+    }
+
+    @Test
+    void theBaseIsTheRemoteTrackingBranchWhenThereIsOne() {
+        Model model = withRemote(withParents(following(CHILD), HashMap.of(CHILD, PARENT)), "feat/a", "main");
+
+        assertEquals(
+                Option.of(new RemoteBranch(RemoteBranch.DEFAULT_REMOTE, PARENT).tracking()),
+                popup(model, OTHER).base());
+        assertEquals(
+                Option.of(new RemoteBranch(RemoteBranch.DEFAULT_REMOTE, MAIN).tracking()),
+                popup(withRemote(following(CHILD), "main"), OTHER).base());
+    }
+
+    @Test
+    void aBaseWithCommitsOfItsOwnStaysTheLocalBranchWhateverTheRemoteHas() {
+        // feat/a was amended here and is not pushed: the remote one is stale, and a rebase onto it replays the commits
+        // of feat/a on top of their old versions (ADR 91).
+        Model model =
+                withRemote(withParents(following(CHILD, PARENT, MAIN), HashMap.of(CHILD, PARENT)), "feat/a", "main");
+
+        assertEquals(Option.of(new BranchRef.Local(PARENT)), popup(model, OTHER).base());
+        assertEquals(
+                Option.of(new BranchRef.Local(MAIN)),
+                popup(withRemote(following(CHILD, MAIN), "main"), OTHER).base());
+    }
+
+    @Test
+    void aBaseThatFollowsNothingOnTheRemoteStaysTheLocalBranch() {
+        assertEquals(
+                Option.of(new BranchRef.Local(MAIN)),
+                popup(withRemote(checkedOut(CHILD), "main"), OTHER).base());
+    }
+
+    @Test
+    void aRemoteBaseIsNotRebasedOnWhileItsLocalBranchIsBusy() {
+        Model open = Update.update(
+                        withRemote(following(CHILD), "main"), new RebaseMsg.Requested(new BranchRef.Local(CHILD)))
+                .model();
+        Model pulling = TestModels.busy(open, new BranchRef.Local(MAIN), PushCmd.PUSH);
+
+        assertEquals(
+                List.of(),
+                Update.update(pulling, new RebaseMsg.Chosen(RebaseMsg.Target.BASE))
+                        .cmds());
+        assertEquals(
+                List.of(new RebaseCmd(new RemoteBranch(RemoteBranch.DEFAULT_REMOTE, MAIN).tracking())),
+                Update.update(open, new RebaseMsg.Chosen(RebaseMsg.Target.BASE)).cmds());
+    }
+
+    @Test
+    void aRemoteBranchOnAnotherRemoteIsRebasedOntoToo() {
+        RemoteBranch upstream = new RemoteBranch("upstream", MAIN);
+        Model model = remoteBranchesRead(
+                        checkedOut(CHILD), List.of(new RemoteRef(upstream, new Sha("2"), Instant.EPOCH)))
+                .model();
+
+        Next asked = Update.update(model, new RebaseMsg.Requested(upstream.tracking()));
+        Next chosen = Update.update(asked.model(), new RebaseMsg.Chosen(RebaseMsg.Target.ONTO));
+
+        assertEquals(List.of(new RebaseCmd(upstream.tracking())), chosen.cmds());
+    }
+
+    @Test
+    void aRemoteBranchThatIsNotKnownCannotBeRebasedOnto() {
+        Model model = withRemote(checkedOut(CHILD), "main");
+
+        assertEquals(
+                Option.none(),
+                Update.update(
+                                model,
+                                new RebaseMsg.Requested(
+                                        new RemoteBranch(RemoteBranch.DEFAULT_REMOTE, OTHER).tracking()))
+                        .model()
+                        .popup(RebasePopup.class));
     }
 
     @Test
     void withoutAParentTheBaseIsTheMainBranch() {
-        assertEquals(Option.of(MAIN), popup(checkedOut(CHILD), CHILD).base());
+        assertEquals(
+                Option.of(new BranchRef.Local(MAIN)),
+                popup(checkedOut(CHILD), CHILD).base());
     }
 
     @Test
@@ -80,19 +162,20 @@ class RebaseUpdateTest {
     @Test
     void choosingTheBaseRebasesOnIt() {
         Model open = Update.update(
-                        withParents(checkedOut(CHILD), HashMap.of(CHILD, PARENT)), new RebaseMsg.Requested(OTHER))
+                        withParents(checkedOut(CHILD), HashMap.of(CHILD, PARENT)),
+                        new RebaseMsg.Requested(new BranchRef.Local(OTHER)))
                 .model();
 
         Next next = Update.update(open, new RebaseMsg.Chosen(RebaseMsg.Target.BASE));
 
-        assertEquals(List.of(new RebaseCmd(PARENT)), next.cmds());
+        assertEquals(List.of(new RebaseCmd(new BranchRef.Local(PARENT))), next.cmds());
         assertEquals(Option.none(), next.model().popup(RebasePopup.class));
     }
 
     @Test
     void choosingWhatDoesNotApplyDoesNothing() {
-        Model open =
-                Update.update(checkedOut(MAIN), new RebaseMsg.Requested(MAIN)).model();
+        Model open = Update.update(checkedOut(MAIN), new RebaseMsg.Requested(new BranchRef.Local(MAIN)))
+                .model();
 
         assertEquals(
                 List.of(),
@@ -104,8 +187,8 @@ class RebaseUpdateTest {
 
     @Test
     void aBaseThatIsBusyIsNotRebasedOn() {
-        Model open =
-                Update.update(checkedOut(CHILD), new RebaseMsg.Requested(CHILD)).model();
+        Model open = Update.update(checkedOut(CHILD), new RebaseMsg.Requested(new BranchRef.Local(CHILD)))
+                .model();
         Model pushing = TestModels.busy(open, new BranchRef.Local(MAIN), PushCmd.PUSH);
 
         assertEquals(
@@ -119,13 +202,14 @@ class RebaseUpdateTest {
         Model model = withParents(checkedOut(CHILD), HashMap.of(CHILD, PARENT));
         Model pushing = TestModels.busy(model, new BranchRef.Local(OTHER), PushCmd.PUSH);
 
-        Model open = Update.update(pushing, new RebaseMsg.Requested(OTHER)).model();
+        Model open = Update.update(pushing, new RebaseMsg.Requested(new BranchRef.Local(OTHER)))
+                .model();
 
         assertEquals(
                 List.of(),
                 Update.update(open, new RebaseMsg.Chosen(RebaseMsg.Target.ONTO)).cmds());
         assertEquals(
-                List.of(new RebaseCmd(PARENT)),
+                List.of(new RebaseCmd(new BranchRef.Local(PARENT))),
                 Update.update(open, new RebaseMsg.Chosen(RebaseMsg.Target.BASE)).cmds());
     }
 
@@ -133,7 +217,8 @@ class RebaseUpdateTest {
     void aBusyCheckedOutBranchOpensThePopupButIsNotRebased() {
         Model pushing = TestModels.busy(checkedOut(CHILD), new BranchRef.Local(CHILD), PushCmd.PUSH);
 
-        Model open = Update.update(pushing, new RebaseMsg.Requested(OTHER)).model();
+        Model open = Update.update(pushing, new RebaseMsg.Requested(new BranchRef.Local(OTHER)))
+                .model();
 
         assertTrue(open.popup(RebasePopup.class).isDefined());
         assertEquals(
@@ -144,8 +229,19 @@ class RebaseUpdateTest {
                 Update.update(open, new RebaseMsg.Chosen(RebaseMsg.Target.BASE)).cmds());
     }
 
+    private static Model withRemote(Model model, String... names) {
+        return remoteBranchesRead(
+                        model,
+                        List.of(names)
+                                .map(name -> new RemoteRef(
+                                        new RemoteBranch(RemoteBranch.DEFAULT_REMOTE, new BranchName(name)),
+                                        new Sha("2"),
+                                        Instant.EPOCH)))
+                .model();
+    }
+
     private static RebasePopup popup(Model model, BranchName highlighted) {
-        return Update.update(model, new RebaseMsg.Requested(highlighted))
+        return Update.update(model, new RebaseMsg.Requested(new BranchRef.Local(highlighted)))
                 .model()
                 .popup(RebasePopup.class)
                 .get();
@@ -156,6 +252,18 @@ class RebaseUpdateTest {
      * {@code current} is checked out.
      */
     private static Model checkedOut(BranchName current) {
+        return model(current, false, HashSet.empty());
+    }
+
+    /**
+     * As {@link #checkedOut(BranchName)}, with each branch following its branch on {@code origin}, {@code ahead} of
+     * which are one commit ahead of it.
+     */
+    private static Model following(BranchName current, BranchName... ahead) {
+        return model(current, true, HashSet.of(ahead));
+    }
+
+    private static Model model(BranchName current, boolean following, io.vavr.collection.Set<BranchName> ahead) {
         return localBranchesRead(
                         loaded(),
                         List.of(MAIN, DEVELOP, PARENT, CHILD, OTHER)
@@ -165,7 +273,13 @@ class RebaseUpdateTest {
                                         new Sha("1"),
                                         Instant.EPOCH,
                                         false,
-                                        name.equals(MAIN))))
+                                        name.equals(MAIN),
+                                        Option.when(
+                                                following,
+                                                new Upstream(
+                                                        new RemoteBranch(RemoteBranch.DEFAULT_REMOTE, name).tracking(),
+                                                        ahead.contains(name) ? 1 : 0,
+                                                        1)))))
                 .model();
     }
 
