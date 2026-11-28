@@ -2,12 +2,14 @@ package net.vanfleteren.jazygit.kernel.state.forge;
 
 import io.vavr.collection.List;
 import io.vavr.control.Option;
+import net.vanfleteren.jazygit.core.repo.RemoteName;
 import net.vanfleteren.jazygit.kernel.state.Events;
 import net.vanfleteren.jazygit.kernel.state.FeatureId;
 import net.vanfleteren.jazygit.kernel.state.FeatureMsg;
 import net.vanfleteren.jazygit.kernel.state.FeatureUpdate;
 import net.vanfleteren.jazygit.kernel.state.KernelEvent;
 import net.vanfleteren.jazygit.kernel.state.Model;
+import net.vanfleteren.jazygit.kernel.state.RereadUpdate;
 import net.vanfleteren.jazygit.kernel.state.Update.Next;
 import net.vanfleteren.jazygit.kernel.state.operation.OperationUpdate;
 
@@ -101,9 +103,20 @@ public final class ForgeUpdate {
         Next next = switches.foldLeft(
                 Next.of(decided), (done, applies) -> done.then(m -> FeatureUpdate.update(m, applies)));
         boolean moved = chosen.exists(c -> before.exists(b -> b.feature().equals(c.feature()) && !b.equals(c)));
-        return moved
-                ? Events.happened(next, new KernelEvent.Switched(chosen.get().feature(), true))
-                : next;
+        return baseRemoteMoved(
+                before.map(ForgeCandidate::remote),
+                moved
+                        ? Events.happened(
+                                next, new KernelEvent.Switched(chosen.get().feature(), true))
+                        : next);
+    }
+
+    /**
+     * {@code next}, also reading the branches again when the remote of the home is not {@code before} anymore: the
+     * base remote goes by it (ADR 215).
+     */
+    private static Next baseRemoteMoved(Option<RemoteName> before, Next next) {
+        return before.equals(ForgeHome.of(next.model())) ? next : RereadUpdate.branches(next);
     }
 
     /**

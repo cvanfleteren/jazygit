@@ -10,6 +10,7 @@ import net.vanfleteren.jazygit.core.git.model.BaseCandidates;
 import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.BranchRef;
 import net.vanfleteren.jazygit.core.repo.RemoteBranch;
+import net.vanfleteren.jazygit.core.repo.RemoteName;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -21,6 +22,8 @@ import org.zeroturnaround.exec.ProcessExecutor;
  * (ADR 148).
  */
 class CliBaseCandidatesTest {
+
+    private static final Option<RemoteName> ORIGIN = Option.of(RemoteBranch.DEFAULT_REMOTE);
 
     private static final BranchName MAIN = new BranchName("main");
     private static final BranchName STAGING = new BranchName("staging/sync");
@@ -127,11 +130,11 @@ class CliBaseCandidatesTest {
 
     @Test
     void theStartsGitWritesNameTheBranch() {
-        assertEquals(Option.of(STAGING), CliBaseCandidates.startBranch("staging/sync"));
-        assertEquals(Option.of(STAGING), CliBaseCandidates.startBranch("origin/staging/sync"));
-        assertEquals(Option.of(STAGING), CliBaseCandidates.startBranch("refs/heads/staging/sync"));
-        assertEquals(Option.of(STAGING), CliBaseCandidates.startBranch("refs/remotes/origin/staging/sync"));
-        assertEquals(Option.none(), CliBaseCandidates.startBranch("HEAD"));
+        assertEquals(Option.of(STAGING), CliBaseCandidates.startBranch("staging/sync", ORIGIN));
+        assertEquals(Option.of(STAGING), CliBaseCandidates.startBranch("origin/staging/sync", ORIGIN));
+        assertEquals(Option.of(STAGING), CliBaseCandidates.startBranch("refs/heads/staging/sync", ORIGIN));
+        assertEquals(Option.of(STAGING), CliBaseCandidates.startBranch("refs/remotes/origin/staging/sync", ORIGIN));
+        assertEquals(Option.none(), CliBaseCandidates.startBranch("HEAD", ORIGIN));
     }
 
     @Test

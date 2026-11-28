@@ -241,3 +241,4 @@ another tool adds it there too.
 | 212 | [The builds get a screen of their own](0212-the-builds-get-a-screen-of-their-own.md) |  |
 | 213 | [A branch can be pointed at another upstream, or at none](0213-a-branch-can-be-pointed-at-another-upstream-or-at-none.md) |  |
 | 214 | [Rebase on the base takes the remote one when the local one has nothing of its own](0214-rebase-on-the-base-takes-the-remote-one-when-it-is-ahead.md) |  |
+| 215 | [One base remote instead of the hard-coded origin](0215-one-base-remote-instead-of-the-hard-coded-origin.md) |  |

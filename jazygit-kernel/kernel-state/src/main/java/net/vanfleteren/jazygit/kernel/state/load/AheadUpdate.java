@@ -118,7 +118,8 @@ public final class AheadUpdate {
                 BranchRef.bases(
                                 named,
                                 named.flatMap(name -> model.repo().parents().get(name)),
-                                main(model))
+                                main(model),
+                                model.repo().baseRemote())
                         .iterator()
                         .flatMap(base -> LoadUpdate.tipOf(model, base)
                                 .flatMap(found -> found)

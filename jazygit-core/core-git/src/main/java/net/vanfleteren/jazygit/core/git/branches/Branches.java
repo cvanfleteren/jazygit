@@ -14,6 +14,7 @@ import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.BranchRef;
 import net.vanfleteren.jazygit.core.repo.CaughtUpBranch;
 import net.vanfleteren.jazygit.core.repo.RemoteBranch;
+import net.vanfleteren.jazygit.core.repo.RemoteName;
 import net.vanfleteren.jazygit.core.repo.Sha;
 
 /**
@@ -25,6 +26,14 @@ public interface Branches {
      * The local and the remote-tracking branches, read at the same moment.
      */
     Either<GitError, AllBranches> all();
+
+    /**
+     * The branches as {@link #all()} reads them, with {@code preferred}, the remote the forge of the repository opens
+     * pull requests against, if a forge is on, the base remote when the repository has it (ADR 215).
+     */
+    default Either<GitError, AllBranches> all(Option<RemoteName> preferred) {
+        return all();
+    }
 
     /**
      * Deletes the local branch {@code name} when it is merged; git refuses one that is not, which is a
@@ -92,6 +101,14 @@ public interface Branches {
     Either<GitError, BaseCandidates> baseCandidates(BranchName branch, Sha tip);
 
     /**
+     * The candidates as {@link #baseCandidates(BranchName, Sha)} reads them, with those on {@code base}, the base
+     * remote, as the remote ones (ADR 215).
+     */
+    default Either<GitError, BaseCandidates> baseCandidates(BranchName branch, Sha tip, Option<RemoteName> base) {
+        return baseCandidates(branch, tip);
+    }
+
+    /**
      * The local branches that have {@code commit}, in one {@code for-each-ref --contains}: those at it, and those
      * built on it (ADR 148).
      */
@@ -99,7 +116,7 @@ public interface Branches {
 
     /**
      * How far each local branch is from its base, by its name, for those that have a base (ADR 46): the branch it was
-     * made from, as {@code parents} has it, else {@code main}; of each, the one on {@code origin} when it is there,
+     * made from, as {@code parents} has it, else {@code main}; of each, the one on the base remote when it is there,
      * else the local one; never the branch itself. The branches and their bases are those of {@code tips}, at the
      * commits it has them at (ADR 49). The branches of a base whose count cannot be read are left out.
      *
@@ -108,4 +125,16 @@ public interface Branches {
      */
     Map<BranchName, BaseDistance> baseDistance(
             Map<BranchRef, Sha> tips, Map<BranchName, BranchName> parents, Option<BranchName> main);
+
+    /**
+     * The distances as {@link #baseDistance(Map, Map, Option)} reads them, the remote bases being those on
+     * {@code base}, the base remote (ADR 215).
+     */
+    default Map<BranchName, BaseDistance> baseDistance(
+            Map<BranchRef, Sha> tips,
+            Map<BranchName, BranchName> parents,
+            Option<BranchName> main,
+            Option<RemoteName> base) {
+        return baseDistance(tips, parents, main);
+    }
 }

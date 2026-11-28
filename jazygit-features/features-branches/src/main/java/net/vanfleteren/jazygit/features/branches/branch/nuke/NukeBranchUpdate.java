@@ -79,10 +79,10 @@ public final class NukeBranchUpdate {
     private static Option<NukeBranchPopup> popup(Model model, BranchName name) {
         return model.idleBranch(name)
                 .filter(branch -> !branch.current() && refused(model, branch).isEmpty())
-                .filter(branch ->
-                        remote(branch).forAll(target -> !model.jobs().busy().containsKey(new BranchRef.Remote(target))))
-                .flatMap(branch ->
-                        worktree(model, branch).map(worktree -> new NukeBranchPopup(name, remote(branch), worktree)));
+                .filter(branch -> remote(model, branch)
+                        .forAll(target -> !model.jobs().busy().containsKey(new BranchRef.Remote(target))))
+                .flatMap(branch -> worktree(model, branch)
+                        .map(worktree -> new NukeBranchPopup(name, remote(model, branch), worktree)));
     }
 
     /**
@@ -97,13 +97,15 @@ public final class NukeBranchUpdate {
     }
 
     /**
-     * The remote branch that goes with {@code branch}: where it is pushed, when that is on {@code origin}, has its
-     * own name and exists. Another one is left alone: one of another name, like the {@code origin/main} a branch was
-     * made from, or one on another remote, which may be that remote's default branch.
+     * The remote branch that goes with {@code branch}: where it is pushed, when that is on the base remote or on the
+     * remote the branch is pushed to without an upstream (the fork of a fork checkout), has its own name and exists.
+     * Another one is left alone: one of another name, like the {@code origin/main} a branch was made from, or one on
+     * another remote, which may be that remote's default branch.
      */
-    private static Option<RemoteBranch> remote(Branch branch) {
+    private static Option<RemoteBranch> remote(Model model, Branch branch) {
         return Option.when(branch.hasRemote(), branch::pushTarget)
-                .filter(target -> target.remote().equals(RemoteBranch.DEFAULT_REMOTE)
+                .filter(target -> (model.repo().baseRemote().contains(target.remote())
+                                || branch.pushRemote().contains(target.remote()))
                         && target.branch().equals(branch.name()));
     }
 }

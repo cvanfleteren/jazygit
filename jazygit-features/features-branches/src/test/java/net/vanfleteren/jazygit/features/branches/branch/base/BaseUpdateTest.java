@@ -17,6 +17,7 @@ import net.vanfleteren.jazygit.core.git.model.Fixtures;
 import net.vanfleteren.jazygit.core.git.process.GitError;
 import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.BranchRef;
+import net.vanfleteren.jazygit.core.repo.RemoteBranch;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import net.vanfleteren.jazygit.features.branches.branch.BranchError;
 import net.vanfleteren.jazygit.kernel.state.AppError;
@@ -86,7 +87,9 @@ class BaseUpdateTest {
     void askingReadsWhatTheBranchCouldBeBuiltOnFromItsTip() {
         Next next = Update.update(model(), new BaseMsg.Requested(FEATURE));
 
-        assertEquals(List.of(new ReadBaseCandidates(FEATURE, FEATURE_TIP)), next.cmds());
+        assertEquals(
+                List.of(new ReadBaseCandidates(FEATURE, FEATURE_TIP, Option.of(RemoteBranch.DEFAULT_REMOTE))),
+                next.cmds());
     }
 
     @Test

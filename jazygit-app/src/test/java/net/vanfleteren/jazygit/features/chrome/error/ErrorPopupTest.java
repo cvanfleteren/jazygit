@@ -38,10 +38,13 @@ class ErrorPopupTest {
 
     @Test
     void anOpenPopupIsNotReplacedByTheErrorPopup() {
-        Model failed = loaded().openPopup(new SetUpstreamPopup(new BranchName("feature")))
+        Model failed = loaded().openPopup(
+                        new SetUpstreamPopup(new BranchName("feature"), "origin feature", Option.none()))
                 .fail(new BranchError.InvalidUpstream("x"));
 
-        assertEquals(Option.of(new SetUpstreamPopup(new BranchName("feature"))), failed.popup());
+        assertEquals(
+                Option.of(new SetUpstreamPopup(new BranchName("feature"), "origin feature", Option.none())),
+                failed.popup());
         assertEquals(
                 Option.of(new BranchError.InvalidUpstream("x")),
                 failed.outcome().error());

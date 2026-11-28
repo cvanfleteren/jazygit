@@ -55,6 +55,15 @@ public final class RereadUpdate {
     }
 
     /**
+     * {@code next}, also reading the branches as {@code next} would ask for them now, unless that read runs already:
+     * for what they are read by changed, as the remote of the forge of the repository (ADR 215).
+     */
+    public static Next branches(Next next) {
+        Load load = LoadBranches.current(next.model(), LoadBranches.LISTED);
+        return next.model().jobs().runs(load) ? next : next.and(load);
+    }
+
+    /**
      * Reads the repository again on a tick, as {@link #refresh(Model)} does, but the branches, the stashes and the
      * worktrees only once the files they are read from changed: each takes a git process, and they hardly change
      * while the user does nothing. What failed to load is only tried again once it waited long enough

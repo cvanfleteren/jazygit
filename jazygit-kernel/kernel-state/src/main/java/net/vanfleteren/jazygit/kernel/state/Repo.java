@@ -28,6 +28,8 @@ import net.vanfleteren.jazygit.core.repo.*;
  * @param parents         the parent of each branch that has one, as read last with the branches (ADR 58, ADR 72):
  *                        what GitHub says it is built on, else the branch it was made from; none before the first
  *                        read
+ * @param remoteSetup     the remotes the branches go by, as read last with them (ADR 215): the base remote, and where a
+ *                        branch without an upstream is pushed
  * @param allFiles        the paths of all files of the working tree, read only while the files pane lists them all
  *                        (ADR 108): loading until then
  */
@@ -43,6 +45,7 @@ public record Repo(
         Map<String, Boolean> worktreeChanges,
         Map<BranchName, BaseDistance> baseDistance,
         Map<BranchName, BranchName> parents,
+        RemoteSetup remoteSetup,
         Loadable<List<RepoPath>> allFiles) {
 
     public static final Repo LOADING = new Repo(
@@ -56,6 +59,7 @@ public record Repo(
             HashMap.empty(),
             HashMap.empty(),
             HashMap.empty(),
+            RemoteSetup.NONE,
             Loadable.loading());
 
     /**
@@ -120,6 +124,14 @@ public record Repo(
                 }))
                 .map(BaseDistance::behind)
                 .filter(behind -> behind > 0);
+    }
+
+    /**
+     * The base remote (ADR 215), as read last with the branches; none while they were not read, or when the repository
+     * has no remote.
+     */
+    public Option<RemoteName> baseRemote() {
+        return remoteSetup.base();
     }
 
     /**

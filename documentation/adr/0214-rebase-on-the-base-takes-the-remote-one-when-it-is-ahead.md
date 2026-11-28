@@ -29,3 +29,5 @@ old versions: duplicates or conflicts.
 - A base whose upstream is another remote or another branch stays local.
 
 Amends ADR 91.
+
+Amended by ADR 215: the remote is the base remote, not always `origin`.

@@ -16,6 +16,8 @@ import java.time.Instant;
  *                  or {@code origin/<name>} without one
  * @param isDefault whether this is the repository's main branch, i.e. the default branch of the remote
  * @param tracking  what it follows: nothing, a branch, or one that is gone
+ * @param pushRemote where it is pushed when it follows nothing: the remote set for it, else
+ *                  {@code remote.pushDefault}, else the base remote (ADR 215); none when the repository has no remote
  * @param worktree  the root of the other worktree it is checked out in, if it is, or that rebases or bisects it
  *                  (ADR 110): git checks a branch out in one worktree at a time, so it can be neither checked out
  *                  nor deleted here
@@ -29,7 +31,34 @@ public record Branch(
         boolean hasRemote,
         boolean isDefault,
         Tracking tracking,
-        Option<Path> worktree) {
+        Option<Path> worktree,
+        Option<RemoteName> pushRemote) {
+
+    /**
+     * A branch that is pushed to {@code origin} when it follows nothing.
+     */
+    public Branch(
+            BranchName name,
+            boolean current,
+            Sha tip,
+            Instant tipTime,
+            Option<Instant> created,
+            boolean hasRemote,
+            boolean isDefault,
+            Tracking tracking,
+            Option<Path> worktree) {
+        this(
+                name,
+                current,
+                tip,
+                tipTime,
+                created,
+                hasRemote,
+                isDefault,
+                tracking,
+                worktree,
+                Option.of(RemoteBranch.DEFAULT_REMOTE));
+    }
 
     /**
      * When the branch was last worked on: when its tip was committed, or when it was made if that is later, so a
@@ -62,14 +91,14 @@ public record Branch(
 
     /**
      * The remote branch it is pushed to: its upstream, even when that is gone, or the branch of the same name
-     * on {@code origin} when it has none, or follows a local branch.
+     * on its {@link #pushRemote} when it has none, or follows a local branch.
      */
     public RemoteBranch pushTarget() {
         return upstream()
                 .map(Upstream::branch)
                 .orElse(this::goneUpstream)
                 .flatMap(Branch::onRemote)
-                .getOrElse(() -> new RemoteBranch(RemoteBranch.DEFAULT_REMOTE, name));
+                .getOrElse(() -> new RemoteBranch(pushRemote.getOrElse(RemoteBranch.DEFAULT_REMOTE), name));
     }
 
     /**

@@ -136,6 +136,29 @@ class NukeBranchTest {
     }
 
     @Test
+    void inAForkTheRemoteBranchOnTheForkGoesWithTheBranchWhateverTheBaseRemoteIs() {
+        RemoteBranch fork = new RemoteBranch("origin", FEATURE);
+        Branch main = branch(MAIN, true, true, Option.of(new RemoteBranch("upstream", MAIN)));
+        Branch feature = branch(FEATURE, false, false, Option.of(fork));
+        Model model = Update.update(
+                        loaded(),
+                        TestModels.branchesLoaded(new AllBranches(
+                                List.of(main, feature),
+                                List.of(
+                                        new RemoteRef(fork, new Sha("ffff"), Instant.EPOCH),
+                                        new RemoteRef(
+                                                new RemoteBranch("upstream", MAIN), new Sha("aaaa"), Instant.EPOCH)),
+                                RemoteSetup.of(new RemoteName("upstream")))))
+                .model();
+
+        Next asked = Update.update(model, new NukeBranchMsg.Requested(FEATURE));
+
+        assertEquals(
+                Option.of(new NukeBranchPopup(FEATURE, Option.of(fork), Option.none())),
+                asked.model().popup());
+    }
+
+    @Test
     void theDefaultBranchAndOneCheckedOutHereOrInTheMainWorktreeAreRefused() {
         Worktree shownLinked = worktree("/repos/app-feature", FEATURE, false, true, Option.none());
         Worktree mainElsewhere = worktree("/repos/app", TRUNK, true, false, Option.none());

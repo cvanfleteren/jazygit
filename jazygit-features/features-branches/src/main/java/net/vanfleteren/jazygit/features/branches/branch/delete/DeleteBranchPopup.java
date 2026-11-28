@@ -16,14 +16,6 @@ import net.vanfleteren.jazygit.kernel.state.popup.Popup;
 public record DeleteBranchPopup(BranchName branch, RemoteBranch remote, Option<String> worktree) implements Popup {
 
     /**
-     * Asking where to delete {@code branch}, which no other worktree has checked out, and which is on the default
-     * remote under its own name, if at all.
-     */
-    public DeleteBranchPopup(BranchName branch) {
-        this(branch, new RemoteBranch(RemoteBranch.DEFAULT_REMOTE, branch), Option.none());
-    }
-
-    /**
      * Whether the remote branch has another name than {@code branch}: it is then another branch, which the dialog
      * says.
      */

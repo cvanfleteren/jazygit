@@ -62,7 +62,8 @@ public final class UpstreamUpdate {
                 .toOption()
                 .flatMap(branches -> branches.find(Branch::isDefault))
                 .map(main -> model.repo()
-                        .remoteBranch(new RemoteBranch(RemoteBranch.DEFAULT_REMOTE, main.name()))
+                        .baseRemote()
+                        .flatMap(remote -> model.repo().remoteBranch(new RemoteBranch(remote, main.name())))
                         .<BranchRef>map(remote -> new BranchRef.Remote(remote.branch()))
                         .getOrElse(() -> new BranchRef.Local(main.name())));
     }

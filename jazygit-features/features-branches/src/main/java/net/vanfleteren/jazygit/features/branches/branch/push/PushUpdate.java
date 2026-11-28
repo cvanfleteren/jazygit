@@ -93,7 +93,7 @@ public final class PushUpdate {
                                 .map(popup -> Next.of(model.clearError(), new ForcePushCheck(popup, upstream)))
                                 .getOrElse(() -> OperationUpdate.start(
                                         model.clearError(), new Push(branch, upstream, PushMode.FAST_FORWARD))))
-                        .getOrElse(() -> PopupUpdate.ask(model, new SetUpstreamPopup(branch))))
+                        .getOrElse(() -> PopupUpdate.ask(model, SetUpstreamPopup.of(known))))
                 .getOrElse(() -> Next.of(model));
     }
 

@@ -82,18 +82,18 @@ public final class RebaseUpdate {
     }
 
     /**
-     * The branch of {@code base} on {@code origin}, when it is known, the local {@code base} follows it and has nothing
-     * that is not on it.
+     * The branch of {@code base} on the base remote, when it is known, the local {@code base} follows it and has
+     * nothing that is not on it.
      */
     private static Option<RemoteBranch> remoteWhenBehind(Model model, BranchName base) {
-        RemoteBranch remote = new RemoteBranch(RemoteBranch.DEFAULT_REMOTE, base);
-        return Option.when(
-                model.repo().remoteBranch(remote).isDefined()
+        return model.repo()
+                .baseRemote()
+                .map(remote -> new RemoteBranch(remote, base))
+                .filter(remote -> model.repo().remoteBranch(remote).isDefined()
                         && model.repo()
                                 .branch(base)
                                 .flatMap(Branch::upstream)
                                 .exists(upstream ->
-                                        upstream.branch().equals(remote.tracking()) && upstream.ahead() == 0),
-                remote);
+                                        upstream.branch().equals(remote.tracking()) && upstream.ahead() == 0));
     }
 }

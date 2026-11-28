@@ -19,6 +19,7 @@ import net.vanfleteren.jazygit.core.git.process.GitOutput;
 import net.vanfleteren.jazygit.core.git.process.GitProcess;
 import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.BranchRef;
+import net.vanfleteren.jazygit.core.repo.RemoteName;
 import net.vanfleteren.jazygit.core.repo.Sha;
 
 /**
@@ -35,14 +36,19 @@ final class CliBaseDistance {
      * {@code for-each-ref} as a whole: then each base is counted in one of its own, so that only the branches of that
      * base are left out.
      *
-     * @param tips the commit of each local branch and of each branch on {@code origin}, as the branches read last have
+     * @param tips the commit of each local branch and of each branch on the base remote, as the branches read last have
      *             them
      * @param parents the branch each branch was made from, of those that have one recorded
      * @param main    the main branch, the base of a branch without a parent
+     * @param base    the base remote
      */
     static Map<BranchName, BaseDistance> read(
-            Path worktree, Map<BranchRef, Sha> tips, Map<BranchName, BranchName> parents, Option<BranchName> main) {
-        List<Tuple2<BranchName, Base>> bases = bases(tips.mapKeys(GitArgs::revision), parents, main);
+            Path worktree,
+            Map<BranchRef, Sha> tips,
+            Map<BranchName, BranchName> parents,
+            Option<BranchName> main,
+            Option<RemoteName> base) {
+        List<Tuple2<BranchName, Base>> bases = bases(tips.mapKeys(GitArgs::revision), parents, main, base);
         Map<BranchName, Base> branches = HashMap.ofEntries(bases);
         List<Sha> commits = bases.map(branch -> branch._2.commit()).distinct();
         return distances(worktree, commits, branches)
@@ -61,13 +67,16 @@ final class CliBaseDistance {
      * @param refs the commit of each ref, by its full name
      */
     static List<Tuple2<BranchName, Base>> bases(
-            Map<String, Sha> refs, Map<BranchName, BranchName> parents, Option<BranchName> main) {
+            Map<String, Sha> refs,
+            Map<BranchName, BranchName> parents,
+            Option<BranchName> main,
+            Option<RemoteName> remote) {
         return refs.keySet()
                 .toList()
                 .sorted()
                 .flatMap(ref -> GitOutput.after(ref, HEADS))
                 .map(BranchName::new)
-                .flatMap(branch -> BranchRef.bases(Option.of(branch), parents.get(branch), main)
+                .flatMap(branch -> BranchRef.bases(Option.of(branch), parents.get(branch), main, remote)
                         .iterator()
                         .flatMap(base -> refs.get(GitArgs.revision(base)).map(sha -> new Base(base, sha)))
                         .headOption()

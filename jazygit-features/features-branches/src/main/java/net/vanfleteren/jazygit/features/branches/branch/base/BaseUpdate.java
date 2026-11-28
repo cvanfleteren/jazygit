@@ -52,7 +52,10 @@ public final class BaseUpdate {
                             .of(branch)
                             .map(stated ->
                                     Next.of(model.fail(new BranchError.BaseStated(name, stated.base(), stated.by()))))
-                            .getOrElse(() -> Next.of(model.clearError(), new ReadBaseCandidates(name, branch.tip())));
+                            .getOrElse(() -> Next.of(
+                                    model.clearError(),
+                                    new ReadBaseCandidates(
+                                            name, branch.tip(), model.repo().baseRemote())));
                 })
                 .getOrElse(() -> Next.of(model));
     }

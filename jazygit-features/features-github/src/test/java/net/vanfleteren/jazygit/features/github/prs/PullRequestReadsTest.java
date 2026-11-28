@@ -25,7 +25,6 @@ import net.vanfleteren.jazygit.features.github.state.GitHubState;
 import net.vanfleteren.jazygit.features.github.state.LoadProtectedBranches;
 import net.vanfleteren.jazygit.features.github.state.PullRequestsError;
 import net.vanfleteren.jazygit.features.github.state.PullRequestsMsg;
-import net.vanfleteren.jazygit.kernel.state.BranchBases;
 import net.vanfleteren.jazygit.kernel.state.Env;
 import net.vanfleteren.jazygit.kernel.state.Failure;
 import net.vanfleteren.jazygit.kernel.state.Model;
@@ -262,7 +261,7 @@ class PullRequestReadsTest {
 
         Next read = Update.update(loaded(), new Read(List.of(onA)));
         assertEquals(
-                List.of(new LoadBranches(BranchBases.in(read.model()))),
+                List.of(LoadBranches.current(read.model(), LoadBranches.LISTED)),
                 read.cmds().filter(LoadBranches.class::isInstance));
 
         Next same = Update.update(read.model(), new Read(List.of(onA)));
@@ -275,7 +274,7 @@ class PullRequestReadsTest {
                 TestModels.loaded(), new PullRequestsMsg.ProtectedLoaded(List.of(new ForgeBranch("develop"))));
 
         assertEquals(
-                List.of(new LoadBranches(BranchBases.in(read.model()))),
+                List.of(LoadBranches.current(read.model(), LoadBranches.LISTED)),
                 read.cmds().filter(LoadBranches.class::isInstance));
     }
 

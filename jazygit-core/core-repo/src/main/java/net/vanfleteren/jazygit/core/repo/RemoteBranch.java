@@ -8,7 +8,8 @@ import io.vavr.control.Option;
 public record RemoteBranch(RemoteName remote, BranchName branch) {
 
     /**
-     * The remote a branch without an upstream is pushed to.
+     * The remote git itself calls the one a repository is cloned from. It is what is taken when nothing says otherwise:
+     * the base remote ({@link BaseRemote}) is the one to ask.
      */
     public static final RemoteName DEFAULT_REMOTE = new RemoteName("origin");
 

@@ -255,4 +255,56 @@ class CliBranchListTest {
     private List<Integer> counts(String branch) {
         return CliGitFixture.counts(repository, branch);
     }
+
+    @Test
+    void aRepositoryWhoseOnlyRemoteIsNotCalledOriginHasItsDefaultBranchFromThatRemote() throws Exception {
+        git("remote", "add", "github", repo.toString());
+        git("branch", "trunk");
+        git("update-ref", "refs/remotes/github/trunk", "trunk");
+        git("symbolic-ref", "refs/remotes/github/HEAD", "refs/remotes/github/trunk");
+        git("branch", "-q", "feature");
+
+        AllBranches branches = repository.branches().all().get();
+
+        assertEquals(Option.of(new RemoteName("github")), branches.setup().base());
+        assertEquals(
+                List.of("trunk"),
+                branches.local()
+                        .filter(Branch::isDefault)
+                        .map(branch -> branch.name().value()));
+        Branch feature = branches.local()
+                .find(branch -> branch.name().value().equals("feature"))
+                .get();
+        assertEquals(new RemoteBranch("github", new BranchName("feature")), feature.pushTarget());
+    }
+
+    @Test
+    void inAForkTheForgeRemoteIsTheBaseAndBranchRemotesFollowTheConfiguration() throws Exception {
+        git("remote", "add", "origin", repo.toString());
+        git("remote", "add", "upstream", repo.toString());
+        git("branch", "trunk");
+        git("update-ref", "refs/remotes/upstream/trunk", "trunk");
+        git("symbolic-ref", "refs/remotes/upstream/HEAD", "refs/remotes/upstream/trunk");
+        git("config", "branch.feature.pushRemote", "origin");
+        git("branch", "-q", "feature");
+
+        AllBranches asked =
+                repository.branches().all(Option.of(new RemoteName("upstream"))).get();
+
+        assertEquals(Option.of(new RemoteName("upstream")), asked.setup().base());
+        assertEquals(
+                List.of("trunk"),
+                asked.local()
+                        .filter(Branch::isDefault)
+                        .map(branch -> branch.name().value()));
+        assertEquals(
+                new RemoteBranch("origin", new BranchName("feature")),
+                asked.local()
+                        .find(branch -> branch.name().value().equals("feature"))
+                        .get()
+                        .pushTarget());
+        assertEquals(
+                Option.of(new RemoteName("origin")),
+                repository.branches().all().get().setup().base());
+    }
 }

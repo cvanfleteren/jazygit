@@ -32,3 +32,5 @@ surprises a git user.
   feature.
 - Pointing a branch at an upstream does not push or fetch anything; only its configuration changes.
 - A branch whose upstream has another name than its own is pushed as `push.default` says (ADR 40), as before.
+
+Amended by ADR 215: the dialog starts out with the remote the branch is pushed to, not always `origin`.
