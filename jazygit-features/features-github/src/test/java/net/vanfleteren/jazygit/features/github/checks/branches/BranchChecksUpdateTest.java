@@ -49,7 +49,6 @@ import net.vanfleteren.jazygit.features.github.state.GitHubChecks;
 import net.vanfleteren.jazygit.features.github.state.GitHubState;
 import net.vanfleteren.jazygit.features.github.state.PendingChecks;
 import net.vanfleteren.jazygit.features.github.state.Waiting;
-import net.vanfleteren.jazygit.kernel.state.BranchBases;
 import net.vanfleteren.jazygit.kernel.state.Cmd;
 import net.vanfleteren.jazygit.kernel.state.Env;
 import net.vanfleteren.jazygit.kernel.state.Model;
@@ -101,7 +100,7 @@ class BranchChecksUpdateTest {
     void theBranchesAreReadAgainWhenTheRemotesOnGitHubAreRead() {
         Next read = Update.update(loaded(), new BranchChecksMsg.Loaded(ON_ORIGIN));
         assertEquals(
-                List.of(new LoadBranches(BranchBases.in(read.model()))),
+                List.of(LoadBranches.current(read.model(), LoadBranches.LISTED)),
                 read.cmds().filter(LoadBranches.class::isInstance));
 
         Next same = Update.update(read.model(), new BranchChecksMsg.Loaded(ON_ORIGIN));

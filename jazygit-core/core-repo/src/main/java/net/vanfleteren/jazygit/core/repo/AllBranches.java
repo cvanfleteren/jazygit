@@ -12,27 +12,35 @@ import io.vavr.control.Option;
  *
  * @param local  the local branches: the checked out one first, then the most recently committed to
  * @param remote the remote-tracking branches, the most recently committed to first
+ * @param setup  the remotes the branches go by
  */
-public record AllBranches(List<Branch> local, List<RemoteRef> remote) {
+public record AllBranches(List<Branch> local, List<RemoteRef> remote, RemoteSetup setup) {
 
     /**
-     * The commit each local branch and each branch on {@link RemoteBranch#DEFAULT_REMOTE} is at: those that can be
+     * Branches of a repository whose only remote setting is {@code origin}.
+     */
+    public AllBranches(List<Branch> local, List<RemoteRef> remote) {
+        this(local, remote, RemoteSetup.ORIGIN);
+    }
+
+    /**
+     * The commit each local branch and each branch on the base remote is at: those that can be
      * the base of a branch (ADR 20).
      */
     public Map<BranchRef, Sha> tips() {
         return HashMap.<BranchRef, Sha>ofEntries(
                         local.map(branch -> Tuple.of(new BranchRef.Local(branch.name()), branch.tip())))
                 .merge(HashMap.ofEntries(
-                        remote.filter(ref -> ref.branch().remote().equals(RemoteBranch.DEFAULT_REMOTE))
+                        remote.filter(ref -> setup.base().contains(ref.branch().remote()))
                                 .map(ref -> Tuple.of(new BranchRef.Remote(ref.branch()), ref.tip()))));
     }
 
     /**
-     * The branches on {@link RemoteBranch#DEFAULT_REMOTE}, by their name there: those that can be a base without
-     * being checked out (ADR 143).
+     * The branches on the base remote, by their name there: those that can be a base without being checked out
+     * (ADR 143).
      */
-    public Set<BranchName> onOrigin() {
-        return remote.filter(ref -> ref.branch().remote().equals(RemoteBranch.DEFAULT_REMOTE))
+    public Set<BranchName> onBase() {
+        return remote.filter(ref -> setup.base().contains(ref.branch().remote()))
                 .map(ref -> ref.branch().branch())
                 .toSet();
     }

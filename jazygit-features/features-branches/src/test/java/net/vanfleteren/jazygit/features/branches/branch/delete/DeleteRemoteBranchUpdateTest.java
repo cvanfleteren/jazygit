@@ -100,4 +100,38 @@ class DeleteRemoteBranchUpdateTest {
                         .model()
                         .popup());
     }
+    /**
+     * {@link #model()} of a fork: the pull requests, and so the base, are on {@code upstream}.
+     */
+    private static Model fork() {
+        Branch main = Fixtures.branch(new BranchName("main"), true, new Sha("bbbb"), Instant.EPOCH, true, true);
+        return Update.update(
+                        loaded(),
+                        TestModels.branchesLoaded(new AllBranches(
+                                List.of(main),
+                                List.of(
+                                        new RemoteRef(ORIGIN_MAIN, new Sha("aaaa"), Instant.EPOCH),
+                                        new RemoteRef(UPSTREAM_MAIN, new Sha("bbbb"), Instant.EPOCH)),
+                                RemoteSetup.of(new RemoteName("upstream")))))
+                .model();
+    }
+
+    @Test
+    void inAForkTheDefaultBranchOfTheBaseRemoteIsNotDeleted() {
+        Next asked = Update.update(fork(), new DeleteBranchMsg.RemoteRequested(UPSTREAM_MAIN));
+
+        assertEquals(List.empty(), asked.cmds());
+        assertEquals(
+                Option.of(new BranchError.DefaultBranch(new BranchRef.Remote(UPSTREAM_MAIN))),
+                asked.model().outcome().error());
+    }
+
+    @Test
+    void inAForkTheBranchOfTheForkWithTheDefaultNameCanBeDeleted() {
+        assertEquals(
+                Option.of(new DeleteRemoteBranchPopup(ORIGIN_MAIN)),
+                Update.update(fork(), new DeleteBranchMsg.RemoteRequested(ORIGIN_MAIN))
+                        .model()
+                        .popup());
+    }
 }

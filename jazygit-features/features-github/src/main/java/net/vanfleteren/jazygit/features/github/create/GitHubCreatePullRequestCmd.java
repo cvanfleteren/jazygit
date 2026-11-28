@@ -18,6 +18,7 @@ import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.BranchRef;
 import net.vanfleteren.jazygit.core.repo.PrNumber;
 import net.vanfleteren.jazygit.core.repo.RemoteBranch;
+import net.vanfleteren.jazygit.core.repo.RemoteName;
 import net.vanfleteren.jazygit.features.branches.branch.BranchCmd;
 import net.vanfleteren.jazygit.features.branches.branch.base.SetBaseCmd;
 import net.vanfleteren.jazygit.features.github.GitHubFailure;
@@ -39,7 +40,21 @@ public sealed interface GitHubCreatePullRequestCmd extends Cmd {
     /**
      * A branch a pull request can merge into, as {@code name}, and {@code ref}, the branch it is on its remote.
      */
-    record Base(BranchName name, BranchRef ref) {
+    record Base(BranchName name, BranchRef ref, RemoteName home) {
+
+        /**
+         * A base for a repository whose base remote is {@code origin}.
+         */
+        public Base(BranchName name, BranchRef ref) {
+            this(name, ref, RemoteBranch.DEFAULT_REMOTE);
+        }
+
+        /**
+         * The base {@code name} of {@code model}, on the base remote when it is not on a remote.
+         */
+        static Base of(Model model, BranchName name, BranchRef ref) {
+            return new Base(name, ref, model.repo().baseRemote().getOrElse(RemoteBranch.DEFAULT_REMOTE));
+        }
 
         /**
          * The name the branch has on its remote, which is what gh and the recorded parent call it; its own name
@@ -50,13 +65,11 @@ public sealed interface GitHubCreatePullRequestCmd extends Cmd {
         }
 
         /**
-         * The branch on its remote, which gh merges into: the one it is, or the one of its name on the default
+         * The branch on its remote, which gh merges into: the one it is, or the one of its name on the base
          * remote when it is not on one.
          */
         RemoteBranch remote() {
-            return ref instanceof BranchRef.Remote(RemoteBranch remote)
-                    ? remote
-                    : new RemoteBranch(RemoteBranch.DEFAULT_REMOTE, name);
+            return ref instanceof BranchRef.Remote(RemoteBranch remote) ? remote : new RemoteBranch(home, name);
         }
     }
 

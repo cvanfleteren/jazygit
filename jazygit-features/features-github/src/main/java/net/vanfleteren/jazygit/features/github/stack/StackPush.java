@@ -79,7 +79,10 @@ public record StackPush(StackId stack, RemoteName remote, List<Tuple2<Branch, Br
             return Either.left(
                     new Refused(new StackSubject.OfBranch(elsewhere.get().name()), StackRefusal.OTHER_REMOTE));
         }
-        return Either.right(new StackPush(stack.number(), remote.getOrElse(RemoteBranch.DEFAULT_REMOTE), branches));
+        return Either.right(new StackPush(
+                stack.number(),
+                remote.getOrElse(() -> model.repo().baseRemote().getOrElse(RemoteBranch.DEFAULT_REMOTE)),
+                branches));
     }
 
     /**

@@ -82,7 +82,8 @@ class BaseDistanceUpdateTest {
         });
         // A protected branch is a root, which has no parent, whatever it was made from (ADR 72).
         LoadBranches load = new LoadBranches(
-                new BranchBases(List.of(new StatedBases(HashMap.empty(), HashSet.of(FEATURE), Option.none()))));
+                new BranchBases(List.of(new StatedBases(HashMap.empty(), HashSet.of(FEATURE), Option.none()))),
+                Option.none());
 
         assertEquals(
                 new LoadMsg.BranchesLoaded(

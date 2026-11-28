@@ -48,7 +48,8 @@ public final class LoadUpdate {
             case BranchesLoaded(var load, var branches, var bases) ->
                 branchesLoaded(model, done.mapRepo(repo -> {
                     Repo read = repo.withBranches(repo.branches().reload(branches.local()))
-                            .withRemoteBranches(repo.remoteBranches().reload(branches.remote()));
+                            .withRemoteBranches(repo.remoteBranches().reload(branches.remote()))
+                            .withRemoteSetup(branches.setup());
                     return bases.fold(
                             () -> read, of -> read.withParents(of.parents()).withBaseDistance(of.counts()));
                 }));

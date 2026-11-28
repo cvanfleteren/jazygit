@@ -1,6 +1,7 @@
 package net.vanfleteren.jazygit.features.branches.branch.push;
 
 import io.vavr.control.Option;
+import net.vanfleteren.jazygit.core.repo.Branch;
 import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.RemoteBranch;
 import net.vanfleteren.jazygit.kernel.state.popup.TextPopup;
@@ -15,8 +16,13 @@ import net.vanfleteren.jazygit.kernel.state.popup.TextPopup;
  */
 public record SetUpstreamPopup(BranchName branch, String upstream, Option<Refusal> refused) implements TextPopup {
 
-    public SetUpstreamPopup(BranchName branch) {
-        this(branch, new RemoteBranch(RemoteBranch.DEFAULT_REMOTE, branch).text(), Option.none());
+    /**
+     * Asking where to push {@code branch}, which follows nothing, starting out with the branch of its own name on the
+     * remote it is pushed to: the one set for it, else {@code remote.pushDefault}, else the base remote (ADR 215).
+     */
+    public static SetUpstreamPopup of(Branch branch) {
+        return new SetUpstreamPopup(
+                branch.name(), new RemoteBranch(branch.pushTarget().remote(), branch.name()).text(), Option.none());
     }
 
     /**

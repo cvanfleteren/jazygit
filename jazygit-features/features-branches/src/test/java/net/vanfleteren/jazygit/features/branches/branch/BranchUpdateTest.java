@@ -11,6 +11,7 @@ import io.vavr.control.Option;
 import java.time.Instant;
 import net.vanfleteren.jazygit.core.git.model.*;
 import net.vanfleteren.jazygit.core.repo.*;
+import net.vanfleteren.jazygit.core.repo.RemoteBranch;
 import net.vanfleteren.jazygit.features.branches.branch.checkout.CheckoutCmd;
 import net.vanfleteren.jazygit.features.branches.branch.checkout.CheckoutCmd.Checkout;
 import net.vanfleteren.jazygit.features.branches.branch.checkout.CheckoutCmd.CheckoutWithStash;
@@ -258,7 +259,7 @@ class BranchUpdateTest {
 
         assertEquals(List.of(), asked.cmds());
         assertEquals(
-                Option.of(new SetUpstreamPopup(new BranchName("feature"))),
+                Option.of(new SetUpstreamPopup(new BranchName("feature"), "origin feature", Option.none())),
                 asked.model().popup());
         assertEquals(Option.none(), asked.model().outcome().error());
         assertEquals(
@@ -300,7 +301,7 @@ class BranchUpdateTest {
 
         assertEquals(List.of(), asked.cmds());
         assertEquals(
-                Option.of(new SetUpstreamPopup(new BranchName("feature"))),
+                Option.of(new SetUpstreamPopup(new BranchName("feature"), "origin feature", Option.none())),
                 asked.model().popup());
         assertEquals(
                 new RemoteBranch("origin", new BranchName("feature")),
@@ -815,7 +816,7 @@ class BranchUpdateTest {
                 errorText(pulled.model()));
         // Like a branch without an upstream, it asks where to push.
         assertEquals(
-                Option.of(new SetUpstreamPopup(new BranchName("old"))),
+                Option.of(new SetUpstreamPopup(new BranchName("old"), "origin old", Option.none())),
                 Update.update(model, new PushMsg.Requested(new BranchName("old")))
                         .model()
                         .popup());
@@ -983,7 +984,10 @@ class BranchUpdateTest {
         Model model = loaded();
 
         assertEquals(
-                Option.of(new DeleteBranchPopup(new BranchName("feature"))),
+                Option.of(new DeleteBranchPopup(
+                        new BranchName("feature"),
+                        new RemoteBranch(RemoteBranch.DEFAULT_REMOTE, new BranchName("feature")),
+                        Option.none())),
                 Update.update(model, new DeleteBranchMsg.Requested(new BranchName("feature")))
                         .model()
                         .popup());
@@ -1008,7 +1012,10 @@ class BranchUpdateTest {
             Next next = Update.update(open, new DeleteBranchMsg.Chosen(scope));
             assertEquals(List.of(), next.cmds());
             assertEquals(
-                    Option.of(new DeleteBranchPopup(new BranchName("feature"))),
+                    Option.of(new DeleteBranchPopup(
+                            new BranchName("feature"),
+                            new RemoteBranch(RemoteBranch.DEFAULT_REMOTE, new BranchName("feature")),
+                            Option.none())),
                     next.model().popup());
         }
         assertEquals(

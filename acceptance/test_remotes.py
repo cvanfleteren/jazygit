@@ -2,6 +2,8 @@
 
 import time
 
+from harness import Git
+
 
 def published(repo, origin):
     """Main with one commit, and a branch feature with one more, both pushed to origin, which they track."""
@@ -626,3 +628,53 @@ def test_pull_a_branch_checked_out_in_another_worktree_is_refused(repo, origin, 
     ui.app.wait_for("Fast-forwarding branch feature failed: it is checked out")
     assert repo("rev-parse", "feature") == feature
     assert not (tmp_path / "repo-feature" / "theirs.txt").exists()
+
+
+def bare(tmp_path, env, name):
+    """An empty bare repository, <name>.git."""
+    path = tmp_path / f"{name}.git"
+    path.mkdir()
+    remote = Git(path, env)
+    remote("init", "--bare", "--initial-branch=main")
+    return remote
+
+
+def test_push_a_branch_without_upstream_to_the_only_remote_whatever_it_is_called(repo, tmp_path, env, jazygit):
+    remote = bare(tmp_path, env, "github")
+    repo("remote", "add", "github", str(remote.path))
+    repo.commit("Add one", **{"one.txt": "one\n"})
+    repo("push", "--set-upstream", "github", "main")
+    repo("switch", "--create", "new")
+    repo.commit("Add new", **{"new.txt": "new\n"})
+    ui = jazygit()
+
+    ui.branches.push("new")
+
+    assert remote("rev-parse", "new") == repo("rev-parse", "new")
+    assert repo.upstream("new") == "github/new"
+
+
+def test_in_a_fork_the_base_is_the_remote_that_is_checked_out_from_by_default(repo, tmp_path, env, jazygit):
+    fork = bare(tmp_path, env, "fork")
+    project = bare(tmp_path, env, "project")
+    repo("remote", "add", "origin", str(fork.path))
+    repo("remote", "add", "upstream", str(project.path))
+    repo("config", "checkout.defaultRemote", "upstream")
+    repo.commit("Add one", **{"one.txt": "one\n"})
+    repo("push", "origin", "main")
+    repo("push", "--set-upstream", "upstream", "main")
+    repo("switch", "--create", "feature")
+    repo.commit("Add two", **{"two.txt": "two\n"})
+    # The project moved on, while the fork did not.
+    checkout = tmp_path / "project-checkout"
+    Git(tmp_path, env)("clone", str(project.path), str(checkout))
+    teammate = Git(checkout, env)
+    teammate.commit("Add three", **{"three.txt": "three\n"})
+    teammate("push")
+    repo("fetch", "upstream")
+    ui = jazygit()
+
+    ui.branches.rebase_on_base("upstream/main")
+
+    assert repo.subjects() == ["Add two", "Add three", "Add one"]
+    assert repo("rev-parse", "origin/main") != repo("rev-parse", "upstream/main")

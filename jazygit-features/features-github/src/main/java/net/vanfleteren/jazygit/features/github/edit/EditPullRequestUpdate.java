@@ -209,7 +209,7 @@ public final class EditPullRequestUpdate {
         RemoteBranch current = others.find(remote -> remote.branch()
                         .equals(FromGitHub.branch(details.branches().base())))
                 .getOrElse(() -> new RemoteBranch(
-                        RemoteBranch.DEFAULT_REMOTE,
+                        model.repo().baseRemote().getOrElse(RemoteBranch.DEFAULT_REMOTE),
                         FromGitHub.branch(details.branches().base())));
         return others.remove(current).prepend(current);
     }

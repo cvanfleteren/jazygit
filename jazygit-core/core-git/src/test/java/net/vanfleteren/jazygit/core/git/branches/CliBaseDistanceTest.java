@@ -11,6 +11,7 @@ import net.vanfleteren.jazygit.core.git.model.BaseDistance;
 import net.vanfleteren.jazygit.core.repo.BranchName;
 import net.vanfleteren.jazygit.core.repo.BranchRef;
 import net.vanfleteren.jazygit.core.repo.RemoteBranch;
+import net.vanfleteren.jazygit.core.repo.RemoteName;
 import net.vanfleteren.jazygit.core.repo.Sha;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -21,6 +22,8 @@ import org.zeroturnaround.exec.ProcessExecutor;
  * How far each local branch is from its base (ADR 46).
  */
 class CliBaseDistanceTest {
+
+    private static final Option<RemoteName> ORIGIN = Option.of(RemoteBranch.DEFAULT_REMOTE);
 
     private static final BranchName MAIN = new BranchName("main");
     private static final BranchName FEATURE = new BranchName("feature");
@@ -163,7 +166,7 @@ class CliBaseDistanceTest {
 
         assertEquals(
                 HashMap.of(FEATURE, distance(LOCAL_MAIN, "feature", 0, 1)),
-                CliBaseDistance.read(repo, tips, new CliBranches(repo).parents().get(), Option.of(MAIN)));
+                CliBaseDistance.read(repo, tips, new CliBranches(repo).parents().get(), Option.of(MAIN), ORIGIN));
     }
 
     @Test
@@ -199,7 +202,8 @@ class CliBaseDistanceTest {
                                 "refs/heads/stacked", new Sha("4444"),
                                 "refs/remotes/origin/main", new Sha("2222")),
                         HashMap.of(STACKED, FEATURE),
-                        Option.of(MAIN)));
+                        Option.of(MAIN),
+                        ORIGIN));
     }
 
     @Test
@@ -224,7 +228,7 @@ class CliBaseDistanceTest {
      */
     private Map<BranchName, BaseDistance> read(Option<BranchName> main) throws Exception {
         return CliBaseDistance.read(
-                repo, tips(), new CliBranches(repo).parents().get(), main);
+                repo, tips(), new CliBranches(repo).parents().get(), main, ORIGIN);
     }
 
     /**

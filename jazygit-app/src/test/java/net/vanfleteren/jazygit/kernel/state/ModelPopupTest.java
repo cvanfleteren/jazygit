@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.core.repo.BranchName;
+import net.vanfleteren.jazygit.core.repo.RemoteBranch;
 import net.vanfleteren.jazygit.features.branches.branch.delete.DeleteBranchPopup;
 import net.vanfleteren.jazygit.features.changes.commit.amend.AmendPopup;
 import net.vanfleteren.jazygit.features.changes.commit.amend.AmendTarget;
@@ -15,20 +16,25 @@ import org.junit.jupiter.api.Test;
  */
 class ModelPopupTest {
 
+    private static final DeleteBranchPopup FEATURE_POPUP = new DeleteBranchPopup(
+            new BranchName("feature"),
+            new RemoteBranch(RemoteBranch.DEFAULT_REMOTE, new BranchName("feature")),
+            Option.none());
+
     private final Model closed = TestModels.loaded();
 
     @Test
     void openingAPopupReplacesTheOneThatWasOpen() {
-        Model model = closed.openPopup(new AmendPopup(new AmendTarget.LastCommit()))
-                .openPopup(new DeleteBranchPopup(new BranchName("feature")));
+        Model model =
+                closed.openPopup(new AmendPopup(new AmendTarget.LastCommit())).openPopup(FEATURE_POPUP);
 
-        assertEquals(Option.of(new DeleteBranchPopup(new BranchName("feature"))), model.popup());
+        assertEquals(Option.of(FEATURE_POPUP), model.popup());
         assertEquals(Option.none(), model.popup(AmendPopup.class));
     }
 
     @Test
     void closingOnlyClosesAPopupOfThatKind() {
-        Model model = closed.openPopup(new DeleteBranchPopup(new BranchName("feature")));
+        Model model = closed.openPopup(FEATURE_POPUP);
 
         assertEquals(model, model.withoutPopup(AmendPopup.class));
         assertEquals(Option.none(), model.withoutPopup(DeleteBranchPopup.class).popup());

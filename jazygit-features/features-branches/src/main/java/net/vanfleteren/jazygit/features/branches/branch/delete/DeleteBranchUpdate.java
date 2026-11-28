@@ -156,10 +156,10 @@ public final class DeleteBranchUpdate {
     }
 
     /**
-     * Whether {@code branch} is the default branch of {@code origin}, as far as the local default branch tells.
+     * Whether {@code branch} is the default branch of the base remote, as far as the local default branch tells.
      */
     private static boolean isDefault(Model model, RemoteBranch branch) {
-        return branch.remote().equals(RemoteBranch.DEFAULT_REMOTE)
+        return model.repo().baseRemote().contains(branch.remote())
                 && model.repo().branch(branch.branch()).exists(Branch::isDefault);
     }
 }

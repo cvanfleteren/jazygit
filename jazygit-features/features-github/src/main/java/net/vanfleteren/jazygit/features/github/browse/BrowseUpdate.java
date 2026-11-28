@@ -33,13 +33,12 @@ public final class BrowseUpdate {
     }
 
     /**
-     * Where {@code branch} is on its remote: its upstream, or else the branch of the same name on {@code origin}
+     * Where {@code branch} is on its remote: its upstream, or else the branch of the same name on the remote it is pushed to
      * when that is there; none when it is on no remote, or its upstream is gone.
      */
     static Option<RemoteBranch> onRemote(Branch branch) {
         return branch.remoteUpstream()
-                .orElse(() -> Option.when(
-                        branch.hasRemote() && branch.goneUpstream().isEmpty(),
-                        () -> new RemoteBranch(RemoteBranch.DEFAULT_REMOTE, branch.name())));
+                .orElse(() ->
+                        Option.when(branch.hasRemote() && branch.goneUpstream().isEmpty(), branch::pushTarget));
     }
 }

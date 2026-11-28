@@ -10,6 +10,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import io.vavr.collection.List;
 import io.vavr.control.Option;
 import net.vanfleteren.jazygit.core.repo.RemoteName;
+import net.vanfleteren.jazygit.kernel.state.BranchBases;
 import net.vanfleteren.jazygit.kernel.state.Carried;
 import net.vanfleteren.jazygit.kernel.state.Cmd;
 import net.vanfleteren.jazygit.kernel.state.Env;
@@ -23,6 +24,7 @@ import net.vanfleteren.jazygit.kernel.state.Msg;
 import net.vanfleteren.jazygit.kernel.state.Reactions;
 import net.vanfleteren.jazygit.kernel.state.Update;
 import net.vanfleteren.jazygit.kernel.state.Update.Next;
+import net.vanfleteren.jazygit.kernel.state.load.LoadBranches;
 import net.vanfleteren.jazygit.kernel.state.popup.Popup;
 import org.junit.jupiter.api.Test;
 
@@ -210,6 +212,40 @@ class ForgeUpdateTest {
         assertTrue(origin.model().on(new FeatureId("forgejo")));
         // Once, and only on, as it reads anew what it read of the home before (ADR 177).
         assertEquals(List.of(new KernelEvent.Switched(new FeatureId("forgejo"), true)), seen(origin));
+    }
+
+    @Test
+    void theBranchesAreReadAgainAsTheHomeDecidesSinceTheBaseRemoteGoesByIt() {
+        Model told = told(nothingRemembered(opened()), claim("github", "origin", "upstream"));
+
+        Next decided = Update.update(told, new FeatureMsg.Claimed(claim("forgejo")));
+
+        assertEquals(Option.of(new RemoteName("upstream")), ForgeHome.of(decided.model()));
+        assertEquals(
+                List.of(new LoadBranches(BranchBases.NONE, Option.of(new RemoteName("upstream")))),
+                decided.cmds().filter(LoadBranches.class::isInstance));
+    }
+
+    @Test
+    void theBranchesAreNotReadAgainWhenTheHomeStaysTheSame() {
+        Model decided = told(nothingRemembered(opened()), claim("forgejo", "origin", "upstream"), claim("github"));
+        Model asked = Update.update(decided, new ForgeMsg.Asked()).model();
+
+        Next upstream = Update.update(asked, new ForgeMsg.Picked(1));
+
+        assertEquals(List.empty(), upstream.cmds().filter(LoadBranches.class::isInstance));
+    }
+
+    @Test
+    void theBranchesAreReadAgainAsTheUserPicksAnotherHome() {
+        Model decided = told(nothingRemembered(opened()), claim("forgejo", "origin", "upstream"), claim("github"));
+        Model asked = Update.update(decided, new ForgeMsg.Asked()).model();
+
+        Next origin = Update.update(asked, new ForgeMsg.Picked(0));
+
+        assertEquals(
+                List.of(new LoadBranches(BranchBases.NONE, Option.of(new RemoteName("origin")))),
+                origin.cmds().filter(LoadBranches.class::isInstance));
     }
 
     @Test

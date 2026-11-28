@@ -10,6 +10,7 @@ import java.nio.file.Path;
 import java.time.Instant;
 import net.vanfleteren.jazygit.core.git.model.*;
 import net.vanfleteren.jazygit.core.repo.*;
+import net.vanfleteren.jazygit.core.repo.RemoteBranch;
 import net.vanfleteren.jazygit.features.branches.branch.checkout.CheckoutMsg;
 import net.vanfleteren.jazygit.features.branches.branch.checkout.SwitchWorktreePopup;
 import net.vanfleteren.jazygit.features.branches.branch.delete.DeleteBranchCmd;
@@ -119,7 +120,10 @@ class WorktreeBranchUpdateTest {
         Model open = Update.update(elsewhere(), new DeleteBranchMsg.Requested(FEATURE))
                 .model();
 
-        assertEquals(Option.of(new DeleteBranchPopup(FEATURE)), open.popup());
+        assertEquals(
+                Option.of(new DeleteBranchPopup(
+                        FEATURE, new RemoteBranch(RemoteBranch.DEFAULT_REMOTE, FEATURE), Option.none())),
+                open.popup());
         for (DeleteScope scope : List.of(DeleteScope.LOCAL, DeleteScope.BOTH)) {
             assertEquals(
                     List.of(),

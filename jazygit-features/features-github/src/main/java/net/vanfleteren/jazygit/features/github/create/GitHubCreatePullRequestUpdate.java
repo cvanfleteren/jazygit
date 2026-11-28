@@ -96,7 +96,8 @@ public final class GitHubCreatePullRequestUpdate {
                         .map(known -> new CreatePullRequest(
                                 popup.branch(),
                                 popup.head(),
-                                new Base(popup.base(), baseRef(model, popup.base())).remote(),
+                                Base.of(model, popup.base(), baseRef(model, popup.base()))
+                                        .remote(),
                                 stripped(popup.pullRequest()),
                                 Option.when(popup.stack(), () -> stackOn(model, popup.base()))
                                         .flatMap(on -> on)
@@ -202,7 +203,8 @@ public final class GitHubCreatePullRequestUpdate {
         return bases.size() < 2
                 ? readTitle(model, branch, bases)
                 : Next.of(
-                        model, new ReadParent(branch.name(), bases.map(base -> new Base(base, baseRef(model, base)))));
+                        model,
+                        new ReadParent(branch.name(), bases.map(base -> Base.of(model, base, baseRef(model, base)))));
     }
 
     /**

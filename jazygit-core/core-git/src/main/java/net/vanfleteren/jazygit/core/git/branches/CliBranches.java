@@ -37,8 +37,6 @@ import net.vanfleteren.jazygit.core.repo.*;
  */
 public final class CliBranches implements Branches {
 
-    private static final String ORIGIN = BranchRef.REMOTES + GitArgs.remote(RemoteBranch.DEFAULT_REMOTE) + "/";
-
     private static final List<String> FIELDS = List.of(
             "%(refname)",
             "%(objectname)",
@@ -89,6 +87,15 @@ public final class CliBranches implements Branches {
      */
     @Override
     public Either<GitError, AllBranches> all() {
+        return all(Option.none());
+    }
+
+    /**
+     * As {@link #all()}, with the remotes the repository is configured with read in one {@code git config} too, for
+     * the base remote and where a branch without an upstream is pushed to (ADR 215).
+     */
+    @Override
+    public Either<GitError, AllBranches> all(Option<RemoteName> preferred) {
         return GitProcess.read(
                         worktree,
                         GitCommand.reading(
@@ -102,10 +109,28 @@ public final class CliBranches implements Branches {
                                 "--"),
                         CliBranches::parseCreated)
                 .flatMap(created -> GitProcess.read(
-                        worktree,
-                        GitCommand.reading("for-each-ref", "--format=" + FORMAT, HEADS, REMOTES),
-                        raw -> parseAll(
-                                raw, created, BranchesInUse.elsewhere(worktree), BranchesInUse.busyIn(worktree))));
+                                worktree,
+                                GitCommand.reading("for-each-ref", "--format=" + FORMAT, HEADS, REMOTES),
+                                Either::<UnexpectedOutput, String>right)
+                        .flatMap(refs -> remoteConfig()
+                                .flatMap(config -> Either.<GitError, AllBranches>narrow(parseAll(
+                                        refs,
+                                        created,
+                                        BranchesInUse.elsewhere(worktree),
+                                        BranchesInUse.busyIn(worktree),
+                                        config,
+                                        preferred)))));
+    }
+
+    /**
+     * The configuration of the remotes. Only looked up, so not logged.
+     */
+    private Either<GitError, RemoteConfig> remoteConfig() {
+        // git config --get-regexp exits with 1, saying nothing, when no key matches.
+        return GitProcess.ask(worktree, GitCommand.reading("config", "--get-regexp", RemoteConfig.KEYS))
+                .map(answer -> answer.map(output -> RemoteConfig.parse(output.stdout()))
+                        .getOrElse(RemoteConfig.NONE))
+                .mapLeft(GitFailure::error);
     }
 
     /**
@@ -234,6 +259,11 @@ public final class CliBranches implements Branches {
      */
     @Override
     public Either<GitError, BaseCandidates> baseCandidates(BranchName branch, Sha tip) {
+        return baseCandidates(branch, tip, Option.of(RemoteBranch.DEFAULT_REMOTE));
+    }
+
+    @Override
+    public Either<GitError, BaseCandidates> baseCandidates(BranchName branch, Sha tip, Option<RemoteName> base) {
         return GitProcess.read(
                         worktree,
                         GitCommand.reading(
@@ -250,8 +280,8 @@ public final class CliBranches implements Branches {
                 .fold(
                         error -> Option.<BranchName>none(),
                         created -> created.get(branch)
-                                .flatMap(creation -> CliBaseCandidates.startBranch(creation.start())))
-                .transform(createdFrom -> CliBaseCandidates.read(worktree, branch, tip)
+                                .flatMap(creation -> CliBaseCandidates.startBranch(creation.start(), base)))
+                .transform(createdFrom -> CliBaseCandidates.read(worktree, branch, tip, base)
                         .map(candidates -> new BaseCandidates(candidates, createdFrom)));
     }
 
@@ -316,7 +346,16 @@ public final class CliBranches implements Branches {
     @Override
     public Map<BranchName, BaseDistance> baseDistance(
             Map<BranchRef, Sha> tips, Map<BranchName, BranchName> parents, Option<BranchName> main) {
-        return CliBaseDistance.read(worktree, tips, parents, main);
+        return baseDistance(tips, parents, main, Option.of(RemoteBranch.DEFAULT_REMOTE));
+    }
+
+    @Override
+    public Map<BranchName, BaseDistance> baseDistance(
+            Map<BranchRef, Sha> tips,
+            Map<BranchName, BranchName> parents,
+            Option<BranchName> main,
+            Option<RemoteName> base) {
+        return CliBaseDistance.read(worktree, tips, parents, main, base);
     }
 
     private static GitError classify(GitError error) {
@@ -350,12 +389,37 @@ public final class CliBranches implements Branches {
      */
     static Either<UnexpectedOutput, AllBranches> parseAll(
             String raw, Map<BranchName, Creation> created, Map<BranchName, Path> inUse, Option<BranchName> busyHere) {
+        return parseAll(raw, created, inUse, busyHere, RemoteConfig.NONE, Option.none());
+    }
+
+    /**
+     * The branches in {@code raw}, as {@link #parseAll(String, Map, Map, Option)} reads them, with the remotes that
+     * {@code config} and the remote-tracking branches tell of, and {@code preferred}, the remote the forge of the
+     * repository opens pull requests against, if a forge is on: the base remote is picked among them
+     * ({@link BaseRemote}), and the main branch is its {@code HEAD}.
+     */
+    static Either<UnexpectedOutput, AllBranches> parseAll(
+            String raw,
+            Map<BranchName, Creation> created,
+            Map<BranchName, Path> inUse,
+            Option<BranchName> busyHere,
+            RemoteConfig config,
+            Option<RemoteName> preferred) {
         Comparator<Branch> order = Comparator.comparing((Branch branch) -> busyHere.contains(branch.name()))
                 .reversed()
                 .thenComparing(ORDER);
         return Either.sequenceRight(GitOutput.nonBlankLines(raw).map(Ref::parse))
                 .map(Seq::toList)
-                .map(refs -> new AllBranches(branches(refs, created, inUse).sorted(order), remoteRefs(refs)));
+                .map(refs -> {
+                    List<RemoteRef> remote = remoteRefs(refs);
+                    Set<RemoteName> remotes = config.remotes()
+                            .addAll(remote.map(ref -> ref.branch().remote()));
+                    RemoteSetup setup = new RemoteSetup(
+                            BaseRemote.of(preferred, config.checkoutDefault(), remotes),
+                            config.pushDefault(),
+                            config.pushRemotes());
+                    return new AllBranches(branches(refs, created, inUse, setup).sorted(order), remote, setup);
+                });
     }
 
     /**
@@ -392,11 +456,11 @@ public final class CliBranches implements Branches {
     }
 
     private static List<Branch> branches(
-            List<Ref> refs, Map<BranchName, Creation> created, Map<BranchName, Path> inUse) {
+            List<Ref> refs, Map<BranchName, Creation> created, Map<BranchName, Path> inUse, RemoteSetup setup) {
         Set<String> remote =
                 refs.map(Ref::name).filter(name -> name.startsWith(REMOTES)).toSet();
         List<BranchName> local = refs.flatMap(Ref::localName);
-        Option<BranchName> defaultBranch = defaultBranch(refs, local);
+        Option<BranchName> defaultBranch = defaultBranch(refs, local, setup.base());
         return refs.flatMap(ref -> ref.localName()
                         .map(name -> new Branch(
                                 name,
@@ -406,21 +470,24 @@ public final class CliBranches implements Branches {
                                 created.get(name)
                                         .filter(creation -> !ref.checkedOutFromItsRemote(name, creation.start()))
                                         .map(Creation::time),
-                                remote.contains(ref.pushedTo(name)),
+                                remote.contains(ref.pushedTo(name, setup)),
                                 defaultBranch.contains(name),
                                 tracking(ref),
-                                ref.otherWorktree().orElse(() -> inUse.get(name).filter(path -> !ref.head())))))
+                                ref.otherWorktree().orElse(() -> inUse.get(name).filter(path -> !ref.head())),
+                                setup.pushRemote(name))))
                 .sorted(ORDER);
     }
 
     /**
-     * The main branch: the one {@code origin/HEAD} points to, as set by a clone. Without it, the
+     * The main branch: the one the {@code HEAD} of the base remote points to, as set by a clone. Without it, the
      * first of {@code main} and {@code master} that is among {@code branches}.
      */
-    private static Option<BranchName> defaultBranch(List<Ref> refs, List<BranchName> branches) {
-        return refs.find(ref -> ref.name().equals(ORIGIN + "HEAD"))
-                .flatMap(Ref::symref)
-                .flatMap(target -> GitOutput.after(target, ORIGIN))
+    private static Option<BranchName> defaultBranch(
+            List<Ref> refs, List<BranchName> branches, Option<RemoteName> base) {
+        return base.map(remote -> BranchRef.REMOTES + GitArgs.remote(remote) + "/")
+                .flatMap(prefix -> refs.find(ref -> ref.name().equals(prefix + "HEAD"))
+                        .flatMap(Ref::symref)
+                        .flatMap(target -> GitOutput.after(target, prefix)))
                 .map(BranchName::new)
                 .orElse(() -> List.of("main", "master").map(BranchName::new).find(branches::contains));
     }
@@ -513,13 +580,15 @@ public final class CliBranches implements Branches {
 
         /**
          * The remote-tracking ref of the branch it is pushed to, as {@link Branch#pushTarget()} says: its upstream,
-         * or the one of the same name on {@code origin} without one, or when it follows a local branch.
+         * or the one of the same name on the remote {@code setup} pushes it to without one, or when it follows a local
+         * branch; none without a remote, a ref no branch has.
          */
-        String pushedTo(BranchName branch) {
+        String pushedTo(BranchName branch, RemoteSetup setup) {
             return upstreamRef
                     .filter(ref -> ref.startsWith(REMOTES))
-                    .getOrElse(
-                            () -> GitArgs.revision(new RemoteBranch(RemoteBranch.DEFAULT_REMOTE, branch).tracking()));
+                    .getOrElse(() -> setup.pushRemote(branch)
+                            .map(remote -> GitArgs.revision(new RemoteBranch(remote, branch).tracking()))
+                            .getOrElse(""));
         }
 
         /**

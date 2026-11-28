@@ -31,7 +31,7 @@ public record StackCheckout(StackId stack, List<Line> lines, List<PrNumber> skip
 
     /**
      * The remote the branches of {@code stack} are fetched from: the one the local branch of an open pull request of
-     * it follows, as they are all pushed to one (ADR 74); else {@code origin}.
+     * it follows, as they are all pushed to one (ADR 74); else the base remote.
      */
     public static RemoteName remote(Model model, PullRequestStack stack) {
         return open(stack)
@@ -39,7 +39,7 @@ public record StackCheckout(StackId stack, List<Line> lines, List<PrNumber> skip
                 .flatMap(Branch::remoteUpstream)
                 .headOption()
                 .map(RemoteBranch::remote)
-                .getOrElse(RemoteBranch.DEFAULT_REMOTE);
+                .getOrElse(() -> model.repo().baseRemote().getOrElse(RemoteBranch.DEFAULT_REMOTE));
     }
 
     /**

@@ -37,19 +37,25 @@ public sealed interface BranchRef extends Revision {
 
     /**
      * What {@code branch} is compared with, the first of them that exists counting (ADR 20): the branch it was made
-     * from, {@code parent}, else the main branch, {@code main}; of each the remote-tracking one on {@code origin}
+     * from, {@code parent}, else the main branch, {@code main}; of each the remote-tracking one on the base remote
      * before the local one. Never the branch itself: the main branch has none. Both the commits ahead of the base in
      * the log and those behind it in the branches list (ADR 46) count against these.
      *
      * @param branch the name of the branch, none for a detached HEAD
+     * @param onRemote the base remote, none when there is none: then only the local ones count
      */
-    static List<BranchRef> bases(Option<BranchName> branch, Option<BranchName> parent, Option<BranchName> main) {
+    static List<BranchRef> bases(
+            Option<BranchName> branch,
+            Option<BranchName> parent,
+            Option<BranchName> main,
+            Option<RemoteName> onRemote) {
         return parent.toList()
                 .appendAll(main)
                 .filter(base -> !branch.contains(base))
                 .distinct()
-                .flatMap(base -> List.<BranchRef>of(
-                        new Remote(new RemoteBranch(RemoteBranch.DEFAULT_REMOTE, base)), new Local(base)));
+                .flatMap(name -> onRemote.<BranchRef>map(remote -> new Remote(new RemoteBranch(remote, name)))
+                        .toList()
+                        .append(new Local(name)));
     }
 
     /**
