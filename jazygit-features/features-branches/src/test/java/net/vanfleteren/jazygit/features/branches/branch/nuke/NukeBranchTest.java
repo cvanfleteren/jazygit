@@ -116,16 +116,14 @@ class NukeBranchTest {
     }
 
     @Test
-    void aRemoteBranchOfAnotherNameOrOnAnotherRemoteIsLeftAlone() {
+    void aRemoteBranchOfAnotherNameIsLeftAlone() {
         BranchName fix = new BranchName("fix");
-        BranchName develop = new BranchName("develop");
         BranchName local = new BranchName("local");
         Model model = model(
                 branch(fix, false, false, Option.of(new RemoteBranch("origin", MAIN))),
-                branch(develop, false, false, Option.of(new RemoteBranch("upstream", develop))),
                 branch(local, false, false, Option.none()));
 
-        for (BranchName name : List.of(fix, develop, local)) {
+        for (BranchName name : List.of(fix, local)) {
             Model asked =
                     Update.update(model, new NukeBranchMsg.Requested(name)).model();
             assertEquals(Option.of(new NukeBranchPopup(name, Option.none(), Option.none())), asked.popup());
@@ -133,6 +131,29 @@ class NukeBranchTest {
                     List.of(new NukeBranchCmd(name, Option.none(), Option.none())),
                     Update.update(asked, new NukeBranchMsg.Confirmed()).cmds());
         }
+    }
+
+    @Test
+    void inAForkTheRemoteBranchOnTheForkGoesWithTheBranchWhateverTheBaseRemoteIs() {
+        RemoteBranch fork = new RemoteBranch("origin", FEATURE);
+        Branch main = branch(MAIN, true, true, Option.of(new RemoteBranch("upstream", MAIN)));
+        Branch feature = branch(FEATURE, false, false, Option.of(fork));
+        Model model = Update.update(
+                        loaded(),
+                        TestModels.branchesLoaded(new AllBranches(
+                                List.of(main, feature),
+                                List.of(
+                                        new RemoteRef(fork, new Sha("ffff"), Instant.EPOCH),
+                                        new RemoteRef(
+                                                new RemoteBranch("upstream", MAIN), new Sha("aaaa"), Instant.EPOCH)),
+                                RemoteSetup.of(new RemoteName("upstream")))))
+                .model();
+
+        Next asked = Update.update(model, new NukeBranchMsg.Requested(FEATURE));
+
+        assertEquals(
+                Option.of(new NukeBranchPopup(FEATURE, Option.of(fork), Option.none())),
+                asked.model().popup());
     }
 
     @Test

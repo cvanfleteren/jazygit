@@ -79,10 +79,10 @@ public final class NukeBranchUpdate {
     private static Option<NukeBranchPopup> popup(Model model, BranchName name) {
         return model.idleBranch(name)
                 .filter(branch -> !branch.current() && refused(model, branch).isEmpty())
-                .filter(branch -> remote(model, branch)
-                        .forAll(target -> !model.jobs().busy().containsKey(new BranchRef.Remote(target))))
-                .flatMap(branch -> worktree(model, branch)
-                        .map(worktree -> new NukeBranchPopup(name, remote(model, branch), worktree)));
+                .filter(branch ->
+                        remote(branch).forAll(target -> !model.jobs().busy().containsKey(new BranchRef.Remote(target))))
+                .flatMap(branch ->
+                        worktree(model, branch).map(worktree -> new NukeBranchPopup(name, remote(branch), worktree)));
     }
 
     /**
@@ -97,13 +97,13 @@ public final class NukeBranchUpdate {
     }
 
     /**
-     * The remote branch that goes with {@code branch}: where it is pushed, when that is on the base remote, has its
-     * own name and exists. Another one is left alone: one of another name, like the {@code origin/main} a branch was
-     * made from, or one on another remote, which may be that remote's default branch.
+     * The remote branch that goes with {@code branch}: where it is pushed, when it has its own name and exists, on
+     * whichever remote that is, as the fork of a fork checkout. Another one is left alone, like the
+     * {@code origin/main} a branch was made from. The default branch of the base remote is not one: a branch of that
+     * name is refused before.
      */
-    private static Option<RemoteBranch> remote(Model model, Branch branch) {
+    private static Option<RemoteBranch> remote(Branch branch) {
         return Option.when(branch.hasRemote(), branch::pushTarget)
-                .filter(target -> model.repo().baseRemote().contains(target.remote())
-                        && target.branch().equals(branch.name()));
+                .filter(target -> target.branch().equals(branch.name()));
     }
 }
